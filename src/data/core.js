@@ -528,8 +528,8 @@
   // Titles show next to your name. `need` is checked against your records (see G.titleUnlocked).
   // Honor ranks (v10.10, #57, docs/plans/2026-10-03-honor-ranks-design.md): eight ranks from lifetime Honor, per faction,
   // each a title. No decay and no spending. Ranks 1-4 keep the old titles' thresholds (and ids pvp1-pvp4, so saves keep
-  // what they earned, under the new name); 5-8 are PROVISIONAL until the balance analyst's Honor-pace numbers (#57: rank
-  // 8 at about 30 hours of PvP at level 60). Looks at ranks 3, 5 and 8 (the rank looks below). title: where the name
+  // what they earned, under the new name); 5-8 double each step (the game designer's pick on #57 from the analyst's
+  // Honor pace: rank 8 at about 29.5 hours of PvP at level 60). Looks at ranks 3, 5 and 8 (the rank looks below). title: where the name
   // goes ('%s' is the character's name)
   D.HONOR_RANKS = [
     { at: 100, alliance: 'Recruit %s', horde: 'Whelp %s' },
@@ -537,9 +537,9 @@
     { at: 1500, alliance: 'Banneret %s', horde: 'Raider %s', look: 'tabard' },
     { at: 4000, alliance: 'Lancer %s', horde: 'Tusker %s' },
     { at: 8000, alliance: '%s, Warden of the Line', horde: 'Ironhide %s', look: 'cloak' },
-    { at: 15000, alliance: 'Lantern Captain %s', horde: 'Warbringer %s' },
-    { at: 26000, alliance: 'High Guard %s', horde: 'Skullbearer %s' },
-    { at: 42000, alliance: '%s, Lord of the Accord', horde: '%s, Hand of the Krugar', look: 'banner' },
+    { at: 16000, alliance: 'Lantern Captain %s', horde: 'Warbringer %s' },
+    { at: 32000, alliance: 'High Guard %s', horde: 'Skullbearer %s' },
+    { at: 64000, alliance: '%s, Lord of the Accord', horde: '%s, Hand of the Krugar', look: 'banner' },
   ];
   // the rank looks: worn on the back, in each faction's colours, collected account-wide when a character of that faction
   // reaches the rank (G.honorLooks); a look only, no stats. faction: only that faction's characters may show it

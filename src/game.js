@@ -2238,13 +2238,17 @@
     D.HONOR_RANKS.forEach((x, i) => { if (!x.look || r < i + 1) return; const it = D.ITEMS[`honor_${f}_${x.look}`];
       if (it && G.collectLook(it) && !quiet) loot(`Honor rank ${i + 1}, ${G.rankName(i + 1, f)}: the ${B.link(it.name, it.q)} joins your wardrobe (Back).`); });
   };
-  // a bot's lifetime Honor, from its id and level (a veteran bot shows a high rank; most stay low): G.BOT_HONOR.max times
-  // a skewed share (curve: higher = fewer veterans), scaled by level squared. PROVISIONAL until the analyst's spread (#57)
-  G.BOT_HONOR = { max: 60000, curve: 12 };
+  // a bot's lifetime Honor, from its id and level (#57, the game designer's bar): at level 60 about half the bots have no
+  // rank, and from rank 5 each rank holds about half the bots of the one below, about 1 in 100 at rank 8. G.BOT_HONOR.spread
+  // is the share (%) of level-60 bots at rank 0..8; a bot's rank comes from a hash of its id, its Honor from a second hash
+  // within that rank's band, and a lower-level bot has that Honor scaled by its level squared (fewer ranks lower down)
+  G.BOT_HONOR = { spread: [50, 10, 9, 8, 8, 8, 4, 2, 1] };
   G.botHonor = function (b) {
     if (!b) return 0; if (b.honor != null) return b.honor;
-    const u = (fnv('honor:' + (b.id != null ? b.id : b.name)) % 10007) / 10007, L = Math.max(0, Math.min(1, (b.level || 1) / D.LEVEL_CAP));
-    return Math.round(G.BOT_HONOR.max * L * L * Math.pow(u, G.BOT_HONOR.curve));
+    const id = b.id != null ? b.id : b.name, u = (fnv('honor:' + id) % 100003) / 100003, v = (fnv('band:' + id) % 10007) / 10007, R = D.HONOR_RANKS, sp = G.BOT_HONOR.spread;
+    const tot = sp.reduce((a, x) => a + x, 0); let r = 0, acc = sp[0] / tot; while (r < R.length && u >= acc) { r++; acc += (sp[r] || 0) / tot; }
+    const lo = r ? R[r - 1].at : 0, hi = r < R.length ? R[r].at : R[R.length - 1].at * 1.5, L = Math.max(0, Math.min(1, (b.level || 1) / D.LEVEL_CAP));
+    return Math.round((lo + (hi - lo) * v) * L * L);
   };
   G.pvpStats = () => Object.assign({ kills: 0, deaths: 0, escapes: 0, honor: 0 }, G.S.player.pvp || {});
   // An enemy player first shows up nearby (in the scene and under People), like any other player.
