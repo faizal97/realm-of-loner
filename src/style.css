@@ -255,7 +255,7 @@ img { max-width: 100%; display: block; }
 .row .ic img { width: 100%; height: 100%; object-fit: cover; }
 .row .ic.mob img { transform: scale(1.6) translateY(12%); }
 .row .t { min-width: 0; }
-.row .t b { display: block; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .t b { display: block; font-weight: 700; overflow-wrap: anywhere; } /* a long name wraps to a second line; the row's number stays in its right column (#60) */
 .row .t small { display: block; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row .r { font: 700 12px var(--body); color: var(--muted); text-align: right; }
 .drop-link { display: inline; padding: 0; margin: 0; min-height: 0; background: none; border: 0; font: inherit; text-decoration: underline dotted; text-underline-offset: 2px; cursor: pointer; }

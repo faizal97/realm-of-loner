@@ -2727,8 +2727,9 @@
     const facts = [`When: ${F.fires}.`, F.cost > 0 ? `Its item gives up ${Math.round(D.effectCost(k) * 100)}% of the stats a plain item like it would have.` : 'Its item keeps all its stats: the price is in the rule itself.'];
     const rows = ids.map((id) => { const it = D.ITEMS[id], o = owned[id];
       return h('div', { class: 'row' }, h('div', { class: 'ic' }, img(art('icon', it.icon))),
-        h('div', { class: 't' }, h('b', { class: 'q' + it.q }, it.name, h('small', { class: 'tnum', style: { display: 'inline', marginLeft: '6px' } }, `level ${it.lvl || 1}`)), ...G.effectSources(id, L).map((t) => h('small', { style: { whiteSpace: 'normal' } }, t))),
-        h('div', { class: 'r' }, o ? h('span', { style: { color: '#5fd46a' } }, '✓ ' + [...new Set(o.map((x) => x.who))].join(', ')) : 'Not owned')); });
+        h('div', { class: 't' }, h('b', { class: 'q' + it.q }, it.name), ...G.effectSources(id, L).map((t) => h('small', { style: { whiteSpace: 'normal' } }, t))),
+        // the level keeps its place on the right; a long name wraps (#60)
+        h('div', { class: 'r' }, h('div', { class: 'tnum' }, `level ${it.lvl || 1}`), o ? h('div', { style: { color: '#5fd46a' } }, '✓ ' + [...new Set(o.map((x) => x.who))].join(', ')) : h('div', null, 'Not owned'))); });
     showDialog([h('h3', { class: 'eff' }, F.name), h('p', null, F.desc(ref.lvl || 1, D.fxGrow(ref.fxScale, k))),
       h('p', { class: 'ai-note' }, best ? `At the numbers of your ${best.name}.` : 'At the numbers of a level-60 drop.'),
       h('div', { class: 'ai-box' }, ...facts.map((t) => h('div', null, t))),
