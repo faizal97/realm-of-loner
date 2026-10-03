@@ -155,6 +155,7 @@
     }
     // v3: stacks saved before a material changed slot (linen was junk) take the item's current slot and icon
     for (const b of (S.player.bags || []).concat(S.player.bank || [])) { const base = D.ITEMS[b.item.id]; if (base && base.slot === 'mat' && b.item.slot !== 'mat') { b.item.slot = 'mat'; b.item.icon = base.icon; } }
+    G.honorLooks(true); // rank looks a character already earned (Honor ranks, #57), without a message
     return G.catchUp();
   };
   // Save codes (v9.7.1): "AZS2.<length>.<base64 of the deflated save>", about a fifth of the old size, so a code fits in a
@@ -1996,7 +1997,7 @@
     const P = G.S.player, out = [];
     for (const k of G.account().looks || []) {
       const i = k.indexOf(':'), pl = k.slice(0, i), key = k.slice(i + 1); if (pl !== place) continue;
-      const it = G.lookItem(pl, key); if (it && G.canUseItem(it, P.cls)) out.push({ key, name: it.name, icon: it.icon, q: it.q });
+      const it = G.lookItem(pl, key); if (it && G.canUseItem(it, P.cls) && (!it.faction || it.faction === G.myFaction())) out.push({ key, name: it.name, icon: it.icon, q: it.q });
     }
     if (place === 'back') for (const lk in D.LEGENDS || {}) { const L = D.LEGENDS[lk]; if (L.keepsake && G.legendUnlocked(lk)) out.push({ key: L.keepsake.look, name: L.keepsake.name, icon: L.keepsake.icon, q: 5, keepsake: lk }); }
     return out;
@@ -2006,7 +2007,7 @@
   G.wardrobeAll = function (place) {
     const P = G.S.player, have = new Set((G.account().looks || []).filter((k) => k.startsWith(place + ':')).map((k) => k.slice(place.length + 1))), seen = new Set(), out = [];
     for (const id in D.ITEMS) {
-      const it = D.ITEMS[id], l = it.look; if (!l || l[0] !== place || seen.has(l[1]) || !G.canUseItem(it, P.cls)) continue;
+      const it = D.ITEMS[id], l = it.look; if (!l || l[0] !== place || seen.has(l[1]) || !G.canUseItem(it, P.cls) || (it.faction && it.faction !== G.myFaction())) continue; // a faction's rank looks only for its own characters (#57)
       const tw = G.account().trialsworn || {}, mo = it.month != null ? root.TRIALS && root.TRIALS.name(it.month) : null;
       const src = mo && have.has(l[1]) ? ((tw.earned || []).includes(it.month) ? `Earned in ${mo}` : 'Bought with Mentor Marks') : mo && root.TRIALS && it.month < root.TRIALS.season(new Date()) ? `${it.source}, or ${G.MONTH_CLOAK_COST} Mentor Marks at the Mentor Quartermaster now` : it.source || null;
       seen.add(l[1]); { const lb = G.lookLabel(it.name, src, P.level, have.has(l[1])); out.push({ key: l[1], name: lb.name, icon: it.icon, q: it.q, lvl: it.lvl || 1, source: lb.source, have: have.has(l[1]), hidden: lb.hidden }); }
@@ -2222,6 +2223,29 @@
     sys(on ? 'War Mode is on. Enemy players may attack you. +10% experience and gold, and Honor for every enemy player you defeat.' : 'War Mode is off.');
     emit('change');
   };
+  // ---- Honor ranks (#57): eight ranks from lifetime Honor (D.HONOR_RANKS), per faction; no decay and no spending
+  // rank: 0 (none yet) .. 8; next: the next rank's index or null at the top
+  G.honorRank = function (honor) {
+    const R = D.HONOR_RANKS; let rank = 0; while (rank < R.length && honor >= R[rank].at) rank++;
+    return { rank, of: R.length, next: rank < R.length ? rank + 1 : null, nextAt: rank < R.length ? R[rank].at : null };
+  };
+  G.rankName = (rank, faction) => { const r = D.HONOR_RANKS[rank - 1]; return r ? r[faction === 'horde' ? 'horde' : 'alliance'].replace(/%s,? ?/, '').replace(/^, /, '').trim() : ''; };
+  G.myRank = () => G.honorRank(G.pvpStats().honor).rank;
+  // the looks at ranks 3, 5 and 8 join the wardrobe (account-wide) once this character's faction reaches them; quiet:
+  // on load, for ranks earned before the looks existed
+  G.honorLooks = function (quiet) {
+    if (!G.S) return; const f = G.myFaction(), r = G.myRank();
+    D.HONOR_RANKS.forEach((x, i) => { if (!x.look || r < i + 1) return; const it = D.ITEMS[`honor_${f}_${x.look}`];
+      if (it && G.collectLook(it) && !quiet) loot(`Honor rank ${i + 1}, ${G.rankName(i + 1, f)}: the ${B.link(it.name, it.q)} joins your wardrobe (Back).`); });
+  };
+  // a bot's lifetime Honor, from its id and level (a veteran bot shows a high rank; most stay low): G.BOT_HONOR.max times
+  // a skewed share (curve: higher = fewer veterans), scaled by level squared. PROVISIONAL until the analyst's spread (#57)
+  G.BOT_HONOR = { max: 60000, curve: 12 };
+  G.botHonor = function (b) {
+    if (!b) return 0; if (b.honor != null) return b.honor;
+    const u = (fnv('honor:' + (b.id != null ? b.id : b.name)) % 10007) / 10007, L = Math.max(0, Math.min(1, (b.level || 1) / D.LEVEL_CAP));
+    return Math.round(G.BOT_HONOR.max * L * L * Math.pow(u, G.BOT_HONOR.curve));
+  };
   G.pvpStats = () => Object.assign({ kills: 0, deaths: 0, escapes: 0, honor: 0 }, G.S.player.pvp || {});
   // An enemy player first shows up nearby (in the scene and under People), like any other player.
   // Most of them attack after a while if you are still around; some are only passing through.
@@ -2360,7 +2384,7 @@
     const mates = B.onlineIn(S, P.place, new Date()).filter((b) => B.factionOf(b) === B.factionOf({ race: P.race }));
     if (C.over === 'win') {
       const honor = Math.round((10 + 2 * info.level) * (info.town ? 1.5 : 1));
-      P.pvp.kills++; P.pvp.honor += honor;
+      P.pvp.kills++; P.pvp.honor += honor; G.honorLooks();
       sys(`You defeated ${info.name}. +${honor} Honor.`);
       if (mates.length && Math.random() < 0.5) B.post(S, 'say', pick(mates), pick(['gj', 'nice', 'ez', 'get rekt lol', 'thx for the help', 'ty']));
       f.nextAmbush = now() + AMBUSH_GAP * rnd(0.8, 1.5);
@@ -2633,7 +2657,7 @@
     const S = G.S, P = S.player, bg = S.bg, C = D.BG[bg.key], L = P.level;
     const won = bg.score.us > bg.score.them, draw = bg.score.us === bg.score.them;
     const honor = Math.round((C.honor.base + C.honor.perLvl * L) * (won ? C.honor.win : 1));
-    P.pvp = G.pvpStats(); P.pvp.honor += honor; P.pvp.bgPlayed = (P.pvp.bgPlayed || 0) + 1; if (won) P.pvp.bgWins = (P.pvp.bgWins || 0) + 1;
+    P.pvp = G.pvpStats(); P.pvp.honor += honor; P.pvp.bgPlayed = (P.pvp.bgPlayed || 0) + 1; if (won) P.pvp.bgWins = (P.pvp.bgWins || 0) + 1; G.honorLooks();
     const money = L * (won ? 120 : 50); P.money += money;
     if (L < D.LEVEL_CAP) G.gainXp(Math.round((D.XP_TO_LEVEL[L] || 0) * (won ? 0.07 : 0.03)));
     else G.addMarks(won ? C.marksAtCap.win : C.marksAtCap.loss, C.name);

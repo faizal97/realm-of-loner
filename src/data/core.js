@@ -526,6 +526,28 @@
     R('healing_way', 'Tidal Surge', ['heal'], ['healing_wave', 'lesser_healing_wave'], 0.25, ['chain_heal'], { instant: true, free: true }, 'Tidal Surge! Instant Chain Heal', 'Tidal Surge (Restoration): Healing Wave can make your next Chain Heal instant and free.')]);
   D.UPGRADE = { raid: 'tidecrown_citadel', step: 0.03, cap: { 3: 0.92, 4: 1 }, minLvl: 57, perPct: 5 }; // 5 Mentor Marks per 1% of the ceiling gained, so a step costs 15
   // Titles show next to your name. `need` is checked against your records (see G.titleUnlocked).
+  // Honor ranks (v10.10, #57, docs/plans/2026-10-03-honor-ranks-design.md): eight ranks from lifetime Honor, per faction,
+  // each a title. No decay and no spending. Ranks 1-4 keep the old titles' thresholds (and ids pvp1-pvp4, so saves keep
+  // what they earned, under the new name); 5-8 are PROVISIONAL until the balance analyst's Honor-pace numbers (#57: rank
+  // 8 at about 30 hours of PvP at level 60). Looks at ranks 3, 5 and 8 (the rank looks below). title: where the name
+  // goes ('%s' is the character's name)
+  D.HONOR_RANKS = [
+    { at: 100, alliance: 'Recruit %s', horde: 'Whelp %s' },
+    { at: 500, alliance: 'Shieldbearer %s', horde: 'Bloodied %s' },
+    { at: 1500, alliance: 'Banneret %s', horde: 'Raider %s', look: 'tabard' },
+    { at: 4000, alliance: 'Lancer %s', horde: 'Tusker %s' },
+    { at: 8000, alliance: '%s, Warden of the Line', horde: 'Ironhide %s', look: 'cloak' },
+    { at: 15000, alliance: 'Lantern Captain %s', horde: 'Warbringer %s' },
+    { at: 26000, alliance: 'High Guard %s', horde: 'Skullbearer %s' },
+    { at: 42000, alliance: '%s, Lord of the Accord', horde: '%s, Hand of the Krugar', look: 'banner' },
+  ];
+  // the rank looks: worn on the back, in each faction's colours, collected account-wide when a character of that faction
+  // reaches the rank (G.honorLooks); a look only, no stats. faction: only that faction's characters may show it
+  for (const [f, names] of [['alliance', ["Banneret's Tabard", 'Cloak of the Line', 'War Banner of the Accord']], ['horde', ["Raider's Tabard", 'Ironhide Cloak', 'War Banner of the Krugar']]]) {
+    let n = 0;
+    D.HONOR_RANKS.forEach((r, i) => { if (!r.look) return; const id = `honor_${f}_${r.look}`;
+      D.item(id, { name: names[n++], slot: 'back', q: 4, lvl: i + 1, look: ['back', id], lookOnly: true, faction: f, icon: r.look === 'banner' ? 'honor_banner_' + f : r.look === 'tabard' ? 'honor_tabard_' + f : 'cloak', source: `Honor rank ${i + 1}` }); });
+  }
   D.TITLES = [
     { id: 'tried', name: '%s the Tried', need: { trial: 10 }, how: 'Beat par in a Trial 10' },
     { id: 'unbroken', name: '%s the Unbroken', need: { trial: 15 }, how: 'Beat par in a Trial 15' },
@@ -536,10 +558,8 @@
     { id: 'guide', name: '%s the Guide', need: { mentor: 25 }, how: 'Help 25 groups through Help Wanted' },
     { id: 'flawless', name: '%s the Flawless', need: { flawless: 10 }, how: 'Clear dungeons without a wipe 10 times' },
     { id: 'swift', name: '%s the Swift', need: { speed: 10 }, how: 'Beat par time 10 times' },
-    { id: 'pvp1', name: 'Private %s', horde: 'Scout %s', need: { honor: 100 }, how: 'Earn 100 Honor' },
-    { id: 'pvp2', name: 'Corporal %s', horde: 'Grunt %s', need: { honor: 500 }, how: 'Earn 500 Honor' },
-    { id: 'pvp3', name: 'Sergeant %s', horde: 'Sergeant %s', need: { honor: 1500 }, how: 'Earn 1500 Honor' },
-    { id: 'pvp4', name: 'Knight %s', horde: 'Stone Guard %s', need: { honor: 4000 }, how: 'Earn 4000 Honor' },
+    // the Honor ranks (#57): one title per rank, from D.HONOR_RANKS below (ids pvp1..pvp8; pvp1-4 are the old titles renamed)
+    ...D.HONOR_RANKS.map((r, i) => ({ id: 'pvp' + (i + 1), name: r.alliance, horde: r.horde, need: { honor: r.at }, how: `Reach Honor rank ${i + 1} (${r.at.toLocaleString('en-US')} Honor)`, rank: i + 1 })),
     { id: 'defender', name: '%s, Defender of the Realm', horde: '%s, Defender of the Krugar', need: { kills: 50 }, how: 'Defeat 50 enemy players' },
     { id: 'biggame', name: '%s the Big-Game Hunter', need: { trophies: 10 }, how: 'Take 10 trophies from level-60 rares and world bosses' },
     { id: 'deadmines', name: '%s of Longfield', need: { clear: 'deadmines' }, how: 'Clear the Smugglers\' Deep' },
