@@ -3519,6 +3519,39 @@
     };
   }
   GBACK.trialsworn_cloak = twCloak(TWP, 0);
+  /* ---- the Honor rank looks (#57): a tabard (rank 3), a cloak (rank 5) and a war banner on the back (rank 8), in each
+     faction's colours: the Accord blue enamel and gold, the Krugar red, iron and bone */
+  function honorBack(main, trim, deep, kind) {
+    var emblem = function (c, x, y, s) {
+      return main === '#2f5fc0'
+        ? P(D`M${x},${y - s} C${x + s * 0.8},${y - s * 0.7} ${x + s},${y - s * 0.8} ${x + s},${y - s * 0.8} C${x + s},${y + s * 0.2} ${x + s * 0.5},${y + s * 0.8} ${x},${y + s} C${x - s * 0.5},${y + s * 0.8} ${x - s},${y + s * 0.2} ${x - s},${y - s * 0.8} C${x - s},${y - s * 0.8} ${x - s * 0.8},${y - s * 0.7} ${x},${y - s} Z`, trim, 1)
+        : P(D`M${x - s * 0.7},${y - s * 0.6} L${x - s * 0.2},${y + s} L${x},${y - s * 0.2} L${x + s * 0.2},${y + s} L${x + s * 0.7},${y - s * 0.6} Z`, trim, 1);
+    };
+    if (kind === 'tabard') return {
+      back: function () { return ''; },
+      torso: function (c, g) { /* wider and longer than a class's plain tabard, bordered, so the rank reads at a glance */
+        var x0 = g.scx - 2, x1 = g.scx + 14, xm = (x0 + x1) / 2, d = D`M${x0},${g.sy + 7} L${x1},${g.sy + 7} L${x1 + 1.5},${g.hy + 21} L${xm},${g.hy + 25} L${x0 - 1.5},${g.hy + 21} Z`;
+        return P(d, c.cel(main), 2) + CG(S(d, trim, 3.4) + S(D`M${x0},${g.sy + 11} L${x1},${g.sy + 11}`, trim, 1.6), c.clip(d)) + emblem(c, xm, g.sy + 24, 3.8);
+      }
+    };
+    if (kind === 'cloak') return {
+      back: function (c, g) { var d = capeD(g, 'plain', 23); return P(d, c.cel(main)) + CG(capeFolds(g, deep) + S(d, trim, 3.2), c.clip(d)); },
+      torso: function (c, g) { var d = collarD(g); return P(d, c.cel(main), 1.8) + C(g.scx + 9, g.sy + 2.5, 2.2, trim, 1); },
+      front: function (c, g) { return drape(c, g, main, trim); }
+    };
+    return { /* the war banner: a pole across the back, its flag above the shoulder, a strap over the chest */
+      back: function (c, g) {
+        var x0 = g.scx - g.b.shW - 4, y0 = g.sy - 40, x1 = g.scx + 4, y1 = g.hy + 8;
+        var fl = D`M${x0 + 1},${y0 + 3} L${x0 + 21},${y0 + 7} L${x0 + 17},${y0 + 13} L${x0 + 21},${y0 + 19} L${x0 + 1},${y0 + 17} Z`;
+        return S(D`M${x0},${y0} L${x1},${y1}`, '#1a1009', 4.6) + S(D`M${x0},${y0} L${x1},${y1}`, '#8a5a30', 2.6) + C(x0, y0 - 1, 2.4, GOLD, 1.2) +
+          P(fl, c.cel(main), 1.8) + CG(S(D`M${x0 + 3},${y0 + 5.5} L${x0 + 19},${y0 + 9}`, trim, 1.6), c.clip(fl)) + emblem(c, x0 + 9, y0 + 11, 2.6);
+      },
+      torso: function (c, g) { return S(D`M${g.scx - 9},${g.sy + 2} L${g.scx + 9},${g.hy - 2}`, '#1a1009', 3.4) + S(D`M${g.scx - 9},${g.sy + 2} L${g.scx + 9},${g.hy - 2}`, deep, 2); }
+    };
+  }
+  [['alliance', '#2f5fc0', GOLD, '#1a2f6a'], ['horde', '#b8302a', '#efe6cf', '#5a1410']].forEach(function (f) {
+    ['tabard', 'cloak', 'banner'].forEach(function (k) { GBACK['honor_' + f[0] + '_' + k] = honorBack(f[1], f[2], f[3], k); });
+  });
   GBACK.trialsworn_cloak_t15 = twCloak(TWP, 1);
   GBACK.trialsworn_cloak_t20 = twCloak(TWP, 2);
   /* ---- the monthly Trialsworn cloaks: the same cloak in the month's colours, key trialsworn_cloak_m<YYYYMM>.

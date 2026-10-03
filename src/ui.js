@@ -846,6 +846,8 @@
     const S = G.S, bg = S.bg, C = D.BG[bg.key], sp = G.bgSplit(), nm = (m) => m.name.split('-')[0];
     p.append(h('div', { class: 'sec-h' }, C.name, h('small', null, bg.phase === 'done' ? 'finished' : `round ${bg.round} of ${C.rounds} · first to ${C.win}`)));
     p.append(h('div', { class: 'bg-score' }, h('div', { class: 'us' }, h('small', null, 'You'), h('b', { class: 'tnum' }, String(bg.score.us))), h('div', { class: 'them' }, h('small', null, 'Them'), h('b', { class: 'tnum' }, String(bg.score.them)))));
+    // your team with their Honor ranks (#57): you first
+    p.append(h('div', { class: 'bg-team' }, h('small', null, 'Your team: '), h('span', null, rankBadge(G.S.player, true), 'You'), ...(bg.team || []).map((m) => h('span', null, rankBadge(m), nm(m)))));
     if (bg.phase === 'done') {
       p.append(h('div', { class: 'ai-box' }, h('div', { class: 'ai-row' }, h('span', null, 'Result'), h('b', null, bg.result === 'win' ? 'Victory' : bg.result === 'draw' ? 'A draw' : 'Defeat')),
         h('div', { class: 'ai-row' }, h('span', null, 'Honor'), h('b', { class: 'tnum' }, '+' + bg.reward.honor)), h('div', { class: 'ai-row' }, h('span', null, 'Money'), h('b', { html: moneyHtml(bg.reward.money) }))),
@@ -1208,7 +1210,7 @@
       const bar = h('div', { class: 'bar hp', 'data-pf': u ? u.uid : '' }, h('i', { style: { width: Math.max(0, hp / st.maxHp * 100) + '%' } }), h('b', { class: 'tnum' }, Math.round(hp)));
       pf.append(h('button', { class: 'pfr' + (u && u.dead ? ' dead' : '') + (C && u && C.allyTarget === u.uid ? ' sel' : ''), onclick: () => { if (u) { G.setTarget(u.uid); renderTarget(); markTargets(); } } },
         h('div', { class: 'portrait' }, h('div', { class: 'pclip' }, img(art('portrait', looks(m))))),
-        h('div', { class: 'uf-body' }, h('div', { class: 'uf-name cls-' + m.cls }, m.name, h('small', { class: 'rc' }, `${m.level} ${raceClass(m)}`)), bar, u ? h('div', { class: 'buffs rowbuffs', 'data-au': u.uid }) : null),
+        h('div', { class: 'uf-body' }, h('div', { class: 'uf-name cls-' + m.cls }, rankBadge(m), m.name, h('small', { class: 'rc' }, `${m.level} ${raceClass(m)}`)), bar, u ? h('div', { class: 'buffs rowbuffs', 'data-au': u.uid }) : null),
         h('div', { class: 'role' }, m.role === 'tank' ? 'TANK' : m.role === 'healer' ? 'HEAL' : 'DPS')));
     }
     const left = Math.max(0, S.wparty.until - Date.now());
@@ -1331,7 +1333,7 @@
       const u = units ? units.find((x) => (m.me ? x.kind === 'player' : x.memberRef === m.char)) : null;
       const row = h('button', { class: 'pfr' + (u && u.dead ? ' dead' : '') + (C && u && C.allyTarget === u.uid ? ' sel' : ''), onclick: () => { if (u) { G.setTarget(u.uid); renderTarget(); markTargets(); renderPanel(); } } },
         h('div', { class: 'portrait' }, h('div', { class: 'pclip' }, img(art('portrait', looks(m.me ? S.player : m.char.bot || m.char))))),
-        h('div', { class: 'uf-body' }, h('div', { class: 'uf-name cls-' + m.cls }, m.gone ? m.name + ' (left)' : m.name, h('small', { class: 'rc' }, (m.me ? S.player.level : (m.char.level || '')) + ' ' + raceClass(m.me ? S.player : m.char))), h('div', { class: 'bar hp', 'data-pf': u ? u.uid : '' }, h('i'), h('b', { class: 'tnum' })), u ? h('div', { class: 'buffs rowbuffs', 'data-au': u.uid }) : null),
+        h('div', { class: 'uf-body' }, h('div', { class: 'uf-name cls-' + m.cls }, rankBadge(m.me ? S.player : m.char, m.me), m.gone ? m.name + ' (left)' : m.name, h('small', { class: 'rc' }, (m.me ? S.player.level : (m.char.level || '')) + ' ' + raceClass(m.me ? S.player : m.char))), h('div', { class: 'bar hp', 'data-pf': u ? u.uid : '' }, h('i'), h('b', { class: 'tnum' })), u ? h('div', { class: 'buffs rowbuffs', 'data-au': u.uid }) : null),
         h('div', { class: 'role' }, m.role === 'tank' ? 'TANK' : m.role === 'healer' ? 'HEAL' : 'DPS'));
       pf.append(row);
     });
@@ -2737,6 +2739,11 @@
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: closeDialog }, 'Got it'))], true);
   }
   // ---- Honor ranks (#57): where you are on the ladder and the next step, as bounded numbers; tap for the whole ladder
+  // the insignia by a name: yours from your Honor, a bot's from its own (G.botHonor) and its race's faction; none below rank 1
+  function rankBadge(who, me) {
+    const f = me ? G.myFaction() : ((D.RACES[who && who.race] || {}).faction || 'alliance'), r = me ? G.myRank() : G.honorRank(G.botHonor(who && (who.bot || who))).rank;
+    return r ? h('img', { class: 'rank-badge', src: art('icon', `honor_${f}_${r}`), alt: `Honor rank ${r}`, title: `Honor rank ${r}: ${G.rankName(r, f)}` }) : null;
+  }
   const rankIcon = (rank, f) => img(art('icon', `honor_${f}_${Math.max(1, rank)}`));
   function honorRow() {
     const f = G.myFaction(), hon = G.pvpStats().honor, r = G.honorRank(hon), fmt = (n) => n.toLocaleString('en-US');
