@@ -1,5 +1,6 @@
 // Verifies src/art_honor.js (Honor rank insignia, #57: 8 per faction, plus the tabard and war banner look icons) and
-// renders contact sheets into art/honor/out/: every key at 64 px, and again at 24 px (the size a party frame shows).
+// renders contact sheets into art/honor/out/: every key at 64 px, and again at 24 px (the size a party frame shows), and
+// the six rank looks on the back (art.js) on four bodies, beside no look (sheet_looks.png).
 // Usage: node art/honor/render.js
 const fs = require('fs');
 const path = require('path');
@@ -26,5 +27,15 @@ for (const px of [64, 24]) {
   const f = path.join(OUT, `sheet_${px}.svg`); fs.writeFileSync(f, svg);
   execFileSync(RSVG, ['-o', f.replace(/\.svg$/, '.png'), f]);
 }
-console.log(problems ? `${problems} problem(s)` : `OK: ${KEYS.length} icons, 0 problems (art/honor/out/sheet_64.png, sheet_24.png)`);
+// the rank looks on the back (art.js GBACK honor_<faction>_<tabard|cloak|banner>): no look, then the six, on four bodies
+const LOOKS = ['', 'honor_alliance_tabard', 'honor_alliance_cloak', 'honor_alliance_banner', 'honor_horde_tabard', 'honor_horde_cloak', 'honor_horde_banner'];
+const BODIES = [['human', 'warrior', 'm'], ['orc', 'shaman', 'm'], ['nightelf', 'priest', 'f'], ['dwarf', 'rogue', 'm']];
+{ const px = 128, cells = [];
+  BODIES.forEach(([race, cls, gender], i) => LOOKS.forEach((k, j) => { const s = win.ART.hero({ cls, race, skin: 0, hair: 0, gender, gear: k ? { back: k } : {} });
+    if (/NaN|undefined/.test(s)) { problems++; console.log('PROBLEM look', k, race, cls); }
+    cells.push(`<image x="${j * (px + 4)}" y="${i * (px + 4)}" width="${px}" height="${px}" href="data:image/svg+xml;base64,${Buffer.from(s).toString('base64')}"/>`); }));
+  const W = LOOKS.length * (px + 4), H = BODIES.length * (px + 4), f = path.join(OUT, 'sheet_looks.svg');
+  fs.writeFileSync(f, `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}"><rect width="100%" height="100%" fill="#2a2218"/>${cells.join('')}</svg>`);
+  execFileSync(RSVG, ['-o', f.replace(/\.svg$/, '.png'), f]); }
+console.log(problems ? `${problems} problem(s)` : `OK: ${KEYS.length} icons and ${LOOKS.length - 1} looks on ${BODIES.length} bodies, 0 problems (art/honor/out/sheet_64.png, sheet_24.png, sheet_looks.png)`);
 process.exit(problems ? 1 : 0);
