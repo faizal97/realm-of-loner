@@ -2239,10 +2239,11 @@
       if (it && G.collectLook(it) && !quiet) loot(`Honor rank ${i + 1}, ${G.rankName(i + 1, f)}: the ${B.link(it.name, it.q)} joins your wardrobe (Back).`); });
   };
   // a bot's lifetime Honor, from its id and level (#57, the game designer's bar): at level 60 about half the bots have no
-  // rank, and from rank 5 each rank holds about half the bots of the one below, about 1 in 100 at rank 8. G.BOT_HONOR.spread
+  // rank, and ranks 5-8 each hold about half the bots of the rank below (rank 5 against rank 4 too), about 1 in 100 at
+  // rank 8. G.BOT_HONOR.spread
   // is the share (%) of level-60 bots at rank 0..8; a bot's rank comes from a hash of its id, its Honor from a second hash
   // within that rank's band, and a lower-level bot has that Honor scaled by its level squared (fewer ranks lower down)
-  G.BOT_HONOR = { spread: [50, 10, 9, 8, 8, 8, 4, 2, 1] };
+  G.BOT_HONOR = { spread: [50, 6, 6, 8, 15, 8, 4, 2, 1] }; // rank 4 holds the most ranked bots: its band (4,000-8,000) is the widest below rank 5
   G.botHonor = function (b) {
     if (!b) return 0; if (b.honor != null) return b.honor;
     const id = b.id != null ? b.id : b.name, u = (fnv('honor:' + id) % 100003) / 100003, v = (fnv('band:' + id) % 10007) / 10007, R = D.HONOR_RANKS, sp = G.BOT_HONOR.spread;

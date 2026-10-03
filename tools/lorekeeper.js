@@ -33,7 +33,7 @@ const known = new Set();
 const addName = (s) => { if (!s) return; for (const w of String(s).split(/[\s,:()"!?.]+/)) if (w) known.add(stripPoss(w)); };
 const stripPoss = (w) => w.replace(/^[^A-Za-z]+|[^A-Za-z']+$/g, '').replace(/'s$/, '').replace(/'$/, '');
 for (const t of ['NPCS', 'MOBS', 'PLACES', 'ITEMS', 'QUESTS', 'DUNGEONS', 'ACTIVITIES', 'RACES', 'CLASSES', 'REGIONS', 'MOUNTS', 'TITLES', 'LEGENDS', 'PROFESSIONS', 'ABILITIES'])
-  for (const v of Object.values(D[t] || {})) { addName(v.name); addName(v.title); addName(v.zone); addName(v.short); }
+  for (const v of Object.values(D[t] || {})) { addName(v.name); addName(v.title); addName(v.zone); addName(v.short); addName(v.horde); } // horde: a title's Krugar wording
 for (const p of Object.values(D.PLACES)) addName(p.zone);
 for (const n of NAMES) addName(n);
 // v10: the new names in the rename map are real names too (until the bible is rewritten with them)
