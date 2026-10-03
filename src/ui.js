@@ -2736,11 +2736,30 @@
       h('div', { class: 'sec-h' }, 'Items with it', h('small', null, `${ids.filter((id) => owned[id]).length} of ${ids.length} owned`)), h('div', { class: 'list' }, ...rows),
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: closeDialog }, 'Got it'))], true);
   }
+  // ---- Honor ranks (#57): where you are on the ladder and the next step, as bounded numbers; tap for the whole ladder
+  const rankIcon = (rank, f) => img(art('icon', `honor_${f}_${Math.max(1, rank)}`));
+  function honorRow() {
+    const f = G.myFaction(), hon = G.pvpStats().honor, r = G.honorRank(hon), fmt = (n) => n.toLocaleString('en-US');
+    const title = r.rank ? `Rank ${r.rank} of ${r.of}: ${G.rankName(r.rank, f)}` : `No Honor rank yet (${r.of} ranks)`;
+    const sub = r.next ? `${fmt(hon)} of ${fmt(r.nextAt)} Honor to Rank ${r.next}: ${G.rankName(r.next, f)}` : `${fmt(hon)} Honor: the top of the ladder`;
+    return h('button', { class: 'row nav', style: { gridTemplateColumns: '34px 1fr auto' }, onclick: () => openLadder() }, h('div', { class: 'ic', style: r.rank ? null : { opacity: 0.35 } }, rankIcon(r.rank, f)),
+      h('div', { class: 't' }, h('b', null, title), h('small', { style: { whiteSpace: 'normal' } }, sub)), h('div', { class: 'r' }, h('span', { class: 'nav-arr' }, '›')));
+  }
+  function openLadder() {
+    const f = G.myFaction(), hon = G.pvpStats().honor, mine = G.honorRank(hon).rank, fmt = (n) => n.toLocaleString('en-US');
+    const rows = D.HONOR_RANKS.map((x, i) => { const n = i + 1, got = mine >= n, T = D.TITLES.find((t) => t.id === 'pvp' + n), look = x.look && D.ITEMS[`honor_${f}_${x.look}`];
+      return h('div', { class: 'row' + (got ? '' : ' off') }, h('div', { class: 'ic' }, rankIcon(n, f)),
+        h('div', { class: 't' }, h('b', null, `${n}. ${G.rankName(n, f)}`), h('small', { style: { whiteSpace: 'normal' } }, `${fmt(x.at)} Honor · the title "${T ? G.titleName(T, G.S.player.name) : ''}"${look ? ` and the ${look.name} (a look for your back)` : ''}`)),
+        h('div', { class: 'r' }, got ? h('span', { style: { color: '#5fd46a' } }, '✓') : '')); });
+    showDialog([h('h3', null, 'Honor ranks'), h('p', null, `You have ${fmt(hon)} Honor. Honor comes from battlegrounds and from defeating enemy players in War Mode. It only ever goes up: ranks never drop and Honor is never spent.`),
+      h('div', { class: 'list' }, ...rows), h('p', { class: 'ai-note' }, 'Ranks give titles, an insignia by your name and looks. No power.'),
+      h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: closeDialog }, 'Got it'))], true);
+  }
   function openWarMode() {
     openSheet('warmode', 'War Mode', G.S.flags.warMode ? 'On · +10% experience and gold' : 'Off', (b, title) => {
       const P = G.S.player, pv = G.pvpStats();
       title.querySelector('small').textContent = G.S.flags.warMode ? 'On · +10% experience and gold' : 'Off';
-      b.append(h('div', { class: 'ai-box' }, h('div', { class: 'ai-row' }, h('span', null, 'Honor'), h('b', { class: 'tnum' }, String(pv.honor))),
+      b.append(honorRow(), h('div', { class: 'ai-box' }, h('div', { class: 'ai-row' }, h('span', null, 'Honor'), h('b', { class: 'tnum' }, String(pv.honor))),
           h('div', { class: 'ai-row' }, h('span', null, 'Enemy players defeated'), h('b', { class: 'tnum' }, String(pv.kills))),
           h('div', { class: 'ai-row' }, h('span', null, 'Died to enemy players'), h('b', { class: 'tnum' }, String(pv.deaths))),
           h('div', { class: 'ai-row' }, h('span', null, 'Escaped'), h('b', { class: 'tnum' }, String(pv.escapes)))),
@@ -3806,6 +3825,7 @@
     } else {
       const ofKind = all.filter((x) => actKind(x.A) === tab).sort(byLevel);
       const now = ofKind.filter(atLevel), up = ofKind.filter((x) => !doable(x)), low = ofKind.filter((x) => doable(x) && P.level > x.A.maxLvl);
+      if (tab === 'pvp') b.append(honorRow()); // your Honor rank and the next step (#57)
       b.append(h('div', { class: 'sec-h' }, 'At your level', h('small', null, `level ${P.level}`)));
       if (!now.length) b.append(h('p', { class: 'ai-note', style: { margin: 0 } }, up.length ? `None at your level. The next opens at level ${up[0].A.minLvl}.` : 'You have outlevelled all of these; they are below, synced to fit.'));
       for (const x of now) b.append(row(x, false));
