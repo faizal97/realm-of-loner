@@ -13,6 +13,6 @@ Fixes #
 
 **Checklist**
 - [ ] Old saves still load (migrate, never break)
-- [ ] No Warcraft or other IP names (`node tools/ipcheck.js`)
+- [ ] No names from other games (`node tools/ipcheck.js`)
 - [ ] No spoilers below their level (`node tools/lorekeeper.js`)
 - [ ] Only the files this change needs
