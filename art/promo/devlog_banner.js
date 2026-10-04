@@ -3,8 +3,9 @@
 // so the banner is 16:9 and keeps everything in the safe area (6% in from every edge); the title must read at 200 px wide.
 // The page is the live game (or --src <url>, e.g. a dist/ served on :8777), so ART and the fonts are the real ones.
 // Usage: node art/promo/devlog_banner.js <spec.json> <out.png> [--src <url>]
+// figures: [{ "hero": { "cls", "race", "gender" } or "mob": "<key>", "x": centre in %, "h": height in %, "bottom": %, "flip", "name", "color" }] (bots with nameplates)
 // spec: { "title": "v10.10", "line": "Rare hunts · Trophies · …", "scene": "<ART.scene key>", "hero": "<ART.mob key>",
-//         (line may be an array of lines) "icons": ["<ART.icon key>", …], "flip": false }   (keep every name in it spoiler-free: G.nameable(text, 1))
+//         (line may be an array of lines; titleSize in px, default 300) "icons": ["<ART.icon key>", …], "flip": false }   (keep every name in it spoiler-free: G.nameable(text, 1))
 const { spawn } = require('child_process');
 const fs = require('fs'), path = require('path'), os = require('os');
 const args = process.argv.slice(2);
@@ -33,7 +34,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const report = await js(`
       const S = ${JSON.stringify(spec)};
       const url = (s) => !s ? '' : /^data:|^https?:/.test(s) ? s : 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
-      const lines = [].concat(S.line || []), words = [S.title].concat(lines).join(' '); // line: a string, or an array of lines (each kept on one line)
+      const lines = [].concat(S.line || []), words = [S.title].concat(lines, (S.figures || []).map((f) => f.name || '')).join(' '); // line: a string, or an array of lines (each kept on one line)
       const spoiler = window.G && G.nameable && !G.nameable(words, 1);
       await document.fonts.ready;
       document.body.innerHTML = '';
@@ -44,10 +45,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
         <img src="\${url(ART.scene(S.scene))}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:saturate(1.05)">
         <div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(14,9,6,.94) 0%,rgba(14,9,6,.82) 38%,rgba(14,9,6,.25) 62%,rgba(14,9,6,0) 80%)"></div>
         <div style="position:absolute;inset:auto 0 0 0;height:22%;background:linear-gradient(0deg,rgba(14,9,6,.7),rgba(14,9,6,0))"></div>
+        \${(S.figures || []).map((f) => \`<div style="position:absolute;left:\${f.x}%;bottom:\${f.bottom || 8}%;height:\${f.h || 40}%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center">\${f.name ? \`<div style="font-weight:700;font-size:30px;color:\${f.color || '#7fd0ff'};text-shadow:0 2px 4px #000,0 0 2px #000;white-space:nowrap;margin-bottom:-4px">\${f.name}</div>\` : ''}<img src="\${url(f.hero ? ART.hero(f.hero) : ART.mob(f.mob))}" style="height:100%;\${f.flip ? 'transform:scaleX(-1);' : ''}filter:drop-shadow(0 10px 16px rgba(0,0,0,.55))"></div>\`).join('')}
         \${S.hero ? \`<img src="\${url(ART.mob(S.hero))}" style="position:absolute;right:7%;bottom:7%;height:78%;\${S.flip ? 'transform:scaleX(-1);' : ''}filter:drop-shadow(0 14px 22px rgba(0,0,0,.6))">\` : ''}
         <div style="position:absolute;left:7%;top:12%;width:52%">
           <div style="font-family:'Marcellus SC',serif;font-size:58px;letter-spacing:6px;color:#d9b45a;text-shadow:0 3px 8px #000">Realm of Loner</div>
-          <div style="font-family:'Marcellus SC',serif;font-size:300px;line-height:.95;color:#ffd77a;text-shadow:0 6px 0 #5a3a12,0 10px 26px #000;margin-top:6px">\${S.title}</div>
+          <div style="font-family:'Marcellus SC',serif;font-size:\${S.titleSize || 300}px;line-height:.95;color:#ffd77a;text-shadow:0 6px 0 #5a3a12,0 10px 26px #000;margin-top:6px">\${S.title}</div>
           <div style="font-size:60px;font-weight:700;line-height:1.15;margin-top:26px;color:#f6ead0;text-shadow:0 3px 10px #000">\${lines.map((l) => \`<div style="white-space:nowrap">\${l}</div>\`).join('')}</div>
           <div style="display:flex;gap:26px;margin-top:44px">\${(S.icons || []).map((k) => \`<div style="width:120px;height:120px;border:4px solid #b8913e;border-radius:14px;background:#1d140c;box-shadow:0 6px 16px rgba(0,0,0,.6);overflow:hidden"><img src="\${url(ART.icon(k))}" style="width:100%;height:100%"></div>\`).join('')}</div>
         </div>\`;
