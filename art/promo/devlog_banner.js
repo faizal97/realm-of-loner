@@ -3,6 +3,7 @@
 // so the banner is 16:9 and keeps everything in the safe area (6% in from every edge); the title must read at 200 px wide.
 // The page is the live game (or --src <url>, e.g. a dist/ served on :8777), so ART and the fonts are the real ones.
 // Usage: node art/promo/devlog_banner.js <spec.json> <out.png> [--src <url>]
+// shot: a phone screenshot (390x844 or @3x), relative to the spec file, shown in a phone frame on the right; tilt in degrees (default 4)
 // figures: [{ "hero": { "cls", "race", "gender" } or "mob": "<key>", "x": centre in %, "h": height in %, "bottom": %, "flip", "name", "color" }] (bots with nameplates)
 // spec: { "title": "v10.10", "line": "Rare hunts · Trophies · …", "scene": "<ART.scene key>", "hero": "<ART.mob key>",
 //         (line may be an array of lines; titleSize in px, default 300) "icons": ["<ART.icon key>", …], "flip": false }   (keep every name in it spoiler-free: G.nameable(text, 1))
@@ -12,6 +13,7 @@ const args = process.argv.slice(2);
 const specFile = args[0], OUT = args[1];
 if (!specFile || !OUT) { console.error('usage: node art/promo/devlog_banner.js <spec.json> <out.png> [--src <url>]'); process.exit(1); }
 const spec = JSON.parse(fs.readFileSync(specFile, 'utf8'));
+if (spec.shot) spec.shotUrl = 'data:image/png;base64,' + fs.readFileSync(path.resolve(path.dirname(specFile), spec.shot)).toString('base64'); // a phone screenshot beside the text
 const SRC = args.includes('--src') ? args[args.indexOf('--src') + 1] : 'https://faizal97.github.io/realm-of-loner/';
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const PORT = 9347, W = 1920, H = 1080;
@@ -45,6 +47,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
         <img src="\${url(ART.scene(S.scene))}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:saturate(1.05)">
         <div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(14,9,6,.94) 0%,rgba(14,9,6,.82) 38%,rgba(14,9,6,.25) 62%,rgba(14,9,6,0) 80%)"></div>
         <div style="position:absolute;inset:auto 0 0 0;height:22%;background:linear-gradient(0deg,rgba(14,9,6,.7),rgba(14,9,6,0))"></div>
+        \${S.shotUrl ? \`<div style="position:absolute;right:9%;top:6%;height:88%;aspect-ratio:390/844;transform:rotate(\${S.tilt == null ? 4 : S.tilt}deg);border:12px solid #0b0806;border-radius:44px;overflow:hidden;box-shadow:0 0 0 3px #b8913e,0 24px 48px rgba(0,0,0,.65);background:#000"><img src="\${S.shotUrl}" style="width:100%;height:100%;object-fit:cover;object-position:top"></div>\` : ''}
         \${(S.figures || []).map((f) => \`<div style="position:absolute;left:\${f.x}%;bottom:\${f.bottom || 8}%;height:\${f.h || 40}%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center">\${f.name ? \`<div style="font-weight:700;font-size:30px;color:\${f.color || '#7fd0ff'};text-shadow:0 2px 4px #000,0 0 2px #000;white-space:nowrap;margin-bottom:-4px">\${f.name}</div>\` : ''}<img src="\${url(f.hero ? ART.hero(f.hero) : ART.mob(f.mob))}" style="height:100%;\${f.flip ? 'transform:scaleX(-1);' : ''}filter:drop-shadow(0 10px 16px rgba(0,0,0,.55))"></div>\`).join('')}
         \${S.hero ? \`<img src="\${url(ART.mob(S.hero))}" style="position:absolute;right:7%;bottom:7%;height:78%;\${S.flip ? 'transform:scaleX(-1);' : ''}filter:drop-shadow(0 14px 22px rgba(0,0,0,.6))">\` : ''}
         <div style="position:absolute;left:7%;top:12%;width:52%">
