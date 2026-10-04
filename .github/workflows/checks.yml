@@ -1,0 +1,51 @@
+# Checks on every pull request and every push to main (#88). The fast job runs the data, lore, name and symbol checks and
+# the unit tests in a couple of minutes; the full gate build (python3 build.py with every sim, ~25 min) still runs locally
+# before every release, and comes here later as a second job.
+# Security: pull_request (never pull_request_target), read-only, no secrets, actions pinned to a commit, so a fork's
+# code can't reach anything.
+name: checks
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  fast:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - name: Game data
+        run: node tools/validate.js
+      - name: Lore (spoilers, names, typos) and its self-test
+        run: |
+          node tools/lorekeeper.js
+          node tools/lorekeeper.js --selftest
+      - name: No old-world names in player text
+        run: node tools/ipcheck.js --brief --enforce
+      - name: Every symbol can be drawn
+        run: node tools/symcheck.js
+      - name: Unit tests
+        run: node --test test/
+      - name: Discord announcer (dry runs only, nothing is posted)
+        run: node tools/announce_discord.test.js
+      # a reminder, never a failure: the pull request template asks for "Fixes #N" or what and why
+      - name: Pull request description
+        if: github.event_name == 'pull_request'
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          what=$(printf '%s' "$BODY" | sed -n '/What and why/,/Fixes #/p' | grep -v -e 'What and why' -e 'Fixes #' -e '^[[:space:]]*$' | head -1)
+          if ! printf '%s' "$BODY" | grep -Eiq '(fixes|closes|resolves) #[0-9]+' && [ -z "$what" ]; then
+            echo "::warning title=Pull request description::Please link the issue (Fixes #N) or say what and why in the description. Thanks!"
+          fi
