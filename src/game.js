@@ -1952,8 +1952,8 @@
   G.buyHeirloom = function (id) {
     const a = G.account(), H = D.HEIRLOOMS[id]; if (!H) return;
     const owned = a.heirlooms.includes(id);
+    if (G.bagsFull()) return toast('Inventory is full.'); // before any Marks are taken, so a full bag costs nothing (#87)
     if (!owned) { if (a.marks < H.cost) return toast(`You need ${H.cost} Mentor Marks.`); a.marks -= H.cost; a.heirlooms.push(id); G.saveAccount(a); }
-    if (G.G.bagsFull()) return toast('Inventory is full.');
     G.addItem(G.makeHeirloom(id, G.S.player.level), 1);
     loot(owned ? `You take a copy of ${B.link(H.name, 5)}.` : `You bought ${B.link(H.name, 5)} for ${H.cost} Mentor Marks. Every character can take a copy.`);
     emit('change');
