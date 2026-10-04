@@ -261,6 +261,9 @@
     els.nav = h('nav', { class: 'nav' });
     app.append(els.frames, els.scene, els.chat, els.panel, els.bottom, els.nav);
     renderNav();
+    // sheets end above the bottom tabs (#67), so Bags -> Hero is one tap: the tabs' height, kept as they resize
+    const navH = () => app.style.setProperty('--nav-h', els.nav.offsetHeight + 'px');
+    requestAnimationFrame(navH); if (!ui.navRO && window.ResizeObserver) { ui.navRO = new ResizeObserver(navH); } if (ui.navRO) { ui.navRO.disconnect(); ui.navRO.observe(els.nav); }
   }
 
   function renderAll() {
@@ -940,7 +943,7 @@
     taskCards(p);
     if (P.place === G.BRAWL.place) brawlCard(p);
     if (S.wparty) p.append(partyStrip());
-    const TABS = [['fight', 'Fight'], ['people', 'People'], ['quests', 'Quests'], ['travel', 'Travel']];
+    const TABS = [['fight', 'Fight'], ['people', 'People'], ['quests', 'Here'], ['travel', 'Travel']]; // 'Here': quests from the people here; the bottom tab 'Quests' is your log (#67)
     if (!ui.tab || (ui.tab === 'fight' && !mobs.length && ui.tabAuto !== P.place)) { ui.tab = mobs.length ? 'fight' : 'people'; ui.tabAuto = P.place; }
     // arriving where a request you accepted takes place: straight to the fight
     if (ui.tabAuto !== P.place && mobs.length && window.SOC && SOC.activeTasks().some((m) => m.act.place === P.place)) { ui.tab = 'fight'; ui.tabAuto = P.place; }
@@ -1467,6 +1470,8 @@
     if (els.abHandle) els.abHandle.remove();
     els.abHandle = multi ? h('button', { class: 'ab-handle', 'aria-label': collapsed ? `Show ${hidden} more abilities` : 'Fold the action bar', onclick: () => {
       try { localStorage.setItem('azsolo.barCollapsed', collapsed ? '0' : '1'); } catch (e) { }
+      // the first fold says what it keeps (#67): the first row, in the order Arrange sets
+      if (!collapsed) { let told = true; try { told = localStorage.getItem('azsolo.barFoldTold') === '1'; localStorage.setItem('azsolo.barFoldTold', '1'); } catch (e) { } if (!told) toast('The bar folds to its first row: the buttons you put first. Long-press a button, then Arrange, to choose them.', true); }
       renderBar();
     } }, h('span', { class: 'arr' }, collapsed ? '▴' : '▾'), collapsed ? h('small', { class: 'tnum' }, '+' + hidden) : null) : null;
     if (els.abHandle) els.bottom.append(els.abHandle);
@@ -1474,7 +1479,7 @@
     bar.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
     for (let i = 0; i < n; i++) {
       const id = slots[i];
-      if (!id) { bar.append(h('div', { class: 'ab empty' })); continue; }
+      if (!id) { const e = h('div', { class: 'ab empty' }); let t = null; e.addEventListener('pointerdown', () => { t = setTimeout(() => abilityTip(null), 450); }); e.addEventListener('pointerup', () => clearTimeout(t)); e.addEventListener('pointerleave', () => clearTimeout(t)); bar.append(e); continue; }
       const ab = D.ABILITIES[id];
       const btn = h('button', { class: 'ab', 'aria-label': ab.name }, img(abIcon(id)), h('div', { class: 'cd' }), h('div', { class: 'cdt tnum' }));
       if (id === 'eat' || id === 'drink' || id === 'potion') {
@@ -1548,16 +1553,18 @@
     const res = D.CLASSES[P.cls].resource;
     return { name: ab.name, cost: cost ? `${cost} ${res === 'mana' ? 'Mana' : res === 'rage' ? 'Rage' : 'Energy'}` : '', cast: ab.cast ? (ab.channel ? 'Channeled' : ab.cast + ' sec cast') : 'Instant', cd: ab.cd ? ab.cd + ' sec cooldown' : '', d };
   }
+  // a long press on a bar button: what it does, and Arrange (#67: the bar's own menu, not only Hero → Abilities)
+  const arrangeBtn = () => h('div', { class: 'btn-row', style: { marginTop: '8px' } }, h('button', { class: 'btn alt', onclick: () => { closeDialog(); openBarEditor(); } }, 'Arrange the action bar'));
   function abilityTip(id) {
-    if (id === 'attack') return toast('Attack: turns auto-attack on or off.', true);
-    if (id === 'potion') return toast('Potion: drinks your best healing potion (or a mana potion when your health is fine). Works in combat; 2 min cooldown.', true);
-    if (id === 'eat' || id === 'drink') return toast(id === 'eat' ? `Eat: restores health over ${G.EAT_SECS} sec.` : `Drink: restores mana over ${G.DRINK_SECS} sec.`, true);
+    const simple = { attack: 'Attack: turns auto-attack on or off.', potion: 'Potion: drinks your best healing potion (or a mana potion when your health is fine). Works in combat; 2 min cooldown.',
+      eat: `Eat: restores health over ${G.EAT_SECS} sec.`, drink: `Drink: restores mana over ${G.DRINK_SECS} sec.` };
+    if (!id || simple[id]) return showDialog([h('p', null, id ? simple[id] : 'An empty slot: a fight-only ability shows here in a fight, or nothing yet.'), arrangeBtn()], true);
     const t = abilityText(id);
-    showDialog(h('div', { class: 'tooltip' },
+    showDialog([h('div', { class: 'tooltip' },
       h('div', { class: 'nm', style: { color: '#fff' } }, t.name),
       h('div', { class: 'flex dim' }, h('span', null, t.cost), h('span', null, t.cd)),
       h('div', { class: 'dim' }, t.cast),
-      h('div', { style: { color: '#ffd100' } }, t.d)), true);
+      h('div', { style: { color: '#ffd100' } }, t.d)), arrangeBtn()], true);
   }
 
   // ============================================================ per-frame updates

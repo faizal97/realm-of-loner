@@ -855,3 +855,9 @@ svg.sym { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: 
 .roll.docked .bar { height: 4px; margin-top: 3px; }
 .roll.docked .roll-b { display: flex; gap: 4px; }
 .roll.docked .roll-b .btn { min-height: 34px; padding: 0 8px; font-size: 12.5px; }
+/* #67: sheets end above the bottom tabs (they stay tappable: Bags -> Hero in one tap); the bar's fold handle is a 44 px
+   touch target and its "+N" readable */
+.sheet-back { bottom: var(--nav-h, 52px); }
+.nav { position: relative; z-index: 56; }
+.ab-handle::before { inset: -14px -10px -12px; }
+.ab-handle small { font: 700 12px var(--body); color: #e8dcc2; }
