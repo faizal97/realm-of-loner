@@ -142,10 +142,19 @@ const CONTENT = []; const addC = (name, lvl, kind) => { if (!name || !(lvl > 0))
 for (const k in D.ACTIVITIES) addC(D.ACTIVITIES[k].name, D.ACTIVITIES[k].minLvl, 'activity');
 for (const k in D.PLACES) addC(D.PLACES[k].name, D.PLACES[k].lvl && D.PLACES[k].lvl[0], 'place');
 for (const k in D.MOBS) if (D.MOBS[k].named || D.MOBS[k].boss) addC(D.MOBS[k].name, D.MOBS[k].lvl && D.MOBS[k].lvl[0], 'creature');
-const C69 = { above: 0, checked: 0, reveal: 0 };
+const C69 = { above: 0, checked: 0, reveal: 0, issue: 0 };
+// the issue's own rule (#69: "a dungeon, raid, zone or rare"), built here from its wording: activities and their dungeons at
+// their minimum level (a "Wanted:" bounty under its creature's name), zones and regions at their lowest place, named
+// creatures at their level or their bounty's, whichever is lower
+const ISSUE = new Map(), putI = (n, l) => { if (!n || !(l > 0)) return; const k = n.toLowerCase().replace(/^the /, ''); if (k.length < 4) return; if (!ISSUE.has(k) || ISSUE.get(k) > l) ISSUE.set(k, l); };
+for (const A of Object.values(D.ACTIVITIES)) { putI(String(A.name).replace(/^(Wanted|World boss): /, ''), A.minLvl); if (A.dungeon && D.DUNGEONS[A.dungeon]) putI(D.DUNGEONS[A.dungeon].name, A.minLvl); }
+for (const M of Object.values(D.MOBS)) if ((M.named || M.boss) && M.lvl) putI(M.name, M.lvl[0]);
+{ const zm = {}, rm = {}; for (const P of Object.values(D.PLACES)) { const l = P.lvl ? P.lvl[0] : 1; if (P.zone) zm[P.zone] = Math.min(zm[P.zone] || 99, l); if (P.region) rm[P.region] = Math.min(rm[P.region] || 99, l); } for (const z in zm) putI(z, zm[z]); for (const r in D.REGIONS || {}) if (rm[r]) putI(D.REGIONS[r].name, rm[r]); }
+const ISSUE_RE = [...ISSUE.entries()].map(([k, l]) => ({ re: new RegExp('\\b' + esc(k) + '\\b'), l, k }));
 for (const l of lines) { const s = l.text.toLowerCase();
-  if (l.bot && l.bot.level != null) { C69.checked++; const hit = CONTENT.find((c) => c.lvl > l.bot.level + 3 && c.re.test(s)); if (hit) { C69.above++; addEx('above69', Object.assign({}, l, { text: l.text + `  [${hit.kind} ${hit.name} level ${hit.lvl}]` })); } }
+  if (l.bot && l.bot.level != null) { C69.checked++; const ih = ISSUE_RE.find((x) => x.l > l.bot.level + 3 && x.re.test(s)); if (ih) { C69.issue++; addEx('issue69', Object.assign({}, l, { text: l.text + `  [${ih.k} level ${ih.l}]` })); } const hit = CONTENT.find((c) => c.lvl > l.bot.level + 3 && c.re.test(s)); if (hit) { C69.above++; const game = B.contentAbove ? B.contentAbove(l.text, l.bot.level) : undefined; if (game) C69.gameAgrees = (C69.gameAgrees || 0) + 1; C69.kinds = C69.kinds || {}; const kk = hit.kind + (game ? ' (game check agrees)' : ' (game check passes it)') + ' via ' + l.ch; C69.kinds[kk] = (C69.kinds[kk] || 0) + 1; addEx('above69', Object.assign({}, l, { text: l.text + `  [${hit.kind} ${hit.name} level ${hit.lvl}; game check: ${game ? JSON.stringify(game).slice(0, 60) : 'passes'}]` })); } }
   const r = REVEALS.find((x) => LV < x.lvl && x.re.test(l.text)); if (r) { C69.reveal++; addEx('reveal', Object.assign({}, l, { text: l.text + `  [Reveal ${r.term} at ${r.lvl}, reader ${LV}]` })); } }
-console.log(`\n== #69 at reader level ${LV}: lines naming content above the speaker's level + 3: ${C69.above} of ${C69.checked} · lines with a Reveals term above the reader's level: ${C69.reveal} of ${lines.length} (bible's Reveals table, ${REVEALS.length} terms)`);
+console.log(`\n== #69 at reader level ${LV}: by the issue's rule (dungeons, raids, zones, regions, named creatures): ${C69.issue} of ${C69.checked} · stricter (every place, a creature at its own level): ${C69.above} · lines with a Reveals term above the reader's level: ${C69.reveal} of ${lines.length} (bible's Reveals table, ${REVEALS.length} terms)`);
+if (C69.kinds) console.log('  #69 flagged lines by kind: ' + Object.entries(C69.kinds).sort((x, y) => y[1] - x[1]).map(([k, n]) => `${k} ${n}`).join(' · '));
 console.log('\n== examples (up to 4 each)'); for (const k of Object.keys(ex)) console.log(`${k}: ` + ex[k].slice(0, 4).join(' ‖ '));
 if (process.env.JSON) console.log('JSON ' + JSON.stringify({ ID, thread, contra, W, MEM }));
