@@ -1,8 +1,12 @@
 // World bosses (v10.7, fast, in the build): one a week from the date (none, one, many new handled like the featured
 // raid), only that one is out, loot and Marks once a week, its mechanics shown untagged; and a fight a level-60 group
 // can win. node sim/worldboss.js
-// seeded (as sim/brawl.js): the fight check judges one fight, so it passes or fails on the code, not on luck
-{ let s = 0x5eed1e55 >>> 0; Math.random = () => { s = (s + 0x6D2B79F5) >>> 0; let x = s; x = Math.imul(x ^ (x >>> 15), x | 1); x ^= x + Math.imul(x ^ (x >>> 7), x | 61); return ((x ^ (x >>> 14)) >>> 0) / 4294967296; }; }
+// seeded (as sim/brawl.js), and the fight check in two stages (game designer, #69): the build's seed first, and only if
+// that fight is lost (more than 2 wipes), the same fight on SEEDS other fixed seeds, passing when at least PASS_RATE of them
+// win within 2 wipes. One seed judged alone failed whenever unrelated code (chat) moved the shared dice onto a bad fight:
+// the same code lost on about 1 seed in 6 (52 seeds, #69). SEED=n runs another fixed seed (unset: the build's).
+const SEED = process.env.SEED ? +process.env.SEED : 0, SEEDS = 20, PASS_RATE = 0.8;
+{ let s = (SEED ? (0x5eed1e55 ^ Math.imul(SEED, 0x9E3779B1)) : 0x5eed1e55) >>> 0; Math.random = () => { s = (s + 0x6D2B79F5) >>> 0; let x = s; x = Math.imul(x ^ (x >>> 15), x | 1); x ^= x + Math.imul(x ^ (x >>> 7), x | 61); return ((x ^ (x >>> 14)) >>> 0) / 4294967296; }; }
 globalThis.localStorage = (() => { const m = new Map(); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k) }; })();
 require('../src/data.js'); require('../src/engine.js'); require('../src/bots.js'); require('../src/game.js'); require('../src/trials.js');
 const { G, D, E } = globalThis;
@@ -42,7 +46,19 @@ for (const act of acts) {
     const r = { done: S.run && S.run.phase === 'done', wipes: S.run ? S.run.wipes : 99, rolls: (S.run && S.run.rolls || []).length, bossRolls: (S.run && S.run.rolls || []).filter((x) => (D.MOBS[A.boss].loot || []).includes(x.item && x.item.id)).length }; S.run = null; S.group = null; return r; };
   const m0 = G.account().marks, r1 = fight(), m1 = G.account().marks;
   console.log(`${act}: first fight done ${r1.done}, wipes ${r1.wipes}, rolls ${r1.rolls} (boss loot ${r1.bossRolls})`);
-  check(r1.done && r1.wipes <= 2, `a level-60 group beats ${A.name} (${r1.wipes} wipes)`);
+  const won = (r) => r.done && r.wipes <= 2;
+  if (won(r1) || SEED) check(won(r1), `a level-60 group beats ${A.name} (${r1.wipes} wipes)`);
+  else {
+    // stage 2: each seed in its own process (a fresh world), read from its first-fight line
+    const { execFileSync } = require('child_process'), wins = [];
+    for (let n = 1; n <= SEEDS; n++) {
+      let out = ''; try { out = execFileSync('node', [__filename], { env: Object.assign({}, process.env, { SEED: String(n) }), encoding: 'utf8' }); } catch (e) { out = String(e.stdout || ''); }
+      const m = out.match(/first fight done (true|false), wipes (\d+)/); wins.push(!!m && won({ done: m[1] === 'true', wipes: +m[2] }));
+    }
+    const k = wins.filter(Boolean).length, rate = k / SEEDS;
+    console.log(`${act}: the build's seed lost (${r1.wipes} wipes), so ${SEEDS} seeds: ${k}/${SEEDS} (${Math.round(rate * 100)}%) win within 2 wipes, ${rate >= PASS_RATE ? 'pass' : 'FAIL'} at ${Math.round(PASS_RATE * 100)}%`);
+    check(rate >= PASS_RATE, `a level-60 group beats ${A.name}: ${k}/${SEEDS} seeds within 2 wipes, under ${Math.round(PASS_RATE * 100)}%`);
+  }
   check(m1 - m0 === G.WB_MARKS && G.worldBossLooted(act) && r1.bossRolls >= 2, `the first kill this week drops loot and ${G.WB_MARKS} Marks`);
   check(!!(G.account().trophies || {})[A.boss] && G.trophyList().some((x) => x.key === A.boss && x.boss), `the kill takes ${D.MOBS[A.boss].name}'s trophy (#44)`);
   // the second kill: none of the boss's loot and no Marks (a trash mob on the way may still drop something of its own)
