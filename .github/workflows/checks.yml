@@ -36,7 +36,7 @@ jobs:
       - name: Every symbol can be drawn
         run: node tools/symcheck.js
       - name: Unit tests
-        run: node --test test/
+        run: node --test test/*.test.js
       - name: Discord announcer (dry runs only, nothing is posted)
         run: node tools/announce_discord.test.js
       # a reminder, never a failure: the pull request template asks for "Fixes #N" or what and why
