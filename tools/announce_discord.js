@@ -20,6 +20,8 @@
 //                  after a full release's devlog is live: one short message to #patch-notes, "Devlog: <title>" and the
 //                  link, that can never ping anyone (Faizal: "in every release please with no mention"). Posted once per
 //                  tag (its own guard, apart from the notes); the title is read from the page unless --title gives it
+//        node tools/announce_discord.js <tag> --web-only [--title "…"]  a web-only patch (a tag and notes/<tag>.md, no release):
+//                  the post says it's live in the browser and comes to Android with the next update (Faizal, 2026-10-04)
 //        node tools/announce_discord.js [tag] --again  post a tag that was already posted
 'use strict';
 const fs = require('fs');
@@ -64,8 +66,15 @@ if (DEVLOG) {
   return;
 }
 let rel;
+const WEB_ONLY = flag('--web-only');
 if (NOTES_FILE && !flag('--dry')) die('--notes is for dry runs only');
-try { if (NOTES_FILE) throw new Error('notes file'); rel = JSON.parse(execFileSync('gh', ['release', 'view', ...(tag ? [tag] : []), '--json', 'tagName,name,body,url,isPrerelease,assets'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })); }
+if (WEB_ONLY) { // a web-only patch (Faizal, 2026-10-04): a tag and its notes, no GitHub release, so the Android updater stays quiet
+  if (!tag || /-beta\./.test(tag)) die('--web-only needs a release tag, e.g. node tools/announce_discord.js v10.10.2 --web-only');
+  const nf = NOTES_FILE || path.join(__dirname, '..', 'notes', tag + '.md');
+  if (!fs.existsSync(nf)) die(`no ${nf}`);
+  if (!NOTES_FILE) { try { execFileSync('git', ['rev-parse', '-q', '--verify', `refs/tags/${tag}`], { stdio: 'ignore' }); } catch (e) { if (!flag('--dry')) die(`no git tag ${tag}: tag and push it first`); } }
+  rel = { tagName: tag, name: DEVLOG_TITLE || tag, body: fs.readFileSync(nf, 'utf8'), url: '', isPrerelease: false, assets: [], webOnly: true }; // --title: the post's title (no release to read it from)
+} else try { if (NOTES_FILE) throw new Error('notes file'); rel = JSON.parse(execFileSync('gh', ['release', 'view', ...(tag ? [tag] : []), '--json', 'tagName,name,body,url,isPrerelease,assets'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })); }
 catch (e) { // a dry run before the release exists: the notes file the release will use
   const nf = NOTES_FILE || (tag && path.join(__dirname, '..', 'notes', tag + '.md'));
   if (!flag('--dry') || !nf || !fs.existsSync(nf)) die(`no GitHub release ${tag || '(latest)'}${flag('--dry') ? ` and no ${nf}` : ''}`);
@@ -83,8 +92,9 @@ const apk = rel.assets.find((a) => a.name.endsWith('.apk'));
 const BETA_PAGE = 'https://faizal97.github.io/realm-of-loner/beta/';
 const links = rel.isPrerelease
   ? `**Android:** turn on Settings → Beta updates.\n**Browser:** [play the beta](${BETA_PAGE}). Characters from the itch.io browser version don't carry over to this page.`
+  : rel.webOnly ? `[Play on itch.io](${ITCH}) in your browser: it's live there now. The Android app gets it with the next update.`
   : `[Play on itch.io](${ITCH}): in your browser or on Android`;
-if (!apk) console.warn(`warning: ${rel.tagName} has no APK attached (the in-app updater will not see it either)`);
+if (!apk && !rel.webOnly) console.warn(`warning: ${rel.tagName} has no APK attached (the in-app updater will not see it either)`);
 
 // the notes in parts that each fit one embed: split before a section heading (a line that is only **Heading** or a #
 // heading), never inside a line; as many parts as the notes need, the links under the last. A section too long for one
@@ -122,7 +132,7 @@ const payloads = parts.map((text, i) => ({
     url: rel.isPrerelease ? BETA_PAGE : ITCH,
     description: (i > 0 ? '*(continued)*\n' : '') + text + (i === N - 1 ? foot : '\n\n*(continued below)*'),
     color: rel.isPrerelease ? 0x6c8ebf : 0xc9a44c,
-    footer: { text: rel.isPrerelease ? 'Beta builds: Settings → Beta updates on Android, or the /beta/ page in a browser' : 'Update in game from Settings, or get it on itch.io' },
+    footer: { text: rel.isPrerelease ? 'Beta builds: Settings → Beta updates on Android, or the /beta/ page in a browser' : rel.webOnly ? 'In your browser now; the Android app gets it with the next update' : 'Update in game from Settings, or get it on itch.io' },
   }],
 }));
 const msgLen = (p) => p.content.length + p.embeds.reduce((a, e) => a + e.title.length + e.description.length + e.footer.text.length, 0);

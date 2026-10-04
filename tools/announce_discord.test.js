@@ -60,5 +60,13 @@ for (const [name, tag, log, want, why] of [
   ['a beta, an old log of tags only', 'v10.10.1-beta.1', ['v10.10.0-beta.8', 'v10.10.0'], 2, /pings the Beta Testers role/],
   ['a feature update after a beta ping', 'v10.11.0', [`ping beta ${ago(1)} v10.11.0-beta.3`], 2, /pings the Patch Notes role/],
 ]) { const r = pings(tag, log); console.log(`${name} (${tag}): ${r.why}`); ok(r.roles === want && why.test(r.why), `${name}: ${r.roles / 2} ping(s), "${r.why}"`); }
+// 5. a web-only patch (Faizal, 2026-10-04): from a tag and its notes with no GitHub release; no ping, and it says where it's live
+{ const f = path.join(os.tmpdir(), `announce-web-${process.pid}.md`), log = f + '.log'; fs.writeFileSync(f, '**Fixes**\n- One fix.'); fs.writeFileSync(log, '');
+  const out = execFileSync('node', [TOOL, 'v10.10.2', '--web-only', '--dry', '--notes', f], { encoding: 'utf8', env: Object.assign({}, process.env, { ANNOUNCE_LOG: log }) }); fs.unlinkSync(f); fs.unlinkSync(log);
+  const p = JSON.parse(out.slice(out.indexOf('{'))), e = p.embeds[0];
+  console.log(`web-only patch (v10.10.2): ${(out.match(/^\((no ping[^\n]*)\)$/m) || [])[1]}; "${e.description.split('\n').pop().slice(0, 70)}…"`);
+  ok(/no ping: patch release/.test(out) && !p.allowed_mentions.roles.length && !/<@&/.test(p.content), 'web-only: no ping');
+  ok(/live there now/.test(e.description) && /Android app gets it with the next update/.test(e.description) && /next update/.test(e.footer.text) && !/Update in game/.test(e.footer.text), 'web-only: says it is live in the browser and comes to Android with the next update');
+  ok(!/no APK/.test(out), 'web-only: no missing-APK warning'); }
 console.log(bad ? `${bad} of ${n} checks FAIL` : `announce split: ${n}/${n} checks pass`);
 process.exit(bad ? 1 : 0);
