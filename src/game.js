@@ -2137,7 +2137,8 @@
     const role = pick(G.roles());
     const firstTimers = Math.random() < 0.6;
     const myF = (D.RACES[P.race] || {}).faction || 'alliance';
-    const poster = pick(S.bots.filter((b) => B.factionOf(b) === myF)) || S.bots[0];
+    const mine = S.bots.filter((b) => B.factionOf(b) === myF), fit = mine.filter((b) => b.level >= A.minLvl - 3); // a poster of the run's level (#69: a bot names content at its own level)
+    const poster = pick(fit.length ? fit : mine) || S.bots[0];
     const req = { id: 'hw' + t, act, role, startIdx: stuck, firstTimers, poster: poster.id, posterName: poster.name, expires: t + HW_LIFE };
     S.helpWanted.push(req);
     const what = stuck ? `stuck on ${Dg.pulls[stuck].label}` : 'full run';

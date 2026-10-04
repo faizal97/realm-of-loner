@@ -102,6 +102,22 @@ for (const id of Object.keys(D.ITEMS).filter((i) => D.ITEMS[i].effect)) for (con
   }
   G.canReach = reach; G.worldBoss = wb;
 }
+// #69: generated chat, as each level's reader sees it: a character of each faction at level 1 and just below each
+// Reveals level, on a server 20 days on, an hour of General, LFG, say, guild, whispers and the social requests (every
+// line a bot sends goes through B.post's check). Bot names are random, so these lines are checked for spoilers only
+{
+  require(path.join(ROOT, 'src/social.js'));
+  const RealNow = Date.now; let clock = RealNow();
+  Date.now = () => clock;
+  try {
+    for (const race of ['human', 'orc']) for (const L of atLevels) {
+      G.newGame({ name: 'Sweep', cls: 'mage', race }); const S = G.S; S.player.level = L; globalThis.B.advance(S, 20 * 864e5);
+      S.chat = []; const t0 = clock;
+      for (let sec = 0; sec < 3600; sec += 2) { clock = t0 + sec * 1000; globalThis.B.chatTick(S, clock); if (globalThis.SOC && SOC.tick) try { SOC.tick(); } catch (e) { } }
+      for (const m of S.chat) if (m.from && m.ch !== 'system') add(`chat ${m.ch} (${race}, level ${L})`, L, m.text, { spoilerOnly: true });
+    }
+  } finally { Date.now = RealNow; }
+}
 // the game's copy of the Reveals table (src/data/reveals.js, which G.nameable reads) must be the bible's
 const revealsDrift = (game) => JSON.stringify(game.map(([re, l]) => [re, +l])) !== JSON.stringify(REVEALS.map((r) => [r.re.source, r.lvl]));
 
@@ -116,6 +132,7 @@ if (SELF) {
   add('selftest hood', 17, 'The stranger, Lyveus, wants a word.');
   // a plaque worded without the level check (as if taken), and a game copy of Reveals that lost a row
   const wi = G.trophyList().find((x) => x.key === 'warden_ithrael'); if (wi) add('selftest trophy', 1, plaqueText(wi, 1, true), { title: true });
+  add('selftest chat', 10, 'anyone for The Tidecrown Citadel? lf healer', { spoilerOnly: true }); // a bot line the chat check would have stopped
   add('selftest codex', 1, G.effectSources('brittle_crown_signet', 60).join('. '), { title: true }); // a source worded for level 60, read at 1
   { const t = D.TITLES.find((x) => x.id === 'tidecrown'); if (t) { const lb = G.titleLabel(t, 1, true, 'Sweep'); add('selftest titles', 1, `${lb.name}. ${lb.how}`, { title: true }); } } // as if earned
 }
@@ -130,6 +147,7 @@ const allowed = (r, src) => r.allow.some((a) => src === a || src.startsWith(a + 
 for (const t of texts) {
   // spoilers
   for (const r of REVEALS) if (t.lvl < r.lvl && r.re.test(t.text) && !allowed(r, t.src)) problems.push(`SPOILER  ${t.src} (level ${t.lvl}) names "${t.text.match(r.re)[0]}" before level ${r.lvl}: ${r.what}`);
+  if (t.spoilerOnly) continue; // generated chat: bot names are random, so only the spoiler check applies
   // faction slips: a quest that sends you into the other faction's town
   if (t.quest && t.faction) {
     const re = /\b(?:[Gg]o|[Hh]ead|[Rr]eturn|[Rr]eport|[Tt]ravel|[Tt]ake (?:it|this|them|these)|[Bb]ring (?:it|this|them|these)|[Dd]eliver (?:it|this|them|these))(?: back)? to ([A-Z][\w']*(?: [A-Z][\w']*)*)/g;
@@ -171,7 +189,7 @@ for (const [w, srcs] of unknown) {
 
 if (SELF) {
   const all = problems.concat(warnings).join('\n');
-  const want = [['spoiler', /SPOILER  selftest spoiler /], ['trophy plaque', /SPOILER  selftest trophy /], ['codex source', /SPOILER  selftest codex /], ['titles screen', /SPOILER  selftest titles /], ['reveals copy', /REVEALS  src\/data\/reveals\.js differs/], ['hale', /SPOILER  selftest spoiler2/], ['faction', /FACTION  selftest/], ['typo Blackwell', /"Blackwel".*did you mean "Blackwell"/], ['typo Carrow', /"Carow".*did you mean "Carrow"/], ['unknown name', /"Zorbulax"/], ['hooded stranger', /SPOILER  selftest hood/]];
+  const want = [['spoiler', /SPOILER  selftest spoiler /], ['trophy plaque', /SPOILER  selftest trophy /], ['codex source', /SPOILER  selftest codex /], ['chat line', /SPOILER  selftest chat /], ['titles screen', /SPOILER  selftest titles /], ['reveals copy', /REVEALS  src\/data\/reveals\.js differs/], ['hale', /SPOILER  selftest spoiler2/], ['faction', /FACTION  selftest/], ['typo Blackwell', /"Blackwel".*did you mean "Blackwell"/], ['typo Carrow', /"Carow".*did you mean "Carrow"/], ['unknown name', /"Zorbulax"/], ['hooded stranger', /SPOILER  selftest hood/]];
   let bad = 0; for (const [k, re] of want) { const ok = re.test(all); if (!ok) bad++; console.log(`${ok ? 'caught' : 'MISSED'}  ${k}`); }
   process.exit(bad ? 1 : 0);
 }

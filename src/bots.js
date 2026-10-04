@@ -183,7 +183,8 @@
     // keep the population bounded
     if (S.bots.length > 420) S.bots.splice(0, S.bots.length - 420);
     S.lastSim += ms;
-    return news;
+    const G1 = root.G; // and nothing the reader's level may not read (#69, the #54 rule)
+    return G1 && G1.nameable && S.player ? news.filter((n) => G1.nameable(n.text, S.player.level)) : news;
   };
 
   // the news follows the player's level, not the server's (issue #18, the lore bible's Reveals): a dungeon or raid is named
@@ -392,8 +393,49 @@
     };
   }
 
-  // Emit one chat message into S.chat. from: bot | null (system)
+  // #69: what a bot's line may name. A bot names content at its own level (never a dungeon, raid, zone or named creature
+  // whose level is above its own + 3), and nothing the reading character's level may not read (G.nameable, the #54 rule).
+  // The index: every dungeon and raid (its group-finder level), named creature and boss (its level) and zone (its lowest
+  // place), built once, matched as whole words in any case (bots write sloppily).
+  let contentIdx = null;
+  function contentLevels() {
+    if (contentIdx) return contentIdx;
+    const lv = new Map(), put = (n, l) => { if (!n || n.length < 4 || !(l > 0)) return; const k = n.toLowerCase(); if (!lv.has(k) || lv.get(k) > l) lv.set(k, l); };
+    for (const A of Object.values(D.ACTIVITIES)) { put(String(A.name).replace(/^(Wanted|World boss): /, ''), A.minLvl); const Dg = A.dungeon && D.DUNGEONS[A.dungeon]; if (Dg) put(Dg.name, A.minLvl); }
+    for (const M of Object.values(D.MOBS)) if ((M.named || M.boss) && M.lvl) put(M.name, M.lvl[0]);
+    const zoneMin = {}, regMin = {};
+    for (const P of Object.values(D.PLACES)) { const l = P.lvl ? P.lvl[0] : 1; if (P.zone) zoneMin[P.zone] = Math.min(zoneMin[P.zone] || 99, l); if (P.region) regMin[P.region] = Math.min(regMin[P.region] || 99, l); }
+    for (const z in zoneMin) put(z, zoneMin[z]);
+    for (const r in D.REGIONS || {}) if (regMin[r]) put(D.REGIONS[r].name, regMin[r]);
+    const alts = [...lv.keys()].sort((a, b) => b.length - a.length).map((x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    return (contentIdx = { lv, re: alts.length ? new RegExp('(^|[^a-z0-9])(' + alts.join('|') + ')(?![a-z0-9])', 'gi') : null });
+  }
+  B.contentAbove = function (text, lvl) { // the first content named in the text whose level is above lvl + 3, or null
+    const C = contentLevels(); if (!C.re || lvl == null) return null;
+    C.re.lastIndex = 0; let m;
+    while ((m = C.re.exec(String(text)))) { if (C.lv.get(m[2].toLowerCase()) > lvl + 3) return m[2]; if (m[0].length === 0) C.re.lastIndex++; }
+    return null;
+  };
+  B.lineFits = function (S, text, from) {
+    const G1 = root.G;
+    if (G1 && G1.nameable && S.player && !G1.nameable(String(text), S.player.level)) return false;
+    const b = from && (from.level != null ? from : S.bots && S.bots.find((x) => x.id === from.id));
+    return !(b && b.level != null && B.contentAbove(text, b.level));
+  };
+
+  // the content a speaker names (#69): a dungeon or raid near ITS level (raids only at their level), its last boss, and
+  // its level band; what the player's level may read is checked again on the finished line (B.lineFits)
+  function botContent(S, b) {
+    const L = (b && b.level) || S.player.level, G0 = root.G;
+    const acts = Object.keys(D.ACTIVITIES).filter((k) => { const A = D.ACTIVITIES[k]; return !A.needQuest && !A.worldBoss && A.minLvl <= L + 3 && A.maxLvl >= L - 3 && !(A.size >= 10 && L < A.minLvl) && !(G0 && G0.activityBlock && G0.activityBlock(k) === 'hidden'); });
+    if (!acts.length) return { band: L < 15 ? 0 : L < 30 ? 1 : L < 45 ? 2 : 3 };
+    const A = D.ACTIVITIES[pick(acts)], Dg = A.dungeon && D.DUNGEONS[A.dungeon], lb = Dg && Dg.pulls.filter((p) => p.boss).pop(), bk = A.boss || (lb && lb.mobs[0]);
+    return { act: A.name, boss: bk && D.MOBS[bk] ? D.MOBS[bk].name : 'the last boss', band: L < 15 ? 0 : L < 30 ? 1 : L < 45 ? 2 : 3 };
+  }
+
+  // Emit one chat message into S.chat. from: bot | null (system). A bot's line that doesn't fit (#69) is not sent: null
   B.post = function (S, ch, from, text) {
+    if (from && !from.legend && !(S.player && from.name === S.player.name) && !B.lineFits(S, text, from)) return null;
     const m = { id: (S.chatSeq = (S.chatSeq || 0) + 1), t: Date.now(), ch, from: from ? from.name : null, cls: from ? from.cls : null, fromId: from ? from.id : null, text };
     if (from && from.legend) m.legend = true; // a Legend speaks in their own colour
     S.chat.push(m);
@@ -414,6 +456,10 @@
     const onl = () => { for (let i = 0; i < 12; i++) { const b = pick(mineBots); if (B.isOnline(b, date)) return b; } return pick(mineBots.length ? mineBots : S.bots); };
     c.horde = myF === 'horde';
     const due = (k, a, b) => { if (!T[k]) T[k] = now + (a + Math.random() * (b - a)) * 1000 / busy; if (now >= T[k]) { T[k] = 0; return true; } return false; };
+    // #69: a line names content at the speaker's level (its dungeon or raid, its boss, its level band), and one that
+    // still doesn't fit (B.lineFits) is picked again; after six tries nothing is said
+    const speak = (b) => { c.me = b; Object.assign(c, botContent(S, b)); return c; };
+    const gen = (b, make) => { for (let i = 0; i < 6; i++) { const t = make(); if (B.lineFits(S, t, b)) return t; } return null; };
 
     if (S.pending && S.pending.length) {
       const ready = S.pending.filter((p) => p.at <= now);
@@ -427,10 +473,10 @@
       }
     }
     if (due('general', 9, 22)) {
-      const b = onl(); c.me = b;
+      const b = onl(); speak(b);
       const pool = GENERAL_ANY.concat(c.horde ? GENERAL_HORDE : GENERAL_ALLI, GENERAL_BAND[c.band], GENERAL_BAND[c.band]);
-      const text = sloppy(b, pick(pool)(c));
-      B.post(S, 'general', b, text);
+      const text = gen(b, () => sloppy(b, pick(pool)(c))) || '';
+      if (text) B.post(S, 'general', b, text);
       // sometimes someone answers
       for (const A of ANSWERS) {
         const mm = lower(text).match(A.q);
@@ -443,24 +489,24 @@
       }
     }
     if (S.player.level >= 8 && due('lfg', 40, 90)) {
-      const b = onl(); c.me = b;
-      if (b.level >= 6) {
-        const text = sloppy(b, pick(LFG_CHATTER)(c));
+      const b = onl(); speak(b);
+      const text = b.level >= 6 ? gen(b, () => sloppy(b, pick(LFG_CHATTER)(c))) : null;
+      if (text) {
         B.post(S, 'lfg', b, text);
         for (const A of ANSWERS) { const mm = lower(text).match(A.q); if (mm && chance(0.6)) { const r = onl(); S.pending = S.pending || []; S.pending.push({ at: now + 3000 + Math.random() * 5000, bot: r.id, ch: 'lfg', text: sloppy(r, pick(A.a(mm))) }); break; } }
       }
     }
     if (due('say', 16, 38)) {
       const near = B.onlineIn(S, S.player.place, date).filter((b) => B.factionOf(b) === B.factionOf(S.player));
-      if (near.length && !D.PLACES[S.player.place].safe || near.length > 2) { const b = pick(near.length ? near : [onl()]); c.me = b; B.post(S, 'say', b, sloppy(b, pick(SAY_NEAR)(c))); }
+      if (near.length && !D.PLACES[S.player.place].safe || near.length > 2) { const b = pick(near.length ? near : [onl()]); speak(b); const t = gen(b, () => sloppy(b, pick(SAY_NEAR)(c))); if (t) B.post(S, 'say', b, t); }
     }
     if (S.player.guild != null && S.player.guild >= 0 && due('guild', 30, 70)) {
       const mates = S.bots.filter((b) => b.guild === S.player.guild && B.isOnline(b, date));
-      if (mates.length) { const b = pick(mates); c.me = b; B.post(S, 'guild', b, sloppy(b, pick(GUILD)(c))); }
+      if (mates.length) { const b = pick(mates); speak(b); const t = gen(b, () => sloppy(b, pick(GUILD)(c))); if (t) B.post(S, 'guild', b, t); }
     }
     if (due('whisper', 200, 480)) {
-      const b = onl(); c.me = b;
-      B.post(S, 'whisper', b, pick(WHISPER)(c));
+      const b = onl(); speak(b);
+      const t = gen(b, () => pick(WHISPER)(c)); if (t) B.post(S, 'whisper', b, t);
     }
   };
 
