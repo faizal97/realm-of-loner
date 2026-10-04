@@ -874,3 +874,7 @@ svg.sym { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: 
 .scene .run-menu[hidden] { display: none; }
 .scene .speed-chip:not([hidden]) ~ .run-menu { right: 54px; }
 .scene .run-menu.dot::after { content: ''; position: absolute; top: -2px; right: -2px; width: 9px; height: 9px; border-radius: 50%; background: #ffcc33; box-shadow: 0 0 0 1px #000; }
+/* #67 fix: the scene's end-of-run, wipe and death messages are only messages (taps pass through), and the corner controls
+   (the run menu, the battle speed) sit above them, so the menu opens Bags on the results screen too */
+.overlay-msg { pointer-events: none; }
+.scene .run-menu, .scene .speed-chip { z-index: 210; }
