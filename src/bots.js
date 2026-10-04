@@ -400,7 +400,9 @@
   let contentIdx = null;
   function contentLevels() {
     if (contentIdx) return contentIdx;
-    const lv = new Map(), put = (n, l) => { if (!n || n.length < 4 || !(l > 0)) return; const k = n.toLowerCase(); if (!lv.has(k) || lv.get(k) > l) lv.set(k, l); };
+    // a name is also found without its leading article ("scrublands" for The Scrublands); case, a plural s and a
+    // possessive 's are handled by the pattern below
+    const lv = new Map(), put = (n, l) => { if (!n || n.length < 4 || !(l > 0)) return; const k = n.toLowerCase(); if (!lv.has(k) || lv.get(k) > l) lv.set(k, l); const bare = n.replace(/^(the|an?) /i, ''); if (bare !== n) put(bare, l); };
     for (const A of Object.values(D.ACTIVITIES)) { put(String(A.name).replace(/^(Wanted|World boss): /, ''), A.minLvl); const Dg = A.dungeon && D.DUNGEONS[A.dungeon]; if (Dg) put(Dg.name, A.minLvl); }
     for (const M of Object.values(D.MOBS)) if ((M.named || M.boss) && M.lvl) put(M.name, M.lvl[0]);
     const zoneMin = {}, regMin = {};
@@ -408,7 +410,7 @@
     for (const z in zoneMin) put(z, zoneMin[z]);
     for (const r in D.REGIONS || {}) if (regMin[r]) put(D.REGIONS[r].name, regMin[r]);
     const alts = [...lv.keys()].sort((a, b) => b.length - a.length).map((x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-    return (contentIdx = { lv, re: alts.length ? new RegExp('(^|[^a-z0-9])(' + alts.join('|') + ')(?![a-z0-9])', 'gi') : null });
+    return (contentIdx = { lv, re: alts.length ? new RegExp('(^|[^a-z0-9])(' + alts.join('|') + ')s?(?![a-z0-9])', 'gi') : null });
   }
   B.contentAbove = function (text, lvl) { // the first content named in the text whose level is above lvl + 3, or null
     const C = contentLevels(); if (!C.re || lvl == null) return null;

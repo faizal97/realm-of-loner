@@ -99,5 +99,11 @@ SOC.leaveGuild(); if (P.guild !== -1) fail('leave guild');
   S2.run = null; for (let i = 0; i < 5 && !inv2; i++) { t += 1000; G.update(1); }
   if (!inv2) fail('the guild offer comes once the run is over');
 }
+// #69: a bot's line naming content above its level (+3) is found however the line words it: no leading article, any
+// case, plural or possessive (the Analyst found "scrublands chat is a way of life" from level-1 bots, The Scrublands being 10)
+for (const [line, lvl, want] of [['scrublands chat is a way of life', 1, 'scrublands'], ['SCRUBLANDS!', 6, 'scrublands'], ['the scrublands again', 1, 'the scrublands'],
+  ["Scrublands' worst rares", 1, 'scrublands'], ['two ashwings lol', 40, 'ashwing'], ["Ashwing's loot", 40, 'ashwing'], ['scrublands chat is a way of life', 7, null], ['the herd is fine', 1, null]]) {
+  const got = B.contentAbove(line, lvl); if ((got && got.toLowerCase()) !== want) fail(`#69: "${line}" from a level-${lvl} bot names ${got || 'nothing'} above its level (want ${want || 'nothing'})`);
+}
 console.log(bad ? `${bad} problem(s)` : 'social sim OK');
 process.exitCode = bad ? 1 : 0;
