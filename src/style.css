@@ -873,9 +873,14 @@ svg.sym { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: 
 .scene .run-menu::before { content: ''; position: absolute; inset: -6px -5px; } /* 44 px to touch */
 .scene .run-menu i { display: block; width: 14px; height: 2px; border-radius: 1px; background: var(--gold); }
 .scene .run-menu[hidden] { display: none; }
-.scene .speed-chip:not([hidden]) ~ .run-menu { right: 54px; }
 .scene .run-menu.dot::after { content: ''; position: absolute; top: -2px; right: -2px; width: 9px; height: 9px; border-radius: 50%; background: #ffcc33; box-shadow: 0 0 0 1px #000; }
 /* #67 fix: the scene's end-of-run, wipe and death messages are only messages (taps pass through), and the corner controls
    (the run menu, the battle speed) sit above them, so the menu opens Bags on the results screen too */
 .overlay-msg { pointer-events: none; }
 .scene .run-menu, .scene .speed-chip { z-index: 210; }
+/* #67 (c): the place name with the run menu and the battle speed under it, at the scene's top-left (the party's side), so they
+   never cover an enemy's or a boss's nameplate; one column, so a two-line name pushes the buttons down instead of under them */
+.scene .scene-tl { position: absolute; z-index: 210; top: 6px; left: 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; pointer-events: none; }
+.scene .scene-tl .zone { position: static; }
+.scene .scene-ctl { display: flex; gap: 8px; }
+.scene .scene-ctl > button { position: relative; top: auto; right: auto; left: auto; pointer-events: auto; }

@@ -3,7 +3,8 @@
 // It enters a dungeon, a raid, a battleground, a Trial and the Bloodsand Brawl, and in each state (resting, fighting,
 // wiped, cleared, dead; a battleground's choosing, fighting and finished) checks that the scene's menu button is the
 // top element at its own centre (document.elementFromPoint), that a tap opens the menu, and that each of its four rows
-// is shown and opens its own sheet (Bags, Hero, Quests, Social). It changes the
+// is shown and opens its own sheet (Bags, Hero, Quests, Social); and that neither the menu nor the battle speed covers an
+// enemy's or a boss's nameplate, in each state, in a boss fight, and in every boss fight of every dungeon and raid. It changes the
 // character's state (runs, Deserter, a brief death): use a test character. Prints one line per state.
 (async () => {
   const W = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -13,8 +14,14 @@
   // its own sheet (a check that stopped at the menu's title once passed while every row was hidden, #67)
   const atTop = (el) => { const r = el.getBoundingClientRect(); if (!r.width || !r.height) return false; const t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!(t && (t === el || el.contains(t))); };
   const closeAll = () => { const x = document.querySelector('.sheet button.x'); if (x) x.click(); const d = document.querySelector('.dialog'); if (d) d.click(); };
+  // no enemy's, boss's or other player's nameplate under the menu or the battle speed (#67 (c): they sit top-left, the party's side)
+  const covered = () => { const out = [], ctl = [...document.querySelectorAll('.scene .run-menu, .scene .speed-chip')].filter((e) => !e.hidden && e.getBoundingClientRect().width);
+    for (const np of document.querySelectorAll('.scene .sprite:not(.friend) .np')) { const q = np.getBoundingClientRect(); if (!q.width) continue;
+      for (const c of ctl) { const r = c.getBoundingClientRect(), ix = Math.min(r.right, q.right) - Math.max(r.left, q.left), iy = Math.min(r.bottom, q.bottom) - Math.max(r.top, q.top); if (ix > 0 && iy > 0) out.push(`${c.className.split(' ')[0]} covers ${np.textContent.trim().slice(0, 24)} (${Math.round(ix)}x${Math.round(iy)})`); } }
+    return out; };
   const check = (label) => {
     const m = document.querySelector('.run-menu'); if (!m || m.hidden) return `${label}: NO MENU`;
+    const cov = covered(); if (cov.length) return `${label}: ${cov.join(', ')}`;
     if (!atTop(m)) { const r = m.getBoundingClientRect(), t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return `${label}: COVERED by ${t && t.className}`; }
     const bad = [];
     for (const [i, k] of ['bags', 'hero', 'quests', 'social'].entries()) {
@@ -35,6 +42,7 @@
   for (const [label, act] of [['dungeon', pick((A) => A.dungeon && (A.size || 5) <= 5 && A.minLvl <= 60 && A.maxLvl >= 60 && !A.needQuest)], ['raid', pick((A) => (A.size || 5) > 5 && !A.worldBoss && A.minLvl <= 60)]]) {
     await enter(act); if (!G.S.run) { out.push(`${label}: did not start`); continue; }
     out.push(check(`${label} resting`)); fightNow(); out.push(check(`${label} fighting`)); endFight();
+    { const R = G.S.run, bi = R.pulls.map((p, i) => (p.boss ? i : -1)).filter((i) => i >= 0).pop(); if (bi != null) { R.idx = bi; R.phase = 'rest'; fightNow(); G.emit('change'); out.push(check(`${label} boss fight (${G.fight ? G.fight.enemies[0].name : 'none'})`)); endFight(); } }
     settle(() => { G.S.run.phase = 'wipe'; }); out.push(check(`${label} wiped`));
     settle(() => { G.S.run.phase = 'done'; }); out.push(check(`${label} cleared`));
     settle(() => { G.S.run.phase = 'rest'; G.S.player.ghostUntil = Date.now() + 60000; }); out.push(check(`${label} dead`)); settle(() => { G.S.player.ghostUntil = 0; });
@@ -53,5 +61,12 @@
   }
   clear(); const bb = G.brawlBlock; G.brawlBlock = () => null; G.brawlJoin(); G.brawlBlock = bb; await skip();
   out.push(G.S.brawl ? check(`Brawl (${G.S.brawl.phase})`) : 'Brawl: did not start');
+  // every boss of every dungeon, raid and world boss: the corner never covers its nameplate
+  { let n = 0; const hits = [];
+    for (const act of Object.keys(D.ACTIVITIES).filter((k) => (D.ACTIVITIES[k].dungeon || D.ACTIVITIES[k].worldBoss) && !D.ACTIVITIES[k].needQuest && G.activityBlock(k) !== 'hidden')) {
+      await enter(act); if (!G.S.run) continue;
+      for (const bi of G.S.run.pulls.map((p, i) => (p.boss ? i : -1)).filter((i) => i >= 0)) { if (!G.S.run) break; endFight(); if (!G.S.run) break; G.S.run.idx = bi; G.S.run.phase = 'rest'; fightNow(); G.emit('change'); n++; const c = covered(); if (c.length) hits.push(`${D.ACTIVITIES[act].name}: ${c.join(', ')}`); }
+    }
+    out.push(`every boss fight (${n}): ${hits.length ? hits.join('; ') : 'no nameplate covered'}`); }
   clear(); console.log(out.join('\n')); return out;
 })();

@@ -501,7 +501,9 @@
     const place = D.PLACES[P.place];
     const title = S.brawl ? 'The Bloodsand Brawl' : S.bg ? D.BG[S.bg.key].name : S.run ? S.run.name : P.travel ? 'On the road' : place.name;
     const sub = S.brawl ? (S.brawl.phase === 'done' ? (S.brawl.champion ? 'Champion' : 'Finished') : `Round ${S.brawl.round} of ${G.BRAWL.rounds}`) : S.bg ? `Round ${S.bg.round} of ${D.BG[S.bg.key].rounds} · you ${S.bg.score.us}, them ${S.bg.score.them}` : S.run ? S.run.pulls[Math.min(S.run.idx, S.run.pulls.length - 1)].label : P.travel ? 'to ' + D.PLACES[P.travel.to].name + (P.route && P.route.length ? ` · then ${D.PLACES[P.route[P.route.length - 1]].name}` : '') : place.zone;
-    sc.append(h('div', { class: 'zone' }, title, h('small', null, sub)));
+    // the place name, and under it the run menu and the battle speed (#67, the game designer's call): top-left, where the
+    // party stands, so they never sit on an enemy's or a boss's nameplate (enemies stand right)
+    sc.append(h('div', { class: 'scene-tl' }, h('div', { class: 'zone' }, title, h('small', null, sub)), h('div', { class: 'scene-ctl' }, runMenuBtn(), speedChip())));
     const C = G.fight;
     if (C) {
       // slots by where each stands (stage 4): the tank and melee at the front, a group's back line in the back slots
@@ -595,7 +597,7 @@
     if (S.run && S.run.phase === 'done') sc.append(h('div', { class: 'overlay-msg', style: { background: 'rgba(0,0,0,.25)' } }, h('div', null, h('h3', null, S.run.name + ' cleared'), h('p', null, 'Leave the group when you are ready.'))));
     els.cast = h('div', { class: 'castbar', hidden: true }, h('i'), h('b'));
     sc.append(els.cast);
-    sc.append(h('div', { class: 'online', id: 'online' }), speedChip(), runMenuBtn());
+    sc.append(h('div', { class: 'online', id: 'online' }));
     if (G.S.player.fishing && ui.fishEl) sc.append(ui.fishEl); // fishing (v10.9) survives a scene rebuild
   }
   function markTargets() {
