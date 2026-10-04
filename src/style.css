@@ -384,7 +384,7 @@ img { max-width: 100%; display: block; }
 .slot .lbl { font-size: 11px; line-height: 1.1; text-align: center; color: var(--muted); padding: 2px; }
 .gear { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
 .gear .row { grid-template-columns: 34px minmax(0, 1fr); min-width: 0; }
-.gear .row b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gear .row b { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; } /* two lines, then "…"; tap the slot for the whole item (#62) */
 .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 16px; font: 600 14px var(--body); }
 .stats div { display: flex; justify-content: space-between; border-bottom: 1px dotted #3b2d18; padding: 2px 0; }
 .stats span { color: var(--muted); }
@@ -861,3 +861,8 @@ svg.sym { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: 
 .nav { position: relative; z-index: 56; }
 .ab-handle::before { inset: -14px -10px -12px; }
 .ab-handle small { font: 700 12px var(--body); color: #e8dcc2; }
+/* #61: rank badges readable on a phone and tappable (a finger-sized target that doesn't move the layout) */
+.rank-badge { width: 16px; height: 16px; vertical-align: -3px; }
+.pf.compact .rank-badge { width: 14px; height: 14px; vertical-align: -2px; }
+.rank-badge-hit { display: inline-block; padding: 8px; margin: -8px -5px -8px -8px; cursor: pointer; line-height: 0; vertical-align: middle; }
+.bg-team .rank-badge-hit { margin-right: -5px; }

@@ -281,7 +281,7 @@
       h('div', { class: 'portrait tap', role: 'button', 'aria-label': 'Open Hero', onclick: () => openHero() }, h('div', { class: 'pclip' }, img(art('portrait', looks(P)))), h('span', { class: 'lvl tnum', id: 'pf-lvl' }, P.level)),
       h('div', { class: 'uf-body' },
         // one line: the name, then (with no target) Rested / In queue, then the buffs (#65: the header is 64 px)
-        h('div', { class: 'uf-namerow' }, h('div', { class: 'uf-name cls-' + P.cls }, G.displayName()), (els.pMoney = h('span', { class: 'pmoney' })), (els.pChips = h('span', { class: 'uf-chips' })), (els.pBuffs = h('div', { class: 'buffs' }))),
+        h('div', { class: 'uf-namerow' }, h('div', { class: 'uf-name cls-' + P.cls, role: 'button', onclick: (e) => { e.stopPropagation(); toast(G.displayName(), true); } }, G.displayName()), /* shortened with "…" when long; a tap shows it in full (#62) */ (els.pMoney = h('span', { class: 'pmoney' })), (els.pChips = h('span', { class: 'uf-chips' })), (els.pBuffs = h('div', { class: 'buffs' }))),
         (els.pHp = barEl('hp')), (els.pRes = barEl(D.CLASSES[P.cls].resource)),
         (els.pXp = h('button', { class: 'bar xp xpmain', 'aria-label': 'Experience', onclick: xpDetail }, h('i', { class: 'rest' }), h('i', { class: 'fill' }), h('b', { class: 'tnum' })))));
     els.tf = h('div', { class: 'uf target' });
@@ -2643,7 +2643,7 @@
     list.append(nav('Trophies', 'Level-60 rares and world bosses, shared by all your characters', `${G.trophyCount()} / ${G.trophyList().length}`, () => openTrophies()));
     { const own = effectsOwned(); list.append(nav('Effects', 'Every item effect: which you own, and where the rest drop', `${Object.keys(D.EFFECTS).filter((k) => own.has(k)).length} / ${Object.keys(D.EFFECTS).length}`, () => openEffects())); }
     if (G.WARDROBE_PLACES) { let got = 0, all = 0; for (const pl of G.WARDROBE_PLACES) { const w = G.wardrobeAll(pl); all += w.length; got += w.filter((o) => o.have).length; } list.append(nav('Looks', 'The wardrobe, shared by all your characters', `${got} / ${all}`, () => openWardrobe())); }
-    list.append(nav('War Mode', P.level < 6 ? 'Enemy players show up from level 6' : `Honor ${G.pvpStats().honor}`, G.S.flags.warMode ? 'On' : 'Off', () => openWarMode()));
+    list.append(nav('War Mode', P.level < 6 ? 'Enemy players show up from level 6' : `Honor ${G.pvpStats().honor.toLocaleString('en-US')}`, G.S.flags.warMode ? 'On' : 'Off', () => openWarMode()));
     b.append(h('div', { class: 'sec-h' }, 'Story and collections'), list);
   }
   const legendStarted = (key) => { const P = G.S.player; return Object.keys(P.done).concat(Object.keys(P.quests)).some((q) => D.QUESTS[q] && D.QUESTS[q].legend === key); };
@@ -2752,7 +2752,18 @@
   // the insignia by a name: yours from your Honor, a bot's from its own (G.botHonor) and its race's faction; none below rank 1
   function rankBadge(who, me) {
     const f = me ? G.myFaction() : ((D.RACES[who && who.race] || {}).faction || 'alliance'), r = me ? G.myRank() : G.honorRank(G.botHonor(who && (who.bot || who))).rank;
-    return r ? h('img', { class: 'rank-badge', src: art('icon', `honor_${f}_${r}`), alt: `Honor rank ${r}`, title: `Honor rank ${r}: ${G.rankName(r, f)}` }) : null;
+    if (!r) return null;
+    // a tap explains it (#61: a phone has no hover): the rank, its name, the Honor it takes, and the ladder; it never
+    // also targets the frame it sits on
+    return h('span', { class: 'rank-badge-hit', role: 'button', 'aria-label': `Honor rank ${r}: ${G.rankName(r, f)}`, onclick: (e) => { e.stopPropagation(); rankInfo(r, f, me ? 'You' : who && (who.name || '').split('-')[0]); } },
+      h('img', { class: 'rank-badge', src: art('icon', `honor_${f}_${r}`), alt: `Honor rank ${r}` }));
+  }
+  function rankInfo(r, f, who) {
+    const R = D.HONOR_RANKS[r - 1], fac = f === 'horde' ? 'the Krugar' : 'the Accord';
+    showDialog([h('div', { style: { display: 'flex', gap: '10px', alignItems: 'center' } }, h('img', { src: art('icon', `honor_${f}_${r}`), style: { width: '48px', height: '48px' } }),
+      h('div', null, h('h3', { style: { margin: 0 } }, `Honor rank ${r}: ${G.rankName(r, f)}`), h('small', { class: 'dim' }, `${who ? who + ', ' : ''}${fac} · ${R.at.toLocaleString('en-US')}+ lifetime Honor`))),
+      h('p', { class: 'ai-note' }, 'Honor ranks come from lifetime Honor, earned in battlegrounds and in War Mode. They never drop. A rank gives a title, this insignia by the name, and looks at ranks 3, 5 and 8; no power.'),
+      h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', onclick: () => { closeDialog(); openLadder(); } }, 'See the ladder'), h('button', { class: 'btn', onclick: closeDialog }, 'Got it'))], true);
   }
   const rankIcon = (rank, f) => img(art('icon', `honor_${f}_${Math.max(1, rank)}`));
   function honorRow() {
@@ -2776,7 +2787,7 @@
     openSheet('warmode', 'War Mode', G.S.flags.warMode ? 'On · +10% experience and gold' : 'Off', (b, title) => {
       const P = G.S.player, pv = G.pvpStats();
       title.querySelector('small').textContent = G.S.flags.warMode ? 'On · +10% experience and gold' : 'Off';
-      b.append(honorRow(), h('div', { class: 'ai-box' }, h('div', { class: 'ai-row' }, h('span', null, 'Honor'), h('b', { class: 'tnum' }, String(pv.honor))),
+      b.append(honorRow(), h('div', { class: 'ai-box' }, h('div', { class: 'ai-row' }, h('span', null, 'Honor'), h('b', { class: 'tnum' }, pv.honor.toLocaleString('en-US'))), // the same thousands separator as the rank line (#63)
           h('div', { class: 'ai-row' }, h('span', null, 'Enemy players defeated'), h('b', { class: 'tnum' }, String(pv.kills))),
           h('div', { class: 'ai-row' }, h('span', null, 'Died to enemy players'), h('b', { class: 'tnum' }, String(pv.deaths))),
           h('div', { class: 'ai-row' }, h('span', null, 'Escaped'), h('b', { class: 'tnum' }, String(pv.escapes)))),

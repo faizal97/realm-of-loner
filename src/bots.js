@@ -179,7 +179,7 @@
       const nb = B.assignGuild(B.makeBot(S.nextBotId++, used, { level: 1 }));
       S.bots.push(nb);
     }
-    if (newbies > 0) news.push({ t: S.lastSim + ms, text: `${Math.min(newbies, 40)} new adventurers started out across Caldreth.` }); // every start, not only the Human one (issue #18)
+    if (newbies > 0) news.push({ t: S.lastSim + ms, text: `${Math.min(newbies, 40)} new adventurer${Math.min(newbies, 40) === 1 ? '' : 's'} started out across Caldreth.` }); // every start, not only the Human one (issue #18)
     // keep the population bounded
     if (S.bots.length > 420) S.bots.splice(0, S.bots.length - 420);
     S.lastSim += ms;
