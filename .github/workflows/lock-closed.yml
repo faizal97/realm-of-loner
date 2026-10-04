@@ -1,0 +1,35 @@
+# Lock issues 7 days after they close (Faizal, 2026-10-04, after bot spam on closed issues): a closed issue is decided, and
+# a new question belongs in a new issue. Open issues, and pull requests, are never touched.
+# Only GITHUB_TOKEN with issues: write; no third-party action (the runner's own gh). A manual run can be a dry run.
+name: lock closed issues
+on:
+  schedule:
+    - cron: '17 3 * * *' # daily, 03:17 UTC
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: List what would be locked, without locking
+        type: boolean
+        default: true
+permissions:
+  issues: write
+concurrency:
+  group: lock-closed
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Lock issues closed 7 or more days ago
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        run: |
+          cutoff=$(date -u -d '7 days ago' +%Y-%m-%d)
+          nums=$(gh api -X GET search/issues --paginate -f q="repo:$REPO is:issue is:closed is:unlocked closed:<$cutoff" -f per_page=100 --jq '.items[].number')
+          echo "closed before $cutoff and not locked: ${nums:-none}"
+          for n in $nums; do
+            if [ "$DRY_RUN" = "true" ]; then echo "would lock #$n"; continue; fi
+            gh api -X PUT "repos/$REPO/issues/$n/lock" -f lock_reason=resolved --silent && echo "locked #$n"
+          done
