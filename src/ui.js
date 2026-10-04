@@ -284,8 +284,7 @@
     const go = (fn) => () => { closeDialog(); fn(); };
     const dot = (k) => !!(els.nav.querySelector(`[data-nav="${k}"]`) || { classList: { contains: () => false } }).classList.contains('dot');
     const item = (k, label, icon, fn) => h('button', { class: 'row nav' + (dot(k) ? ' dotted' : ''), onclick: go(fn) }, h('div', { class: 't' }, h('b', null, label)), h('div', { class: 'r' }, dot(k) ? h('span', { class: 'tab-dot' }) : null, h('span', { class: 'nav-arr' }, '›')));
-    showDialog([h('h3', null, 'Menu'), h('div', { class: 'list' }, item('bags', 'Bags', 'coin', openBags), item('hero', 'Hero', 'sword', () => openHero()), item('quests', 'Quests', 'chest_box', openQuests), item('social', 'Social', 'bread', () => openSocial('group'))),
-      h('p', { class: 'ai-note' }, 'The tabs come back when the run ends.')], true);
+    showDialog([h('h3', null, 'Menu'), h('div', { class: 'list' }, item('bags', 'Bags', 'coin', openBags), item('hero', 'Hero', 'sword', () => openHero()), item('quests', 'Quests', 'chest_box', openQuests), item('social', 'Social', 'bread', () => openSocial('group')))], true);
   }
   function renderAll() {
     if (!G.S) return;

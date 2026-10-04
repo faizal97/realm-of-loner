@@ -2,17 +2,29 @@
 // page, or a local build) with a level-60 character entered, at the phone size you want to check (375x812, 412x915).
 // It enters a dungeon, a raid, a battleground, a Trial and the Bloodsand Brawl, and in each state (resting, fighting,
 // wiped, cleared, dead; a battleground's choosing, fighting and finished) checks that the scene's menu button is the
-// top element at its own centre (document.elementFromPoint) and that a tap there opens the menu. It changes the
+// top element at its own centre (document.elementFromPoint), that a tap opens the menu, and that each of its four rows
+// is shown and opens its own sheet (Bags, Hero, Quests, Social). It changes the
 // character's state (runs, Deserter, a brief death): use a test character. Prints one line per state.
 (async () => {
   const W = (ms) => new Promise((r) => setTimeout(r, ms));
   const settle = (fn) => { fn(); G.emit('runUpdate'); G.emit('change'); };
   const skip = async () => { for (let j = 0; j < 8; j++) { const b = [...document.querySelectorAll('button')].find((x) => /^(Skip|Enter|Accept|Join)/.test(x.textContent.trim())); if (!b) break; b.click(); await W(250); } };
+  // the button is on top at its centre, its tap opens the menu, and each of the menu's four rows is shown, on top and opens
+  // its own sheet (a check that stopped at the menu's title once passed while every row was hidden, #67)
+  const atTop = (el) => { const r = el.getBoundingClientRect(); if (!r.width || !r.height) return false; const t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!(t && (t === el || el.contains(t))); };
+  const closeAll = () => { const x = document.querySelector('.sheet button.x'); if (x) x.click(); const d = document.querySelector('.dialog'); if (d) d.click(); };
   const check = (label) => {
     const m = document.querySelector('.run-menu'); if (!m || m.hidden) return `${label}: NO MENU`;
-    const r = m.getBoundingClientRect(), top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2), ok = !!(top && top.closest('.run-menu'));
-    let opened = false; if (ok) { top.click(); const h3 = document.querySelector('.dialog h3'); opened = !!(h3 && /Menu/.test(h3.textContent)); const d = document.querySelector('.dialog'); if (d) d.click(); }
-    return `${label}: ${ok ? (opened ? 'ok' : 'on top but DID NOT OPEN') : 'COVERED by ' + (top && top.className)}`;
+    if (!atTop(m)) { const r = m.getBoundingClientRect(), t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return `${label}: COVERED by ${t && t.className}`; }
+    const bad = [];
+    for (const [i, k] of ['bags', 'hero', 'quests', 'social'].entries()) {
+      m.click(); const rows = [...document.querySelectorAll('.dialog .list .row')];
+      if (rows.length !== 4) { closeAll(); return `${label}: the menu has ${rows.length} rows, not 4`; }
+      if (!atTop(rows[i])) { bad.push(`${k} row hidden`); closeAll(); continue; }
+      rows[i].click(); const sh = document.querySelector('.sheet'); if (!(sh && sh.classList.contains('sheet-' + k))) bad.push(`${k} opened ${sh ? sh.className : 'nothing'}`);
+      closeAll();
+    }
+    return `${label}: ${bad.length ? bad.join(', ') : 'ok (Bags, Hero, Quests, Social each open)'}`;
   };
   const clear = () => { if (G.fight) { for (const e of G.fight.enemies) e.hp = 1; for (let i = 0; i < 400 && G.fight; i++) G.update(0.2); } if (G.S.brawl) G.leaveBrawl(); if (G.S.run) G.leaveGroup(); if (G.S.bg) G.leaveBg(); G.S.flags.deserterUntil = 0; };
   const fightNow = () => { for (let i = 0; i < 400 && !G.fight; i++) { if (G.S.run) G.S.run.restUntil = 0; G.update(0.25); } };
