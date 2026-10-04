@@ -6,8 +6,8 @@
 name: checks
 on:
   pull_request:
-  push:
-    branches: [main]
+  push: # main, and the short work branches before they merge (trunk plus short branches); never gh-pages (the built web pages)
+    branches: [main, 'feat/**', 'fix/**', 'hotfix/**']
   workflow_dispatch:
 permissions:
   contents: read
