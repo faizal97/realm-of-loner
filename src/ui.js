@@ -303,7 +303,7 @@
     const rm = runMode();
     if (app.classList.contains('runmode') !== rm) {
       app.classList.toggle('runmode', rm); sheetTop();
-      if (rm) { let told = true; try { told = localStorage.getItem('azsolo.tabsHidTold') === '1'; localStorage.setItem('azsolo.tabsHidTold', '1'); } catch (e) { } if (!told) toast('For the run, the tabs at the bottom are tucked away: the menu button at the top right of the scene opens Bags, Hero, Quests and Social.', true); }
+      if (rm) { let told = true; try { told = localStorage.getItem('azsolo.tabsHidTold') === '1'; localStorage.setItem('azsolo.tabsHidTold', '1'); } catch (e) { } if (!told) toast('For the run, the tabs at the bottom are tucked away: the menu button at the top left of the scene, under the place name, opens Bags, Hero, Quests and Social.', true); }
     }
     const m = els.scene && els.scene.querySelector('.run-menu'); if (m) m.hidden = !rm;
   }
