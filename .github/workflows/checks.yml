@@ -39,13 +39,13 @@ jobs:
         run: node --test test/*.test.js
       - name: Discord announcer (dry runs only, nothing is posted)
         run: node tools/announce_discord.test.js
-      # a reminder, never a failure: the pull request template asks for "Fixes #N" or what and why
+      # a reminder, never a failure: the pull request template asks for "Refs #N" (or a contributor's Fixes/Closes #N) or what and why
       - name: Pull request description
         if: github.event_name == 'pull_request'
         env:
           BODY: ${{ github.event.pull_request.body }}
         run: |
-          what=$(printf '%s' "$BODY" | sed -n '/What and why/,/Fixes #/p' | grep -v -e 'What and why' -e 'Fixes #' -e '^[[:space:]]*$' | head -1)
-          if ! printf '%s' "$BODY" | grep -Eiq '(fixes|closes|resolves) #[0-9]+' && [ -z "$what" ]; then
-            echo "::warning title=Pull request description::Please link the issue (Fixes #N) or say what and why in the description. Thanks!"
+          what=$(printf '%s' "$BODY" | sed -E -n '/What and why/,/^(Refs|Fixes) #/p' | grep -v -e 'What and why' -e '^Refs #' -e '^Fixes #' -e '^[[:space:]]*$' | head -1)
+          if ! printf '%s' "$BODY" | grep -Eiq '(refs|fixes|closes|resolves) #[0-9]+' && [ -z "$what" ]; then
+            echo "::warning title=Pull request description::Please link the issue (Refs #N) or say what and why in the description. Thanks!"
           fi
