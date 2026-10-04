@@ -6,16 +6,17 @@ Realm of Loner is a single-player "fake MMO" set in Caldreth, a world of its own
 
 This document says where the game stands, how it is designed, and what comes next.
 
-## Where it stands (v10.9.0, with v10.10 in beta)
+## Where it stands (v10.10.0)
 
 - **Levels 1–60, both factions, eight races and nine classes** (any race any class), in the original world of Caldreth (since v10). About 25 zones, from the starting valleys to Icewold and the West Rotmoor.
 - **Every classic dungeon along the way,** from The Smoke Pit and the Smugglers' Deep to Cinderpeak Depths, The Blackcloister and Graymouth, each with a lore intro.
 - **The main story, The Black Ledger:** six chapters at levels 10–60, and short story scenes on key quests and levels in between (a story moment every 3–5 levels, for both factions).
 - **The classic endgame raids at 60:** Magma Throne, beneath Cinderpeak, and Veshmira's Lair in the new Saltmarsh. Veshmira's death opens the expansion.
 - **After 60, horizontal progression:** gear upgrades with Mentor Marks, the account-wide wardrobe, monthly Trials with Omens and a realm leaderboard, Hard raids, the featured raid, raid sets and three weekly world bosses.
-- **Battlegrounds:** the Battle for Highmoor, 5 against 5, from level 10.
+- **Rare hunts and trophies (v10.10):** level-60 rares appear once in each 6-hour window, with a sighting in chat; an account-wide trophy for each rare and world boss, and a title at 10.
+- **Battlegrounds:** the Battle for Highmoor, 5 against 5, from level 10, with eight Honor ranks per faction (titles, insignia and looks, v10.10).
 - **Professions up to 300,** with Fishing and Cooking, and distance in every fight.
-- **Drops with effects (v10.10, in beta):** 12 item effects on drops from every dungeon final, raid boss and world boss, and as Trial finds.
+- **Drops with effects (v10.10):** 12 item effects on drops from every dungeon final, raid boss and world boss, and as Trial finds; an Effects codex shows them all, and bots wear them too.
 - **An original expansion at 60, "The Drowned Crown":** two new zones, two dungeons and a 10-player raid.
 - **Legends:** hand-made story heroes (most created by the developer's friends) with their own questline, who later turn up in your runs now and then.
 - **A server that feels alive:** working chat, guilds, requests, trades, duels and rare sightings.
@@ -63,7 +64,7 @@ This document says where the game stands, how it is designed, and what comes nex
 | 10.7 | The endgame update: Hard raids, the featured raid, raid sets, three world bosses, the Battle for Highmoor, the Trialsworn set |
 | 10.8 | Music for every zone, town, capital, dungeon and raid, and new sounds |
 | 10.9 | Professions to 300 (Expert and Artisan), Fishing and Cooking; distance in every fight; Rumhook Bay and the Bloodsand Brawl; a riskier auction house; What's new in the game |
-| 10.10 (beta) | Drops with effects: 12 effects, an effect item on every dungeon final, raid boss and world boss, Trial finds that fit your class, Mentor Mark upgrades that grow the effect; new par times and a fast pace that's a real trade |
+| 10.10 | Drops with effects: 12 effects, an effect item on every dungeon final, raid boss and world boss, Trial finds that fit your class, Mentor Mark upgrades that grow the effect, the Effects codex, bots wearing effects; rare hunts and trophies; Honor ranks; levelling pace evened out by class; new par times and a fast pace that's a real trade; Friends offers cloud save |
 
 ## How the world works
 
@@ -154,14 +155,15 @@ At the level cap, power stops climbing; what you collect and what you can do kee
 
 Roughly in priority order:
 
-Shipped from the earlier list: horizontal progression (10.3–10.7), world bosses (10.7), battlegrounds (10.7), Rumhook Bay and the Bloodsand Brawl (10.9), Expert and Artisan professions (10.9), and drops with effects (10.10, in beta).
+Shipped from the earlier list: horizontal progression (10.3–10.7), world bosses (10.7), battlegrounds (10.7), Rumhook Bay and the Bloodsand Brawl (10.9), Expert and Artisan professions (10.9), and in 10.10 drops with effects, levelling pace by class, level-60 rares with trophies, and Honor ranks.
 
-1. **Levelling pace by class:** every class levels along the quest path within ±20% of the others (issue #4).
-2. **Server events:** a Darkmoon Faire week, guild server-first races, and town defences in War Mode.
-3. **Level-60 rares with trophies,** and **Honor ranks** in battlegrounds for looks and titles.
-4. **Effect set bonuses** (a set of items that adds an effect; Brimming Cup may come back there).
-5. **More Legends:** after Bromli Beerhammer (built in v10.6), the next one when a creator brings one.
-6. **Co-op with real friends,** built on Friends (sign-in, friend list, online status); the connection for live fights is decided when co-op is designed.
+1. **The main screen's layout (v10.10.1):** a patch from QA's layout audit, so a healer sees the whole party in a fight and nothing a fight needs sits below the fold (`2026-10-04-main-screen-layout-options.md`).
+2. **Tavern games (v10.11):** games at every inn for any level, Hazard and arm wrestling first, looks and titles only (`2026-10-03-tavern-games-design.md`). Liar's dice next.
+3. **The Ruinfall Saga (v11–v13):** three expansions, one story. Chapter 1's design is approved and waits for Faizal's go (`2026-10-03-ossarak-saga.md`).
+4. **Server events:** a Darkmoon Faire week (it can reuse the tavern's games), guild server-first races, and town defences in War Mode.
+5. **Effect set bonuses** (a set of items that adds an effect; Brimming Cup may come back there).
+6. **More Legends:** after Bromli Beerhammer (built in v10.6), the next one when a creator brings one.
+7. **Co-op with real friends,** built on Friends (sign-in, friend list, online status); the connection for live fights is decided when co-op is designed.
 
 ## Open questions
 
