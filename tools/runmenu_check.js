@@ -3,7 +3,8 @@
 // It enters a dungeon, a raid, a battleground, a Trial and the Bloodsand Brawl, and in each state (resting, fighting,
 // wiped, cleared, dead; a battleground's choosing, fighting and finished) checks that the scene's menu button is the
 // top element at its own centre (document.elementFromPoint), that a tap opens the menu, and that each of its four rows
-// is shown and opens its own sheet (Bags, Hero, Quests, Social); and that neither the menu nor the battle speed covers an
+// is shown and opens its own sheet (Bags, Hero, Quests, Social), and with that sheet open the button is still on top and
+// switches to the next sheet in two taps (menu, row); and that neither the menu nor the battle speed covers an
 // enemy's or a boss's nameplate, in each state, in a boss fight, and in every boss fight of every dungeon and raid. It changes the
 // character's state (runs, Deserter, a brief death): use a test character. Prints one line per state.
 (async () => {
@@ -28,10 +29,16 @@
       m.click(); const rows = [...document.querySelectorAll('.dialog .list .row')];
       if (rows.length !== 4) { closeAll(); return `${label}: the menu has ${rows.length} rows, not 4`; }
       if (!atTop(rows[i])) { bad.push(`${k} row hidden`); closeAll(); continue; }
-      rows[i].click(); const sh = document.querySelector('.sheet'); if (!(sh && sh.classList.contains('sheet-' + k))) bad.push(`${k} opened ${sh ? sh.className : 'nothing'}`);
+      rows[i].click(); const sh = document.querySelector('.sheet'); if (!(sh && sh.classList.contains('sheet-' + k))) { bad.push(`${k} opened ${sh ? sh.className : 'nothing'}`); closeAll(); continue; }
+      // with that sheet open, the menu is still one tap away and switches straight to the next sheet (QA on beta.1)
+      const nx = ['bags', 'hero', 'quests', 'social'][(i + 1) % 4];
+      if (!atTop(m)) { bad.push(`with ${k} open the menu is covered`); closeAll(); continue; }
+      m.click(); const rows2 = [...document.querySelectorAll('.dialog .list .row')];
+      if (rows2.length !== 4 || !atTop(rows2[(i + 1) % 4])) { bad.push(`with ${k} open the menu did not open`); closeAll(); continue; }
+      rows2[(i + 1) % 4].click(); const sh2 = document.querySelector('.sheet'); if (!(sh2 && sh2.classList.contains('sheet-' + nx))) bad.push(`${k} -> ${nx} opened ${sh2 ? sh2.className : 'nothing'}`);
       closeAll();
     }
-    return `${label}: ${bad.length ? bad.join(', ') : 'ok (Bags, Hero, Quests, Social each open)'}`;
+    return `${label}: ${bad.length ? bad.join(', ') : 'ok (each of the four opens, and from each open sheet the menu switches to the next)'}`;
   };
   const clear = () => { if (G.fight) { for (const e of G.fight.enemies) e.hp = 1; for (let i = 0; i < 400 && G.fight; i++) G.update(0.2); } if (G.S.brawl) G.leaveBrawl(); if (G.S.run) G.leaveGroup(); if (G.S.bg) G.leaveBg(); G.S.flags.deserterUntil = 0; };
   const fightNow = () => { for (let i = 0; i < 400 && !G.fight; i++) { if (G.S.run) G.S.run.restUntil = 0; G.update(0.25); } };

@@ -274,7 +274,7 @@
   function applyRunMode() {
     const rm = runMode();
     if (app.classList.contains('runmode') !== rm) {
-      app.classList.toggle('runmode', rm);
+      app.classList.toggle('runmode', rm); sheetTop();
       if (rm) { let told = true; try { told = localStorage.getItem('azsolo.tabsHidTold') === '1'; localStorage.setItem('azsolo.tabsHidTold', '1'); } catch (e) { } if (!told) toast('For the run, the tabs at the bottom are tucked away: the menu button at the top right of the scene opens Bags, Hero, Quests and Social.', true); }
     }
     const m = els.scene && els.scene.querySelector('.run-menu'); if (m) m.hidden = !rm;
@@ -1825,10 +1825,13 @@
     const sheet = h('div', { class: 'sheet sheet-' + name, onclick: (e) => e.stopPropagation() }, h('div', { class: 'sheet-h' }, backBtn, titleEl, h('button', { class: 'x', onclick: () => { if (window.SND) SND.play('close', { vol: 0.45 }); closeSheet(); }, 'aria-label': 'Close' }, '×')), body);
     const back = h('div', { class: 'sheet-back', onclick: closeSheet }, sheet);
     app.append(back);
-    ui.sheet = name; ui.sheetEl = back; ui.sheetBody = body; ui.sheetTitle = titleEl; ui.sheetDef = { name, title, sub, fill };
+    ui.sheet = name; ui.sheetEl = back; ui.sheetBody = body; ui.sheetTitle = titleEl; ui.sheetDef = { name, title, sub, fill }; sheetTop();
     ui.sheetFn = () => { const s = body.scrollTop; body.innerHTML = ''; fill(body, titleEl); body.scrollTop = s; };
     ui.sheetFn();
   }
+  // in a run (#67) a sheet and its backdrop start below the scene, so the scene's menu stays one tap away: Bags -> Hero
+  // is the menu, then Hero, as the tabs are outside a run
+  function sheetTop() { if (ui.sheetEl) ui.sheetEl.style.top = app.classList.contains('runmode') && els.scene ? Math.round(els.scene.getBoundingClientRect().bottom - app.getBoundingClientRect().top) + 'px' : ''; }
   function closeSheet() { if (ui.sheetEl) ui.sheetEl.remove(); ui.sheet = null; ui.sheetFn = null; ui.sheetEl = null; ui.sheetDef = null; ui.sheetStack = []; }
   function showDialog(content, dismissable) {
     closeDialog();
