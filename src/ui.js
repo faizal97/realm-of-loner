@@ -266,8 +266,30 @@
     requestAnimationFrame(navH); if (!ui.navRO && window.ResizeObserver) { ui.navRO = new ResizeObserver(navH); } if (ui.navRO) { ui.navRO.disconnect(); ui.navRO.observe(els.nav); }
   }
 
+  // Full-screen run modes (#67, the game designer and QA's final call): in a dungeon or raid run, a Trial, a battleground or
+  // the Bloodsand Brawl the bottom tabs hide for the whole run (they change only on entering or leaving it, never in a
+  // fight); a menu button in the scene's corner opens Bags, Hero, Quests and Social, with a dot when one of them has one.
+  // Open-world fights keep the tabs.
+  const runMode = () => !!(G.S && (G.S.run || G.S.bg || G.S.brawl));
+  function applyRunMode() {
+    const rm = runMode();
+    if (app.classList.contains('runmode') !== rm) {
+      app.classList.toggle('runmode', rm);
+      if (rm) { let told = true; try { told = localStorage.getItem('azsolo.tabsHidTold') === '1'; localStorage.setItem('azsolo.tabsHidTold', '1'); } catch (e) { } if (!told) toast('For the run, the tabs at the bottom are tucked away: the menu button at the top right of the scene opens Bags, Hero, Quests and Social.', true); }
+    }
+    const m = els.scene && els.scene.querySelector('.run-menu'); if (m) m.hidden = !rm;
+  }
+  function runMenuBtn() { return h('button', { class: 'run-menu', 'aria-label': 'Menu: Bags, Hero, Quests and Social', hidden: !runMode(), onclick: (e) => { e.stopPropagation(); openRunMenu(); } }, h('i'), h('i'), h('i')); }
+  function openRunMenu() {
+    const go = (fn) => () => { closeDialog(); fn(); };
+    const dot = (k) => !!(els.nav.querySelector(`[data-nav="${k}"]`) || { classList: { contains: () => false } }).classList.contains('dot');
+    const item = (k, label, icon, fn) => h('button', { class: 'row nav' + (dot(k) ? ' dotted' : ''), onclick: go(fn) }, h('div', { class: 't' }, h('b', null, label)), h('div', { class: 'r' }, dot(k) ? h('span', { class: 'tab-dot' }) : null, h('span', { class: 'nav-arr' }, '›')));
+    showDialog([h('h3', null, 'Menu'), h('div', { class: 'list' }, item('bags', 'Bags', 'coin', openBags), item('hero', 'Hero', 'sword', () => openHero()), item('quests', 'Quests', 'chest_box', openQuests), item('social', 'Social', 'bread', () => openSocial('group'))),
+      h('p', { class: 'ai-note' }, 'The tabs come back when the run ends.')], true);
+  }
   function renderAll() {
     if (!G.S) return;
+    applyRunMode();
     renderFrames(); renderScene(); renderPanel(); renderBar(); renderChat(); renderNavDots(); renderRolls();
     if (ui.sheet && ui.sheetFn) ui.sheetFn();
   }
@@ -574,7 +596,7 @@
     if (S.run && S.run.phase === 'done') sc.append(h('div', { class: 'overlay-msg', style: { background: 'rgba(0,0,0,.25)' } }, h('div', null, h('h3', null, S.run.name + ' cleared'), h('p', null, 'Leave the group when you are ready.'))));
     els.cast = h('div', { class: 'castbar', hidden: true }, h('i'), h('b'));
     sc.append(els.cast);
-    sc.append(h('div', { class: 'online', id: 'online' }), speedChip());
+    sc.append(h('div', { class: 'online', id: 'online' }), speedChip(), runMenuBtn());
     if (G.S.player.fishing && ui.fishEl) sc.append(ui.fishEl); // fishing (v10.9) survives a scene rebuild
   }
   function markTargets() {
@@ -1783,6 +1805,7 @@
     const s = els.nav.querySelector('[data-nav="social"]'); if (s) s.classList.toggle('dot', !!(G.S.queue && G.S.queue.popped) || friendsWaiting());
     const hb = els.nav.querySelector('[data-nav="hero"]'); if (hb) hb.classList.toggle('dot', G.talentPoints(G.S.player).free > 0 || loreUnread() > 0);
     const bb = els.nav.querySelector('[data-nav="bags"]'); if (bb) bb.classList.toggle('dot', G.bagDot());
+    const rmb = els.scene && els.scene.querySelector('.run-menu'); if (rmb) rmb.classList.toggle('dot', !!els.nav.querySelector('button.dot:not([data-nav="map"])')); // the hidden tabs' dots (#67)
     loreNotice();
   }
 

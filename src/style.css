@@ -866,3 +866,11 @@ svg.sym { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: 
 .pf.compact .rank-badge { width: 14px; height: 14px; vertical-align: -2px; }
 .rank-badge-hit { display: inline-block; padding: 8px; margin: -8px -5px -8px -8px; cursor: pointer; line-height: 0; vertical-align: middle; }
 .bg-team .rank-badge-hit { margin-right: -5px; }
+/* #67: full-screen run modes hide the bottom tabs; the scene's menu button (44 px to touch) opens them */
+.runmode .nav { display: none; }
+.scene .run-menu { position: absolute; z-index: 130; top: 24px; right: 6px; width: 34px; height: 32px; border-radius: 16px; border: 1px solid #c9a24a; background: rgba(12,9,6,.72); display: grid; align-content: center; justify-items: center; gap: 3px; padding: 0; }
+.scene .run-menu::before { content: ''; position: absolute; inset: -6px -5px; } /* 44 px to touch */
+.scene .run-menu i { display: block; width: 14px; height: 2px; border-radius: 1px; background: var(--gold); }
+.scene .run-menu[hidden] { display: none; }
+.scene .speed-chip:not([hidden]) ~ .run-menu { right: 54px; }
+.scene .run-menu.dot::after { content: ''; position: absolute; top: -2px; right: -2px; width: 9px; height: 9px; border-radius: 50%; background: #ffcc33; box-shadow: 0 0 0 1px #000; }
