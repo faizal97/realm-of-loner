@@ -158,12 +158,15 @@ Roughly in priority order:
 Shipped from the earlier list: horizontal progression (10.3–10.7), world bosses (10.7), battlegrounds (10.7), Rumhook Bay and the Bloodsand Brawl (10.9), Expert and Artisan professions (10.9), and in 10.10 drops with effects, levelling pace by class, level-60 rares with trophies, and Honor ranks.
 
 1. **The main screen's layout (v10.10.1):** a patch from QA's layout audit, so a healer sees the whole party in a fight and nothing a fight needs sits below the fold (`2026-10-04-main-screen-layout-options.md`).
-2. **Tavern games (v10.11):** games at every inn for any level, Hazard and arm wrestling first, looks and titles only (`2026-10-03-tavern-games-design.md`). Liar's dice next.
-3. **The Ruinfall Saga (v11–v13):** three expansions, one story. Chapter 1's design is approved and waits for Faizal's go (`2026-10-03-ossarak-saga.md`).
-4. **Server events:** a Darkmoon Faire week (it can reuse the tavern's games), guild server-first races, and town defences in War Mode.
-5. **Effect set bonuses** (a set of items that adds an effect; Brimming Cup may come back there).
-6. **More Legends:** after Bromli Beerhammer (built in v10.6), the next one when a creator brings one.
-7. **Co-op with real friends,** built on Friends (sign-in, friend list, online status); the connection for live fights is decided when co-op is designed.
+2. **The living server (v10.11):** persistent bots shared by all your characters, a server that reaches 60, gear that
+   progresses, memories and chat that fits who's speaking, without changing how bots play content
+   (`2026-10-04-living-population-design.md`).
+3. **Tavern games (v10.12):** games at every inn for any level, Hazard and arm wrestling first, looks and titles only (`2026-10-03-tavern-games-design.md`). Liar's dice next.
+4. **The Ruinfall Saga (v11–v13):** three expansions, one story. Chapter 1's design is approved and waits for Faizal's go (`2026-10-03-ossarak-saga.md`).
+5. **Server events:** a Darkmoon Faire week (it can reuse the tavern's games), guild server-first races, and town defences in War Mode.
+6. **Effect set bonuses** (a set of items that adds an effect; Brimming Cup may come back there).
+7. **More Legends:** after Bromli Beerhammer (built in v10.6), the next one when a creator brings one.
+8. **Co-op with real friends,** built on Friends (sign-in, friend list, online status); the connection for live fights is decided when co-op is designed.
 
 ## Open questions
 

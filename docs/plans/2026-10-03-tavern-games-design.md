@@ -1,6 +1,7 @@
 # Tavern games: design
 
-Non-combat games at the inn, for any level, as a break from questing. From Faizal's idea (2026-10-03). Drafted by the
+**v10.12** (moved from v10.11 on 2026-10-04, when the living server went first). Non-combat games at the inn, for any
+level, as a break from questing. From Faizal's idea (2026-10-03). Drafted by the
 game designer; the games to start with are Faizal's pick (§2).
 
 ## Why

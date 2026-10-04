@@ -1,8 +1,8 @@
 # A living population: design options
 
 **Decided: option A, the living server in four phases, with the 16 gated targets** (Faizal, 2026-10-04, via the
-Lead: "yes option A"). Phase 1's spoiler fix is already filed as #69 in v10.10.1. Not filed yet: it goes before or
-after the v10.11 tavern (his next choice). From QA's believability audit (#68) and the Balance Analyst's chat measurements on it
+Lead: "yes option A"). Phase 1's spoiler fix is already filed as #69 in v10.10.1. **It goes first, as v10.11** (Faizal: "full living server but make sure our system didnt change i mean like our rules
+of the bots in the contents"); the tavern moves to v10.12. From QA's believability audit (#68) and the Balance Analyst's chat measurements on it
 (`sim/chatrepeat.js`, main d76854d). Faizal's aim: the simulated players should feel like **persistent people**, not
 disguised NPCs; what's needed is **persistent identity, not more AI**; and chat's "repetitiveness and cohesiveness...
 we need to crush that down". Drafted by the game designer, 2026-10-04.
@@ -52,6 +52,25 @@ we need to crush that down". Drafted by the game designer, 2026-10-04.
    - **Catch-up chat spread over the time you were away**, not dumped in one second.
 6. **No chat spoilers.** Every generated line goes through the #54 shared check (`G.nameable`) at the reading
    character's level, and `tools/lorekeeper.js` sweeps generated chat at every Reveals level in the build.
+
+## The guardrail: who bots are changes, how they play content does not
+
+Faizal's rule (2026-10-04). The living server changes **who the bots are** (persistent identity, the roster, stored
+progressing gear, memory, friends and rivals) and **what they say** (chat). It must **not** change the rules of how bots
+play content:
+- combat behaviour and AI;
+- group-finder fill and composition (roles, how many, the **skill mix**: groups drawn from the roster must have the
+  same distribution of bot skill as today's generated groups);
+- battleground and Bloodsand Brawl rules (including how teams are levelled to you);
+- world-party rules, and **anything that scales with how many bots are online** (world-party joins, ambushes,
+  requests): the bigger roster must give the same rate per hour as today;
+- balance, and **the bot gear power level**: stored, progressing gear lands in the same power band as today's
+  generated gear at each level and quality, and bots' effect items (#56) are unchanged.
+
+**Proof, every phase:** the Balance Analyst runs every existing gate sim before and after (group, raid, Hard raid,
+Trials, world bosses, brawl, duel, pars, `questpace`, `capacity`, `effects`), and each must stay within noise (the #45
+two-stage rule). It's a build gate for the whole update. A gear-band check compares stored gear with generated gear
+per level and quality.
 
 ## Targets the Balance Analyst gates in the build
 
@@ -107,8 +126,8 @@ their chat stays generic until a later update.
 
 ## Recommendation
 
-**A, in its four phases, as its own update ("The Living Server")**, after the v10.10.1 layout patch and the v10.11
-tavern. And **phase 1's spoiler fix sooner:** a level-8 bot naming a level-60 raid boss is a real bug, so chat through
+**A, in its four phases, as its own update ("The Living Server")**: decided as **v10.11**, before the tavern (now
+v10.12). And **phase 1's spoiler fix sooner:** a level-8 bot naming a level-60 raid boss is a real bug, so chat through
 `G.nameable` (and the lorekeeper sweep) can go into **v10.10.1** with the layout patch, at about an hour.
 
 Why A: Faizal's aim is persistent people, and only A delivers them (B fixes their words, C their existence; neither
