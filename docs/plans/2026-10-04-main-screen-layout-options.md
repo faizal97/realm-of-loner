@@ -1,6 +1,7 @@
 # Main screen layout: options
 
-For Faizal to choose. From QA's layout audit (#64, v10.10.0-beta.8, measured at 375×812 and 412×915), folding in #61
+**Decided: option A** (Faizal, 2026-10-04, via the Lead: "the layout also yes"), with the seven shared rules, as the
+v10.10.1 patch. From QA's layout audit (#64, v10.10.0-beta.8, measured at 375×812 and 412×915), folding in #61
 (rank badges unreadable on a phone) and #62 (names cut in the equipment grid and the top bar). Drafted by the game
 designer, 2026-10-04.
 
