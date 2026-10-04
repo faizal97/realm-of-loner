@@ -837,8 +837,6 @@
     const S = G.S, bg = S.bg, C = D.BG[bg.key], sp = G.bgSplit(), nm = (m) => m.name.split('-')[0];
     p.append(h('div', { class: 'sec-h' }, C.name, h('small', null, bg.phase === 'done' ? 'finished' : `round ${bg.round} of ${C.rounds} · first to ${C.win}`)));
     p.append(h('div', { class: 'bg-score' }, h('div', { class: 'us' }, h('small', null, 'You'), h('b', { class: 'tnum' }, String(bg.score.us))), h('div', { class: 'them' }, h('small', null, 'Them'), h('b', { class: 'tnum' }, String(bg.score.them)))));
-    // your team with their Honor ranks (#57): you first
-    p.append(h('div', { class: 'bg-team' }, h('small', null, 'Your team: '), h('span', null, rankBadge(G.S.player, true), 'You'), ...(bg.team || []).map((m) => h('span', null, rankBadge(m), nm(m)))));
     if (bg.phase === 'done') {
       p.append(h('div', { class: 'ai-box' }, h('div', { class: 'ai-row' }, h('span', null, 'Result'), h('b', null, bg.result === 'win' ? 'Victory' : bg.result === 'draw' ? 'A draw' : 'Defeat')),
         h('div', { class: 'ai-row' }, h('span', null, 'Honor'), h('b', { class: 'tnum' }, '+' + bg.reward.honor)), h('div', { class: 'ai-row' }, h('span', null, 'Money'), h('b', { html: moneyHtml(bg.reward.money) }))),
@@ -855,6 +853,9 @@
     const pickRow = (label, who, key) => h('div', { class: 'bg-pick' }, h('small', null, `${label} (${who})`), h('div', { class: 'chips' }, ...C.banners.map(([b, name]) => h('button', { class: 'chip' + (pk[key] === b ? ' gold' : ''), onclick: () => { pk[key] = b; renderPanel(); } }, name.replace(/^the /, '')))));
     p.append(pickRow('Your group', ['you'].concat(sp.group.map(nm)).join(', '), 'group'), pickRow('The pair', sp.pair.map(nm).join(', '), 'pair'));
     p.append(h('button', { class: 'btn wide', disabled: !pk.group || !pk.pair, onclick: () => { G.bgGo(pk.group, pk.pair); renderAll(); } }, pk.group && pk.pair ? 'Go' : 'Choose where both go'));
+    // your team with their Honor ranks (#57), after the decision (#66: the three banners and where you send them first)
+    p.append(h('div', { class: 'bg-team' }, h('small', null, 'Your team: '), h('span', null, rankBadge(G.S.player, true), 'You'), ...(bg.team || []).map((m) => h('span', null, rankBadge(m), nm(m)))));
+
     p.append(h('p', { class: 'ai-note' }, 'Where both teams meet, they fight; an empty banner is taken; they take the banners they reach alone. Every banner you hold scores each round. The scouts give a range and the true number is always inside it. They can still move when they see you coming, toward your pair or your group.'));
     if (bg.log.length) p.append(h('div', { class: 'ai-box' }, ...bg.log.slice(0, 3).map((l) => h('div', { class: 'ai-row' }, h('span', null, l)))));
   }
@@ -1330,8 +1331,8 @@
       pf.append(row);
     });
     if (!C && R.phase === 'rest') tacticsBlock(p, R); // the pace: decide before the pull
+    runScore(p, R); // the clock against par, then the run's name and progress (#66: the decisions and the timer first)
     p.append(...head);
-    runScore(p, R);
     pf.classList.add('compact'); p.prepend(pf); // the party first: five 30 px rows at the very top, then Pull and the pace (#65)
     if (C) {
       const list = h('div', { class: 'list' });
@@ -1355,16 +1356,25 @@
   }
 
   // ============================================================ action bar
+  // The bar never changes size in a fight (#66): its layout is the fight's (every ability, Step Back, the racial, a potion,
+  // in the player's order), the same as before. Out of a fight, Eat and Drink take the first fight-only slots (Step Back,
+  // Taunt, the racial, combat-only abilities) and the other fight-only slots stay empty, so every other button keeps its
+  // place and the bar keeps its rows. null is an empty slot.
   function barSlots() {
-    const P = G.S.player;
-    const known = G.knownAbilities();
-    const C = D.CLASSES[P.cls];
-    // v2.0: no cap; past 8 buttons the bar wraps to two rows
-    const pot = G.S.player.bags.some((b) => b.item.slot === 'potion') ? ['potion'] : [];
-    if (G.fight) { const r = G.racial(); return barArrange(known.concat(['step_back'], r && !(G.pUnit && G.pUnit.form) ? [r] : [], pot)); } // Step Back (every class) only in a fight
-    const extras = ['eat'].concat(C.resource === 'mana' ? ['drink'] : [], pot);
-    const ab = known.filter((a) => a !== 'taunt' && !D.ABILITIES[a].combatOnly);
-    return barArrange(ab.concat(extras));
+    const P = G.S.player, r = G.racial();
+    const pot = P.bags.some((b) => b.item.slot === 'potion');
+    const base = barArrange(barPool()).filter((id) => id !== 'potion' || pot);
+    const peaceOnly = (id) => id === 'eat' || id === 'drink';
+    const fightOnly = (id) => id === 'step_back' || id === 'taunt' || id === r || !!(D.ABILITIES[id] && D.ABILITIES[id].combatOnly);
+    const po = base.filter(peaceOnly), slots = [];
+    let k = 0;
+    for (const id of base) {
+      if (peaceOnly(id)) continue;
+      if (fightOnly(id)) slots.push(G.fight ? (id === r && G.pUnit && G.pUnit.form ? null : id) : (po[k++] || null)); // the racial waits out a form
+      else slots.push(id);
+    }
+    for (; k < po.length; k++) slots.push(G.fight ? null : po[k]); // more of them than fight-only slots (one hid Step Back): at the end, either way
+    return slots;
   }
   // the player's own bar layout, per character and saved with it: P.barOrder (ids in order) and P.barHide.
   // Anything not in the order yet (a newly learned ability) goes at the end, in the default order.
@@ -4031,17 +4041,20 @@
     if (!open.length) return;
     const { r, i } = open[0];
     const it = r.item;
-    ui.rollEl = h('div', { class: 'roll' },
-      h('button', { style: { padding: 0 }, onclick: () => inspectRoll(i) }, itemIcon(it, 'rollic')),
-      h('div', null,
-        h('div', { class: 'q' + it.q, style: { fontWeight: 800 } }, it.name + (open.length > 1 ? `  (+${open.length - 1} more)` : ''), gearTag(it)),
-        G.effectOf(it) ? h('div', { class: 'eff', style: { fontSize: '12px', lineHeight: 1.3 } }, `Effect: ${G.effectOf(it).name}. ${G.effectOf(it).desc(it.lvl || 1, D.fxGrow(it.fxScale, it.effect))}`) : null, // plan the roll without opening it (#23)
-        h('div', { class: 'bar' }, h('i', { 'data-roll': i, style: { width: '100%' } })),
-        h('div', { class: 'btn-row', style: { marginTop: '6px' } },
-          h('button', { class: needFirst(it) ? 'btn' : 'btn alt', onclick: () => { G.roll(i, 'need'); renderRolls(); } }, 'Need'),
-          h('button', { class: needFirst(it) ? 'btn alt' : 'btn', onclick: () => { G.roll(i, 'greed'); renderRolls(); } }, 'Greed'),
-          h('button', { class: 'btn alt', onclick: () => { G.roll(i, 'pass'); renderRolls(); } }, 'Pass'))));
-    els.bottom.append(ui.rollEl);
+    // a small card docked above the action bar (#66): it takes its own room, so it never covers the party or the panel's
+    // decision. The item, its effect named (plan the roll without opening it, #23), the time left, Need / Greed / Pass;
+    // tap the icon for the whole item
+    const F = G.effectOf(it);
+    ui.rollEl = h('div', { class: 'roll docked' },
+      h('button', { style: { padding: 0 }, 'aria-label': 'See the item', onclick: () => inspectRoll(i) }, itemIcon(it, 'rollic')),
+      h('div', { class: 'roll-t' },
+        h('div', { class: 'q' + it.q, style: { fontWeight: 800 } }, it.name + (open.length > 1 ? `  (+${open.length - 1} more)` : ''), F ? h('span', { class: 'eff', style: { marginLeft: '5px', fontWeight: 700 } }, '◆ ' + F.name) : gearTag(it)),
+        h('div', { class: 'bar' }, h('i', { 'data-roll': i, style: { width: '100%' } }))),
+      h('div', { class: 'roll-b' },
+        h('button', { class: needFirst(it) ? 'btn' : 'btn alt', onclick: () => { G.roll(i, 'need'); renderRolls(); } }, 'Need'),
+        h('button', { class: needFirst(it) ? 'btn alt' : 'btn', onclick: () => { G.roll(i, 'greed'); renderRolls(); } }, 'Greed'),
+        h('button', { class: 'btn alt', onclick: () => { G.roll(i, 'pass'); renderRolls(); } }, 'Pass')));
+    els.bottom.prepend(ui.rollEl);
   }
 
   // ---------- away report, pops, invites

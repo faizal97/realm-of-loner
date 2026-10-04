@@ -848,3 +848,10 @@ svg.sym { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: 
 /* the panel starts 6 px higher, so a run's pace sits on screen under Pull (the sticky tabs and actions match it) */
 .panel { padding-top: 10px; }
 .panel .ptabs { top: -10px; margin-top: -10px; padding-top: 10px; }
+/* #66: a loot roll is a one-line card docked above the action bar, in its own room (the panel gives it the space) */
+.roll.docked { position: static; margin: 4px 6px 2px; padding: 5px 6px; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 6px; box-shadow: none; }
+.roll.docked img { width: 32px; height: 32px; }
+.roll.docked .roll-t { min-width: 0; font-size: 12.5px; line-height: 1.2; overflow-wrap: anywhere; }
+.roll.docked .bar { height: 4px; margin-top: 3px; }
+.roll.docked .roll-b { display: flex; gap: 4px; }
+.roll.docked .roll-b .btn { min-height: 34px; padding: 0 8px; font-size: 12.5px; }
