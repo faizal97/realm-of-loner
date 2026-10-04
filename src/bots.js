@@ -365,7 +365,7 @@
     return 'no idea';
   };
 
-  function ctx(S) {
+  function ctx(S, bot) {
     const P = D.PLACES[S.player.place] || D.PLACES.northshire_abbey;
     const mobs = (P.mobs || []).map((m) => m[0]);
     // named mobs players ask about come from the zone you are in, never another faction's
@@ -392,8 +392,20 @@
     };
   }
 
+  // #69: the reader's Reveals check (#54's shared rule): a bot line that would name a term the READING player
+  // hasn't reached the level for is not sent at all (another line is picked next tick). G.nameable is the shared
+  // check when the game layer is loaded; D.REVEALS is the same table it reads.
+  B.readerOk = function (S, text) {
+    const L = (S.player && S.player.level) || 1;
+    const G0 = root.G;
+    if (G0 && typeof G0.nameable === 'function') { try { if (!G0.nameable(text, L)) return false; } catch (e) { } }
+    for (const [re, lvl] of (D.REVEALS || [])) if (L < lvl && new RegExp(re, 'i').test(String(text))) return false;
+    return true;
+  };
+
   // Emit one chat message into S.chat. from: bot | null (system)
   B.post = function (S, ch, from, text) {
+    if (from && !B.readerOk(S, text)) return null; // #69: never send a bot line that spoils the reader
     const m = { id: (S.chatSeq = (S.chatSeq || 0) + 1), t: Date.now(), ch, from: from ? from.name : null, cls: from ? from.cls : null, fromId: from ? from.id : null, text };
     if (from && from.legend) m.legend = true; // a Legend speaks in their own colour
     S.chat.push(m);
@@ -427,7 +439,7 @@
       }
     }
     if (due('general', 9, 22)) {
-      const b = onl(); c.me = b;
+      const b = onl(); c = ctx(S, b); c.me = b;
       const pool = GENERAL_ANY.concat(c.horde ? GENERAL_HORDE : GENERAL_ALLI, GENERAL_BAND[c.band], GENERAL_BAND[c.band]);
       const text = sloppy(b, pick(pool)(c));
       B.post(S, 'general', b, text);
@@ -452,14 +464,14 @@
     }
     if (due('say', 16, 38)) {
       const near = B.onlineIn(S, S.player.place, date).filter((b) => B.factionOf(b) === B.factionOf(S.player));
-      if (near.length && !D.PLACES[S.player.place].safe || near.length > 2) { const b = pick(near.length ? near : [onl()]); c.me = b; B.post(S, 'say', b, sloppy(b, pick(SAY_NEAR)(c))); }
+      if (near.length && !D.PLACES[S.player.place].safe || near.length > 2) { const b = pick(near.length ? near : [onl()]); c = ctx(S, b); c.me = b; B.post(S, 'say', b, sloppy(b, pick(SAY_NEAR)(c))); }
     }
     if (S.player.guild != null && S.player.guild >= 0 && due('guild', 30, 70)) {
       const mates = S.bots.filter((b) => b.guild === S.player.guild && B.isOnline(b, date));
       if (mates.length) { const b = pick(mates); c.me = b; B.post(S, 'guild', b, sloppy(b, pick(GUILD)(c))); }
     }
     if (due('whisper', 200, 480)) {
-      const b = onl(); c.me = b;
+      const b = onl(); c = ctx(S, b); c.me = b;
       B.post(S, 'whisper', b, pick(WHISPER)(c));
     }
   };
