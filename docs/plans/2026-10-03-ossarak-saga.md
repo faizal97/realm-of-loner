@@ -125,10 +125,16 @@ in `2026-10-03-v11-story-options.md`.
     **No issues, milestones or art until he asks.** Still open for when he resumes it: the final names for the two
     dungeons and the raid (options in the design doc).
 
+20. **A pre-patch bridges into Chapter 1.** Faizal, 2026-10-04 (via the Lead): "we would like to have like
+    'pre-patch' of the v11. so basically a bridge to the v11. it will be on the last version of v10. before we going to
+    v11 (havent detemermined yet what version but its the last)". The last v10 release (its number isn't set) is a
+    pre-patch leading into The Ashen Coronation. **Parked like the rest of Chapter 1:** not designed or filed until he
+    asks.
+
 ## Agreed as a direction (still open to his refinement)
 
-20. **Chapter 1's ending reveals that the Ledger served Ossarak's return:** Veshmira and Kethriax were working toward it.
-21. **Chapter 2 can tie the ancient Drowning to Ossarak's first tearing of the world** (the Heartfire's bursting ten thousand
+21. **Chapter 1's ending reveals that the Ledger served Ossarak's return:** Veshmira and Kethriax were working toward it.
+22. **Chapter 2 can tie the ancient Drowning to Ossarak's first tearing of the world** (the Heartfire's bursting ten thousand
    years ago, and the Black Ruin's wound in the world).
 
 ## Still open (for Faizal), in the order v11 needs them
@@ -136,7 +142,14 @@ in `2026-10-03-v11-story-options.md`.
 1. **Chapter 1's final names** (when he resumes Chapter 1; the design is approved and parked, decision 19). Was: **Chapter 1's design** (`2026-10-03-ch1-ashen-coronation-design.md`; the game designer wrote it for his approval): the zone around the Spire, the two faction
    dungeons, the Spire raid's bosses, the story beat by beat, the end cinematic teasing the Reach, the logo, and
    canon's new Timeline, Names and Reveals.
-2. *Later, not needed for v11:* Chapter 2's and 3's raids and spines; the mega raid's exact size (20 or 25) and gate;
+2. **The pre-patch (decision 20), when he asks:**
+   - which story beats tease the coronation and Kethriax without leaking the level-60 Reveals (a pre-patch reaches
+     every level, so its text is checked at every level);
+   - whether systems changes land early in the pre-patch, so v11.0 is only content;
+   - a small pre-patch event;
+   - whether the Ruinfall Saga emblem and Chapter 1's logo debut there;
+   - its version number (the last v10).
+3. *Later, not needed for v11:* Chapter 2's and 3's raids and spines; the mega raid's exact size (20 or 25) and gate;
    one or two releases for Chapters 2 and 3; and the next saga, planned before Chapter 3's development starts.
 
 ## The cast: a draft for Faizal (game designer, 2026-10-03)
@@ -236,7 +249,7 @@ the sea" again.
 
 ### Choice 3: Ossarak and the Black Brood (**decided: A, born from his blood**)
 
-Canon says nothing yet. It must fit "the Ledger served Ossarak's return" (direction 20).
+Canon says nothing yet. It must fit "the Ledger served Ossarak's return" (direction 21).
 
 - **A. The Brood was born from his blood** (recommended). When Ossarak was driven off, his blood fell on the mountains
   and the first black dragons hatched from it. Every one of the Brood owes him its life: the **oldest debt**.
