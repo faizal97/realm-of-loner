@@ -13,6 +13,10 @@
 //        node tools/announce_discord.js [tag] --dry    print every part instead of posting (before the GitHub release
 //                                                       exists, it reads notes/<tag>.md)
 //        node tools/announce_discord.js <tag> --dry --notes FILE   a dry run of FILE's notes (tools/announce_discord.test.js)
+//        node tools/announce_discord.js <tag> --devlog <itch.io devlog url> [--title "…"]
+//                  after a full release's devlog is live: one short message to #patch-notes, "Devlog: <title>" and the
+//                  link, that can never ping anyone (Faizal: "in every release please with no mention"). Posted once per
+//                  tag (its own guard, apart from the notes); the title is read from the page unless --title gives it
 //        node tools/announce_discord.js [tag] --again  post a tag that was already posted
 'use strict';
 const fs = require('fs');
@@ -24,7 +28,8 @@ const args = process.argv.slice(2);
 const flag = (f) => args.includes(f);
 const opt = (f) => { const i = args.indexOf(f); return i >= 0 ? args[i + 1] : null; };
 const NOTES_FILE = opt('--notes');
-const tag = args.find((a, i) => !a.startsWith('--') && args[i - 1] !== '--notes');
+const DEVLOG = opt('--devlog'), DEVLOG_TITLE = opt('--title');
+const tag = args.find((a, i) => !a.startsWith('--') && !['--notes', '--devlog', '--title'].includes(args[i - 1]));
 const DIR = path.join(os.homedir(), '.config', 'realm-of-loner');
 const LOG_FILE = path.join(DIR, 'announced');
 const ITCH = 'https://starlighthvn.itch.io/realm-of-loner';
@@ -34,6 +39,27 @@ const BETA_ROLE = '1555436280542789672'; // the server's "Beta Testers" role
 
 const die = (msg) => { console.error(msg); process.exit(1); };
 
+if (DEVLOG) {
+  // the devlog link (#patch-notes), never a mention; a tag's devlog is posted once
+  if (!tag) die('--devlog needs the release tag: node tools/announce_discord.js vX.Y.Z --devlog <url>');
+  if (!/^https:\/\/[a-z0-9-]+\.itch\.io\/realm-of-loner\/devlog\//.test(DEVLOG)) die(`not an itch.io devlog link for the game: ${DEVLOG}`);
+  const mark = `${tag} devlog`, seen = fs.existsSync(LOG_FILE) ? fs.readFileSync(LOG_FILE, 'utf8').split('\n').filter(Boolean) : [];
+  if (seen.includes(mark) && !flag('--again') && !flag('--dry')) die(`${tag}'s devlog was already posted; add --again to post it again`);
+  (async () => {
+    let title = DEVLOG_TITLE;
+    if (!title) { try { const html = await (await fetch(DEVLOG)).text(); const m = html.match(/<meta property="og:title" content="([^"]+)"/) || html.match(/<title>([^<]+)<\/title>/); title = m && m[1].replace(/\s*[-|]\s*Realm of Loner.*$/i, '').replace(/&amp;/g, '&').replace(/&#39;|&#x27;/g, "'").replace(/&quot;/g, '"').trim(); } catch (e) { } }
+    title = (title || `Realm of Loner ${tag}`).slice(0, 200);
+    const payload = { username: 'Realm of Loner', content: `**Devlog: ${title}**\n${DEVLOG}`, allowed_mentions: { parse: [] } };
+    if (flag('--dry')) { console.log(`--- devlog post for ${tag} (#patch-notes, no mention${seen.includes(mark) ? '; already posted once' : ''}):`); console.log(JSON.stringify(payload, null, 2)); process.exit(0); }
+    const HOOK = path.join(DIR, 'discord-webhook'), hook = (process.env.DISCORD_WEBHOOK || (fs.existsSync(HOOK) ? fs.readFileSync(HOOK, 'utf8') : '')).trim();
+    if (!/^https:\/\/(ptb\.|canary\.)?discord(app)?\.com\/api\/webhooks\//.test(hook)) die(`no Discord webhook: put its URL in ${HOOK}`);
+    const res = await fetch(hook + '?wait=true', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (!res.ok) die(`Discord said ${res.status}: ${await res.text()}`);
+    fs.mkdirSync(DIR, { recursive: true }); fs.appendFileSync(LOG_FILE, mark + '\n');
+    console.log(`posted ${tag}'s devlog link to Discord`);
+  })();
+  return;
+}
 let rel;
 if (NOTES_FILE && !flag('--dry')) die('--notes is for dry runs only');
 try { if (NOTES_FILE) throw new Error('notes file'); rel = JSON.parse(execFileSync('gh', ['release', 'view', ...(tag ? [tag] : []), '--json', 'tagName,name,body,url,isPrerelease,assets'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })); }
