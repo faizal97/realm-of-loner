@@ -37,6 +37,8 @@ python3 build.py      # inlines fonts, CSS, JS, audio → dist/index.html and ap
 cd app && JAVA_HOME=/opt/homebrew/opt/openjdk@17 flutter build apk --release
 ```
 
+**Version numbers (since 2026-10-04, Faizal):** the major number goes up only with an expansion: v11 is The Ruinfall Saga, Chapter 1, v12 is Chapter 2, v13 is Chapter 3. Everything between expansions is a minor (vX.Y, a feature update) or a patch (vX.Y.Z, fixes). Never reset or go backwards: the in-app updater and Android's build number need versions to keep rising. Players see the update's name first ("The Ruinfall Saga, Chapter 1: The Ashen Coronation"), the number second.
+
 1. Bump `version:` in `app/pubspec.yaml` for every release, and write its notes **first** in `notes/vX.Y.Z.md` (a beta: `notes/vX.Y.Z-beta.N.md`). `build.py` inlines that file as the in-game "What's new" and stops if it is missing; the GitHub release uses the same file: `gh release create vX.Y.Z --notes-file notes/vX.Y.Z.md`, so the updater and the Discord post read the same text.
 2. Copy the APK to `~/Library/Mobile Documents/com~apple~CloudDocs/Azeroth Solo/RealmOfLoner-vX.apk`, remove the previous APK there, and confirm `ubiquitousItemIsUploaded` is true.
 3. Faizal installs it from icloud.com → Recents on his phone.
