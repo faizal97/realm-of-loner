@@ -40,9 +40,12 @@ for (const n of NAMES) addName(n);
 try { for (const v of Object.values(JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/rename_v10.json'), 'utf8')))) addName(v.new); } catch (e) { }
 for (const n of ['Accord', 'Krugar', 'Caldreth', 'Kingsmere', 'Long', 'Regent', 'Mistress', 'Ledger', 'Rise', 'Hoods', 'Grand']) addName(n);
 for (const n of ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']) addName(n); // the calendar (monthly Trialsworn cloaks)
-// every-day English, so a capital at the start of a sentence is not a name
+// every-day English, so a capital at the start of a sentence is not a name: tools/words.gz (Webster's Second, 1934, public
+// domain: the lowercase words of macOS's /usr/share/dict/words), so the check reads the same on every machine (#88: a CI
+// runner has no word list, and plain words then read as names); the system list only if that file is missing
 const dict = new Set();
-try { for (const w of fs.readFileSync('/usr/share/dict/words', 'utf8').split('\n')) if (w && w[0] === w[0].toLowerCase()) dict.add(w); } catch (e) { }
+try { for (const w of require('zlib').gunzipSync(fs.readFileSync(path.join(__dirname, 'words.gz'))).toString('utf8').split('\n')) if (w) dict.add(w); }
+catch (e) { try { for (const w of fs.readFileSync('/usr/share/dict/words', 'utf8').split('\n')) if (w && w[0] === w[0].toLowerCase()) dict.add(w); } catch (e2) { } }
 const COMMON = new Set('I A An The In On At Of To For And But Or Not No Yes Now Then When Where Who What Why How Our Your My His Her Their Its We You He She They It This That These Those There Here Every Each Some Any All One Two Three Four Five Six Seven Eight Nine Ten Twenty Hundred Thousand Kill Bring Find Take Go Head Report Return Speak Talk Deliver Collect Gather Slay Destroy Clear Help Look Let Tell Keep Get Show Come Meet Ask Save Stop Burn Free Heh Deeper Rumours'.split(' '));
 
 // ---------- the text, with the level at which a player can first read it
