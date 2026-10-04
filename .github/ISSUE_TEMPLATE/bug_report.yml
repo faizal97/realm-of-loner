@@ -1,0 +1,46 @@
+name: Bug report
+description: Something in the game is broken or wrong.
+title: "Bug: "
+labels: ["bug", "status: discussion", "needs: qa"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! In the game, **Settings → Community → Report a bug** fills most of this in for you.
+        Please don't paste save codes or anything private: this page is public.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What went wrong, in your own words.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to make it happen again
+      placeholder: |
+        1. Go to …
+        2. Tap …
+        3. …
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: The version is in Settings. Fill in what you know.
+      value: |
+        - Version: 
+        - Device: browser or Android app (and which phone or browser)
+        - Character: level, race, class
+        - Place: 
+    validations:
+      required: true
+  - type: textarea
+    id: errors
+    attributes:
+      label: Errors
+      description: Any error text the game showed (optional). A screenshot helps too.

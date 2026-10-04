@@ -1,0 +1,24 @@
+name: Idea or feedback
+description: Something you'd like in the game, or something that could work or read better.
+title: "Idea: "
+labels: ["improvement", "status: discussion", "needs: game designer"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for the idea! Every one is read. This page is public, so please keep it to the game.
+  - type: textarea
+    id: what
+    attributes:
+      label: What you'd like
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: What it would make better for you, or what's missing today.
+  - type: input
+    id: where
+    attributes:
+      label: Where in the game
+      placeholder: e.g. the group finder, professions, a zone, the Hero sheet
