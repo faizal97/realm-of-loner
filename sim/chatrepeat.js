@@ -16,7 +16,10 @@ const RealDate = Date; let t = new RealDate(2026, 9, 12, 18, 0).getTime(); // a 
 globalThis.Date = class extends RealDate { constructor(...a) { if (a.length) super(...a); else super(t); } static now() { return t; } };
 for (const f of ['data', 'engine', 'bots', 'game', 'social', 'trials']) require(ROOT + '/src/' + f + '.js');
 const { G, D, B, SOC } = globalThis;
-const NP = +process.argv[2] || 4, DAYS = +process.env.DAYS || 7, PLAY_MIN = 120;
+const NP = +process.argv[2] || 4, DAYS = +process.env.DAYS || 7, PLAY_MIN = 120, LV = +process.env.LV || 60; // LV: the reading player's level (#69)
+// the bible's Reveals table (docs/lore/canon.md), read as tools/lorekeeper.js reads it, so this check doesn't lean on the game's copy
+const canon = require('fs').readFileSync(ROOT + '/docs/lore/canon.md', 'utf8'), sect = (ti) => { const m = canon.match(new RegExp(`^## ${ti}\\s*$([\\s\\S]*?)(?=^## |(?![\\s\\S]))`, 'm')); return m ? m[1] : ''; };
+const REVEALS = sect('Reveals').split('\n').filter((l) => /^\|/.test(l) && !/^\|\s*-/.test(l)).map((l) => l.split(/(?<!\\)\|/).slice(1, -1).map((c) => c.trim().replace(/\\\|/g, '|'))).slice(1).map(([term, lvl]) => ({ re: new RegExp(term.replace(/^`|`$/g, ''), 'i'), term, lvl: +lvl }));
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const exactKey = (s) => s.toLowerCase().replace(/\s+/g, ' ').trim().replace(/[.!?]+$/, '');
 let NAMES = null;
@@ -32,11 +35,11 @@ const tmplKey = (s) => exactKey(s).replace(NAMES, '<n>').replace(/\b\d+(?:[.,]\d
 const CLASSN = Object.keys(D.CLASSES), ROLE_WORD = { tank: 'tank', healer: 'heal(?:er|s)?', dps: 'dps' };
 function player(i) {
   const race = i % 2 ? 'orc' : 'human', cls = ['warrior', 'priest', 'mage', 'rogue'][i % 4];
-  G.newGame({ name: ['Aldren', 'Brakka', 'Corwyn', 'Dusk'][i % 4], cls, race }); const S = G.S, P = S.player; P.level = 60; P.money = 1e7;
+  G.newGame({ name: ['Aldren', 'Brakka', 'Corwyn', 'Dusk'][i % 4], cls, race }); const S = G.S, P = S.player; P.level = LV; P.money = 1e7;
   Object.assign(S.flags, { warModeAsked: true, warMode: false, stormBroken: true });
-  P.equip = G.botChar({ name: 'x', cls, race, level: 60, skill: 0.7 }).equip; P.talents = G.autoTalents(cls, 'dps', 60, 0);
+  P.equip = G.botChar({ name: 'x', cls, race, level: LV, skill: 0.7 }).equip; P.talents = G.autoTalents(cls, 'dps', LV, 0);
   B.advance(S, 30 * 864e5); // a server 30 days on, as a level-60 player finds it (median bot about 37, a quarter at 60)
-  const gs = SOC.myGuilds(); const g = gs.find((x) => 60 >= x.min); if (g) P.guild = g.g;
+  const gs = SOC.myGuilds(); const g = gs.find((x) => LV >= x.min); if (g) P.guild = g.g;
   return S;
 }
 const RUNS = [], BGS = []; // how each day's dungeon and battleground ended
@@ -60,12 +63,12 @@ function runAll() {
       S.player.place = cap(S); tick(40 * 60); play += 0; // capital
       const minNow = () => Math.round((t - start) / 60000);
       // a group-finder dungeon (bot-driven), then a battleground, then the world
-      G.queueFor(['stratholme', 'scholomance', 'blackrock_depths'][day % 3]); for (let g = 0; g < 600 && S.queue && !S.queue.popped; g++) tick(1); if (S.queue) G.acceptPop(); if (S.run) S.run.pace = 'normal'; // the pull pace, as sim/tactics.js sets it
+      const dun = Object.keys(D.ACTIVITIES).filter((k) => { const A = D.ACTIVITIES[k]; return A.dungeon && !A.worldBoss && !A.needQuest && (A.size || 5) <= 5 && A.minLvl <= LV && (A.maxLvl || 60) >= LV && !A.trial && !/hard|bg_/.test(k); }); if (dun.length) G.queueFor(dun[day % dun.length]); for (let g = 0; g < 600 && S.queue && !S.queue.popped; g++) tick(1); if (S.queue) G.acceptPop(); if (S.run) S.run.pace = 'normal'; // the pull pace, as sim/tactics.js sets it
       for (let g = 0; g < 3600 && S.run && S.run.phase !== 'done'; g++) tick(1); RUNS.push(S.run ? S.run.phase : 'none'); if (S.group || S.run) try { G.leaveGroup(); } catch (e) {}
-      G.queueFor('bg_highmoor'); for (let g = 0; g < 600 && S.queue && !S.queue.popped; g++) tick(1); if (S.queue) G.acceptPop();
+      if (LV >= 10) G.queueFor('bg_highmoor'); for (let g = 0; g < 600 && S.queue && !S.queue.popped; g++) tick(1); if (S.queue) G.acceptPop();
       for (let g = 0; g < 1800 && S.bg && S.bg.phase !== 'done'; g++) { if (S.bg.phase === 'choose' && !G.fight) { const n = D.BG.highmoor.banners.map((x) => x[0]); G.bgGo(n[0], n[1]); } tick(1); }
       BGS.push(S.bg ? S.bg.phase : 'none'); if (S.bg && G.leaveBg) try { G.leaveBg(); } catch (e) {}
-      S.player.place = 'scorched_fen'; while (minNow() < PLAY_MIN) tick(60);
+      S.player.place = LV >= 58 ? 'scorched_fen' : (Object.keys(D.PLACES).find((k) => { const p = D.PLACES[k]; return p.lvl && p.lvl[0] <= LV && p.lvl[1] >= LV && !p.safe && !p.city && G.dangerOf(k) === 0; }) || cap(S)); while (minNow() < PLAY_MIN) tick(60);
       // away until the next day's session, then the game's catch-up
       S.lastSeen = t; t += (24 * 60 - PLAY_MIN) * 60000; G.catchUp(); collect();
       for (const l of lines) if (l.p === i && l.min === 0 && l.day == null) l.day = day; // (filled below)
@@ -134,5 +137,15 @@ console.log(`threading: replies to a line in the last 12 s ${pct(thread.reply, l
 console.log(`contradictions (same bot, 10 min): ${contra.n} (${pct(contra.n, lines.length)} of lines)`);
 console.log(`world fit: time-of-day words wrong ${W.tod} of ${W.todN} · hunt rare said to be up when it isn't ${W.rare} of ${W.rareN} · world boss named not this week's ${W.wb} of ${W.wbN} · busy/quiet claims against who's online ${W.busy} of ${W.busyN}`);
 console.log(`memory: lines naming the player or an earlier time ${MEM.n} · from a bot the player had grouped with ${MEM.met} · from one it hadn't ${MEM.n - MEM.met}`);
+// #69: content named above the speaker's level + 3 (dungeons and raids, places, named creatures), and Reveals terms above the reader's level
+const CONTENT = []; const addC = (name, lvl, kind) => { if (!name || !(lvl > 0)) return; const n = name.toLowerCase().replace(/^the /, ''); if (n.length < 5) return; CONTENT.push({ re: new RegExp('\\b' + esc(n) + '\\b'), lvl, kind, name }); };
+for (const k in D.ACTIVITIES) addC(D.ACTIVITIES[k].name, D.ACTIVITIES[k].minLvl, 'activity');
+for (const k in D.PLACES) addC(D.PLACES[k].name, D.PLACES[k].lvl && D.PLACES[k].lvl[0], 'place');
+for (const k in D.MOBS) if (D.MOBS[k].named || D.MOBS[k].boss) addC(D.MOBS[k].name, D.MOBS[k].lvl && D.MOBS[k].lvl[0], 'creature');
+const C69 = { above: 0, checked: 0, reveal: 0 };
+for (const l of lines) { const s = l.text.toLowerCase();
+  if (l.bot && l.bot.level != null) { C69.checked++; const hit = CONTENT.find((c) => c.lvl > l.bot.level + 3 && c.re.test(s)); if (hit) { C69.above++; addEx('above69', Object.assign({}, l, { text: l.text + `  [${hit.kind} ${hit.name} level ${hit.lvl}]` })); } }
+  const r = REVEALS.find((x) => LV < x.lvl && x.re.test(l.text)); if (r) { C69.reveal++; addEx('reveal', Object.assign({}, l, { text: l.text + `  [Reveal ${r.term} at ${r.lvl}, reader ${LV}]` })); } }
+console.log(`\n== #69 at reader level ${LV}: lines naming content above the speaker's level + 3: ${C69.above} of ${C69.checked} · lines with a Reveals term above the reader's level: ${C69.reveal} of ${lines.length} (bible's Reveals table, ${REVEALS.length} terms)`);
 console.log('\n== examples (up to 4 each)'); for (const k of Object.keys(ex)) console.log(`${k}: ` + ex[k].slice(0, 4).join(' ‖ '));
 if (process.env.JSON) console.log('JSON ' + JSON.stringify({ ID, thread, contra, W, MEM }));
