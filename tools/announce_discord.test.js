@@ -41,5 +41,24 @@ p2.slice(1).forEach((p, i) => { const first = body(p.embeds[0].description).spli
 // 3. one section longer than a whole embed: it carries on into the next part between two lines, never mid-line
 const huge = '**One huge section**\n' + Array.from({ length: 180 }, (_, i) => `- Line ${i + 1}: ${'a fact about the update, '.repeat(3)}and its end.`).join('\n');
 check('one section of ' + huge.length + ' chars', huge, (N) => N >= 3);
+// 4. who is pinged (Faizal, 2026-10-04): a patch release never pings; a feature update or an expansion pings Patch Notes
+// once; a beta pings Beta Testers only if no beta ping is logged in the last 24 hours. A stand-in log, never the real one.
+const pings = (tag, logLines) => {
+  const f = path.join(os.tmpdir(), `announce-ping-${process.pid}-${n}.md`), log = f + '.log'; fs.writeFileSync(f, '**Fixes**\n- One fix.'); fs.writeFileSync(log, logLines.join('\n') + '\n');
+  const out = execFileSync('node', [TOOL, tag, '--dry', '--notes', f, ...(/-beta\./.test(tag) ? ['--beta'] : [])], { encoding: 'utf8', env: Object.assign({}, process.env, { ANNOUNCE_LOG: log }) }); fs.unlinkSync(f); fs.unlinkSync(log);
+  const ps = out.split(/^--- part /m).slice(1).map((blk) => JSON.parse(blk.slice(blk.indexOf('\n') + 1)));
+  return { roles: ps.reduce((a, p) => a + p.allowed_mentions.roles.length + (/<@&/.test(p.content) ? 1 : 0), 0), why: (out.match(/^\((no ping: [^\n]*|pings the [^)]*)\)$/m) || [])[1] || '' };
+};
+const ago = (h) => new Date(Date.now() - h * 3600000).toISOString();
+for (const [name, tag, log, want, why] of [
+  ['a patch release', 'v10.10.1', [], 0, /no ping: patch release/],
+  ['a feature update', 'v10.11.0', [], 2, /pings the Patch Notes role/],
+  ['an expansion', 'v11.0.0', [], 2, /pings the Patch Notes role/],
+  ['a beta 2 h after a beta ping', 'v10.10.1-beta.1', [`ping beta ${ago(2)} v10.10.0-beta.8`], 0, /no ping: testers were pinged in the last day/],
+  ['a beta 25 h after a beta ping', 'v10.10.1-beta.1', [`ping beta ${ago(25)} v10.10.0-beta.8`], 2, /pings the Beta Testers role/],
+  ['a beta, a release ping 2 h ago', 'v10.10.1-beta.1', [`ping patch ${ago(2)} v10.10.0`], 2, /pings the Beta Testers role/],
+  ['a beta, an old log of tags only', 'v10.10.1-beta.1', ['v10.10.0-beta.8', 'v10.10.0'], 2, /pings the Beta Testers role/],
+  ['a feature update after a beta ping', 'v10.11.0', [`ping beta ${ago(1)} v10.11.0-beta.3`], 2, /pings the Patch Notes role/],
+]) { const r = pings(tag, log); console.log(`${name} (${tag}): ${r.why}`); ok(r.roles === want && why.test(r.why), `${name}: ${r.roles / 2} ping(s), "${r.why}"`); }
 console.log(bad ? `${bad} of ${n} checks FAIL` : `announce split: ${n}/${n} checks pass`);
 process.exit(bad ? 1 : 0);

@@ -6,7 +6,10 @@
 // Normal releases go to #patch-notes, betas to #beta-builds (only Beta Testers see it). The webhook URLs live outside the
 // repo, in ~/.config/realm-of-loner/discord-webhook and discord-webhook-beta (or the DISCORD_WEBHOOK env var),
 // so they can never be committed. Each tag is posted once; the posted tags are kept in ~/.config/realm-of-loner/announced.
-// A normal release pings the "Patch Notes" role, a beta the "Beta Testers" role (players opt in to both in Onboarding).
+// A normal release pings the "Patch Notes" role, a beta the "Beta Testers" role (players opt in to both in Onboarding),
+// with two rules from Faizal (2026-10-04): a patch release (vX.Y.Z with Z above 0) posts without a ping ("Yes" to "should
+// patch releases post without the role ping?"), and a beta pings Beta Testers at most once a day ("Yes I like that idea"):
+// each ping is logged with its time ("ping beta <ISO time> <tag>"), and a beta within 24 hours of the last one posts quiet.
 // Usage: node tools/announce_discord.js [tag]          the latest normal release, or that tag
 //        node tools/announce_discord.js <tag> --beta   allow a pre-release (posts to #beta-builds)
 //        node tools/announce_discord.js [tag] --quiet  post without the role ping
@@ -31,7 +34,7 @@ const NOTES_FILE = opt('--notes');
 const DEVLOG = opt('--devlog'), DEVLOG_TITLE = opt('--title');
 const tag = args.find((a, i) => !a.startsWith('--') && !['--notes', '--devlog', '--title'].includes(args[i - 1]));
 const DIR = path.join(os.homedir(), '.config', 'realm-of-loner');
-const LOG_FILE = path.join(DIR, 'announced');
+const LOG_FILE = process.env.ANNOUNCE_LOG || path.join(DIR, 'announced'); // ANNOUNCE_LOG: a stand-in log (tools/announce_discord.test.js)
 const ITCH = 'https://starlighthvn.itch.io/realm-of-loner';
 const MAX_DESC = 4096; // Discord's limit for an embed description (and 6,000 for a whole message: one embed stays under it)
 const PATCH_ROLE = '1555434281520865341'; // the server's "Patch Notes" role (role IDs are not secrets)
@@ -101,7 +104,13 @@ for (const sec of sections) {
 }
 if (cur.trim() || !parts.length) parts.push(cur.trim());
 const N = parts.length;
-const role = flag('--quiet') ? null : rel.isPrerelease ? BETA_ROLE : PATCH_ROLE;
+// who is pinged, and why not when nobody is
+const DAY = 86400000, NOW = Date.now();
+const lastBetaPing = posted.map((l) => l.match(/^ping beta (\S+)/)).filter(Boolean).map((m) => Date.parse(m[1])).filter((x) => x > 0).sort((a, b) => b - a)[0];
+const noPing = flag('--quiet') ? '--quiet'
+  : rel.isPrerelease ? (lastBetaPing && NOW - lastBetaPing < DAY ? `testers were pinged in the last day (${new Date(lastBetaPing).toISOString().slice(0, 16).replace('T', ' ')} UTC)` : null)
+  : /^v\d+\.\d+\.[1-9]\d*$/.test(rel.tagName) ? 'patch release' : null;
+const role = noPing ? null : rel.isPrerelease ? BETA_ROLE : PATCH_ROLE;
 const title = (rel.isPrerelease ? 'Beta: ' : '') + (rel.name || rel.tagName);
 const payloads = parts.map((text, i) => ({
   username: 'Realm of Loner',
@@ -120,6 +129,7 @@ const msgLen = (p) => p.content.length + p.embeds.reduce((a, e) => a + e.title.l
 for (const p of payloads) if (p.embeds[0].description.length > MAX_DESC || msgLen(p) > 6000) die(`a part is over Discord's limits (${p.embeds[0].description.length} / ${MAX_DESC} description, ${msgLen(p)} / 6000 message)`);
 
 if (flag('--dry')) {
+  console.log(noPing ? `(no ping: ${noPing})` : `(pings the ${rel.isPrerelease ? 'Beta Testers' : 'Patch Notes'} role in part 1)`);
   payloads.forEach((p, i) => { const d = p.embeds[0].description; console.log(`--- part ${i + 1}/${N}: description ${d.length} / ${MAX_DESC} chars, message ${msgLen(p)} / 6000, role ping: ${p.content ? 'yes' : 'no'}, links: ${d.endsWith(foot) ? 'yes' : 'no'}; starts "${d.split('\n').find((l) => l.trim() && !/continued/.test(l)).slice(0, 60)}", ends "${d.split('\n').filter((l) => l.trim()).slice(-1)[0].slice(0, 60)}"`); console.log(JSON.stringify(p, null, 2)); });
   process.exit(0);
 }
@@ -137,9 +147,10 @@ if (!/^https:\/\/(ptb\.|canary\.)?discord(app)?\.com\/api\/webhooks\//.test(hook
     if (N > 1 && posted.includes(mark) && !flag('--again')) { console.log(`part ${i + 1}/${N} was already posted; skipping it`); continue; }
     const res = await fetch(hook + '?wait=true', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payloads[i]) });
     if (!res.ok) die(`Discord said ${res.status} on part ${i + 1}/${N}: ${await res.text()}`);
+    if (i === 0 && role) fs.appendFileSync(LOG_FILE, `ping ${rel.isPrerelease ? 'beta' : 'patch'} ${new Date().toISOString()} ${rel.tagName}\n`);
     if (N > 1) fs.appendFileSync(LOG_FILE, mark + '\n');
     if (i < N - 1) await new Promise((r) => setTimeout(r, 1500)); // a short pause between parts: Discord rate-limits webhooks
   }
   if (!posted.includes(rel.tagName)) fs.appendFileSync(LOG_FILE, rel.tagName + '\n');
-  console.log(`posted ${rel.tagName} to Discord${N > 1 ? ` in ${N} parts` : ''}`);
+  console.log(`posted ${rel.tagName} to Discord${N > 1 ? ` in ${N} parts` : ''}${noPing ? ` (no ping: ${noPing})` : ''}`);
 })();
