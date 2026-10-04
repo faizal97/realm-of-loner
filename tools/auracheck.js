@@ -3,7 +3,8 @@
 // fight it gives you, a party member and the boss eight long harmless buffs (30 min, like food and flasks) and one debuff,
 // and checks that in each frame the debuff is an icon you can see (inside the row, not folded) while "+N" holds the long
 // buffs and is not red; then it overfills the rows with debuffs and checks "+N" turns red; then a tap on "+N" lists every
-// aura with what it does, who put it there and the time left. Prints one line per check. Use a test character.
+// aura with what it does, who put it there and the time left, every line whole, with a close at the top. Every icon is
+// 12 px or more and every debuff is boxed in red. Prints one line per check. Use a test character.
 (async () => {
   const W = (ms) => new Promise((r) => setTimeout(r, ms)), out = [`viewport ${innerWidth}x${innerHeight}`];
   // the frames paint in the game's animation-frame loop, which a hidden tab pauses: run it on timers while checking
@@ -26,7 +27,10 @@
   for (const [name, box] of boxes()) {
     if (!box) { out.push(`${name}: NO ROW`); continue; }
     const more = box.querySelector('.au.more');
-    out.push(`${name}: ${visibleDebuff(box) ? 'the debuff shows' : 'DEBUFF NOT VISIBLE'}, ${box.querySelectorAll('.au:not(.more)').length} icons + ${more ? more.textContent : 'no fold'}${more && more.classList.contains('lost') ? ' (RED: wrong, only long buffs folded)' : ''}`);
+    // every icon readable (QA on beta.2: the header squeezed them to 4 px slivers), and a debuff boxed in red
+    const thin = [...box.querySelectorAll('.au')].map((c) => c.getBoundingClientRect().width).filter((w) => w < 12);
+    const red = [...box.querySelectorAll('.au.de img')].every((i) => /rgb\(224, 64, 47\)/.test(getComputedStyle(i).borderTopColor));
+    out.push(`${name}: ${visibleDebuff(box) ? 'the debuff shows' : 'DEBUFF NOT VISIBLE'}, ${box.querySelectorAll('.au:not(.more)').length} icons + ${more ? more.textContent : 'no fold'}${more && more.classList.contains('lost') ? ' (RED: wrong, only long buffs folded)' : ''}, ${thin.length ? `${thin.length} ICONS UNDER 12 PX (${thin.map((w) => Math.round(w)).join(', ')})` : 'every icon 12 px or more'}, ${red ? 'debuffs boxed in red' : 'A DEBUFF NOT BOXED IN RED'}`);
   }
   // overfill with debuffs: "+N" turns red, and its list has every aura
   for (const u of [me, mate, boss]) for (let n = 1; n <= 12; n++) debuff(u, n);
@@ -36,6 +40,11 @@
   if (more) { more.click(); await W(200); const rows = [...document.querySelectorAll('.dialog .list .row')], mine = rows.filter((r) => /Long buff|Test Poison/.test(r.textContent)).length;
     const poison = rows.find((r) => /Test Poison/.test(r.textContent));
     out.push(`"+N" list: ${rows.length} rows, ${mine} of the 21 test auras${mine === 21 ? '' : ' (MISSING SOME)'}; a debuff row reads "${poison ? poison.querySelector('small').textContent : 'NONE'}"`);
+    // every line whole (QA: 13 of 13 debuff rows ended "from …"), debuff rows boxed in red, a close at the top
+    const cut = rows.filter((r) => [...r.querySelectorAll('.t b, .t small')].some((e) => e.scrollWidth > e.clientWidth + 1 || getComputedStyle(e).textOverflow === 'ellipsis' && e.scrollWidth > e.clientWidth)).length;
+    const deRows = rows.filter((r) => /^Debuff/.test((r.querySelector('small') || {}).textContent || '')), boxed = deRows.filter((r) => r.querySelector('.ic.de')).length;
+    const x = document.querySelector('.dialog .dlg-h .x'); if (x) x.click(); await W(100);
+    out.push(`"+N" list: ${cut ? `${cut} ROWS CUT OFF` : 'every line whole'}, ${boxed} of ${deRows.length} debuff rows boxed in red, ${x ? (document.querySelector('.dialog') ? 'the top × DID NOT CLOSE it' : 'the top × closes it') : 'NO CLOSE AT THE TOP'}`);
     const d = document.querySelector('.dialog'); if (d) d.click(); }
   for (const u of [me, mate, boss]) u.auras = u.auras.filter((a) => !/^test_/.test(a.id));
   for (const e of C.enemies) e.hp = 1; for (let i = 0; i < 300 && G.fight; i++) G.update(0.2); if (G.S.run) G.leaveGroup(); G.S.flags.deserterUntil = 0;

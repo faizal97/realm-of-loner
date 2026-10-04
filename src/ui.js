@@ -213,8 +213,9 @@
   const auraFrom = (a) => { const src = a.raw && a.raw.src != null && G.fight && G.fight.units[a.raw.src]; return src ? `from ${src.kind === 'player' ? 'you' : src.name}` : ''; };
   function auraListDialog(box) {
     const all = box._all || [];
-    showDialog([h('h3', null, 'Buffs and debuffs'), h('div', { class: 'list' }, ...all.map((a) => h('button', { class: 'row', onclick: () => { closeDialog(); showAura(a, box); } },
-      h('div', { class: 'ic' }, img(abIcon(a.icon))), h('div', { class: 't' }, h('b', { style: { color: a.debuff ? '#ff6a5a' : '#5fd46a' } }, a.name),
+    // the full list (#79): a close at the top too (the list can be taller than the screen), every line wraps, debuffs boxed in red
+    showDialog([h('div', { class: 'dlg-h' }, h('h3', null, 'Buffs and debuffs'), h('button', { class: 'x', 'aria-label': 'Close', onclick: closeDialog }, '×')), h('div', { class: 'list aura-list' }, ...all.map((a) => h('button', { class: 'row', onclick: () => { closeDialog(); showAura(a, box); } },
+      h('div', { class: 'ic' + (a.debuff ? ' de' : '') }, img(abIcon(a.icon))), h('div', { class: 't' }, h('b', { style: { color: a.debuff ? '#ff6a5a' : '#5fd46a' } }, a.name),
         h('small', null, [(a.debuff ? 'Debuff' : 'Buff'), auraEffects(a).join(' '), auraFrom(a), a.left > 86400 || !isFinite(a.left) ? '' : `${fmtLeft(a.left)}${a.left >= 60 ? '' : ' sec'} left`].filter(Boolean).join(' · ')))))),
       h('button', { class: 'btn wide', style: { marginTop: '8px' }, onclick: closeDialog }, 'Close')], true);
   }

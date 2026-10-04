@@ -63,6 +63,12 @@ img { max-width: 100%; display: block; }
 .uf-body > .buffs { flex-wrap: nowrap; overflow: hidden; height: 33px; }
 .au.more i { width: 20px; height: 20px; display: grid; place-items: center; border: 1.5px solid var(--edge-hi); border-radius: 3px; box-sizing: border-box; font: 800 10px/1 var(--body); font-style: normal; color: var(--gold); background: #1a1209; }
 /* #79: "+N" turns red when a debuff had to fold; a debuff your group can remove has a corner mark in its dispel type's colour */
+/* #79 (QA on beta.2): a chip never shrinks (the header squeezed them to 4 px slivers); what does not fit folds into "+N" */
+.au { flex: none; }
+.frames .buffs .au.de img { border-width: 2px; }
+.dlg-h { display: flex; align-items: center; gap: 8px; } .dlg-h h3 { flex: 1; } .dlg-h .x { flex: none; margin: -8px -8px -8px 0; }
+.aura-list .row .t small { white-space: normal; overflow: visible; text-overflow: clip; }
+.row .ic.de { border: 2px solid #e0402f; }
 .au.more.lost i { border-color: #e0402f; color: #ffb0a6; background: #4a120c; }
 .au.dm::after { content: ''; position: absolute; top: -2px; right: -2px; width: 7px; height: 7px; border-radius: 50%; box-shadow: 0 0 0 1px #000; background: #fff; }
 .au.dm-magic::after { background: #3c8cff; } .au.dm-curse::after { background: #a050ff; } .au.dm-disease::after { background: #c9953c; } .au.dm-poison::after { background: #3fbf4f; }
