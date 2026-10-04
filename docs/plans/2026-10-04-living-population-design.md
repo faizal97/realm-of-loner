@@ -1,6 +1,8 @@
 # A living population: design options
 
-For Faizal to choose. From QA's believability audit (#68) and the Balance Analyst's chat measurements on it
+**Decided: option A, the living server in four phases, with the 16 gated targets** (Faizal, 2026-10-04, via the
+Lead: "yes option A"). Phase 1's spoiler fix is already filed as #69 in v10.10.1. Not filed yet: it goes before or
+after the v10.11 tavern (his next choice). From QA's believability audit (#68) and the Balance Analyst's chat measurements on it
 (`sim/chatrepeat.js`, main d76854d). Faizal's aim: the simulated players should feel like **persistent people**, not
 disguised NPCs; what's needed is **persistent identity, not more AI**; and chat's "repetitiveness and cohesiveness...
 we need to crush that down". Drafted by the game designer, 2026-10-04.
@@ -115,6 +117,4 @@ and every phase is measured against the table, so "alive" stops being a feeling 
 
 ## Still open (for Faizal)
 
-1. **A, B or C.**
-2. **Where it goes:** its own update after the tavern (recommended), or before it.
-3. **The spoiler fix in v10.10.1:** yes or no.
+1. **Where it goes:** its own update after the tavern (recommended), or before it.
