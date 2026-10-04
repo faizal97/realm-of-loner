@@ -484,7 +484,8 @@
     if (!u.pos || !u.pos0) return;
     const W = els.scene.clientWidth || 360, H = els.scene.clientHeight || 220, t = C.t;
     const dx = cam.dx[u.uid] != null ? cam.dx[u.uid] : (u.side === 'ally' ? cam.pull : -cam.pull), dy = u.pos.y - u.pos0.y, lift = (u.pos.z || 0) * M_MAX * W * 0.7, depth = dy * H * 0.035;
-    el.style.translate = `${dx.toFixed(1)}px ${(-depth - lift).toFixed(1)}px`;
+    const up = el._head != null ? Math.min(depth + lift, el._head) : depth + lift; // never up into the strip (#83)
+    el.style.translate = `${dx.toFixed(1)}px ${(-up).toFixed(1)}px`;
     el.style.scale = (1 - dy * 0.04).toFixed(3);
     const running = !u.dead && u.movedAt != null && t - u.movedAt < 0.25, fleeing = !u.dead && u.fleeUntil > t;
     el.classList.toggle('run', running);
@@ -511,8 +512,22 @@
     fear: '<svg viewBox="0 0 40 40"><g fill="none" stroke-linecap="round"><path d="M20 20 m-12 0 a12 12 0 1 1 12 12 a7 7 0 1 1 -7 -7" stroke="#1a1009" stroke-width="6"/><path d="M20 20 m-12 0 a12 12 0 1 1 12 12 a7 7 0 1 1 -7 -7" stroke="#b18cff" stroke-width="3"/></g></svg>',
     shadow: '',
   };
+  const STRIP = 32; // #83: the scene's top strip, for controls only (style.css .scene .strip)
+  // after a scene is drawn: a sprite whose nameplate would still reach into the strip is lowered by that much, and each
+  // keeps its headroom, the most a fight may lift it (placeSprite), so no unit is ever drawn into the strip (#83)
+  function fitBelowStrip(sc) {
+    const top = sc.getBoundingClientRect().top + STRIP;
+    for (const el of sc.querySelectorAll('.sprite')) {
+      const tops = [el, ...el.querySelectorAll('.np')].map((e) => e.getBoundingClientRect()).filter((r) => r.height).map((r) => r.top);
+      if (!tops.length) continue;
+      let t = Math.min(...tops);
+      if (t < top) { el.style.bottom = `calc(${el.style.bottom || '0px'} - ${Math.ceil(top - t)}px)`; t = top; }
+      el._head = Math.max(0, t - top);
+    }
+  }
   function spriteEl(src, pos, cls, np) {
-    const st = { width: `calc(${pos.w} * 1.6667cqh)`, bottom: pos.b + '%' }; // w% of a 5:3 stage, from the scene's height (#65)
+    // w% of a 5:3 stage, from the stage's height (#65): the scene below its 32 px strip (#83), so no unit is drawn into it
+    const st = { width: `calc(${pos.w} * 1.6667 * (1cqh - ${STRIP / 100}px))`, bottom: `calc(${pos.b} * (1cqh - ${STRIP / 100}px))` };
     if (pos.l != null) st.left = pos.l + '%'; else st.right = pos.r + '%';
     st.zIndex = String(100 - Math.round(pos.b));
     return h('div', { class: 'sprite ' + (cls || ''), style: st }, np || null, img(src));
@@ -532,7 +547,9 @@
     const sub = S.brawl ? (S.brawl.phase === 'done' ? (S.brawl.champion ? 'Champion' : 'Finished') : `Round ${S.brawl.round} of ${G.BRAWL.rounds}`) : S.bg ? `Round ${S.bg.round} of ${D.BG[S.bg.key].rounds} · you ${S.bg.score.us}, them ${S.bg.score.them}` : S.run ? S.run.pulls[Math.min(S.run.idx, S.run.pulls.length - 1)].label : P.travel ? 'to ' + D.PLACES[P.travel.to].name + (P.route && P.route.length ? ` · then ${D.PLACES[P.route[P.route.length - 1]].name}` : '') : place.zone;
     // the place name, and under it the run menu and the battle speed (#67, the game designer's call): top-left, where the
     // party stands, so they never sit on an enemy's or a boss's nameplate (enemies stand right)
-    sc.append(h('div', { class: 'scene-tl' }, h('div', { class: 'zone' }, title, h('small', null, sub)), h('div', { class: 'scene-ctl' }, runMenuBtn(), speedChip())));
+    // the strip along the scene's top (#83, the game designer's call): the place name, "N online", the battle speed and the
+    // run menu, in every state; no unit is drawn into it (spriteEl, fitBelowStrip)
+    sc.append(h('div', { class: 'strip' }, h('div', { class: 'zone' }, title, h('small', null, sub)), h('div', { class: 'online', id: 'online' }), h('div', { class: 'scene-ctl' }, speedChip(), runMenuBtn())));
     const C = G.fight;
     if (C) {
       // slots by where each stands (stage 4): the tank and melee at the front, a group's back line in the back slots
@@ -626,7 +643,7 @@
     if (S.run && S.run.phase === 'done') sc.append(h('div', { class: 'overlay-msg', style: { background: 'rgba(0,0,0,.25)' } }, h('div', null, h('h3', null, S.run.name + ' cleared'), h('p', null, 'Leave the group when you are ready.'))));
     els.cast = h('div', { class: 'castbar', hidden: true }, h('i'), h('b'));
     sc.append(els.cast);
-    sc.append(h('div', { class: 'online', id: 'online' }));
+    fitBelowStrip(sc);
     if (G.S.player.fishing && ui.fishEl) sc.append(ui.fishEl); // fishing (v10.9) survives a scene rebuild
   }
   function markTargets() {

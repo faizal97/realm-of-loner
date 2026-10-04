@@ -4,22 +4,29 @@
 // wiped, cleared, dead; a battleground's choosing, fighting and finished) checks that the scene's menu button is the
 // top element at its own centre (document.elementFromPoint), that a tap opens the menu, and that each of its four rows
 // is shown and opens its own sheet (Bags, Hero, Quests, Social), and with that sheet open the button is still on top and
-// switches to the next sheet in two taps (menu, row); and that neither the menu nor the battle speed covers an
-// enemy's or a boss's nameplate, in each state, in a boss fight, and in every boss fight of every dungeon and raid. It changes the
+// switches to the next sheet in two taps (menu, row); and that no unit (sprite, nameplate or health bar, ally or enemy) is
+// drawn into the scene's top strip where the controls live (#83), in each state, at ten moments across a dungeon and a raid
+// fight, in a boss fight, and in every boss fight of every dungeon and raid. It changes the
 // character's state (runs, Deserter, a brief death): use a test character. Prints one line per state.
 (async () => {
   const W = (ms) => new Promise((r) => setTimeout(r, ms));
+  // units move in the game's animation-frame loop, which a hidden tab pauses: run it on timers while checking
+  const rAF = window.requestAnimationFrame; window.requestAnimationFrame = (f) => setTimeout(() => f(performance.now()), 16);
   const settle = (fn) => { fn(); G.emit('runUpdate'); G.emit('change'); };
   const skip = async () => { for (let j = 0; j < 8; j++) { const b = [...document.querySelectorAll('button')].find((x) => /^(Skip|Enter|Accept|Join)/.test(x.textContent.trim())); if (!b) break; b.click(); await W(250); } };
   // the button is on top at its centre, its tap opens the menu, and each of the menu's four rows is shown, on top and opens
   // its own sheet (a check that stopped at the menu's title once passed while every row was hidden, #67)
   const atTop = (el) => { const r = el.getBoundingClientRect(); if (!r.width || !r.height) return false; const t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!(t && (t === el || el.contains(t))); };
   const closeAll = () => { const x = document.querySelector('.sheet button.x'); if (x) x.click(); const d = document.querySelector('.dialog'); if (d) d.click(); };
-  // no enemy's, boss's or other player's nameplate under the menu or the battle speed (#67 (c): they sit top-left, the party's side)
-  const covered = () => { const out = [], ctl = [...document.querySelectorAll('.scene .run-menu, .scene .speed-chip')].filter((e) => !e.hidden && e.getBoundingClientRect().width);
-    for (const np of document.querySelectorAll('.scene .sprite:not(.friend) .np')) { const q = np.getBoundingClientRect(); if (!q.width) continue;
-      for (const c of ctl) { const r = c.getBoundingClientRect(), ix = Math.min(r.right, q.right) - Math.max(r.left, q.left), iy = Math.min(r.bottom, q.bottom) - Math.max(r.top, q.top); if (ix > 0 && iy > 0) out.push(`${c.className.split(' ')[0]} covers ${np.textContent.trim().slice(0, 24)} (${Math.round(ix)}x${Math.round(iy)})`); } }
-    return out; };
+  // no unit (sprite, nameplate or health bar, ally or enemy) drawn into the scene's top strip, where the controls live (#83)
+  const covered = () => { const out = [], st = document.querySelector('.scene .strip'), sc = document.querySelector('.scene').getBoundingClientRect();
+    // a build before #83 has no strip: the controls themselves (the run menu and the battle speed) are what a unit must not be under
+    const ctl = [...document.querySelectorAll('.scene .run-menu, .scene .speed-chip')].filter((e) => !e.hidden && e.getBoundingClientRect().width).map((e) => e.getBoundingClientRect());
+    const r = st ? st.getBoundingClientRect() : ctl.length ? { left: Math.min(...ctl.map((q) => q.left)), right: Math.max(...ctl.map((q) => q.right)), top: Math.min(...ctl.map((q) => q.top)), bottom: Math.max(...ctl.map((q) => q.bottom)) } : { left: 0, right: 0, top: 0, bottom: 0 };
+    for (const el of document.querySelectorAll('.scene .sprite, .scene .sprite .np, .scene .sprite .hpb')) { const q = el.getBoundingClientRect(); if (!q.width || !q.height) continue;
+      const ix = Math.min(r.right, q.right) - Math.max(r.left, q.left), iy = Math.min(r.bottom, q.bottom) - Math.max(r.top, q.top);
+      if (ix > 0 && iy > 0) { const sp = el.closest('.sprite'), nm = ((sp.querySelector('.np') || {}).textContent || '?').trim().slice(0, 20); out.push(`${el.classList.contains('np') ? 'nameplate' : el.classList.contains('hpb') ? 'health bar' : 'sprite'} of ${nm} in the strip (${Math.round(iy)} px)`); } }
+    return [...new Set(out)]; };
   const check = (label) => {
     const m = document.querySelector('.run-menu'); if (!m || m.hidden) return `${label}: NO MENU`;
     const cov = covered(); if (cov.length) return `${label}: ${cov.join(', ')}`;
@@ -48,7 +55,10 @@
   const pick = (f) => Object.keys(D.ACTIVITIES).find((k) => f(D.ACTIVITIES[k]) && G.activityBlock(k) !== 'hidden');
   for (const [label, act] of [['dungeon', pick((A) => A.dungeon && (A.size || 5) <= 5 && A.minLvl <= 60 && A.maxLvl >= 60 && !A.needQuest)], ['raid', pick((A) => (A.size || 5) > 5 && !A.worldBoss && A.minLvl <= 60)]]) {
     await enter(act); if (!G.S.run) { out.push(`${label}: did not start`); continue; }
-    out.push(check(`${label} resting`)); fightNow(); out.push(check(`${label} fighting`)); endFight();
+    out.push(check(`${label} resting`)); fightNow(); out.push(check(`${label} fighting`));
+    // QA's samples (#83): ten moments across the fight, as units move and fly
+    { const hits = []; let n = 0; for (let k = 0; k < 10 && G.S.run; k++) { if (!G.fight) { if (G.S.run.phase !== 'rest') break; fightNow(); } for (let i = 0; i < 8; i++) G.update(0.25); await W(60); n++; hits.push(...covered()); } out.push(`${label}: ${n} fight samples, ${hits.length ? [...new Set(hits)].join('; ') : 'no unit in the strip'}`); }
+    endFight();
     { const R = G.S.run, bi = R.pulls.map((p, i) => (p.boss ? i : -1)).filter((i) => i >= 0).pop(); if (bi != null) { R.idx = bi; R.phase = 'rest'; fightNow(); G.emit('change'); out.push(check(`${label} boss fight (${G.fight ? G.fight.enemies[0].name : 'none'})`)); endFight(); } }
     settle(() => { G.S.run.phase = 'wipe'; }); out.push(check(`${label} wiped`));
     settle(() => { G.S.run.phase = 'done'; }); out.push(check(`${label} cleared`));
@@ -74,6 +84,6 @@
       await enter(act); if (!G.S.run) continue;
       for (const bi of G.S.run.pulls.map((p, i) => (p.boss ? i : -1)).filter((i) => i >= 0)) { if (!G.S.run) break; endFight(); if (!G.S.run) break; G.S.run.idx = bi; G.S.run.phase = 'rest'; fightNow(); G.emit('change'); n++; const c = covered(); if (c.length) hits.push(`${D.ACTIVITIES[act].name}: ${c.join(', ')}`); }
     }
-    out.push(`every boss fight (${n}): ${hits.length ? hits.join('; ') : 'no nameplate covered'}`); }
-  clear(); console.log(out.join('\n')); return out;
+    out.push(`every boss fight (${n}): ${hits.length ? hits.join('; ') : 'no unit in the strip'}`); }
+  clear(); window.requestAnimationFrame = rAF; console.log(out.join('\n')); return out;
 })();

@@ -838,7 +838,7 @@ svg.sym { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: 
 /* scene: about a fifth of the screen; the art fills it, and sprites are sized from its height so they shrink with it */
 .scene { aspect-ratio: auto; height: clamp(140px, 21vh, 200px); max-height: none; container-type: size; }
 .scene .bg { object-position: 50% 70%; }
-.sprite { width: calc(30 * 1.6667cqh); }
+.sprite { width: calc(30 * 1.6667 * (1cqh - .32px)); }
 /* chat: the newest line only; tap to open the full chat */
 .chat.folded { height: 34px; }
 /* party frames, compact: name and health in a 30 px row, your target outlined, tap to heal as before */
@@ -888,9 +888,15 @@ svg.sym { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: 
    (the run menu, the battle speed) sit above them, so the menu opens Bags on the results screen too */
 .overlay-msg { pointer-events: none; }
 .scene .run-menu, .scene .speed-chip { z-index: 210; }
-/* #67 (c): the place name with the run menu and the battle speed under it, at the scene's top-left (the party's side), so they
-   never cover an enemy's or a boss's nameplate; one column, so a two-line name pushes the buttons down instead of under them */
-.scene .scene-tl { position: absolute; z-index: 210; top: 6px; left: 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; pointer-events: none; }
-.scene .scene-tl .zone { position: static; }
-.scene .scene-ctl { display: flex; gap: 8px; }
-.scene .scene-ctl > button { position: relative; top: auto; right: auto; left: auto; pointer-events: auto; }
+/* #83 (the game designer's call, replacing #67's top-left): a 32 px strip along the scene's top in every state holds the place
+   name, "N online", the battle speed and the run menu; the art and every unit sit below it (ui.js spriteEl, fitBelowStrip),
+   so nothing is ever drawn under a control. Each control is the strip's full height and at least 44 px wide to touch */
+.scene .strip { position: absolute; z-index: 210; top: 0; left: 0; right: 0; height: 32px; display: flex; align-items: center; gap: 8px; padding-left: 8px; background: linear-gradient(#17110a, #0f0b06); border-bottom: 1px solid var(--edge); box-sizing: border-box; }
+.scene .strip .zone { position: static; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.1; }
+.scene .strip .zone small { display: inline; margin: 0 0 0 6px; }
+.scene .strip .online { position: static; flex: none; }
+.scene .strip .scene-ctl { display: flex; flex: none; align-self: stretch; }
+.scene .strip .scene-ctl > button { position: relative; top: auto; right: auto; left: auto; height: 100%; min-width: 44px; width: auto; border: 0; border-left: 1px solid var(--edge); border-radius: 0; background: transparent; }
+.scene .strip .run-menu::before { display: none; }
+.scene .strip .run-menu.dot::after { top: 4px; right: 6px; }
+.scene .bg, .scene .shade { top: 32px; height: calc(100% - 32px); }
