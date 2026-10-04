@@ -1,5 +1,5 @@
 // Bug reports (v9.9): catches JavaScript errors while you play and builds a report you can send as a prefilled GitHub
-// issue (github.com/faizal97/realm-of-loner/issues/new) or copy for Discord. The report holds the version, the device
+// issue (the bug form at github.com/faizal97/realm-of-loner/issues/new) or copy for Discord. The report holds the version, the device
 // and the game state needed to reproduce a bug (level, class, place, what you were doing); never the save itself.
 // UI lives in ui.js (reportDialog); this file has no DOM code.
 (function (root) {
@@ -40,18 +40,20 @@
     } else lines.push('Character: none loaded (character screen)');
     return lines;
   };
+  // the errors as text, each in a code block (the report's last part; the bug form's Errors field)
+  const errorsText = () => errors.map((e) => ['```', `${e.message}${e.count > 1 ? ` (x${e.count})` : ''} at ${e.where} ${e.at}`, e.stack, '```'].join('\n')).join('\n');
   REPORT.text = function (what) {
     const out = ['**What happened**', (what || '').trim() || '(not described)', '', '**Details**'].concat(REPORT.details().map((l) => '- ' + l));
-    if (errors.length) {
-      out.push('', '**Errors**');
-      for (const e of errors) out.push('```', `${e.message}${e.count > 1 ? ` (x${e.count})` : ''} at ${e.where} ${e.at}`, e.stack, '```');
-    }
+    if (errors.length) out.push('', '**Errors**', errorsText());
     return out.join('\n');
   };
-  // a new-issue link with the title and body filled in (kept short enough for a URL)
+  // a new-issue link that opens the bug form (.github/ISSUE_TEMPLATE/bug_report.yml) with its fields filled in by their ids:
+  // what, details, errors. The form labels the issue itself (labels in a URL only apply for the repo's own team), and blank
+  // issues are off, so a plain ?body= link would land on the template chooser and lose the report. Kept short enough for a URL
   REPORT.issueUrl = function (title, what) {
-    let body = REPORT.text(what);
-    if (body.length > 6000) body = body.slice(0, 6000) + '\n…(cut; use Copy report for the rest)';
-    return `${REPO_ISSUES}?labels=bug&title=${encodeURIComponent(title || 'Bug report')}&body=${encodeURIComponent(body)}`;
+    let errs = errorsText();
+    if (errs.length > 4000) errs = errs.slice(0, 4000) + '\n…(cut; use Copy report for the rest)';
+    const q = { template: 'bug_report.yml', title: 'Bug: ' + (title || 'Bug report'), what: (what || '').trim() || '(not described)', details: REPORT.details().map((l) => '- ' + l).join('\n'), errors: errs };
+    return REPO_ISSUES + '?' + Object.keys(q).filter((k) => q[k]).map((k) => `${k}=${encodeURIComponent(q[k])}`).join('&');
   };
 })(typeof window !== 'undefined' ? window : globalThis);
