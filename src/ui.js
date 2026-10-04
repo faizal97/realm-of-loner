@@ -253,11 +253,8 @@
     els.chatLines = h('div', { class: 'chat-lines' });
     els.chatOpen = h('button', { class: 'chat-open', 'aria-label': 'Open chat', onclick: (e) => { e.stopPropagation(); openSocial('chat'); } });
     els.chat = h('div', { class: 'chat', onclick: (e) => { const ln = e.target.closest('.ln.tap'); const m = ln && G.S.chat.find((x) => String(x.id) === ln.dataset.mid); if (m) { e.stopPropagation(); msgDialog(m); } else openSocial('chat'); } }, els.chatLines, els.chatOpen);
-    // the chat strip folds to one line (a tab on its bottom edge); remembered on this device
-    const chatFolded = () => { try { return localStorage.getItem('azsolo.chatFolded') === '1'; } catch (e) { return false; } };
-    const paintChatFold = () => { const f = chatFolded(); els.chat.classList.toggle('folded', f); setSym(els.chatFold, f ? '▾' : '▴'); els.chatFold.setAttribute('aria-label', f ? 'Show more chat' : 'Fold the chat to one line'); };
-    els.chatFold = h('button', { class: 'chat-fold', onclick: (e) => { e.stopPropagation(); try { localStorage.setItem('azsolo.chatFolded', chatFolded() ? '0' : '1'); } catch (x) { } paintChatFold(); } });
-    els.chat.append(els.chatFold); paintChatFold();
+    // the strip is one line, the newest message (#65: 34 px); a tap anywhere opens the full chat, a request line acts
+    els.chat.classList.add('folded');
     els.panel = h('div', { class: 'panel' });
     els.bar = h('div', { class: 'actionbar' });
     els.bottom = h('div', { class: 'bottom-wrap' }, els.bar);
@@ -280,10 +277,10 @@
     const pf = h('div', { class: 'uf' },
       h('div', { class: 'portrait tap', role: 'button', 'aria-label': 'Open Hero', onclick: () => openHero() }, h('div', { class: 'pclip' }, img(art('portrait', looks(P)))), h('span', { class: 'lvl tnum', id: 'pf-lvl' }, P.level)),
       h('div', { class: 'uf-body' },
-        h('div', { class: 'uf-namerow' }, h('div', { class: 'uf-name cls-' + P.cls }, G.displayName()), (els.pMoney = h('span', { class: 'pmoney' }))),
+        // one line: the name, then (with no target) Rested / In queue, then the buffs (#65: the header is 64 px)
+        h('div', { class: 'uf-namerow' }, h('div', { class: 'uf-name cls-' + P.cls }, G.displayName()), (els.pMoney = h('span', { class: 'pmoney' })), (els.pChips = h('span', { class: 'uf-chips' })), (els.pBuffs = h('div', { class: 'buffs' }))),
         (els.pHp = barEl('hp')), (els.pRes = barEl(D.CLASSES[P.cls].resource)),
-        (els.pXp = h('button', { class: 'bar xp xpmain', 'aria-label': 'Experience', onclick: xpDetail }, h('i', { class: 'rest' }), h('i', { class: 'fill' }), h('b', { class: 'tnum' }))),
-        (els.pBuffs = h('div', { class: 'buffs' }))));
+        (els.pXp = h('button', { class: 'bar xp xpmain', 'aria-label': 'Experience', onclick: xpDetail }, h('i', { class: 'rest' }), h('i', { class: 'fill' }), h('b', { class: 'tnum' })))));
     els.tf = h('div', { class: 'uf target' });
     f.append(pf, els.tf);
     renderTarget();
@@ -313,17 +310,11 @@
       u = C.units[G.pUnit.target];
       if (C.allyTarget != null && C.units[C.allyTarget] && ['priest', 'paladin', 'druid'].includes(G.pUnit.cls)) u = C.units[C.allyTarget];
     }
-    if (!u) {
-      const P = G.S.player;
-      tf.classList.add('empty');
-      tf.style.opacity = '1';
-      tf.append(h('div', { class: 'uf-body', style: { textAlign: 'right', alignContent: 'center' } },
-        P.rested > 0 && P.level < D.LEVEL_CAP ? h('div', { style: { color: '#6fa8ff', font: '700 12px var(--body)' } }, 'Rested') : null,
-        G.S.queue ? h('div', { style: { color: 'var(--gold)', font: '700 12px var(--body)' } }, 'In queue') : null),
-        h('div'));
-      tf.classList.remove('empty');
-      return;
-    }
+    // no target: your frame spans the header, and Rested / In queue sit in your name row (#65)
+    const P0 = G.S.player;
+    els.frames.classList.toggle('solo', !u);
+    if (els.pChips) { els.pChips.innerHTML = ''; if (!u) els.pChips.append(...[P0.rested > 0 && P0.level < D.LEVEL_CAP ? h('span', { class: 'chip-rest' }, 'Rested') : null, G.S.queue ? h('span', { class: 'chip-queue' }, 'In queue') : null].filter(Boolean)); }
+    if (!u) return;
     els.tUid = u.uid;
     const isMob = u.kind === 'mob';
     const port = h('div', { class: 'portrait' + (isMob ? ' mob' : '') + (u.elite ? ' elite' : '') },
@@ -341,7 +332,7 @@
   // a group member's effect item (#56): tap their frame and the target shows it, and tapping that opens the item
   function botFxLine(u) {
     if (!u || u.kind === 'mob' || !u.char || !u.char.bot) return [];
-    return Object.values(u.char.equip || {}).filter((it) => G.effectOf(it)).map((it) => h('button', { class: 'eff', style: { display: 'block', marginLeft: 'auto', padding: 0, background: 'none', border: 0, font: '700 11px var(--body)', textAlign: 'right' }, onclick: () => showDialog(itemTip(it, null, u.char), true) }, `◆ ${G.effectOf(it).name}: ${it.name}`));
+    return Object.values(u.char.equip || {}).filter((it) => G.effectOf(it)).map((it) => h('button', { class: 'eff botfx', style: { padding: 0, background: 'none', border: 0, font: '700 11px var(--body)' }, onclick: (e) => { e.stopPropagation(); showDialog(itemTip(it, null, u.char), true); } }, `◆ ${G.effectOf(it).name}`)); // inline in the one-line header (#65); the item opens on tap
   }
   // ============================================================ scene
   const POS_ALLY = [{ l: 3, b: 4, w: 25 }, { l: 20, b: 16, w: 19 }, { l: 1, b: 29, w: 17 }, { l: 22, b: 33, w: 15 }, { l: 10, b: 43, w: 13 }];
@@ -468,7 +459,7 @@
     shadow: '',
   };
   function spriteEl(src, pos, cls, np) {
-    const st = { width: pos.w + '%', bottom: pos.b + '%' };
+    const st = { width: `calc(${pos.w} * 1.6667cqh)`, bottom: pos.b + '%' }; // w% of a 5:3 stage, from the scene's height (#65)
     if (pos.l != null) st.left = pos.l + '%'; else st.right = pos.r + '%';
     st.zIndex = String(100 - Math.round(pos.b));
     return h('div', { class: 'sprite ' + (cls || ''), style: st }, np || null, img(src));
@@ -1322,7 +1313,8 @@
     const dots = h('div', { class: 'progress-dots' });
     R.pulls.forEach((pl, i) => dots.append(h('i', { class: (pl.boss ? 'boss ' : '') + (i < R.idx ? 'done' : i === R.idx ? 'now' : '') })));
     const status = R.phase === 'fight' ? 'Fighting: ' + R.pulls[R.idx].label : R.phase === 'rest' && S.group.members.some((m) => m.gone) ? 'Looking for replacements...' : R.phase === 'rest' ? (G.role() === 'tank' ? 'You are the tank. Pull when ready.' : 'Resting. The tank will pull soon.') : R.phase === 'wipe' ? 'Running back...' : 'Dungeon complete.';
-    p.append(h('div', { class: 'sec-h' }, R.name, h('small', null, `${Math.min(R.idx + (R.phase === 'done' ? 0 : 1), R.pulls.length)}/${R.pulls.length}${R.wipes ? ' · wipes ' + R.wipes : ''}`)), dots, h('div', { style: { color: 'var(--muted)', fontSize: '13px' } }, status));
+    // the run's name, progress and status come after the party and the decisions (#65: decisions first)
+    const head = [h('div', { class: 'sec-h' }, R.name, h('small', null, `${Math.min(R.idx + (R.phase === 'done' ? 0 : 1), R.pulls.length)}/${R.pulls.length}${R.wipes ? ' · wipes ' + R.wipes : ''}`)), dots, h('div', { style: { color: 'var(--muted)', fontSize: '13px' } }, status)];
     // Pull / Ready / Leave sit right under the progress line and stay pinned there, so a 10-player raid's frames never push them off screen
     const actions = h('div', { class: 'run-actions' }); p.append(actions);
     // party frames
@@ -1337,9 +1329,10 @@
         h('div', { class: 'role' }, m.role === 'tank' ? 'TANK' : m.role === 'healer' ? 'HEAL' : 'DPS'));
       pf.append(row);
     });
+    if (!C && R.phase === 'rest') tacticsBlock(p, R); // the pace: decide before the pull
+    p.append(...head);
     runScore(p, R);
-    if (!C && R.phase === 'rest') tacticsBlock(p, R); // decide before the pull, above the party list
-    p.append(h('div', { class: 'sec-h' }, 'Party', h('small', null, C && G.role() === 'healer' ? 'tap someone to heal them' : '')), pf);
+    pf.classList.add('compact'); p.prepend(pf); // the party first: five 30 px rows at the very top, then Pull and the pace (#65)
     if (C) {
       const list = h('div', { class: 'list' });
       for (const u of C.enemies) {

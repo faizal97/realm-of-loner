@@ -185,8 +185,6 @@ img { max-width: 100%; display: block; }
 .chat.folded .chat-open { flex-direction: row; width: auto; min-width: 52px; padding: 0 8px; gap: 6px; }
 .chat.folded .chat-open small { display: none; }
 .chat.folded .chat-open b { padding: 0 5px; }
-.chat-fold { position: absolute; left: 50%; bottom: -15px; transform: translateX(-50%); height: 15px; min-width: 44px; padding: 0 10px; border: 1px solid var(--edge); border-top: 0; border-radius: 0 0 8px 8px; background: #0f0b07; color: var(--gold); font: 700 11px/1 var(--body); }
-.chat-fold::before { content: ''; position: absolute; inset: -6px -10px -12px; }
 .panel .ptabs { top: -16px; margin-top: -16px; padding-top: 16px; }
 .panel .run-actions { top: -10px; }
 .portrait.tap { cursor: pointer; }
@@ -794,3 +792,59 @@ svg.sym { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: 
 .rank-badge { display: inline-block; width: 14px; height: 14px; margin-right: 3px; vertical-align: -2px; border-radius: 2px; flex: none; }
 .bg-team { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; margin: 4px 0 6px; font-size: 13px; }
 .bg-team span { display: inline-flex; align-items: center; white-space: nowrap; }
+
+/* ===== Layout A (#65, docs/plans/2026-10-04-main-screen-layout-options.md): the same bands in the same order, each
+   smaller, so a healer sees the whole party. Header 115 -> 64 px, scene 225 -> 170 px (at 812 tall), chat one line
+   (34 px), party frames compact at the top of the run panel. ===== */
+/* header: one line each for you and your target; with no target your frame spans the width */
+.frames { padding: 4px 8px; gap: 8px; }
+.frames.solo { grid-template-columns: 1fr; }
+.frames.solo .uf.target { display: none; }
+.frames .uf { grid-template-columns: 38px 1fr; gap: 6px; }
+.frames .uf.target { grid-template-columns: 1fr 38px; }
+.frames .portrait { width: 38px; height: 38px; }
+.frames .lvl { min-width: 16px; height: 16px; bottom: -3px; left: -3px; font-size: 10px; line-height: 14px; }
+.frames .dst { height: 15px; padding: 0 3px; font-size: 10px; line-height: 13px; bottom: auto; top: -3px; right: -3px; } /* above the level pill, not on it */
+.frames .uf-body { gap: 2px; }
+.frames .uf-namerow { align-items: center; gap: 4px; }
+.frames .uf-name { font-size: 12.5px; }
+.frames .uf.target .uf-name .rc { display: inline; margin-left: 5px; }
+.frames .uf-namerow .buffs { margin: 0 0 0 auto; height: 16px; flex-wrap: nowrap; overflow: hidden; flex: 0 1 auto; min-width: 0; }
+.frames .uf-body > .buffs { height: 16px; margin-top: 0; }
+.frames .buffs .au { width: 14px; }
+.frames .buffs .au img { width: 14px; height: 14px; border-width: 1px; }
+.frames .buffs .au b { display: none; } /* the time left is in the buff's card: tap it */
+.frames .bar.hp { height: 12px; }
+.frames .bar.hp b { font-size: 10px; line-height: 10px; }
+.frames .bar.mana, .frames .bar.rage, .frames .bar.energy { height: 9px; }
+.frames .bar.mana b, .frames .bar.rage b, .frames .bar.energy b { font-size: 8.5px; line-height: 7px; }
+.frames .bar.xpmain { height: 4px; margin-top: 0; }
+.frames .bar.xpmain b { display: none; } /* tap the line for your experience */
+.uf-chips { display: inline-flex; gap: 4px; flex: none; }
+.uf-chips span { font: 700 11px/16px var(--body); padding: 0 6px; border-radius: 8px; background: #1a1209; border: 1px solid var(--edge); }
+.uf-chips .chip-rest { color: #6fa8ff; }
+.uf-chips .chip-queue { color: var(--gold); }
+.frames .botfx { display: inline-block; margin-left: 5px; }
+/* scene: about a fifth of the screen; the art fills it, and sprites are sized from its height so they shrink with it */
+.scene { aspect-ratio: auto; height: clamp(140px, 21vh, 200px); max-height: none; container-type: size; }
+.scene .bg { object-position: 50% 70%; }
+.sprite { width: calc(30 * 1.6667cqh); }
+/* chat: the newest line only; tap to open the full chat */
+.chat.folded { height: 34px; }
+/* party frames, compact: name and health in a 30 px row, your target outlined, tap to heal as before */
+.pf.compact { gap: 2px; margin-bottom: 6px; }
+.pf.compact .pfr { grid-template-columns: minmax(0, 1fr) auto; min-height: 30px; padding: 1px 6px; gap: 6px; }
+.pf.compact .pfr .portrait { display: none; }
+.pf.compact .uf-body { gap: 1px; }
+.pf.compact .uf-name { font-size: 12px; line-height: 12px; }
+.pf.compact .rank-badge { width: 12px; height: 12px; vertical-align: -1px; }
+.pf.compact .uf-name .rc { font-size: 11px; }
+.pf.compact .bar { height: 11px; }
+.pf.compact .bar b { font-size: 9.5px; line-height: 9px; }
+.pf.compact .rowbuffs { position: absolute; right: 0; top: 0; }
+.pf.compact .rowbuffs .au, .pf.compact .rowbuffs .au img { width: 13px; height: 13px; }
+.pf.compact .role { font-size: 10px; }
+
+/* the panel starts 6 px higher, so a run's pace sits on screen under Pull (the sticky tabs and actions match it) */
+.panel { padding-top: 10px; }
+.panel .ptabs { top: -10px; margin-top: -10px; padding-top: 10px; }
