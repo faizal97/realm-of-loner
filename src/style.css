@@ -62,6 +62,10 @@ img { max-width: 100%; display: block; }
 /* the frames' buff rows keep one line, always the same height (v10.9): buffs coming and going never push the screen */
 .uf-body > .buffs { flex-wrap: nowrap; overflow: hidden; height: 33px; }
 .au.more i { width: 20px; height: 20px; display: grid; place-items: center; border: 1.5px solid var(--edge-hi); border-radius: 3px; box-sizing: border-box; font: 800 10px/1 var(--body); font-style: normal; color: var(--gold); background: #1a1209; }
+/* #79: "+N" turns red when a debuff had to fold; a debuff your group can remove has a corner mark in its dispel type's colour */
+.au.more.lost i { border-color: #e0402f; color: #ffb0a6; background: #4a120c; }
+.au.dm::after { content: ''; position: absolute; top: -2px; right: -2px; width: 7px; height: 7px; border-radius: 50%; box-shadow: 0 0 0 1px #000; background: #fff; }
+.au.dm-magic::after { background: #3c8cff; } .au.dm-curse::after { background: #a050ff; } .au.dm-disease::after { background: #c9953c; } .au.dm-poison::after { background: #3fbf4f; }
 /* one buff/debuff: icon, green (buff) or red (debuff) border, seconds left underneath; flashes in the last 3 sec */
 .au { position: relative; width: 20px; display: inline-flex; flex-direction: column; align-items: center; cursor: pointer; }
 .au img { width: 20px; height: 20px; border: 1.5px solid #3fbf4f; border-radius: 3px; box-sizing: border-box; }
@@ -841,7 +845,7 @@ svg.sym { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: 
 .pf.compact .uf-name .rc { font-size: 11px; }
 .pf.compact .bar { height: 11px; }
 .pf.compact .bar b { font-size: 9.5px; line-height: 9px; }
-.pf.compact .rowbuffs { position: absolute; right: 0; top: 0; }
+.pf.compact .rowbuffs { position: absolute; right: 0; top: 0; width: 96px; justify-content: flex-end; } /* room for 6 (#79): a width from its own content made the fit chase itself down to "+N" */
 .pf.compact .rowbuffs .au, .pf.compact .rowbuffs .au img { width: 13px; height: 13px; }
 .pf.compact .role { font-size: 10px; }
 

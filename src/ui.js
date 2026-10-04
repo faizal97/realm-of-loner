@@ -111,7 +111,18 @@
     return { id: a.id, icon: a.icon || AURA_ALIAS[base] || base, name: a.name || AURA_NAME[a.id] || (ab ? ab.name : a.id.replace(/_/g, ' ')), debuff };
   }
   // in a fight 'until' is fight seconds; out of combat the player's buffs use wall-clock ms
-  function auraList(u) {
+  // the order in every frame (#79, the game designer's rule), read from each aura's own properties: 0 debuffs, always (on the
+  // target, the ones you put there first), soonest to expire first; 1 short or fight-relevant buffs (under 5 min left, a
+  // shield, a proc light, an item effect, anything on an enemy: enrage, Omens); 2 long harmless buffs (food, an elixir or
+  // flask, long class buffs: 5 min and more), which fold first into "+N"
+  const LONG_BUFF = 300;
+  function auraRank(a, mine) {
+    if (a.debuff) return mine && a.raw && a.raw.src != null && G.pUnit && a.raw.src === G.pUnit.uid ? -1 : 0;
+    const r = a.raw || {};
+    if (r.proc || r.absorb || r.effect || (a.unit && a.unit.side === 'enemy') || a.left < LONG_BUFF) return 1;
+    return 2;
+  }
+  function auraList(u, mine) {
     const C = G.fight, out = [];
     if (u && C) {
       for (const a of u.auras) { const left = a.until - C.t; if (left > 0) out.push(Object.assign(auraInfo(a, u), { left, raw: a, unit: u })); }
@@ -125,7 +136,15 @@
     } else if (!C && G.S) {
       for (const a of (G.S.player.auras || [])) { const left = (a.until - Date.now()) / 1000; if (left > 0) out.push(Object.assign(auraInfo(a, null), { left, raw: a })); }
     }
-    return out.sort((x, y) => (x.debuff - y.debuff) || (x.left - y.left));
+    for (const a of out) a.rank = auraRank(a, mine);
+    return out.sort((x, y) => (x.rank - y.rank) || (x.left - y.left));
+  }
+  // a debuff someone in your group can remove carries a mark in its dispel type's colour (#79): the debuff's own dispel
+  // type and the abilities' own dispels lists, so it lights up as soon as the data has them
+  function canDispel(type) {
+    if (!type) return false;
+    const P = G.S && G.S.player, who = [P].concat(G.S && G.S.group ? G.S.group.members : []).filter(Boolean);
+    return who.some((m) => Object.values(D.ABILITIES).some((ab) => ab.dispels && ab.dispels.includes(type) && (!ab.cls || ab.cls === m.cls)));
   }
   const STAT_WORD = { wdmg: 'weapon damage', ap: 'attack power', sp: 'spell power', armor: 'armor', str: 'Strength', agi: 'Agility', sta: 'Stamina', int: 'Intellect', spi: 'Spirit', dodge: '% dodge', haste: '% attack and cast speed', rap: 'ranged attack power' };
   const SCHOOL = (x) => (x && x !== 'physical' ? x[0].toUpperCase() + x.slice(1) + ' ' : '');
@@ -167,27 +186,36 @@
   // (re)build a strip only when the set of auras changes; otherwise just tick the timers
   // one fixed line of buffs (v10.9): the row never wraps, so the frames never grow and push the screen down; what does not
   // fit folds into a "+N" chip that lists them all
+  // list comes in the frame order (auraList), so what folds is the long harmless buffs first; "+N" counts every aura it
+  // hides, turns red if a debuff had to fold, and opens the full list (#79)
   function paintAuras(box, list, max) {
     if (!box) return;
-    const all = list.slice(0, max || 10), fit = box.clientWidth ? Math.max(1, Math.floor((box.clientWidth + 3) / 23)) : all.length;
+    // a chip's width where it sits (14 px in the header, 13 in party rows, 20 elsewhere): an empty row measures a probe chip
+    let cw = box.firstElementChild && box.firstElementChild.offsetWidth;
+    if (!cw) { const p = h('span', { class: 'au' }, h('img')); box.append(p); cw = p.offsetWidth || 20; p.remove(); }
+    const all = list, fit = Math.min(max || 10, box.clientWidth ? Math.max(1, Math.floor((box.clientWidth + 3) / (cw + 3))) : all.length);
     const more = all.length > fit ? all.length - (fit - 1) : 0;
     list = more ? all.slice(0, fit - 1) : all;
-    const key = list.map((a) => a.id).join(',') + (more ? '+' + more : '');
+    const lostDebuff = more > 0 && all.slice(fit - 1).some((a) => a.debuff);
+    const key = list.map((a) => a.id).join(',') + (more ? '+' + more + (lostDebuff ? '!' : '') : '');
     if (box.dataset.k !== key) {
       box.dataset.k = key; box.innerHTML = '';
       for (const a of list) {
-        const chip = h('span', { class: 'au ' + (a.debuff ? 'de' : 'bu'), onclick: (e) => { e.stopPropagation(); showAura(a, box); } }, img(abIcon(a.icon)), h('b', { class: 'tnum' }));
+        const dt = a.debuff && a.raw && a.raw.dispel && canDispel(a.raw.dispel) ? a.raw.dispel : null;
+        const chip = h('span', { class: 'au ' + (a.debuff ? 'de' : 'bu') + (dt ? ' dm dm-' + dt : ''), onclick: (e) => { e.stopPropagation(); showAura(a, box); } }, img(abIcon(a.icon)), h('b', { class: 'tnum' }));
         box.append(chip);
       }
-      if (more) box.append(h('span', { class: 'au more', onclick: (e) => { e.stopPropagation(); auraListDialog(box); } }, h('i', null, '+' + more), h('b', null, '')));
+      if (more) box.append(h('span', { class: 'au more' + (lostDebuff ? ' lost' : ''), 'aria-label': `${more} more${lostDebuff ? ', a debuff among them' : ''}: tap for the full list`, onclick: (e) => { e.stopPropagation(); auraListDialog(box); } }, h('i', null, '+' + more), h('b', null, '')));
     }
     box._list = list; box._all = all;
     list.forEach((a, i) => { const c = box.children[i]; if (!c) return; c.lastChild.textContent = fmtLeft(a.left); c.classList.toggle('soon', a.left < 3); });
   }
+  const auraFrom = (a) => { const src = a.raw && a.raw.src != null && G.fight && G.fight.units[a.raw.src]; return src ? `from ${src.kind === 'player' ? 'you' : src.name}` : ''; };
   function auraListDialog(box) {
     const all = box._all || [];
     showDialog([h('h3', null, 'Buffs and debuffs'), h('div', { class: 'list' }, ...all.map((a) => h('button', { class: 'row', onclick: () => { closeDialog(); showAura(a, box); } },
-      h('div', { class: 'ic' }, img(abIcon(a.icon))), h('div', { class: 't' }, h('b', { style: { color: a.debuff ? '#ff6a5a' : '#5fd46a' } }, a.name), h('small', null, (a.debuff ? 'debuff' : 'buff') + (a.left > 86400 ? '' : ` · ${fmtLeft(a.left)} left`)))))),
+      h('div', { class: 'ic' }, img(abIcon(a.icon))), h('div', { class: 't' }, h('b', { style: { color: a.debuff ? '#ff6a5a' : '#5fd46a' } }, a.name),
+        h('small', null, [(a.debuff ? 'Debuff' : 'Buff'), auraEffects(a).join(' '), auraFrom(a), a.left > 86400 || !isFinite(a.left) ? '' : `${fmtLeft(a.left)}${a.left >= 60 ? '' : ' sec'} left`].filter(Boolean).join(' · ')))))),
       h('button', { class: 'btn wide', style: { marginTop: '8px' }, onclick: closeDialog }, 'Close')], true);
   }
   const img = (src, cls) => h('img', { src, class: cls, alt: '', draggable: 'false' });
@@ -1686,7 +1714,7 @@
       const t = C.units[tid];
       if (t && els.tHp) setBar(els.tHp, t.hp, t.maxHp, Math.round((t.hp / t.maxHp) * 100) + '%');
       if (els.tDist) paintDist(els.tDist, G.pUnit, t);
-      if (t && els.tBuffs) paintAuras(els.tBuffs, auraList(t), 8);
+      if (t && els.tBuffs) paintAuras(els.tBuffs, auraList(t, true), 8);
       document.querySelectorAll('[data-au]').forEach((d) => { const u = C.units[d.dataset.au]; if (u) paintAuras(d, u.dead ? [] : auraList(u), 6); });
       if (els.tCp) {
         const n = G.pUnit.cls === 'rogue' && G.pUnit.cpTarget === G.pUnit.target ? G.pUnit.cp : -1;
