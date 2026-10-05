@@ -4,14 +4,16 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert');
-const { G, D, B, character } = require('./world');
+const { G, D, B, character, now, setNow } = require('./world');
 
 const OLD = /(?<![A-Za-z0-9_])(horde|alliance)(?![A-Za-z0-9_])/i;
 function alertLines(race, cls) {
-  const lines = [];
+  const lines = [], start = now();
   character(30, cls, race); // dangerOf reads the player's side
   const places = Object.keys(D.PLACES).filter((k) => G.dangerOf(k) > 0).sort((a, b) => !!D.PLACES[b].safe - !!D.PLACES[a].safe); // towns first: their shout names the side
-  for (const k of places) {
+  // who is online, and where, follows the clock: try each hour of the day until a town has allies around
+  for (let h = 0; h < 24 && !lines.some((x) => /!!$/.test(x)); h++) for (const k of places) {
+    setNow(start + h * 3600000);
     const { S, P } = character(30, cls, race); const f = S.flags;
     for (const b of S.bots) b.level = 20 + (b.id % 21); // a fresh world's players are all in the starting zones: spread them over 20-40
     P.place = k; f.warMode = true; f.warModeAsked = true; f.nextAmbush = 0;
@@ -24,6 +26,7 @@ function alertLines(race, cls) {
     for (const m of S.chat.slice(before)) if (m.from && /!!$|, careful$|near the inn$|^watch out, pvp$| here$/i.test(m.text)) lines.push(m.text);
     if (lines.some((t) => /!!$/.test(t))) break; // a town's shout, which names the side
   }
+  setNow(start);
   return lines;
 }
 
