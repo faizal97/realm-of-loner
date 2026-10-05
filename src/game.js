@@ -1613,6 +1613,11 @@
   // P.prof = { mining: { skill, max, known: [rare recipe ids] } }. Two primary professions. Data in data/professions.js.
   G.bagCap = function () { const P = G.S.player; return 16 + (P.bagsEq || []).reduce((a, b) => a + (b.bag || 0), 0); };
   G.bagsFull = () => G.S.player.bags.length >= G.bagCap();
+  // the Bags tab warns before your bags are full (#90): free slots from the real capacity, so bigger bags need nothing here.
+  // A badge only at BAG_WARN free or fewer (amber, the count), and "Full" at none; with more room, nothing
+  G.BAG_WARN = 3;
+  G.bagFree = () => Math.max(0, G.bagCap() - G.S.player.bags.length);
+  G.bagBadge = () => { const n = G.bagFree(); return n > G.BAG_WARN ? null : n === 0 ? { full: true, text: 'Full', n } : { full: false, text: String(n), n }; };
   G.profs = () => G.S.player.prof || (G.S.player.prof = {});
   G.hasProf = (id) => !!G.profs()[id];
   // the skills this build knows: a save from a newer build can hold one it does not (issue #17); it stays in the save,

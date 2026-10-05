@@ -312,7 +312,7 @@
   function openRunMenu() {
     const go = (fn) => () => { closeDialog(); fn(); };
     const dot = (k) => !!(els.nav.querySelector(`[data-nav="${k}"]`) || { classList: { contains: () => false } }).classList.contains('dot');
-    const item = (k, label, icon, fn) => h('button', { class: 'row nav' + (dot(k) ? ' dotted' : ''), onclick: go(fn) }, h('div', { class: 't' }, h('b', null, label)), h('div', { class: 'r' }, dot(k) ? h('span', { class: 'tab-dot' }) : null, h('span', { class: 'nav-arr' }, '›')));
+    const item = (k, label, icon, fn) => h('button', { class: 'row nav' + (dot(k) ? ' dotted' : ''), onclick: go(fn) }, h('div', { class: 't' }, h('b', null, label)), h('div', { class: 'r' }, k === 'bags' ? bagBadgeEl(true) : null, dot(k) ? h('span', { class: 'tab-dot' }) : null, h('span', { class: 'nav-arr' }, '›')));
     showDialog([h('h3', null, 'Menu'), h('div', { class: 'list' }, item('bags', 'Bags', 'coin', openBags), item('hero', 'Hero', 'sword', () => openHero()), item('quests', 'Quests', 'chest_box', openQuests), item('social', 'Social', 'bread', () => openSocial('group')))], true);
   }
   function renderAll() {
@@ -1846,12 +1846,18 @@
     const items = [['map', 'Map', 'hearthstone', openMap], ['quests', 'Quests', 'chest_box', openQuests], ['bags', 'Bags', 'coin', openBags], ['hero', 'Hero', 'sword', openHero], ['social', 'Social', 'bread', () => openSocial('group')]];
     for (const [k, label, icon, fn] of items) els.nav.append(h('button', { 'data-nav': k, onclick: fn }, img(art('icon', icon)), label));
   }
+  // free bag slots, before they run out (#90): the count at G.BAG_WARN or fewer (amber), "Full" at none (red); a different
+  // mark in a different corner from the Bags dot, which keeps meaning an upgrade or a new effect item
+  function bagBadgeEl(inline) {
+    const b = G.bagBadge(); if (!b) return null;
+    return h('span', { class: 'bag-badge' + (b.full ? ' full' : '') + (inline ? ' inline' : ''), 'aria-label': b.full ? 'Bags full' : `${b.n} free bag ${b.n === 1 ? 'slot' : 'slots'}` }, b.text);
+  }
   function renderNavDots() {
     const q = Object.keys(G.S.player.quests).some((id) => G.questState(id) === 'complete');
     const b = els.nav.querySelector('[data-nav="quests"]'); if (b) b.classList.toggle('dot', q);
     const s = els.nav.querySelector('[data-nav="social"]'); if (s) s.classList.toggle('dot', !!(G.S.queue && G.S.queue.popped) || friendsWaiting());
     const hb = els.nav.querySelector('[data-nav="hero"]'); if (hb) hb.classList.toggle('dot', G.talentPoints(G.S.player).free > 0 || loreUnread() > 0);
-    const bb = els.nav.querySelector('[data-nav="bags"]'); if (bb) bb.classList.toggle('dot', G.bagDot());
+    const bb = els.nav.querySelector('[data-nav="bags"]'); if (bb) { bb.classList.toggle('dot', G.bagDot()); const old = bb.querySelector('.bag-badge'), nb = bagBadgeEl(); if (old) old.remove(); if (nb) bb.append(nb); }
     const rmb = els.scene && els.scene.querySelector('.run-menu'); if (rmb) rmb.classList.toggle('dot', !!els.nav.querySelector('button.dot:not([data-nav="map"])')); // the hidden tabs' dots (#67)
     loreNotice();
   }
@@ -2571,7 +2577,8 @@
     ui.bagSel = null; ui.sellPick = null; G.seenBags(); renderNavDots(); // seen: the dot clears (issues #11, #23)
     openSheet('bags', 'Backpack', null, (b, t) => {
       const P = G.S.player;
-      t.innerHTML = ''; t.append('Bags', h('small', { html: `${P.bags.length}/${G.bagCap()} · ` + moneyHtml(P.money) }));
+      const bd = G.bagBadge(); // "2 free" or "Full" beside the count, in the badge's colour, so the badge explains itself (#90)
+      t.innerHTML = ''; t.append('Bags', h('small', { html: `${P.bags.length}/${G.bagCap()}${bd ? ` <span class="bag-free${bd.full ? ' full' : ''}">${bd.full ? 'Full' : bd.n + ' free'}</span>` : ''} · ` + moneyHtml(P.money) }));
       // the bag bar (v10.9): your bags in one short row, empty slots shown; tap one to take it off
       if ((P.bagsEq || []).length) {
         const bar = h('div', { class: 'bagbar' });
