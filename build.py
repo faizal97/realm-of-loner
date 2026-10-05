@@ -8,6 +8,14 @@ import base64, json, glob, sys, subprocess
 # release notes, shows "Dev build <sha>" for the version, keeps its own save keys (src/devkeys.js), has no updater,
 # What's new, cloud saves or Friends, and writes only dist-dev/ (never dist/ or the app's assets)
 DEV = '--dev' in sys.argv[1:]
+# a gate run quietly: on failure its own output is shown (its FAIL lines, or its last lines), so a failure on the CI runner
+# says why without a rerun
+def quiet(cmd):
+    r = subprocess.run(cmd, stdout=subprocess.PIPE, text=True)
+    if r.returncode != 0:
+        lines = r.stdout.splitlines(); fails = [l for l in lines if 'FAIL' in l]
+        print('\n'.join((fails or lines[-15:])[:30]))
+    return r
 # the data must check out before anything is built
 if subprocess.run(['node', os.path.join(R, 'tools', 'validate.js')]).returncode != 0:
     sys.exit('build stopped: fix the data errors above')
@@ -24,7 +32,7 @@ if subprocess.run(['node', os.path.join(R, 'sim', 'cloudsync.js')]).returncode !
     sys.exit('build stopped: a cloud save rule is broken (node sim/cloudsync.js lists which)')
 if subprocess.run(['node', os.path.join(R, 'sim', 'friends.js')]).returncode != 0:
     sys.exit('build stopped: a Friends rule is broken (node sim/friends.js lists which)')
-if subprocess.run(['node', os.path.join(R, 'sim', 'legends.js')], stdout=subprocess.DEVNULL).returncode != 0:
+if quiet(['node', os.path.join(R, 'sim', 'legends.js')]).returncode != 0:
     sys.exit('build stopped: a Legend rule is broken (node sim/legends.js lists which)')
 if subprocess.run(['node', os.path.join(R, 'sim', 'upgrades.js')]).returncode != 0:
     sys.exit('build stopped: a gear upgrade rule is broken (node sim/upgrades.js lists which)')
@@ -36,7 +44,7 @@ if subprocess.run(['node', os.path.join(R, 'sim', 'news.js')]).returncode != 0:
     sys.exit('build stopped: the news names a place or secret beyond the player\'s level (node sim/news.js lists which)')
 if subprocess.run(['node', os.path.join(R, 'sim', 'trials.js')]).returncode != 0:
     sys.exit('build stopped: a Trials rule is broken (node sim/trials.js lists which)')
-if subprocess.run(['node', os.path.join(R, 'sim', 'reactions.js')], stdout=subprocess.DEVNULL).returncode != 0:
+if quiet(['node', os.path.join(R, 'sim', 'reactions.js')]).returncode != 0:
     sys.exit('build stopped: a class reaction rule is broken (node sim/reactions.js lists which)')
 if subprocess.run(['node', os.path.join(R, 'sim', 'hard.js')]).returncode != 0:
     sys.exit('build stopped: a Hard raid rule is broken (node sim/hard.js lists which)')
@@ -46,17 +54,17 @@ if subprocess.run(['node', os.path.join(R, 'sim', 'distance.js')]).returncode !=
     sys.exit('build stopped: a distance rule is broken (node sim/distance.js lists which)')
 if subprocess.run(['node', os.path.join(R, 'sim', 'brawl.js'), '48']).returncode != 0:
     sys.exit('build stopped: a Bloodsand Brawl rule is broken (node sim/brawl.js lists which)')
-if subprocess.run(['node', os.path.join(R, 'sim', 'prof.js')], stdout=subprocess.DEVNULL).returncode != 0:
+if quiet(['node', os.path.join(R, 'sim', 'prof.js')]).returncode != 0:
     sys.exit('build stopped: a profession rule or the Expert or Artisan pace is broken (node sim/prof.js lists which)')
-if subprocess.run(['node', os.path.join(R, 'sim', 'social.js')], stdout=subprocess.DEVNULL).returncode != 0:
+if quiet(['node', os.path.join(R, 'sim', 'social.js')]).returncode != 0:
     sys.exit('build stopped: a chat or guild rule is broken (node sim/social.js lists which)')
-if subprocess.run(['node', os.path.join(R, 'sim', 'auction.js')], stdout=subprocess.DEVNULL).returncode != 0:
+if quiet(['node', os.path.join(R, 'sim', 'auction.js')]).returncode != 0:
     sys.exit('build stopped: the auction house pays risk-free or a price button wins nowhere (node sim/auction.js lists which)')
-if subprocess.run(['node', os.path.join(R, 'sim', 'effects.js')], stdout=subprocess.DEVNULL).returncode != 0:
+if quiet(['node', os.path.join(R, 'sim', 'effects.js')]).returncode != 0:
     sys.exit('build stopped: an item effect wins nowhere, loses nowhere or is too strong (node sim/effects.js lists which)')
-if subprocess.run(['node', os.path.join(R, 'sim', 'rares.js')], stdout=subprocess.DEVNULL).returncode != 0:
+if quiet(['node', os.path.join(R, 'sim', 'rares.js')]).returncode != 0:
     sys.exit('build stopped: a rare is in a starting place or first in a Fight list it outlevels (node sim/rares.js lists which)')
-if subprocess.run(['node', os.path.join(R, 'sim', 'consumables.js')], stdout=subprocess.DEVNULL).returncode != 0:
+if quiet(['node', os.path.join(R, 'sim', 'consumables.js')]).returncode != 0:
     sys.exit('build stopped: level-60 consumables give more than the modest edge (node sim/consumables.js lists which)')
 if subprocess.run(['node', os.path.join(R, 'sim', 'music.js')]).returncode != 0:
     sys.exit('build stopped: a place plays the wrong music (node sim/music.js lists which)')
