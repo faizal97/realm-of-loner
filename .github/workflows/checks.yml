@@ -53,6 +53,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    env:
+      # the sims follow the local clock (who is online, the week), and every gate was measured and every release built
+      # in Faizal's time zone: the same here, or a gate can pass on his machine and fail on the runner (auction did)
+      TZ: Asia/Jakarta
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
