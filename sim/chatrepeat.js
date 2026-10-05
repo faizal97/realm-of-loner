@@ -1,4 +1,4 @@
-// Bot chat: how repetitive and how cohesive is it? (Faizal, via the Lead.) A level-60 player with a guild plays two hours a
+// Bot chat: how repetitive and how cohesive is it? A level-60 player with a guild plays two hours a
 // day for a week (the rest of each day away, then the game's own catch-up): 40 min in a capital, a group-finder dungeon,
 // a battleground, then out in the world. Everything bots say that the player would see is collected (General, LFG, say,
 // guild, whispers, party, the battleground, catch-up), in minutes of play.
