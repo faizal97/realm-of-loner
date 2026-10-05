@@ -341,6 +341,11 @@ img { max-width: 100%; display: block; }
 .nav { display: grid; grid-template-columns: repeat(5, 1fr); background: #0b0805; border-top: 1px solid var(--edge); }
 .nav button { min-height: 50px; font: 13px/1 var(--display); color: var(--muted); letter-spacing: .04em; display: grid; place-items: center; gap: 2px; padding-top: 6px; position: relative; }
 .nav button img { width: 22px; height: 22px; border-radius: 3px; opacity: .85; }
+/* #90: free bag slots on the Bags tab, top-left (the dot keeps the top-right): amber count at 3 or fewer, red "Full" at none */
+.bag-badge { position: absolute; top: 3px; left: 22%; min-width: 16px; height: 16px; padding: 0 4px; box-sizing: border-box; border-radius: 8px; background: #e8a33a; color: #1a1209; font: 800 10px/16px var(--body); letter-spacing: 0; text-align: center; box-shadow: 0 0 0 1px #000; }
+.bag-badge.full { background: #d42a20; color: #fff; }
+.bag-badge.inline { position: static; display: inline-block; margin-right: 6px; vertical-align: middle; }
+.bag-free { color: #e8a33a; font-weight: 700; } .bag-free.full { color: #ff6a5a; }
 .nav button.dot::after { content: ''; position: absolute; top: 6px; right: 26%; width: 8px; height: 8px; border-radius: 50%; background: #ffd100; box-shadow: 0 0 6px #ffd100; }
 
 /* ---------- sheets & dialogs */
