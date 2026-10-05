@@ -864,9 +864,10 @@
   // ---- riding (v5.1)
   G.mounted = () => { const P = G.S.player; return !!(P.riding && P.mount && D.MOUNTS[P.mount]); };
   G.travelSecs = function (from, dest) {
-    const p = D.PLACES[from], secs = p.links[dest];
+    const p = D.PLACES[from], q = D.PLACES[dest], secs = p.links[dest];
     if (!secs) return 0;
-    return G.mounted() && !(p.via && p.via[dest]) ? Math.round(secs * D.RIDING.speed) : secs;
+    const via = !!(p.via && p.via[dest]), near = !via && q && p.zone && p.zone === q.zone; // same zone, on foot or mounted (#107)
+    return Math.max(1, Math.round(secs * (near ? D.IN_ZONE_HOP : 1) * (G.mounted() && !via ? D.RIDING.speed : 1)));
   };
   G.learnRiding = function () {
     const P = G.S.player;
