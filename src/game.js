@@ -2170,8 +2170,9 @@
     emit('change');
   };
   // Daily Roulette: once a day, a random dungeon you can do, with bonus rewards. The group summons you.
-  const today = () => new Date(now()).toISOString().slice(0, 10);
-  G.rouletteReady = () => G.S.flags.rouletteDay !== today();
+  // the day is the player's own (#96): it resets at local midnight, as the bounties have since v10.1.1 (it was UTC's). A
+  // save from before keeps its UTC day until its next Roulette, so nobody gains or loses a run at the switch
+  G.rouletteReady = () => { const f = G.S.flags; return f.rouletteLocal ? f.rouletteDay !== dayKey() : f.rouletteDay !== oldDayKey(); };
   G.rouletteOptions = () => Object.keys(D.ACTIVITIES).filter((k) => { const A = D.ACTIVITIES[k]; return A.dungeon && G.S.player.level >= A.minLvl && G.activityBlock(k) !== 'hidden'; });
   G.startRoulette = function () {
     const S = G.S;
@@ -2198,7 +2199,7 @@
       P.money += L * 100; loot(`The group thanks you with ${G.moneyText(L * 100)}.`);
     }
     if (R.roulette) {
-      S.flags.rouletteDay = today();
+      S.flags.rouletteDay = dayKey(); S.flags.rouletteLocal = true;
       G.addMarks(15, 'daily Roulette');
       const A = D.ACTIVITIES[R.act], Dg = D.DUNGEONS[A.dungeon];
       { const it = G.fittedBossBlue(Dg, L, P.cls); G.giveReward(it, 'Roulette bonus'); loot(`Roulette bonus: ${B.link(it.name, it.q)}.`); } // fits your class, never lost (issue #13)
