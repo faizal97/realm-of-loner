@@ -15,7 +15,9 @@ permissions:
   contents: read
 concurrency:
   group: checks-${{ github.ref }}
-  cancel-in-progress: true
+  # a newer push cancels a branch's older run, but never on main: there each run publishes its own dev build, and a
+  # docs-only push (which skips the build) must not cancel a code push's run and leave /dev/ without that code
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 jobs:
   fast:
     runs-on: ubuntu-latest
