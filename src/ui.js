@@ -266,10 +266,17 @@
   }
   const richText = (t) => symHtml(esc(t).replace(/\[\[(\d)\|([^\]]+)\]\]/g, '<span class="q$1">[$2]</span>'));
 
+  // toasts stack (#102): a new one goes under those still showing, in one column at the same spot, so two at once never
+  // sit on top of each other; the same text already showing is shown afresh instead of twice; at most TOAST_MAX at once
+  const TOAST_MAX = 3;
   function toast(text, info) {
     const secs = Math.min(4.5, 1.8 + Math.max(0, String(text).length - 50) * 0.04); // a long toast stays long enough to read (#41)
+    let box = app.querySelector(':scope > .toasts'); if (!box) { box = h('div', { class: 'toasts' }); app.append(box); }
+    const drop = (el) => { clearTimeout(el._t); el.remove(); };
+    for (const old of [...box.children]) if (old.textContent === String(text)) drop(old);
+    while (box.children.length >= TOAST_MAX) drop(box.firstElementChild);
     const t = h('div', { class: 'toast' + (info ? ' info' : ''), style: { animationDuration: secs + 's' } }, text);
-    app.append(t); setTimeout(() => t.remove(), secs * 1000 + 100);
+    box.append(t); t._t = setTimeout(() => t.remove(), secs * 1000 + 100);
   }
 
   // ============================================================ layout

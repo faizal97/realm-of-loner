@@ -450,6 +450,9 @@ img { max-width: 100%; display: block; }
 .bottom-wrap { position: relative; }
 .toast { position: absolute; left: 50%; top: 40%; transform: translateX(-50%); z-index: 59; background: rgba(0,0,0,.8); color: #ff3b3b; font: 700 14px var(--body); padding: 6px 12px; border-radius: 3px; pointer-events: none; animation: toast 1.8s forwards; width: max-content; max-width: calc(100vw - 32px); white-space: normal; text-align: center; line-height: 1.3; box-sizing: border-box; text-shadow: 0 1px 1px #000; } /* a long toast wraps inside the screen (#41) */
 .toast.info { color: #ffd100; }
+/* #102: toasts stack in one column at the toast's spot (each still fades on its own) */
+.toasts { position: absolute; left: 50%; top: 40%; transform: translateX(-50%); z-index: 59; display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; width: max-content; max-width: calc(100vw - 32px); }
+.toasts .toast { position: static; left: auto; top: auto; transform: none; }
 @keyframes toast { 0% { opacity: 0; } 10% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }
 
 /* ---------- character creation */
