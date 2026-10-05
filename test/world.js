@@ -2,7 +2,7 @@
 // moves it, and an in-memory localStorage, as the sims run it (sim/*.js). require('./world') once per test file;
 // node --test runs each file in its own process, so files never share a world.
 'use strict';
-process.env.TZ = 'UTC'; // one time zone everywhere: who is online and where follows the local hour, and CI runs in UTC
+process.env.TZ = globalThis.TEST_TZ || 'UTC'; // one time zone everywhere (who is online and where follows the local hour); a test of local days sets TEST_TZ first
 let s = 0x5eed1e55 >>> 0;
 Math.random = () => { s = (s + 0x6D2B79F5) >>> 0; let x = s; x = Math.imul(x ^ (x >>> 15), x | 1); x ^= x + Math.imul(x ^ (x >>> 7), x | 61); return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
 globalThis.localStorage = (() => { const m = new Map(); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k), clear: () => m.clear(), keys: () => [...m.keys()] }; })();
