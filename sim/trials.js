@@ -1,6 +1,7 @@
 // Trials (v10.4): the calendar, the automatic season picks (safe for new content), the realm leaderboard, and a
 // character's Trials record, with one real Trial run. Design: docs/plans/2026-09-30-trials-design.md
-//   node sim/trials.js
+//   node sim/trials.js            (seeded: the same run always gives the same result; SEED=n picks other dice, #104)
+require('./_seed.js');
 globalThis.localStorage = (() => { const m = new Map(); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k) }; })();
 require('../src/data.js'); require('../src/engine.js'); require('../src/bots.js'); require('../src/game.js'); require('../src/trials.js');
 const { G, D, TRIALS: T } = globalThis;
@@ -106,10 +107,14 @@ const drop = (keys) => { for (const k of keys) { delete D.DUNGEONS[k]; delete D.
   const m = fz.enemies[0]; fz.allies[0].bot = { skill: 0.8, react: 0.4 }; m.hp = m.maxHp * 0.34; let said = false;
   for (let i = 0; i < 600 && !m.frenzy && !m.dead; i++) { E.tick(fz, 0.1); if (fz.events.some((e) => e.type === 'emote' && /frenzy/.test(e.text))) said = true; fz.events.length = 0; }
   ok(m.frenzy === true && said, 'Frenzied: an enemy under 30% goes into a frenzy, and it is called out');
-  const hit = (om) => { const F = E.fight([E.charUnit(G.S.player, 'ally', 'bot', Date.now())], [E.mobUnit('mangy_wolf', 60)], { omens: om }); const w = F.enemies[0], p = F.allies[0]; w.hp = w.maxHp * 0.2; p.auto = false; const h0 = p.hp; let n = 0; for (let i = 0; i < 600 && n < 1; i++) { E.tick(F, 0.1); for (const e of F.events) if (e.type === 'dmg' && e.src === w.uid && !e.crit) { n++; return e.amount; } F.events.length = 0; } return 0; };
-  const avg = (om) => { const v = []; for (let i = 0; i < 40 && v.length < 30; i++) { const d = hit(om); if (d > 0) v.push(d); } return v.reduce((x, y) => x + y, 0) / Math.max(1, v.length); };
+  // a hit's full size counts what a shield soaked too: the bot's Power Word: Shield took most first hits whole, and
+  // those read as 0 damage (#104)
+  const hit = (om) => { const F = E.fight([E.charUnit(G.S.player, 'ally', 'bot', Date.now())], [E.mobUnit('mangy_wolf', 60)], { omens: om }); const w = F.enemies[0], p = F.allies[0]; w.hp = w.maxHp * 0.2; p.auto = false; for (let i = 0; i < 600; i++) { E.tick(F, 0.1); for (const e of F.events) if (e.type === 'dmg' && e.src === w.uid && !e.crit) { const d = e.amount + (e.absorbed || 0); if (d > 0) return d; } F.events.length = 0; } return 0; };
+  const SAMPLES = 30;
+  const avg = (om) => { const v = []; for (let i = 0; i < 300 && v.length < SAMPLES; i++) { const d = hit(om); if (d > 0) v.push(d); } return { n: v.length, mean: v.reduce((x, y) => x + y, 0) / Math.max(1, v.length) }; };
   const a1 = avg(['frenzied']), a2 = avg([]);
-  ok(a1 > a2 * 1.3, `Frenzied: a low enemy hits about 50% harder (${Math.round(a1)} vs ${Math.round(a2)})`);
+  ok(a1.n === SAMPLES && a2.n === SAMPLES, `Frenzied: ${SAMPLES} hits measured each way (no data: ${a1.n} frenzied, ${a2.n} normal)`);
+  ok(a1.mean > a2.mean * 1.3, `Frenzied: a low enemy hits about 50% harder (${Math.round(a1.mean)} vs ${Math.round(a2.mean)})`);
   const rl = E.fight([E.charUnit(G.S.player, 'ally', 'bot', Date.now())], [E.mobUnit('mangy_wolf', 60), E.mobUnit('mangy_wolf', 60)], { omens: ['rallying'] });
   const [x, y] = rl.enemies; y.hp = y.maxHp * 0.5; x.hp = 1;
   for (let i = 0; i < 400 && !x.dead; i++) E.tick(rl, 0.1);
