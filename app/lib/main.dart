@@ -38,6 +38,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   static const _upd = MethodChannel('azsolo/update'); // in-app updater, answered with window.AZUPD_REPLY
   static const _file = MethodChannel('azsolo/file');  // save files: share sheet and file picker, window.AZFILE_REPLY
   static const _cloud = MethodChannel('azsolo/cloud'); // cloud save: a Google Drive token, window.AZCLOUD_REPLY
+  static const _view = MethodChannel('azsolo/view');   // the WebView's mode (#99), window.AZVIEW_REPLY
+  // hybrid: the native WebView draws at its own rate (#99: smoother than texture mode, where Flutter copies each frame);
+  // texture mode stays one hidden switch away so the same phone can compare. null until read at start
+  String? _mode;
   // Music files (v10.8): the page asks for one by path ({id, path}), the bytes come back as base64 to window.AZASSET_REPLY.
   // Only files under music/ can be read.
   static final _assetPath = RegExp(r'^music/[a-z0-9_]+\.m4a$');
@@ -86,10 +90,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       ..addJavaScriptChannel('AzUpd', onMessageReceived: (m) => _bridge(_upd, 'AZUPD_REPLY', m))
       ..addJavaScriptChannel('AzFile', onMessageReceived: (m) => _bridge(_file, 'AZFILE_REPLY', m))
       ..addJavaScriptChannel('AzCloud', onMessageReceived: (m) => _bridge(_cloud, 'AZCLOUD_REPLY', m))
+      ..addJavaScriptChannel('AzView', onMessageReceived: (m) => _bridge(_view, 'AZVIEW_REPLY', m))
       ..addJavaScriptChannel('AzAsset', onMessageReceived: _asset);
     // music may start without a tap (v10.8), so the main menu has its theme from the first screen; set before the page loads
     if (_controller.platform is AndroidWebViewController) (_controller.platform as AndroidWebViewController).setMediaPlaybackRequiresUserGesture(false);
     _controller.loadFlutterAsset('assets/game/index.html');
+    _view.invokeMethod<String>('getMode').then((m) { if (mounted) setState(() => _mode = m == 'texture' ? 'texture' : 'hybrid'); },
+        onError: (_) { if (mounted) setState(() => _mode = 'hybrid'); });
     // debug builds only: the page can be inspected from Chrome (chrome://inspect), for testing on an emulator
     if (kDebugMode && _controller.platform is AndroidWebViewController) AndroidWebViewController.enableDebugging(true);
   }
@@ -111,6 +118,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
   }
 
+  PlatformWebViewWidgetCreationParams _widgetParams() {
+    final p = _controller.platform;
+    if (p is AndroidWebViewController) return AndroidWebViewWidgetCreationParams(controller: p, displayWithHybridComposition: _mode != 'texture');
+    return PlatformWebViewWidgetCreationParams(controller: p);
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -120,7 +133,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       },
       child: Scaffold(
         backgroundColor: const Color(0xFF0E0B08),
-        body: SafeArea(child: WebViewWidget(controller: _controller)),
+        body: SafeArea(child: _mode == null ? const SizedBox.expand() : WebViewWidget.fromPlatformCreationParams(params: _widgetParams())),
       ),
     );
   }

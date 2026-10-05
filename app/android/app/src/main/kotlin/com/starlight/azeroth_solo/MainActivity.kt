@@ -158,6 +158,20 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+        // the WebView's mode (#99): "hybrid" (the default) or "texture", kept in a small file so the same phone can compare
+        // both; lib/main.dart reads it when the app starts, and the page's hidden switch changes it for the next start
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "azsolo/view").setMethodCallHandler { call, result ->
+            val f = File(filesDir, "webview_mode")
+            when (call.method) {
+                "getMode" -> result.success(try { if (f.exists() && f.readText().trim() == "texture") "texture" else "hybrid" } catch (_: Exception) { "hybrid" })
+                "setMode" -> {
+                    val m = call.argument<String>("mode")
+                    if (m != "hybrid" && m != "texture") result.error("bad_mode", "hybrid or texture", null)
+                    else { try { f.writeText(m); result.success(true) } catch (e: Exception) { result.error("write", e.message, null) } }
+                }
+                else -> result.notImplemented()
+            }
+        }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "azsolo/cloud").setMethodCallHandler { call, result ->
             when (call.method) {
                 "available" -> result.success(GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(this) == ConnectionResult.SUCCESS)

@@ -4533,16 +4533,17 @@
   // a new version, and any time from the version tag on the main menu. A brand-new device is marked seen silently.
   const SEEN_KEY = 'azsolo.seenVersion', verNow = () => (window.UPD ? UPD.current() : String(window.AZ_VERSION || ''));
   const verLabel = () => { if (window.AZ_DEV) return `Dev build ${window.AZ_DEV.sha}`; const v = verNow(); return /-beta\./.test(v) ? `v${v} · Beta` : `v${v}`; };
-  // a hidden frame-rate readout (#99), to measure the same scene in the Android app and in a browser on one phone: five
-  // quick taps on the title screen's version label turn it on or off (remembered on this device); a single tap still
-  // opens What's new, after a short pause in case more taps follow. It counts its own animation frames: the frames per
-  // second and the slowest frame of the last second
+  // a hidden frame-rate readout (#99), to measure the same scene in the Android app and in a browser on one phone: quick
+  // taps on the title screen's version label, counted when they stop: one opens What's new (as before), five to seven
+  // show or hide the readout (remembered on this device), eight or more switch the app's WebView mode (below). It
+  // counts its own animation frames: the frames per second, the slowest frame of the last second, and where it runs
+  // ("browser", or the app's "hybrid" or "texture" mode), so two measurements can't be mixed up
   const FPS_KEY = 'azsolo.fps', fps = { on: false, el: null, raf: 0, frames: 0, worst: 0, last: 0, since: 0 };
   function fpsTick(t) {
     if (!fps.on) return;
     if (fps.last && t - fps.last > fps.worst) fps.worst = t - fps.last;
     fps.last = t; fps.frames++; if (!fps.since) fps.since = t;
-    if (t - fps.since >= 1000) { fps.el.textContent = `${Math.round((fps.frames * 1000) / (t - fps.since))} fps · slowest ${Math.round(fps.worst)} ms`; fps.frames = 0; fps.worst = 0; fps.since = t; }
+    if (t - fps.since >= 1000) { fps.el.textContent = `${Math.round((fps.frames * 1000) / (t - fps.since))} fps · slowest ${Math.round(fps.worst)} ms · ${view.mode || 'browser'}`; fps.frames = 0; fps.worst = 0; fps.since = t; }
     fps.raf = requestAnimationFrame(fpsTick);
   }
   function setFps(on) {
@@ -4552,11 +4553,28 @@
     if (!fps.el) { fps.el = h('div', { class: 'fps-readout', 'aria-hidden': 'true' }, '… fps'); document.body.append(fps.el); }
     Object.assign(fps, { frames: 0, worst: 0, last: 0, since: 0 }); fps.raf = requestAnimationFrame(fpsTick);
   }
+  // the Android app's WebView mode (#99, lib/main.dart): "hybrid" by default, "texture" to compare; it applies the next
+  // time the app starts. Asked once through the AzView bridge; null in a browser
+  const view = { mode: null, seq: 0, wait: {} };
+  window.AZVIEW_REPLY = (s) => { try { const r = JSON.parse(s), w = view.wait[r.id]; delete view.wait[r.id]; if (w) w(r); } catch (e) { } };
+  const viewCall = (cmd, args) => new Promise((res) => { if (!(window.AzView && window.AzView.postMessage)) return res(null); const id = ++view.seq; view.wait[id] = res; window.AzView.postMessage(JSON.stringify({ id, cmd, args: args || {} })); });
+  viewCall('getMode').then((r) => { if (r && r.ok) view.mode = r.value; });
+  function switchViewMode() {
+    if (!view.mode) return toast('Only in the Android app.');
+    const next = view.mode === 'hybrid' ? 'texture' : 'hybrid';
+    showDialog([h('h3', null, 'WebView mode'), h('p', null, `Now: ${view.mode}. Switch to ${next}? It applies the next time the app starts.`),
+      h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => viewCall('setMode', { mode: next }).then((r) => { closeDialog(); toast(r && r.ok ? `WebView mode: ${next} from the next start. Close and reopen the app.` : 'Could not switch.', true); }) }, `Switch to ${next}`),
+        h('button', { class: 'btn alt', onclick: closeDialog }, 'Cancel'))], true);
+  }
   let verTaps = 0, verTimer = 0;
   function verTap() {
     verTaps++; clearTimeout(verTimer);
-    if (verTaps >= 5) { verTaps = 0; setFps(!fps.on); toast(fps.on ? 'Frame rate shown' : 'Frame rate hidden'); return; }
-    verTimer = setTimeout(() => { const n = verTaps; verTaps = 0; if (n) showWhatsNew(); }, 450);
+    verTimer = setTimeout(() => {
+      const n = verTaps; verTaps = 0;
+      if (n >= 8) switchViewMode();
+      else if (n >= 5) { setFps(!fps.on); toast(fps.on ? 'Frame rate shown' : 'Frame rate hidden', true); }
+      else if (n === 1) showWhatsNew();
+    }, 450);
   }
   try { if (localStorage.getItem(FPS_KEY) === '1') setFps(true); } catch (e) { }
   function showWhatsNew() {
