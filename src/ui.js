@@ -1164,7 +1164,7 @@
           h('div', { class: 't' }, h('b', null, `${bb.weekly ? 'Weekly: ' : ''}${bb.n} ${D.MOBS[bb.mob].name}`), h('small', { style: { whiteSpace: 'normal' } }, `${bb.xp} XP · ${G.moneyText(bb.money)} · ${bb.marks} Mentor Marks${bb.weekly ? ' · bonus gear' : ''}`)),
           h('div', { class: 'r' }, h('span', { class: st === 'complete' ? 'pill ready' : 'pill' }, label))));
       }
-      b.append(list, h('p', { class: 'ai-note' }, 'Bounties you take show in your Quests tab. Hunt them anywhere in this zone, then hand them in here.'));
+      b.append(list, h('p', { class: 'ai-note' }, 'Bounties you take show in your Quest Log (the Quests tab at the bottom), with their progress. Hunt them anywhere in this zone, then hand them in here.'));
     });
   }
   function questsTab(b) {
@@ -2370,11 +2370,35 @@
     if ((st === 'active' || st === 'complete') && !npc) btns.append(h('button', { class: 'btn alt', onclick: () => { G.abandon(qid); openQuests(); } }, 'Abandon'));
     return [box, btns];
   }
+  // a bounty you hold (#109): where its target lives (in the board's zone first, nearest first), where it is handed in,
+  // and what it pays
+  function bountyDetail(x) {
+    const P = G.S.player, st = (P.bounty || {})[x.id] || {}, rw = st.reward || {}, hub = D.PLACES[x.hub], M = D.MOBS[x.mob];
+    const all = objPlaces({ type: 'kill', mob: x.mob }), inZone = all.filter((p) => D.PLACES[p].region === (hub && hub.region));
+    const where = byNearness(inZone.length ? inZone : all);
+    const box = h('div', { class: 'quest-box' },
+      h('p', null, `${x.weekly ? 'A weekly bounty' : 'A daily bounty'} from the ${x.hubName} board. Hunt ${M.name} anywhere in ${hub ? hub.zone : 'the zone'}, then hand it in at the board.`),
+      h('h4', null, 'Progress'),
+      h('div', { class: 'obj tnum' + (x.complete ? ' done' : '') }, `${M.name}: ${x.prog}/${x.n}`, !x.complete && where.length ? h('small', { class: 'obj-where' }, ' · ' + placeNames(where)) : null),
+      x.complete ? h('div', { class: 'obj turnin-to' }, qmark('ready'), ' Hand in at the ', h('b', null, 'Bounty Board'), x.hub === P.place && !P.travel ? ` here in ${x.hubName}.` : ` in ${x.hubName}${hub ? ', ' + hub.zone : ''}.`) : null,
+      h('p', { class: 'ai-note' }, x.weekly ? 'Lapses at the end of the week (Monday).' : 'Lapses at midnight.'),
+      h('h4', null, 'Rewards'),
+      h('div', { class: 'money', html: `${rw.xp || 0} experience · ` + moneyHtml(rw.money || 0) + (rw.marks ? ` · ${rw.marks} Mentor Marks` : '') + (x.weekly ? ' · bonus gear' : '') }));
+    // back the way the header's ‹ Back goes, so the log isn't opened again on top of itself
+    const back = () => { const d = (ui.sheetStack || []).pop(); if (d) openSheet(d.name, d.title, d.sub, d.fill, true); else openQuests(); };
+    const btns = h('div', { class: 'btn-row' });
+    if (x.complete && x.hub === P.place && !P.travel) btns.append(h('button', { class: 'btn', onclick: () => { G.turnInBounty({ id: x.id }); back(); renderPanel(); } }, 'Hand in'));
+    btns.append(h('button', { class: 'btn alt', onclick: back }, 'Back'));
+    return [box, btns];
+  }
   function openQuests() {
-    openSheet('quests', 'Quest Log', `${Object.keys(G.S.player.quests).length}/20`, (b) => {
+    const counts = () => `${Object.keys(G.S.player.quests).length}/20 quests` + (G.myBounties().length ? ` · ${G.myBounties().length}/6 bounties` : '');
+    openSheet('quests', 'Quest Log', counts(), (b, title) => {
       const P = G.S.player;
-      const qs = readyFirst(Object.keys(P.quests));
-      if (!qs.length) b.append(h('p', null, 'Your quest log is empty. Look for people with a yellow ! above their name.'));
+      const qs = readyFirst(Object.keys(P.quests)), bs = G.myBounties();
+      const sub = title && title.querySelector('small'); if (sub) sub.textContent = counts(); // fresh after a hand-in or Back
+      if (!qs.length && !bs.length) b.append(h('p', null, 'Your quest log is empty. Look for people with a yellow ! above their name, or a Bounty Board in a town.'));
+      if (bs.length) b.append(h('div', { class: 'sec-h' }, 'Quests', h('small', null, qs.length ? `${qs.length} of 20` : 'none yet: look for a yellow !')));
       for (const qid of qs) {
         const st = G.questState(qid);
         const Q = D.QUESTS[qid];
@@ -2382,6 +2406,14 @@
           h('div', { class: 'ic' }, qmark(st === 'complete' ? 'ready' : 'active', null, Q.main)),
           h('div', { class: 't' }, h('b', { style: { color: conColor(Q.lvl) } }, `[${Q.lvl}] ${Q.name}`), h('small', null, st === 'complete' ? 'Complete. Return to ' + D.NPCS[Q.turnin].name : G.questProgress(qid).map((p) => `${p.have}/${p.n}`).join(' · '))),
           h('div', { class: 'r' }, '›')));
+      }
+      // bounties sit with your quests, each with its progress and where it is handed in (#109)
+      if (bs.length) {
+        b.append(h('div', { class: 'sec-h' }, 'Bounties', h('small', null, `${bs.length} of 6`)));
+        for (const x of bs) b.append(h('button', { class: 'row', onclick: () => openSheet('quest', `${x.weekly ? 'Weekly bounty' : 'Bounty'}: ${D.MOBS[x.mob].name}`, x.hubName, (bb) => bb.append(...bountyDetail(x))) },
+          h('div', { class: 'ic mob' }, img(mobArt(x.mob))),
+          h('div', { class: 't' }, h('b', null, `${x.weekly ? 'Weekly: ' : ''}${x.n} ${D.MOBS[x.mob].name}`), h('small', null, x.complete ? `Complete. Hand in at ${x.hubName}` : `${x.prog}/${x.n} · from ${x.hubName}`)),
+          h('div', { class: 'r' }, x.complete ? h('span', { class: 'pill ready' }, 'Ready') : '›')));
       }
     });
   }
