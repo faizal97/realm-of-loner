@@ -4533,6 +4533,32 @@
   // a new version, and any time from the version tag on the main menu. A brand-new device is marked seen silently.
   const SEEN_KEY = 'azsolo.seenVersion', verNow = () => (window.UPD ? UPD.current() : String(window.AZ_VERSION || ''));
   const verLabel = () => { if (window.AZ_DEV) return `Dev build ${window.AZ_DEV.sha}`; const v = verNow(); return /-beta\./.test(v) ? `v${v} · Beta` : `v${v}`; };
+  // a hidden frame-rate readout (#99), to measure the same scene in the Android app and in a browser on one phone: five
+  // quick taps on the title screen's version label turn it on or off (remembered on this device); a single tap still
+  // opens What's new, after a short pause in case more taps follow. It counts its own animation frames: the frames per
+  // second and the slowest frame of the last second
+  const FPS_KEY = 'azsolo.fps', fps = { on: false, el: null, raf: 0, frames: 0, worst: 0, last: 0, since: 0 };
+  function fpsTick(t) {
+    if (!fps.on) return;
+    if (fps.last && t - fps.last > fps.worst) fps.worst = t - fps.last;
+    fps.last = t; fps.frames++; if (!fps.since) fps.since = t;
+    if (t - fps.since >= 1000) { fps.el.textContent = `${Math.round((fps.frames * 1000) / (t - fps.since))} fps · slowest ${Math.round(fps.worst)} ms`; fps.frames = 0; fps.worst = 0; fps.since = t; }
+    fps.raf = requestAnimationFrame(fpsTick);
+  }
+  function setFps(on) {
+    fps.on = on; try { if (on) localStorage.setItem(FPS_KEY, '1'); else localStorage.removeItem(FPS_KEY); } catch (e) { }
+    cancelAnimationFrame(fps.raf);
+    if (!on) { if (fps.el) fps.el.remove(); fps.el = null; return; }
+    if (!fps.el) { fps.el = h('div', { class: 'fps-readout', 'aria-hidden': 'true' }, '… fps'); document.body.append(fps.el); }
+    Object.assign(fps, { frames: 0, worst: 0, last: 0, since: 0 }); fps.raf = requestAnimationFrame(fpsTick);
+  }
+  let verTaps = 0, verTimer = 0;
+  function verTap() {
+    verTaps++; clearTimeout(verTimer);
+    if (verTaps >= 5) { verTaps = 0; setFps(!fps.on); toast(fps.on ? 'Frame rate shown' : 'Frame rate hidden'); return; }
+    verTimer = setTimeout(() => { const n = verTaps; verTaps = 0; if (n) showWhatsNew(); }, 450);
+  }
+  try { if (localStorage.getItem(FPS_KEY) === '1') setFps(true); } catch (e) { }
   function showWhatsNew() {
     if (window.AZ_DEV) return; // a dev build has no release notes (#92)
     const md = String(window.AZ_NOTES || ''), html = md && window.UPD && UPD.notesHtml ? UPD.notesHtml(md) : '';
@@ -4581,7 +4607,7 @@
           h('button', { class: 'btn alt', onclick: () => { if (!G.S) { const r = G.load(sel); if (!r) return; } openTheater(); } }, 'Theater'),
           h('button', { class: 'btn alt', style: { color: '#ff6a5a' }, onclick: () => confirmDeleteChar(cur, () => showSelect()) }, 'Delete')),
         h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', onclick: importSave }, 'Load save code'), restoreButton(() => showSelect())),
-        footLinks(), h('button', { class: 'ver-tag', onclick: showWhatsNew, 'aria-label': "What's new" }, verLabel()));
+        footLinks(), h('button', { class: 'ver-tag', onclick: verTap, 'aria-label': "What's new" }, verLabel()));
     };
     draw();
   }
