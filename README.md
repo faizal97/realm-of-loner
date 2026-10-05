@@ -25,12 +25,15 @@ It is a numbers-and-visuals game, not a text adventure: hand-drawn scenes and sp
 
 > **About the name and the history.** Versions up to 9.9 were a free, non-commercial fan project set in another company's game world. Since v10 the world (Caldreth), its story (*The Black Ledger*), names and art are original, and the game is **Realm of Loner**. All art (hand-written SVG), music (composed synth) and code in this repository are our own. The game is free and will stay free.
 
-## What's in it (v9.6)
+## What's in it
+
+**Recent updates:** the professions update (v10.9: every craft to 300, Fishing and Cooking, Rumhook Bay and the Bloodsand Brawl), the level-60 update (v10.10: item effects on drops, rare hunts with trophies, a ladder of Honor ranks) and The Layout Update (v10.10.1: a roomier phone screen). Full notes for each version are on the [Releases](https://github.com/faizal97/realm-of-loner/releases) page.
+
 
 - **Both factions, all 8 classic races.** Human, Dwarf, Gnome, Wood Elf, Orc, Troll, Hornfolk, Undead, each with its own starting zone, and racial traits (one active, two passive).
 - **Talents** from level 10: three trees per class.
 - **Mounts** at 40: learn riding and buy your race's mount; every road is 40% faster.
-- **Professions.** Mining, Herbalism, Skinning, Blacksmithing, Alchemy, Leatherworking and Tailoring: gather in the wild, craft gear, potions, elixirs and bags, and trade on the auction house.
+- **Professions up to 300.** Mining, Herbalism, Skinning, Fishing, Blacksmithing, Alchemy, Leatherworking, Tailoring and Cooking: gather in the wild, craft gear, potions, flasks and bags, and trade on the auction house.
 - **Cities.** A bank and auction house in every capital, Kingsmere included; daily bounty boards, Help Wanted, Mentor Marks, heirlooms and titles.
 - **9 classes, any race can be any class.** Warrior, Paladin, Hunter, Rogue, Priest, Shaman, Mage, Warlock, Druid. Pets for Hunters and Warlocks, Bear Form for Druids, seals for Paladins, totems for Shamans.
 - **Levels 1–60.** Starting zones, then Longfield and the Scrublands, Stoneharrow and Highcrag, then Wraithwood, the Greenfen and Greymead, and contested Elderglen, The Vinewild, the Kinloch Highlands, Ferndeep, the Cinderfields, the West Rotmoor, Sirocco, Greenmaw Crater and Icewold (neutral Coppergulch, Marshal's Refuge and Coldcoin), with about 700 quests, named rares and unique drops.
@@ -48,10 +51,9 @@ Where the game stands, how it is designed and what comes next: [the roadmap](doc
 
 ## Install (Android)
 
-From v9.3.0 the app checks GitHub for new releases. When one is out it shows what changed, and **Update now** downloads it and opens Android's installer. The first time, Android asks you to allow Realm of Loner to install apps. Hero → Check for updates checks by hand.
+Download the latest APK from [Releases](https://github.com/faizal97/realm-of-loner/releases) or [itch.io](https://starlighthvn.itch.io/realm-of-loner) and open it on your phone (you may need to allow installs from your browser or file manager). arm64 phones only.
 
-
-Download the latest APK from [Releases](../../releases) and open it on your phone (you may need to allow installs from your browser or file manager). arm64 phones only.
+After that the app updates itself: when a new version is out it shows what changed, and **Update now** downloads it and opens Android's installer. The first time, Android asks you to allow Realm of Loner to install apps. Hero → Check for updates checks by hand.
 
 ## Build it yourself
 
