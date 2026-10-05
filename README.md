@@ -11,16 +11,16 @@ It is a numbers-and-visuals game, not a text adventure: hand-drawn scenes and sp
 **Support the game:** Realm of Loner is free and stays free, with nothing to buy in the game. If you'd like to leave a tip: [Ko-fi](https://ko-fi.com/starlighthvn), or [SociaBuzz](https://sociabuzz.com/starlighthvn/tribe) for players in Indonesia.
 
 <p align="center">
-  <img src="docs/screenshots/02_goldshire.jpg" width="24%" alt="Brackenford with other players and General chat">
-  <img src="docs/screenshots/04_deadmines_fight.jpg" width="24%" alt="A Smugglers' Deep pull with a simulated party">
-  <img src="docs/screenshots/05_westfall_foe_reaper.jpg" width="24%" alt="Longfield: Hartwell Farm with the rare Grim Harvester 3000">
-  <img src="docs/screenshots/06_crossroads.jpg" width="24%" alt="Dustfort in the Scrublands">
+  <img src="docs/screenshots/02_brackenford.jpg" width="24%" alt="Brackenford with other players and the people of the town">
+  <img src="docs/screenshots/03_smugglers_deep_pull.jpg" width="24%" alt="A Smugglers' Deep pull with a simulated party">
+  <img src="docs/screenshots/04_hartwell_farm_grim_harvester.jpg" width="24%" alt="Longfield: Hartwell Farm with the rare Grim Harvester 3000">
+  <img src="docs/screenshots/05_dustfort.jpg" width="24%" alt="Dustfort in the Scrublands">
 </p>
 <p align="center">
-  <img src="docs/screenshots/01_create.jpg" width="24%" alt="Character creation: any race, any class">
-  <img src="docs/screenshots/p4_pvp_fight.jpg" width="24%" alt="World PvP: an enemy player in Longfield">
-  <img src="docs/screenshots/t2_bossplan.jpg" width="24%" alt="Dungeon tactics: pull pace, kill order and boss plan">
-  <img src="docs/screenshots/au1_warlock_dots.jpg" width="24%" alt="Buffs and debuffs with time left">
+  <img src="docs/screenshots/01_character_creation.jpg" width="24%" alt="Character creation: any race, any class">
+  <img src="docs/screenshots/06_world_pvp.jpg" width="24%" alt="World PvP: an enemy player at Wenham Farm in Longfield">
+  <img src="docs/screenshots/07_dungeon_tactics.jpg" width="24%" alt="Dungeon tactics: pull pace and boss plan">
+  <img src="docs/screenshots/08_buffs_and_debuffs.jpg" width="24%" alt="A Warlock's debuffs on the target, with time left">
 </p>
 
 > **About the name and the history.** Versions up to 9.9 were a free, non-commercial fan project set in another company's game world. Since v10 the world (Caldreth), its story (*The Black Ledger*), names and art are original, and the game is **Realm of Loner**. All art (hand-written SVG), music (composed synth) and code in this repository are our own. The game is free and will stay free.
