@@ -21,7 +21,10 @@ globalThis.localStorage = { getItem() { return null; }, setItem() {}, removeItem
 require('../src/data.js'); require('../src/engine.js'); require('../src/bots.js'); require('../src/game.js');
 const { D, G } = globalThis;
 const fs = require('fs');
-const BAR = process.env.BAR || 'median', SLOW = 20, FAST = BAR === 'median' ? 40 : 20, DEATHS = 2, DEATHS_CLS = { mage: 3 }, TALK = 10, BANDS = [[10, 20], [25, 35], [40, 50], [50, 60]], ORDER = process.env.ORDER || 'nearest';
+// HOP=x scales every hop between two places in the same zone (not boats or other 'via' routes), to try a travel change
+// without editing the data (#107). BANDS=10-20,20-30,... sets the level bands (contiguous bands give time 10 to 60).
+if (process.env.HOP) { const k = +process.env.HOP; for (const a in D.PLACES) { const A = D.PLACES[a]; for (const b in A.links || {}) { const B = D.PLACES[b]; if (B && A.zone && A.zone === B.zone && !(A.via && A.via[b])) A.links[b] *= k; } } }
+const BAR = process.env.BAR || 'median', SLOW = 20, FAST = BAR === 'median' ? 40 : 20, DEATHS = 2, DEATHS_CLS = { mage: 3 }, TALK = 10, BANDS = process.env.BANDS ? process.env.BANDS.split(',').map((b) => b.split('-').map(Number)) : [[10, 20], [25, 35], [40, 50], [50, 60]], ORDER = process.env.ORDER || 'nearest';
 // seconds and deaths per kill by seed, class and level, from sim/lvpace.js output
 const SEEDS = (process.env.LVPACE || '').split(';').filter(Boolean).map((files) => {
   const pace = {}; // pace[cls][L] = { spk: seconds per kill (3600 / kills an hour), dpk: deaths per kill }
