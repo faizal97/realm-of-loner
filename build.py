@@ -4,6 +4,10 @@ import os, shutil
 R = os.path.dirname(os.path.abspath(__file__))
 rd = lambda p: open(os.path.join(R, p), encoding='utf-8').read()
 import base64, json, glob, sys, subprocess
+# --dev (#92): a dev build for /dev/ (CI publishes one after every green main). Every gate runs as usual; it needs no
+# release notes, shows "Dev build <sha>" for the version, keeps its own save keys (src/devkeys.js), has no updater,
+# What's new, cloud saves or Friends, and writes only dist-dev/ (never dist/ or the app's assets)
+DEV = '--dev' in sys.argv[1:]
 # the data must check out before anything is built
 if subprocess.run(['node', os.path.join(R, 'tools', 'validate.js')]).returncode != 0:
     sys.exit('build stopped: fix the data errors above')
@@ -63,7 +67,7 @@ PENDING_SFX = set(open(os.path.join(R, 'audio', 'pending_sfx.txt')).read().split
 # v10.8: the first music (the three oldest tracks) stays inlined; every other approved track ships as a file next to the
 # page (dist/music/ and the app's assets/game/music/), loaded when it is first played (src/sound.js)
 INLINE_MUSIC = {'ambermoor', 'town', 'dungeon'}
-MUSIC_DIRS = [os.path.join(R, 'dist', 'music'), os.path.join(R, 'app', 'assets', 'game', 'music')]
+MUSIC_DIRS = [os.path.join(R, 'dist-dev', 'music')] if DEV else [os.path.join(R, 'dist', 'music'), os.path.join(R, 'app', 'assets', 'game', 'music')]
 for d in MUSIC_DIRS:
     os.makedirs(d, exist_ok=True)
     for old in glob.glob(os.path.join(d, '*.m4a')): os.remove(old)
@@ -85,11 +89,16 @@ VERSION = re.search(r'^version:\s*([0-9.]+(?:-[0-9A-Za-z.]+)?)', rd('app/pubspec
 # the release notes for this version (issue #29): one file per release in notes/, the same text the GitHub release, the
 # in-app updater and the Discord post use; shown once as "What's new" on the first open of a new version
 NOTES_FILE = os.path.join(R, 'notes', f'v{VERSION}.md')
-if not os.path.exists(NOTES_FILE):
+if DEV:
+    NOTES = ''
+    SHA = (os.environ.get('GITHUB_SHA') or subprocess.run(['git', '-C', R, 'rev-parse', 'HEAD'], capture_output=True, text=True).stdout.strip() or 'unknown')[:7]
+elif not os.path.exists(NOTES_FILE):
     sys.exit(f'build stopped: no release notes for v{VERSION} (write notes/v{VERSION}.md first)')
-NOTES = open(NOTES_FILE).read()
-audio_js = f'window.AZ_VERSION={json.dumps(VERSION)};window.AZ_NOTES={json.dumps(NOTES)};' + 'window.AUDIO_DATA=' + json.dumps(aud) + ';window.AUDIO_FILES=' + json.dumps(files) + ';window.AUDIO_META=' + meta + ';'
+else:
+    NOTES = open(NOTES_FILE).read()
+audio_js = (f'window.AZ_DEV={json.dumps({"sha": SHA})};' if DEV else '') + f'window.AZ_VERSION={json.dumps(VERSION)};window.AZ_NOTES={json.dumps(NOTES)};' + 'window.AUDIO_DATA=' + json.dumps(aud) + ';window.AUDIO_FILES=' + json.dumps(files) + ';window.AUDIO_META=' + meta + ';'
 js = [f for f in ['src/report.js', 'src/art.js', 'src/art_durotar.js', 'src/art_mulgore.js', 'src/art_tirisfal.js', 'src/art_westfall.js', 'src/art_barrens.js', 'src/art_icons2.js', 'src/art_icons3.js', 'src/art_icons4.js', 'src/art_icons5.js', 'src/art_icons6.js', 'src/art_icons7.js', 'src/art_redridge.js', 'src/art_stonetalon.js', 'src/art_duskwood.js', 'src/art_hillsbrad.js', 'src/art_ashenvale.js', 'src/art_wetlands.js', 'src/art_stranglethorn.js', 'src/art_gnomeregan.js', 'src/art_razorfen.js', 'src/art_arathi.js', 'src/art_scarlet.js', 'src/art_mounts.js', 'src/art_icons8.js', 'src/art_tanaris.js', 'src/art_zulfarrak.js', 'src/art_coinworks.js', 'src/art_rumhook.js', 'src/art_feralas.js', 'src/art_maraudon.js', 'src/art_icons9.js', 'src/art_icons10.js', 'src/art_icons11.js', 'src/art_icons12.js', 'src/art_icons13.js', 'src/art_honor.js', 'src/art_ungoro.js', 'src/art_steppes.js', 'src/art_brd.js', 'src/art_plaguelands.js', 'src/art_winterspring.js', 'src/art_scholomance.js', 'src/art_stratholme.js', 'src/art_dustwallow.js', 'src/art_moltencore.js', 'src/art_tidewatch.js', 'src/art_skullreef.js', 'src/art_archive.js', 'src/art_shalzua.js', 'src/art_tidecrown.js', 'src/art_worldbosses.js', 'src/art_story.js', 'src/art_story2.js', 'src/art_legends.js', 'src/art_bromli.js'] + DATA + ['src/engine.js', 'src/bots.js', 'src/game.js', 'src/trials.js', 'src/social.js', 'src/sound.js', 'src/cutscene.js', 'src/update.js', 'src/cloud.js', 'src/friends.js', 'src/savefile.js', 'src/sym.js', 'src/ui.js'] if os.path.exists(os.path.join(R, f))]
+if DEV: js = ['src/devkeys.js'] + js  # first, before any script reads or writes storage
 html = f'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
@@ -103,11 +112,12 @@ html = f'''<!doctype html>
 <script>{audio_js}</script>
 {''.join('<script>' + rd(f) + '</script>' for f in js)}
 </body></html>'''
-os.makedirs(os.path.join(R, 'dist'), exist_ok=True)
-out = os.path.join(R, 'dist', 'index.html')
+OUT_DIR = os.path.join(R, 'dist-dev' if DEV else 'dist')
+os.makedirs(OUT_DIR, exist_ok=True)
+out = os.path.join(OUT_DIR, 'index.html')
 open(out, 'w', encoding='utf-8').write(html)
 dst = os.path.join(R, 'app', 'assets', 'game', 'index.html')
 if subprocess.run(['node', os.path.join(R, 'tools', 'ipcheck.js'), '--dist', out]).returncode != 0:
     sys.exit('build stopped: an old-world name is in the built page, maybe in a comment (listed above)')
-shutil.copy(out, dst)
-print('built', out, 'v' + VERSION, round(len(html) / 1024), 'KB;', 'art.js' if 'src/art.js' in js else 'NO ART (placeholders)', '; audio inlined:', len(aud), '; music files:', len(files))
+if not DEV: shutil.copy(out, dst)
+print('built', out, ('dev build ' + SHA) if DEV else 'v' + VERSION, round(len(html) / 1024), 'KB;', 'art.js' if 'src/art.js' in js else 'NO ART (placeholders)', '; audio inlined:', len(aud), '; music files:', len(files))

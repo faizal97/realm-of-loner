@@ -1,8 +1,9 @@
-# Checks on every pull request and every push to main (#88). The fast job runs the data, lore, name and symbol checks and
-# the unit tests in a couple of minutes; the full gate build (python3 build.py with every sim, ~25 min) still runs locally
-# before every release, and comes here later as a second job.
+# Checks on every pull request and every push to main and the short work branches (#88). The fast job runs the data, lore,
+# name and symbol checks and the unit tests in a couple of minutes. The build job (#92) runs the full build with every gate
+# (python3 build.py --dev) and the pass/fail sims it doesn't run (tools/ci-sim-gates.txt, at seed 0). On main, once both pass,
+# publish-dev puts that dev build on the site's /dev/ page: https://faizal97.github.io/realm-of-loner/dev/
 # Security: pull_request (never pull_request_target), read-only, no secrets, actions pinned to a commit, so a fork's
-# code can't reach anything.
+# code can't reach anything. Only publish-dev may write, only on main, and only gh-pages' dev/ folder.
 name: checks
 on:
   pull_request:
@@ -49,3 +50,60 @@ jobs:
           if ! printf '%s' "$BODY" | grep -Eiq '(refs|fixes|closes|resolves) #[0-9]+' && [ -z "$what" ]; then
             echo "::warning title=Pull request description::Please link the issue (Refs #N) or say what and why in the description. Thanks!"
           fi
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - name: The full build and every gate it runs (a dev build, #92)
+        run: python3 build.py --dev
+      - name: The pass/fail sims the build doesn't run (tools/ci-sim-gates.txt, seed 0)
+        run: |
+          for s in $(grep -v '^#' tools/ci-sim-gates.txt); do
+            echo "::group::$s"; start=$(date +%s)
+            SEED=0 node -r ./sim/_seed.js "sim/$s.js" || { echo "::error title=Sim gate::sim/$s.js failed at seed 0"; exit 1; }
+            echo "::endgroup::$s: $(( $(date +%s) - start ))s"
+          done
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          name: dev-build
+          path: dist-dev/
+          retention-days: 3
+  # the dev page (#92): main only, after both checks pass; the one job that writes, and only gh-pages' dev/ folder
+  # (never the main page or /beta/)
+  publish-dev:
+    needs: [fast, build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    concurrency:
+      group: publish-dev
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dev-build
+          path: dev-build
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: gh-pages
+          path: site
+      - name: Put the dev build on /dev/
+        working-directory: site
+        run: |
+          test -f ../dev-build/index.html
+          grep -q 'window.AZ_DEV=' ../dev-build/index.html # never publish a live build to /dev/
+          rm -rf dev && mkdir dev && cp -R ../dev-build/. dev/
+          touch .nojekyll
+          git add -A dev .nojekyll
+          if git diff --cached --quiet; then echo "dev page already up to date"; exit 0; fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "Dev build ${GITHUB_SHA::7} (/dev/)"
+          git push -q origin gh-pages

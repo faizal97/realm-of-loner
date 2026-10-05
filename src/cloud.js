@@ -25,7 +25,7 @@
   const patch = (o) => { const st = read(); Object.assign(st, o); write(st); return st; };
   const record = (id, r) => { const st = read(); if (r) st.chars[id] = r; else delete st.chars[id]; write(st); };
   CLOUD.state = read;
-  CLOUD.on = () => !!read().on;
+  CLOUD.on = () => !root.AZ_DEV && !!read().on; // never in a dev build (#92): it would reach the player's real Drive
   CLOUD.device = () => (root.UPD && UPD.inApp && UPD.inApp() ? 'phone' : 'browser');
   const err = (code, message) => Object.assign(new Error(message), { code });
 
@@ -308,7 +308,7 @@
       signOut() { const t = tok; tok = null; exp = 0; if (t) call('clear', { token: t }).catch(() => {}); },
     };
   };
-  CLOUD.available = () => !!auth;
+  CLOUD.available = () => !root.AZ_DEV && !!auth;
   CLOUD.TESTING = false; // true while Google's consent screen is in Testing mode (only invited accounts can sign in); published 2026-09-29
   // a token for Drive; from a tap, interactive may open Google's window (called synchronously so the popup is allowed)
   CLOUD.token = (interactive) => (auth ? auth.token(interactive) : Promise.reject(err('unavailable', 'Cloud save is not available here.')));
