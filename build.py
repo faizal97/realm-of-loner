@@ -8,6 +8,9 @@ import base64, json, glob, sys, subprocess
 # release notes, shows "Dev build <sha>" for the version, keeps its own save keys (src/devkeys.js), has no updater,
 # What's new, cloud saves or Friends, and writes only dist-dev/ (never dist/ or the app's assets)
 DEV = '--dev' in sys.argv[1:]
+# --skip=effects,prof,…: gates another CI job runs in parallel (#88: the full build split in three); a build run by hand
+# never skips, and a release is always built without it
+SKIP = set(next((a[7:] for a in sys.argv[1:] if a.startswith('--skip=')), '').split(',')) - {''}
 # a gate run quietly: on failure its own output is shown (its FAIL lines, or its last lines), so a failure on the CI runner
 # says why without a rerun
 def quiet(cmd):
@@ -28,45 +31,45 @@ if subprocess.run(['node', os.path.join(R, 'tools', 'ipcheck.js'), '--brief', '-
 # v10.8: every symbol must be drawn (src/sym.js) or in the fonts, or the phone fills it in from its own font
 if subprocess.run(['node', os.path.join(R, 'tools', 'symcheck.js')]).returncode != 0:
     sys.exit('build stopped: a symbol the fonts cannot draw (node tools/symcheck.js lists where)')
-if subprocess.run(['node', os.path.join(R, 'sim', 'cloudsync.js')]).returncode != 0:
+if 'cloudsync' not in SKIP and subprocess.run(['node', os.path.join(R, 'sim', 'cloudsync.js')]).returncode != 0:
     sys.exit('build stopped: a cloud save rule is broken (node sim/cloudsync.js lists which)')
-if subprocess.run(['node', os.path.join(R, 'sim', 'friends.js')]).returncode != 0:
+if 'friends' not in SKIP and subprocess.run(['node', os.path.join(R, 'sim', 'friends.js')]).returncode != 0:
     sys.exit('build stopped: a Friends rule is broken (node sim/friends.js lists which)')
-if quiet(['node', os.path.join(R, 'sim', 'legends.js')]).returncode != 0:
+if 'legends' not in SKIP and quiet(['node', os.path.join(R, 'sim', 'legends.js')]).returncode != 0:
     sys.exit('build stopped: a Legend rule is broken (node sim/legends.js lists which)')
-if subprocess.run(['node', os.path.join(R, 'sim', 'upgrades.js')]).returncode != 0:
+if 'upgrades' not in SKIP and subprocess.run(['node', os.path.join(R, 'sim', 'upgrades.js')]).returncode != 0:
     sys.exit('build stopped: a gear upgrade rule is broken (node sim/upgrades.js lists which)')
-if subprocess.run(['node', os.path.join(R, 'sim', 'wardrobe.js')]).returncode != 0:
+if 'wardrobe' not in SKIP and subprocess.run(['node', os.path.join(R, 'sim', 'wardrobe.js')]).returncode != 0:
     sys.exit('build stopped: a wardrobe rule is broken (node sim/wardrobe.js lists which)')
-if subprocess.run(['node', os.path.join(R, 'sim', 'sellspeed.js')]).returncode != 0:
+if 'sellspeed' not in SKIP and subprocess.run(['node', os.path.join(R, 'sim', 'sellspeed.js')]).returncode != 0:
     sys.exit('build stopped: selling several or battle speed is broken (node sim/sellspeed.js lists which)')
-if subprocess.run(['node', os.path.join(R, 'sim', 'news.js')]).returncode != 0:
+if 'news' not in SKIP and subprocess.run(['node', os.path.join(R, 'sim', 'news.js')]).returncode != 0:
     sys.exit('build stopped: the news names a place or secret beyond the player\'s level (node sim/news.js lists which)')
-if subprocess.run(['node', os.path.join(R, 'sim', 'trials.js')]).returncode != 0:
+if 'trials' not in SKIP and subprocess.run(['node', os.path.join(R, 'sim', 'trials.js')]).returncode != 0:
     sys.exit('build stopped: a Trials rule is broken (node sim/trials.js lists which)')
-if quiet(['node', os.path.join(R, 'sim', 'reactions.js')]).returncode != 0:
+if 'reactions' not in SKIP and quiet(['node', os.path.join(R, 'sim', 'reactions.js')]).returncode != 0:
     sys.exit('build stopped: a class reaction rule is broken (node sim/reactions.js lists which)')
-if subprocess.run(['node', os.path.join(R, 'sim', 'hard.js')]).returncode != 0:
+if 'hard' not in SKIP and subprocess.run(['node', os.path.join(R, 'sim', 'hard.js')]).returncode != 0:
     sys.exit('build stopped: a Hard raid rule is broken (node sim/hard.js lists which)')
-if subprocess.run(['node', os.path.join(R, 'sim', 'worldboss.js')]).returncode != 0:
+if 'worldboss' not in SKIP and subprocess.run(['node', os.path.join(R, 'sim', 'worldboss.js')]).returncode != 0:
     sys.exit('build stopped: a world boss rule is broken (node sim/worldboss.js lists which)')
-if subprocess.run(['node', os.path.join(R, 'sim', 'distance.js')]).returncode != 0:
+if 'distance' not in SKIP and subprocess.run(['node', os.path.join(R, 'sim', 'distance.js')]).returncode != 0:
     sys.exit('build stopped: a distance rule is broken (node sim/distance.js lists which)')
-if subprocess.run(['node', os.path.join(R, 'sim', 'brawl.js'), '48']).returncode != 0:
+if 'brawl' not in SKIP and subprocess.run(['node', os.path.join(R, 'sim', 'brawl.js'), '48']).returncode != 0:
     sys.exit('build stopped: a Bloodsand Brawl rule is broken (node sim/brawl.js lists which)')
-if quiet(['node', os.path.join(R, 'sim', 'prof.js')]).returncode != 0:
+if 'prof' not in SKIP and quiet(['node', os.path.join(R, 'sim', 'prof.js')]).returncode != 0:
     sys.exit('build stopped: a profession rule or the Expert or Artisan pace is broken (node sim/prof.js lists which)')
-if quiet(['node', os.path.join(R, 'sim', 'social.js')]).returncode != 0:
+if 'social' not in SKIP and quiet(['node', os.path.join(R, 'sim', 'social.js')]).returncode != 0:
     sys.exit('build stopped: a chat or guild rule is broken (node sim/social.js lists which)')
-if quiet(['node', os.path.join(R, 'sim', 'auction.js')]).returncode != 0:
+if 'auction' not in SKIP and quiet(['node', os.path.join(R, 'sim', 'auction.js')]).returncode != 0:
     sys.exit('build stopped: the auction house pays risk-free or a price button wins nowhere (node sim/auction.js lists which)')
-if quiet(['node', os.path.join(R, 'sim', 'effects.js')]).returncode != 0:
+if 'effects' not in SKIP and quiet(['node', os.path.join(R, 'sim', 'effects.js')]).returncode != 0:
     sys.exit('build stopped: an item effect wins nowhere, loses nowhere or is too strong (node sim/effects.js lists which)')
-if quiet(['node', os.path.join(R, 'sim', 'rares.js')]).returncode != 0:
+if 'rares' not in SKIP and quiet(['node', os.path.join(R, 'sim', 'rares.js')]).returncode != 0:
     sys.exit('build stopped: a rare is in a starting place or first in a Fight list it outlevels (node sim/rares.js lists which)')
-if quiet(['node', os.path.join(R, 'sim', 'consumables.js')]).returncode != 0:
+if 'consumables' not in SKIP and quiet(['node', os.path.join(R, 'sim', 'consumables.js')]).returncode != 0:
     sys.exit('build stopped: level-60 consumables give more than the modest edge (node sim/consumables.js lists which)')
-if subprocess.run(['node', os.path.join(R, 'sim', 'music.js')]).returncode != 0:
+if 'music' not in SKIP and subprocess.run(['node', os.path.join(R, 'sim', 'music.js')]).returncode != 0:
     sys.exit('build stopped: a place plays the wrong music (node sim/music.js lists which)')
 DATA = ['src/data/' + f for f in json.load(open(os.path.join(R, 'src', 'data', 'files.json')))]
 # music ships only once he has listened and approved the track
