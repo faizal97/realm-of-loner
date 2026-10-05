@@ -65,8 +65,10 @@ const drop = (keys) => { for (const k of keys) { delete D.DUNGEONS[k]; delete D.
   ok(late.rank > early.rank, `bots climb during the month: the same rating drops from #${early.rank} to #${late.rank}`);
   ok(late.rows.length <= 15 && late.rows.some((r) => r.me) && late.rows[0].rank === 1, 'the board shows the top 10 and you, not the whole realm');
   const top = T.board(bots, 99999, 'Me', new RealDate(2026, 9, 28)); ok(top.rank === 1, 'a huge rating is #1');
-  const tops = bots.map((b) => T.botRating(b, 0, 1)).sort((a, b) => b - a);
-  ok(tops[0] > 1100 && tops[Math.floor(tops.length / 2)] < 700, `a few bots push past 1100, most sit lower (best ${tops[0]}, median ${tops[Math.floor(tops.length / 2)]})`);
+  // measured on the board you see (the realm's bots and the ladder), not the realm's bots alone: those are a random
+  // sample, and on some dice its best stopped just under 1100 (#106)
+  const tops = bots.concat(T.ladder()).map((b) => T.botRating(b, 0, 1)).sort((a, b) => b - a), over = tops.filter((r) => r > 1100).length;
+  ok(over >= 3 && tops[Math.floor(tops.length / 2)] < 700, `a few bots push past 1100, most sit lower (${over} past 1100, best ${tops[0]}, median ${tops[Math.floor(tops.length / 2)]} of ${tops.length})`);
 }
 
 
@@ -169,11 +171,15 @@ const drop = (keys) => { for (const k of keys) { delete D.DUNGEONS[k]; delete D.
   // Hasty: the Trial's par is shorter
   ok(T.par(D.DUNGEONS.stratholme, ['hasty']) === Math.round((D.DUNGEONS.stratholme.trialPar || D.DUNGEONS.stratholme.par) * T.PAR * T.OMENS.hasty.par), 'Hasty: a shorter par');
   // Warded: while the focus lives, the others take half damage
-  const hitOn = (om, killFocus) => { let s2 = 0, n2 = 0; for (let r = 0; r < 20; r++) { const me = bag(); me.auto = true; me.bot = { skill: 0.8, react: 0.3 };
+  // each ability is compared with itself: a plain average over every hit swung with how many big Fire Blasts the bot
+  // happened to cast among its small wand hits, and on some dice that alone crossed the line (#106)
+  const hitOn = (om, killFocus) => { const k = {}; for (let r = 0; r < 20; r++) { const me = bag(); me.auto = true; me.bot = { skill: 0.8, react: 0.3 };
     const a = E.mobUnit('mangy_wolf', 60, { hp: 50, dmg: 0 }), f = E.mobUnit('mangy_wolf', 60, { hp: 50, dmg: 0 }); f.focus = true; if (killFocus) f.dead = true;
-    const F = E.fight([me], [a, f], { omens: om }); me.target = a.uid; for (let i = 0; i < 60; i++) { E.tick(F, 0.1); for (const e of F.events) if (e.type === 'dmg' && e.tgt === a.uid && !e.crit) { s2 += e.amount; n2++; } F.events.length = 0; } } return s2 / Math.max(1, n2); };
-  const w1 = hitOn(['warded'], false), w0 = hitOn([], false), w2 = hitOn(['warded'], true);
-  ok(w1 < w0 * 0.65 && w2 > w0 * 0.8, `Warded: the rest take about half damage while the warden lives (${Math.round(w1)} vs ${Math.round(w0)}; warden dead ${Math.round(w2)})`);
+    const F = E.fight([me], [a, f], { omens: om }); me.target = a.uid; for (let i = 0; i < 60; i++) { E.tick(F, 0.1); for (const e of F.events) if (e.type === 'dmg' && e.tgt === a.uid && !e.crit) { const s = k[e.ab || 'melee'] = k[e.ab || 'melee'] || { sum: 0, n: 0 }; s.sum += e.amount; s.n++; } F.events.length = 0; } } return k; };
+  // the hit-weighted ratio of each ability's mean damage to its mean with no Omen
+  const vs = (k, base) => { let r = 0, n = 0; for (const id in k) if (base[id]) { r += k[id].n * (k[id].sum / k[id].n) / (base[id].sum / base[id].n); n += k[id].n; } return n ? r / n : NaN; };
+  const h0 = hitOn([], false), w1 = vs(hitOn(['warded'], false), h0), w2 = vs(hitOn(['warded'], true), h0);
+  ok(w1 < 0.65 && w2 > 0.8, `Warded: the rest take about half damage while the warden lives (${Math.round(w1 * 100)}% of normal; warden dead ${Math.round(w2 * 100)}%)`);
   // Sheltered: the focus cannot be hurt while another enemy lives
   { const me = bag(); me.auto = true; me.bot = { skill: 0.8, react: 0.3 }; const a = E.mobUnit('mangy_wolf', 60, { hp: 50, dmg: 0 }), f = E.mobUnit('mangy_wolf', 60, { hp: 50, dmg: 0 }); f.focus = true;
     const F = E.fight([me], [a, f], { omens: ['sheltered'] }); me.target = f.uid; const hp0 = f.hp; for (let i = 0; i < 60; i++) E.tick(F, 0.1);
