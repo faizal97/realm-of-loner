@@ -15,8 +15,8 @@ permissions:
   contents: read
 concurrency:
   group: checks-${{ github.ref }}
-  # a newer push cancels a branch's older run, but never on main: there each run publishes its own dev build, and a
-  # docs-only push (which skips the build) must not cancel a code push's run and leave /dev/ without that code
+  # a newer push cancels a branch's older run, but never a running one on main: there the run publishes /dev/ (a waiting
+  # one may still give way to a newer push, which always builds main's newest code)
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 jobs:
   fast:
@@ -53,8 +53,10 @@ jobs:
           if ! printf '%s' "$BODY" | grep -Eiq '(refs|fixes|closes|resolves) #[0-9]+' && [ -z "$what" ]; then
             echo "::warning title=Pull request description::Please link the issue (Refs #N) or say what and why in the description. Thanks!"
           fi
-  # whether the full build is needed (#88): a change only to notes, docs, the issue and PR templates, the README or
-  # CLAUDE.md can't move a gate, so it skips the build; anything else (code, data, sims, tools, this workflow) runs it all
+  # whether the full build is needed (#88): on a pull request or a work branch, a change only to notes, docs, the issue
+  # and PR templates, the README or CLAUDE.md can't move a gate, so it skips the build; anything else (code, data, sims,
+  # tools, this workflow) runs it all. A push to main always builds: it publishes /dev/, and main's runs queue (a waiting
+  # run can be dropped for a newer one), so the newest run must always carry the newest code
   changes:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -70,9 +72,10 @@ jobs:
           BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
           HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           PR: ${{ github.event_name == 'pull_request' }}
+          MAIN: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         run: |
           full=true
-          if [ -n "$BASE" ] && [ "$BASE" != 0000000000000000000000000000000000000000 ] && git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+          if [ "$MAIN" != true ] && [ -n "$BASE" ] && [ "$BASE" != 0000000000000000000000000000000000000000 ] && git cat-file -e "$BASE^{commit}" 2>/dev/null; then
             if [ "$PR" = true ]; then files=$(git diff --name-only "$BASE...$HEAD_SHA"); else files=$(git diff --name-only "$BASE" "$HEAD_SHA"); fi
             printf 'changed:\n%s\n' "$files"
             if [ -n "$files" ] && ! printf '%s\n' "$files" | grep -vqE '^(notes/|docs/|art/promo/|\.github/ISSUE_TEMPLATE/|\.github/PULL_REQUEST_TEMPLATE\.md$|README\.md$|CLAUDE\.md$)'; then full=false; fi
