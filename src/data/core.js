@@ -593,6 +593,9 @@
   // ---- mounts (v5.1): learn riding at 40 from a stable master in a capital, then buy a mount.
   // Riding makes every road 40% faster (boats, zeppelins, gryphons and trams keep their time).
   D.RIDING = { lvl: 40, cost: 400000, speed: 0.6 };
+  // a hop between two places in the same zone takes this share of its listed time (#107): nearby is quick, while hops
+  // into another zone, boats and other 'via' routes keep theirs, so distance stays far away. The mount's speed applies on top.
+  D.IN_ZONE_HOP = 0.5;
   // The Trialsworn set (v10.7, Trials stage 4): looks earned once per account, the cloak for beating Trial 5 in time,
   // a weapon look for every weapon type and the Trialsworn Charger for Trial 10. The items exist for their looks only.
   const tsw = (id, name, slot, o) => D.item(id, Object.assign({ name, slot, q: 4, lvl: 60, look: [slot, id], source: slot === 'back' ? 'Trials: beat Trial 5 in time' : 'Trials: beat Trial 10 in time', lookOnly: true, sell: 0 }, o));
