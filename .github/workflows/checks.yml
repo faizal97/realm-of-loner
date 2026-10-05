@@ -25,7 +25,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 24
+          node-version: 26
       - name: Game data
         run: node tools/validate.js
       - name: Lore (spoilers, names, typos) and its self-test
@@ -63,7 +63,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 24
+          node-version: 26
       - name: The full build and every gate it runs (a dev build, #92)
         run: python3 build.py --dev
       - name: The pass/fail sims the build doesn't run (tools/ci-sim-gates.txt, seed 0)
