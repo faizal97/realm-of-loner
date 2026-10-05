@@ -785,6 +785,8 @@ svg.sym { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: 
 .slot .up.eff { color: #d39cff; }
 
 /* the version on the main menu (issue #29): tap it for What's new */
+/* #99: the hidden frame-rate readout (five taps on the version label), above everything and never in the way of a tap */
+.fps-readout { position: fixed; z-index: 9999; top: calc(env(safe-area-inset-top, 0px) + 2px); left: 2px; padding: 1px 5px; border-radius: 3px; background: rgba(0,0,0,.72); color: #8cff6a; font: 700 11px/1.35 ui-monospace, monospace; pointer-events: none; }
 .ver-tag { position: absolute; right: 10px; bottom: 8px; padding: 6px 8px; border: 0; background: none; color: #8a7d64; font: 600 12px var(--body); }
 .create { position: relative; }
 .dialog .notes { text-align: left; }
