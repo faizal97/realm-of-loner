@@ -4525,8 +4525,9 @@
   // What's new (issue #29): the notes bundled with this build (window.AZ_NOTES), shown once per device on the first open of
   // a new version, and any time from the version tag on the main menu. A brand-new device is marked seen silently.
   const SEEN_KEY = 'azsolo.seenVersion', verNow = () => (window.UPD ? UPD.current() : String(window.AZ_VERSION || ''));
-  const verLabel = () => { const v = verNow(); return /-beta\./.test(v) ? `v${v} · Beta` : `v${v}`; };
+  const verLabel = () => { if (window.AZ_DEV) return `Dev build ${window.AZ_DEV.sha}`; const v = verNow(); return /-beta\./.test(v) ? `v${v} · Beta` : `v${v}`; };
   function showWhatsNew() {
+    if (window.AZ_DEV) return; // a dev build has no release notes (#92)
     const md = String(window.AZ_NOTES || ''), html = md && window.UPD && UPD.notesHtml ? UPD.notesHtml(md) : '';
     try { localStorage.setItem(SEEN_KEY, verNow()); } catch (e) { }
     // long notes scroll (v10.9.0 is about 3 phone screens): an × at the top and Got it at the bottom stay in view (#29)

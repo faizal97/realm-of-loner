@@ -18,11 +18,11 @@
   const patch = (o) => { const st = read(); Object.assign(st, o); write(st); return st; };
   const err = (code, message) => Object.assign(new Error(message), { code });
   FRIENDS.state = read;
-  FRIENDS.on = () => !!read().on;
+  FRIENDS.on = () => !root.AZ_DEV && !!read().on; // never in a dev build (#92): it would reach the player's real Friends account
 
   let be = null;
   FRIENDS.setBackend = (b) => { be = b; };
-  FRIENDS.available = () => !!be;
+  FRIENDS.available = () => !root.AZ_DEV && !!be;
   // load Firebase (and Google's script in a browser) ahead of a tap; resume() signs back in quietly on a later visit
   FRIENDS.prepare = () => (be && be.prepare ? be.prepare() : Promise.resolve());
   FRIENDS.signedIn = () => !!(be && be.signedIn && be.signedIn());

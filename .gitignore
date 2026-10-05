@@ -1,5 +1,6 @@
 # build output (build.py and flutter regenerate these)
 dist/
+dist-dev/
 app/build/
 app/.dart_tool/
 app/.flutter-plugins

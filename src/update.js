@@ -37,6 +37,7 @@
 
   // Resolves { latest, name, notes, url, apk, size, newer, skipped } or null when offline / GitHub unreachable.
   UPD.check = async function (force) {
+    if (root.AZ_DEV) return null; // a dev build (#92) is never offered a release
     const st = store(), chan = UPD.beta() ? 'beta' : 'stable';
     if (!force && st.at && st.chan === chan && Date.now() - st.at < EVERY) {
       if (!st.rel) return null;

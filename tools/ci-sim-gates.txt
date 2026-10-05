@@ -1,0 +1,22 @@
+# The pass/fail sims CI runs after the build (#92), at seed 0 (SEED=0 node -r ./sim/_seed.js sim/<name>.js); build.py already
+# runs its own gates. Measured 2026-10-05 on main: all 18 pass, about 3 minutes together (chatcheck 131 s, battleground 21 s,
+# the rest 1 s or less). Left out, for the Lead: pvp (over 15 minutes), questpace (needs lvpace.js's output as input),
+# v4abilities (fails: the Warrior's Overpower "Not lit yet", a reaction ability since v10.4; likely a stale sim).
+battleground
+chatcheck
+honorspread
+huntproof
+lvabilities
+v191
+v20
+v20abilities
+v21abilities
+v3
+v3abilities
+v5
+v51
+v51abilities
+v5abilities
+v6_feralas
+v6_tanaris
+zoneflow
