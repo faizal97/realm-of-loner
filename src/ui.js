@@ -617,10 +617,10 @@
           el.addEventListener('click', () => confirmAttack(foe));
           sc.append(el);
         }
-        // gathering nodes you can see
-        G.placeNodes().forEach((nd, i) => {
-          const el = spriteEl(art('node', nd.key), [{ l: 31, b: 3, w: 11 }, { l: 49, b: 1, w: 10 }][i], 'node tappable', h('div', { class: 'np', style: { fontSize: '10px' } }, h('span', { style: { color: '#ffd84a' } }, nd.N.name)));
-          el.addEventListener('click', () => G.gatherNode(nd.i));
+        // gathering nodes (two spots): yours first, then ones you haven't learned, named with what they need (#76)
+        G.placeNodes(true).sort((a, c) => c.learned - a.learned).slice(0, 2).forEach((nd, i) => {
+          const el = spriteEl(art('node', nd.key), [{ l: 31, b: 3, w: 11 }, { l: 49, b: 1, w: 10 }][i], 'node tappable' + (nd.learned ? '' : ' unlearned'), h('div', { class: 'np', style: { fontSize: '10px' } }, h('span', { style: { color: nd.learned ? '#ffd84a' : '#c9b894' } }, nd.learned ? nd.N.name : `${nd.N.name} · needs ${D.PROFESSIONS[nd.N.prof].name}`)));
+          el.addEventListener('click', () => (nd.learned ? G.gatherNode(nd.i) : needsProfDialog(nd.N)));
           sc.append(el);
         });
         // the people of this place (v9.4): quest givers first, tap to talk
@@ -1089,10 +1089,13 @@
       const W = G.S.world[P.place]; const n = W ? W.nodes.n : 4;
       b.append(h('button', { class: 'chip gold', disabled: !n, onclick: () => G.gather() }, 'Collect ' + place.gather.label, h('small', null, n ? n + ' nearby' : 'More soon')));
     }
-    const nodes = G.placeNodes();
+    const nodes = G.placeNodes(true);
     if (nodes.length) {
       const row = h('div', { class: 'chips' });
-      for (const nd of nodes) { const p = G.profs()[nd.N.prof], col = G.skillColor(p.skill, G.nodeSk(nd.N));
+      for (const nd of nodes) {
+        // one you haven't learned (#76): shown, with what it needs; tapping says where to learn it
+        if (!nd.learned) { row.append(h('button', { class: 'chip', onclick: () => needsProfDialog(nd.N) }, img(art('icon', nd.N.item)), ' ', nd.N.name, h('small', { style: { color: SKILL_COL[0] } }, `needs ${D.PROFESSIONS[nd.N.prof].name}`))); continue; }
+        const p = G.profs()[nd.N.prof], col = G.skillColor(p.skill, G.nodeSk(nd.N));
         row.append(h('button', { class: 'chip gold', disabled: col < 0, onclick: () => G.gatherNode(nd.i) }, img(art('icon', nd.N.item)), ' ', `${D.PROFESSIONS[nd.N.prof].verb} ${nd.N.name}`, h('small', { style: { color: SKILL_COL[col + 1] } }, col < 0 ? `needs ${nd.N.skill}` : `skill ${p.skill}`))); }
       b.append(row);
     }
@@ -2234,6 +2237,8 @@
         for (const o of D.QUESTS[qid].objs) objPlaces(o).forEach((p) => { mark(p); if (main && qPlaces.get(p) === 'new') qMain.add(p); });
       }
       const huntUpAt = new Map(); for (const r of (G.huntRares ? G.huntRares() : [])) if (MAP[r.place] && G.huntUp(r.key, Date.now())) huntUpAt.set(r.place, r.key); // a rare hunt that's up (#43)
+      // your faction's profession trainers, marked with an anvil so the map itself says where crafting is learned (#76)
+      const trainerAt = new Set(((D.PROF_TRAINERS || {})['crafts_' + G.myFaction()] || []).filter((p) => MAP[p] && !G.enemyTown(p))), ANVIL = art('icon', 'prof_blacksmithing');
       for (const p in MAP) {
         const [x, y] = MAP[p]; const pl = D.PLACES[p];
         const here = p === cur;
@@ -2242,6 +2247,7 @@
         nodes.push(`<g data-go="${p}" style="cursor:${adj ? 'pointer' : 'default'}">
           <circle cx="${x}" cy="${y}" r="${here ? 13 : 10}" fill="${here ? '#f0c75e' : G.enemyTown(p) ? '#8a2a22' : seenP ? '#6b8f3a' : '#3a4a2a'}" stroke="#1a1208" stroke-width="3"/>
           ${here ? `<circle cx="${x}" cy="${y}" r="19" fill="none" stroke="#f0c75e" stroke-width="2" opacity=".6"/>` : ''}
+          ${trainerAt.has(p) ? `<image href="${ANVIL}" x="${x - 31}" y="${y - 9}" width="18" height="18"/>` : ''}
           ${huntUpAt.has(p) ? `<polygon points="${x - 15},${y - 22} ${x - 9},${y - 28} ${x - 3},${y - 22} ${x - 9},${y - 16}" fill="#ff8a3a" stroke="#1a1208" stroke-width="2"/>` : ''}
           ${qPlaces.has(p) ? (qMain.has(p) ? `<image href="${qmarkSrc(qPlaces.get(p), true)}" x="${x + 5}" y="${y - 30}" width="20" height="24.5"/>` : `<image href="${qmarkSrc(qPlaces.get(p))}" x="${x + 7}" y="${y - 30}" width="15" height="24.5"/>`) : ''}
           <text x="${x}" y="${y + 26}" text-anchor="middle" font-family="Alegreya Sans, sans-serif" font-weight="800" font-size="13" fill="${adj || here ? '#f3e6c6' : '#a89a7a'}" stroke="#120c05" stroke-width="3" paint-order="stroke">${esc(pl.name)}</text>
@@ -2262,6 +2268,7 @@
       const far = h('div', { class: 'chips' });
       for (const a in MAP) for (const c in D.PLACES[a].links) if (!MAP[c] && !G.enemyTown(a) && !G.enemyTown(c)) far.append(h('button', { class: 'chip gold', onclick: () => { if (cur === a) { G.travelTo(c); closeSheet(); } else toast(`Go to ${D.PLACES[a].name} first.`); } }, `${D.PLACES[a].name} → ${D.PLACES[c].name}`, h('small', null, `${D.PLACES[c].zone} · ` + ((D.PLACES[a].via || {})[c] || 'Road') + ' · ' + G.travelSecs(a, c) + 's')));
       b.append(m, h('div', { style: { color: 'var(--muted)', fontSize: '13px' } }, 'Gold: you are here. ! marks places your quests need, ? where a finished quest is handed in. Tap any place for the way there.'),
+        ...(trainerAt.size ? [h('div', { class: 'map-key', style: { color: 'var(--muted)', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' } }, h('img', { src: ANVIL, alt: '', style: { width: '18px', height: '18px' } }), 'A profession trainer: learn gathering and crafting there (two professions).')] : []),
         ...(huntUpAt.size ? [h('div', { style: { color: '#ff8a3a', fontSize: '13px', fontWeight: 700 } }, `◆ Rare hunt up now: ${[...huntUpAt].map(([pk, k]) => `${D.MOBS[k].name} at ${D.PLACES[pk].name}`).join(', ')}`)] : [])); // no line when none is up (#53: append(null) wrote "null")
       // roads out of this zone, under the map so they never push it down
       if (far.childNodes.length) b.append(h('div', { class: 'sec-h' }, 'Roads out of ' + D.REGIONS[region].name), far);
@@ -3187,13 +3194,28 @@
     if (crafted.length) rows.push(h('div', { class: 'row' }, h('div', { class: 'ic' }, itemIcon(crafted[0])), h('div', { class: 't' }, h('b', null, `Crafted looks: ${have} of ${crafted.length}`), h('small', { style: { whiteSpace: 'normal' } }, crafted.map((it) => `${it.name}${looks.has(it.look[0] + ':' + it.look[1]) ? ' ✓' : ''}`).join(' · ') + '. Only from crafting.'))));
     return h('div', null, h('div', { class: 'sec-h' }, 'Collections', h('small', null, 'for every character on this device')), h('div', { class: 'list' }, ...rows));
   }
+  // where to learn a profession, as a fact (#76): the trainer here (Talk to) or the nearest one and how far (Show the
+  // way). One line and one button, for the Professions screen, a node you can't gather yet and the first tip.
+  function trainerLead() {
+    const nt = G.nearestTrainer(); if (!nt) return { text: 'No profession trainer can be reached from here right now.', btn: null };
+    const N = D.NPCS[nt.npc], pl = D.PLACES[nt.place];
+    if (!nt.secs) return { text: `${N.name} is here in ${pl.name}.`, label: `Talk to ${N.name}`, go: () => { closeDialog(); openNpc(nt.npc); } };
+    return { text: `The nearest: ${N.name} in ${pl.name}, ${pl.zone} (about ${fmtTime(nt.secs * 1000).trim()} away).`, label: 'Show the way', go: () => { closeDialog(); routeDialog(nt.place); } };
+  }
+  const leadBtn = (L, cls) => (L.go ? h('button', { class: cls || 'btn wide', onclick: L.go }, L.label) : null);
+  // a node whose skill you haven't learned: what it needs, and where to learn it
+  function needsProfDialog(N) {
+    const L = trainerLead(), name = D.PROFESSIONS[N.prof].name;
+    showDialog([h('h3', null, N.name), h('p', null, `Needs ${name}. Profession trainers teach gathering and crafting, and you can learn two.`), h('p', null, L.text),
+      h('div', { class: 'btn-row' }, leadBtn(L, 'btn'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Close'))], true);
+  }
   function openProfessions() {
     ui.profTab = ui.profTab || null;
     openSheet('profs', 'Professions', ' ', (b, title) => {
       const P = G.S.player, profs = G.profs(), ids = G.knownProfIds(); // a skill from a newer build is skipped (issue #17)
       title.querySelector('small').textContent = ids.length ? `${G.primaryCount()}/${D.PROF_MAX} · craft anywhere out of combat` : 'Learn up to two from a profession trainer';
       ids.sort((a, c) => (D.isSecondary(a) ? 1 : 0) - (D.isSecondary(c) ? 1 : 0)); // your two professions, then Cooking and Fishing
-      if (!ids.length) { b.append(h('p', null, 'You have no professions yet. Profession trainers wait in every capital and in Warrick\'s Rise and Dustfort.')); return; }
+      if (!ids.length) { const L = trainerLead(); b.append(h('p', null, 'You have no professions yet. A profession trainer teaches them: two gathering or crafting skills, plus Cooking and Fishing.'), h('p', null, L.text), leadBtn(L) || ''); return; }
       if (!ids.includes(ui.profTab)) ui.profTab = ids.find((k) => D.PROFESSIONS[k].kind === 'craft') || ids.find((k) => k === 'mining') || ids[0];
       b.append(h('div', { class: 'chips' }, ...ids.map((k) => h('button', { class: 'chip' + (k === ui.profTab ? ' gold' : ''), onclick: () => { ui.profTab = k; ui.sheetFn(); } }, img(art('icon', D.PROFESSIONS[k].icon)), ' ', D.PROFESSIONS[k].name, h('small', null, `${profs[k].skill}/${profs[k].max}`)))));
       const k = ui.profTab, Pd = D.PROFESSIONS[k], p = profs[k];
@@ -4224,7 +4246,16 @@
     dungeon: 'Dungeons are open. Social → Groups: queue from the dungeon\'s zone and the finder fills your group.',
     run: 'In a group the tank pulls. Tap Pull (or Ready) when you are set; Tactics set the pace.',
     talents: 'Talents are open: Hero → Abilities → Talents. You get a new point every level.',
+    // a tip can be a function, read when it shows: its text and one button (#76)
+    professions: () => {
+      const nt = G.nearestTrainer(), say = 'Profession trainers teach gathering and crafting. You can learn two.'; if (!nt) return null;
+      const N = D.NPCS[nt.npc], pl = D.PLACES[nt.place];
+      return !nt.secs ? { text: `${say} One is here: ${N.name}.`, label: `Talk to ${N.name}`, go: () => openNpc(nt.npc) }
+        : { text: `${say} The nearest: ${N.name} in ${pl.name} (about ${fmtTime(nt.secs * 1000).trim()} away).`, label: 'Show the way', go: () => routeDialog(nt.place) };
+    },
   };
+  // the professions tip (#76): from level 5, for a character with none, the first time it levels, arrives or logs in
+  const profTip = () => { if (G.S && G.S.player.level >= 5 && !G.knownProfIds().length && !G.S.run) tip('professions'); };
   const TIP_KEY = 'azsolo.tips';
   function tipState() {
     let s = null; try { s = JSON.parse(localStorage.getItem(TIP_KEY) || 'null'); } catch (e) { }
@@ -4262,14 +4293,18 @@
   function nextTip() {
     clearTimeout(ui.tipWait);
     if ((ui.tipQueue || []).length && !tipCalm()) { ui.tipWait = setTimeout(nextTip, 1500); return; } // a tip waits for an open screen to close (issues #8, #35)
-    const id = (ui.tipQueue || []).shift(); if (!id) { ui.tipEl = null; return; }
+    const id = (ui.tipQueue || [])[0]; if (!id) { ui.tipEl = null; return; }
+    // a tip with a button waits out a fight, so its button isn't lost in the fight banner
+    if (G.fight && typeof TIPS[id] === 'function') { ui.tipWait = setTimeout(nextTip, 1500); return; }
+    ui.tipQueue.shift();
+    const T = typeof TIPS[id] === 'function' ? TIPS[id]() : { text: TIPS[id] }; if (!T) { setTimeout(nextTip, 0); return; }
     let gone = false, el = null; const close = () => { if (gone) return; gone = true; el.remove(); ui.tipEl = null; setTimeout(nextTip, 400); };
     if (G.fight) { // in a fight: a banner that taps pass through (it never swallows an ability press), its × or a few seconds close it
-      el = h('div', { class: 'tip-card banner' }, h('div', { class: 'tip-t' }, TIPS[id]), h('button', { class: 'tip-x', onclick: close, 'aria-label': 'Close' }, '×'));
+      el = h('div', { class: 'tip-card banner' }, h('div', { class: 'tip-t' }, T.text), h('button', { class: 'tip-x', onclick: close, 'aria-label': 'Close' }, '×'));
       ui.tipEl = el; (document.getElementById('app') || document.body).append(el); setTimeout(close, 7000); return;
     }
-    el = h('div', { class: 'tip-card' }, h('div', { class: 'tip-t' }, TIPS[id]),
-      h('div', { class: 'tip-b' }, h('button', { class: 'chip gold', onclick: close }, 'Got it'),
+    el = h('div', { class: 'tip-card' }, h('div', { class: 'tip-t' }, T.text),
+      h('div', { class: 'tip-b' }, T.go ? h('button', { class: 'chip gold', onclick: () => { close(); T.go(); } }, T.label) : null, h('button', { class: T.go ? 'chip' : 'chip gold', onclick: close }, 'Got it'),
         h('button', { class: 'chip', onclick: () => { const s = tipState(); s.off = true; saveTips(s); ui.tipQueue = []; el.remove(); ui.tipEl = null; toast('Tips off. Hero → Settings can turn them back on.', true); } }, 'Skip all tips')));
     ui.tipEl = el; (document.getElementById('app') || document.body).append(el);
   }
@@ -4736,7 +4771,8 @@
     G.on('questReady', () => tip('questReady'));
     G.on('roll', () => tip('roll'));
     G.on('runUpdate', () => { if (G.S && G.S.run && G.S.run.phase === 'rest') tip('run'); });
-    G.on('levelup', (d) => { if (d.level === 2) tip('level'); if (d.level === 8) tip('dungeon'); if (d.level === D.TALENT_START) tip('talents'); });
+    G.on('levelup', (d) => { if (d.level === 2) tip('level'); if (d.level === 8) tip('dungeon'); if (d.level === D.TALENT_START) tip('talents'); if (d.level === 5) profTip(); });
+    G.on('arrive', () => profTip()); // #76: from level 5, the nearest trainer, or the one in this town
     G.on('chat', () => { if (G.S && G.S.chat.some((m) => m.act && m.act.state === 'open' && !m.act.accepted)) tip('request'); });
     G.on('fightEnd', (d) => { fightEndAt = performance.now(); renderAll(); if (d.result === 'lose' && !G.S.run) banner('You died'); });
     G.on('runUpdate', renderAll);
@@ -4819,6 +4855,7 @@
     closeDialog();
     buildLayout(); bind(); renderAll();
     if (G.S.player.level <= 3) setTimeout(() => tip('start'), 1500);
+    else setTimeout(profTip, 2500); // #76: a character past 5 with no profession hears of the trainers once
   }
   let last = performance.now(), cloudTick = 0;
   function loop(t) {

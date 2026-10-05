@@ -1624,6 +1624,15 @@
   // and every list skips it
   G.knownProfIds = () => Object.keys(G.profs()).filter((k) => D.PROFESSIONS[k]);
   G.primaryCount = () => G.knownProfIds().filter((k) => !D.isSecondary(k)).length;
+  // your faction's nearest profession trainer (#76): { npc, place, secs } (secs 0 when one stands here), or null when
+  // none can be reached; from where you are heading when you are on the road
+  G.nearestTrainer = function () {
+    const P = G.S.player, npc = 'crafts_' + G.myFaction(), from = P.travel ? P.travel.to : P.place;
+    const at = ((D.PROF_TRAINERS || {})[npc] || []).filter((p) => D.PLACES[p] && !G.enemyTown(p));
+    if (at.includes(from)) return { npc, place: from, secs: 0 };
+    const t = G.travelTimes(from), best = at.filter((p) => t[p] != null).sort((a, b) => t[a] - t[b])[0];
+    return best ? { npc, place: best, secs: Math.round(t[best]) } : null;
+  };
   G.profRank = function (id) { const p = G.profs()[id]; return p ? D.PROF_RANKS.findIndex((r) => r.max === p.max) : -1; };
   G.nextRank = function (id) {
     const P = G.S.player, p = G.profs()[id], i = p ? G.profRank(id) + 1 : 0, R = D.PROF_RANKS[i];
@@ -1683,11 +1692,12 @@
       else if (t >= W.pnodes.at[kind]) W.pnodes.at[kind] = t + rnd(60, 100) * 1000;
     }
   }
-  // the nodes you can see here (you only notice what your professions look for)
-  G.placeNodes = function () {
+  // the nodes here you can gather; all = true also the ones whose skill you haven't learned (#76: the world shows them,
+  // marked "Needs Mining", so it points at the skill), each with learned
+  G.placeNodes = function (all) {
     const P = G.S.player, pl = D.PLACES[P.place]; if (!nodePlace(pl) || G.S.run) return [];
     const W = placeState(P.place); nodesTick(P.place, W, now());
-    return W.pnodes.list.map((k, i) => ({ i, key: k, N: D.NODES[k] })).filter((x) => G.hasProf(x.N.prof));
+    return W.pnodes.list.map((k, i) => ({ i, key: k, N: D.NODES[k], learned: G.hasProf(D.NODES[k].prof) })).filter((x) => all || x.learned);
   };
   G.gatherNode = function (i) {
     const S = G.S, P = S.player;
