@@ -188,6 +188,35 @@ console.log(`Blizzard names still to rename: ${left} of ${Object.keys(map).lengt
 console.log(`in player-facing code and data: ${text.length} places in ${Object.keys(byFile).length} files; in comments: ${com.length}`);
 if (!arg('--brief')) for (const [f, n] of Object.entries(byFile).sort((a, b) => b[1] - a[1]).slice(0, 15)) console.log(`  ${String(n).padStart(5)}  ${f}`);
 if (!arg('--brief')) console.log('most frequent: ' + Object.entries(byName).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([n, c]) => `${n} ${c}`).join(' · '));
+// the old faction names in any capitalisation inside a string literal (#93: "HORDE IN BRACKENFORD!!" passed, because the
+// names above match by their case). All lower case is plain English ("the old alliance of men and elves", "a horde of
+// ghouls") and the game's own keys ('horde'), so it passes here; what a chat line prints at run time is checked in
+// test/factions.test.js. The factions are read from the game (D.FACTIONS in core.js) and the old names from the map (the
+// entries renamed to them), so a new faction needs nothing here. A template's ${…} parts are code, not text
+function factionLiterals() {
+  const core = fs.readFileSync(path.join(ROOT, 'src/data/core.js'), 'utf8'), line = (core.match(/D\.FACTIONS = \{.*\};/) || [''])[0];
+  const keys = [...line.matchAll(/(\w+): \{ name: '([^']+)'/g)], names = new Set(keys.map((k) => k[2])), own = new Set(keys.map((k) => k[1]));
+  const old = Object.keys(map).filter((n) => map[n].new && names.has(map[n].new));
+  if (!old.length) return [];
+  const word = new RegExp(`(?<![A-Za-z0-9_])(?:${old.join('|')})(?![A-Za-z0-9_])`, 'gi'), out = [];
+  for (const f of files().filter((x) => /[\/]src[\/].*\.js$/.test(x))) {
+    const src = fs.readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' ')); // block comments out, lines kept
+    src.split('\n').forEach((ln, i) => {
+      if (NOTICE.test(ln)) return;
+      const c = ln.match(/(^|[^:'"`\\])\/\/(?![^'"`]*['"`][,)\]}]?\s*$)/); const code = c ? ln.slice(0, c.index + c[1].length) : ln;
+      for (const m of code.matchAll(/'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)"|`((?:[^`\\]|\\.)*)`/g)) {
+        const lit = m[3] != null ? m[3].replace(/\$\{[^}]*\}/g, ' ') : (m[1] ?? m[2]);
+        if (own.has(lit)) continue;
+        if ([...lit.matchAll(word)].some((w) => w[0] !== w[0].toLowerCase())) out.push({ file: path.relative(ROOT, f), line: i + 1, lit });
+      }
+    });
+  }
+  return out;
+}
+const fl = factionLiterals();
+console.log(`old faction names in string literals (any capitalisation but all lower case): ${fl.length}`);
+for (const h of fl.slice(0, 20)) console.log(`  ${h.file}:${h.line}  '${h.lit.slice(0, 60)}'`);
+if (arg('--enforce') && fl.length) process.exit(1);
 // --enforce (the build): any live name in player text fails, 'review' ones included (a name under review can already
 // have its new name, and then the old one must not come back)
 if (arg('--enforce') && text.length) { for (const h of text.slice(0, 20)) console.log(`  ${h.file}:${h.line}  ${h.name}${map[h.name] && map[h.name].new ? ' → ' + map[h.name].new : ''}`); process.exit(1); }

@@ -2303,7 +2303,7 @@
     // the zone notices
     const mates = B.onlineIn(S, P.place, new Date()).filter((x) => B.factionOf(x) === myF);
     if (mates.length && (place.safe || Math.random() < 0.4)) {
-      const who = theirF === 'horde' ? 'HORDE' : 'ALLIANCE';
+      const who = D.FACTIONS[theirF].name.toUpperCase(); // the faction's name in the game (Krugar, Accord), never its key (#93)
       B.post(S, place.safe ? 'general' : 'say', pick(mates), pick(place.safe ? [`${who} IN ${place.name.toUpperCase()}!!`, `${lower(who)} in ${place.name.toLowerCase()}, careful`, `inc ${lower(who)} near the inn`] : ['watch out, pvp', `${lower(who)} here`, `a ${lower(D.CLASSES[b.cls].name)} is ganking here`]));
       emit('chat');
     }
