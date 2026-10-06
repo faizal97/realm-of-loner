@@ -2055,11 +2055,11 @@
     durotar: { orgrimmar: [150, 52], thunder_ridge: [80, 130], razor_hill: [200, 215], tiragarde_keep: [292, 185], echo_isles: [268, 325], valley_of_trials: [140, 300], burning_blade_coven: [62, 336] },
     teldrassil: { darnassus: [60, 110], dolanaar: [190, 200], shadowglen: [280, 90], shadowthread_cave: [312, 36], lake_alameth: [205, 318], banethil_barrow: [300, 250], fel_rock: [110, 290] },
     westfall: { furlbrow_farm: [250, 60], saldean_farm: [170, 110], sentinel_hill: [190, 225], jangolode_mine: [70, 150], molsen_farm: [260, 300], the_longshore: [50, 320], dagger_hills: [150, 355], gold_coast_quarry: [42, 92], moonbrook: [205, 285], the_dead_acre: [298, 362] },
-    barrens: { far_watch: [290, 90], crossroads: [175, 175], forgotten_pools: [90, 150], stagnant_oasis: [230, 290], razormane_grounds: [270, 205], thorn_hill: [110, 330], sludge_fen: [215, 62], lushwater_oasis: [155, 262], baeldun_digsite: [52, 368] },
+    barrens: { far_watch: [290, 90], crossroads: [175, 175], forgotten_pools: [90, 150], stagnant_oasis: [230, 290], razormane_grounds: [270, 205], thorn_hill: [110, 330], sludge_fen: [215, 62], lushwater_oasis: [155, 262], baeldun_digsite: [52, 368], razorfen_gate: [60, 270] },
     redridge: { three_corners: [40, 300], lakeshire: [140, 205], lake_everstill: [195, 262], redridge_canyons: [70, 120], althers_mill: [160, 92], renders_valley: [262, 335], stonewatch_keep: [285, 205], galardell_valley: [272, 80] },
     tanaris: { gadgetzan: [170, 80], waterspring_field: [250, 150], thistleshrub_valley: [60, 200], lost_rigger_cove: [45, 360], noxious_lair: [285, 60], eastmoon_ruins: [260, 260], dunemaul_compound: [210, 340], zul_farrak_gate: [80, 90], coinworks_gate: [130, 60] },
     ungoro: { marshals_refuge: [240, 60], the_slithering_scar: [300, 150], golakka_hot_springs: [70, 150], fire_plume_ridge: [170, 190], terror_run: [270, 250], lakkari_tar_pits: [200, 320], the_marshlands: [70, 300] },
-    steppes: { blackrock_mountain: [50, 170], terror_wing_path: [90, 60], flame_crest: [220, 60], blackrock_stronghold: [160, 150], dreadmaul_rock: [270, 190], ruins_of_thaurissan: [120, 280], morgans_vigil: [280, 310] },
+    steppes: { blackrock_mountain: [50, 170], terror_wing_path: [90, 60], flame_crest: [220, 60], blackrock_stronghold: [160, 150], dreadmaul_rock: [270, 190], ruins_of_thaurissan: [120, 280], morgans_vigil: [280, 310], molten_core_gate: [52, 248] },
     plaguelands: { hearthglen: [190, 60], stratholme_gate: [305, 45], the_bulwark: [40, 200], felstone_field: [110, 220], dalson_tears: [190, 170], andorhal: [180, 290], the_writhing_haunt: [270, 290], chillwind_camp: [100, 340], caer_darrow: [250, 360] },
     winterspring: { everlook: [230, 200], frostsaber_rock: [140, 150], ice_thistle_hills: [60, 90], lake_keltheril: [150, 250], winterfall_village: [280, 110], frostwhisper_gorge: [280, 300], mazthoril: [200, 340] },
     tidewatch: { brightwater_landing: [60, 330], saltmarsh_shallows: [60, 220], kelpwood: [120, 110], drowned_orchards: [180, 290], archive_steps: [290, 330], sael_anor_outskirts: [240, 170] },
@@ -2073,7 +2073,7 @@
     duskwood: { darkshire: [170, 200], brightwood_grove: [90, 130], raven_hill_cemetery: [45, 245], the_hushed_bank: [250, 110], vulgol_ogre_mound: [285, 250], tranquil_gardens: [215, 300], the_rotting_orchard: [150, 365] },
     hillsbrad: { tarren_mill: [220, 110], hillsbrad_fields: [160, 220], azurelode_mine: [85, 300], durnholde_keep: [265, 290], alterac_foothills: [210, 40], growless_cave: [110, 60], pyrewood_village: [40, 150] },
     stonetalon: { malakajin: [250, 362], webwinder_path: [205, 285], grimtotem_post: [300, 290], sun_rock_retreat: [160, 200], charred_vale: [55, 235], windshear_crag: [265, 150], cragpool_lake: [215, 60], mirkfallon_lake: [110, 100] },
-    dunmorogh: { ironforge: [170, 70], kharanos: [175, 210], grizzled_den: [190, 325], frostmane_hold: [62, 165], amberstill_ranch: [292, 205], anvilmar: [78, 330], coldridge_cave: [34, 262] },
+    dunmorogh: { ironforge: [170, 70], kharanos: [175, 210], grizzled_den: [190, 325], frostmane_hold: [62, 165], amberstill_ranch: [292, 205], anvilmar: [78, 330], coldridge_cave: [34, 262], gnomeregan_gate: [95, 100] }, // the gates were missing from their maps (#134)
   };
   const MAP_BG = {
     tanaris: `<defs><radialGradient id="maptn" cx="50%" cy="45%" r="75%"><stop offset="0" stop-color="#e0c070"/><stop offset="1" stop-color="#9a7a3a"/></radialGradient></defs>
