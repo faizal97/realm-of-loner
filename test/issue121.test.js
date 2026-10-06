@@ -60,3 +60,25 @@ test('a step of the fight\'s ending that throws never leaves the fight open or p
   } finally { G.gainXp = real; }
   assert.ok(P.hp >= 1);
 });
+
+// The report was an Orc Mage. A Mage's damage after death goes through the same ending: Fireball's burn sits on the mob
+// and still ticks with you dead (the only damage that does: a dead caster's cast or channel stops), so it can kill the
+// mob in the step you die, and the fight ends as above.
+test("an Orc Mage's Fireball burn killing the mob in the step the Mage dies: the kill counts, alive at 1 HP", () => {
+  const { P, C, pu, mu } = fight('mage'); P.race = 'orc';
+  for (let i = 0; i < 40 && !mu.auras.some((a) => a.id === 'fireball_burn'); i++) { if (!pu.cast) G.useAbility('fireball'); steps(0.25); }
+  const burn = mu.auras.find((a) => a.id === 'fireball_burn'); assert.ok(burn, 'the burn is on the mob');
+  burn.next = C.t; mu.hp = 1; // the burn's next tick is due now, and it will kill the mob
+  E.kill(C, pu, mu); // the mob's hit kills the Mage first, in the same step
+  steps(1);
+  assert.strictEqual(C.over, 'win', 'the burn landed the kill'); assert.ok(mu.dead);
+  assert.ok(hpAtEnd >= 1 && !P.ghostUntil, `alive at 1 HP (was ${hpAtEnd})`);
+});
+
+test("a dead Mage's Arcane Missiles stop: no kill after death, so it is a clean death", () => {
+  const { P, C, pu, mu } = fight('mage'); pu.res = pu.maxRes; // a test character starts the fight with no mana
+  for (let i = 0; i < 20 && !(pu.cast && pu.cast.channel); i++) { G.useAbility('arcane_missiles'); steps(0.25); }
+  assert.ok(pu.cast && pu.cast.channel, 'channelling'); mu.hp = 1; mu.auras = [];
+  E.kill(C, pu, mu); steps(2);
+  assert.strictEqual(C.over, 'lose'); assert.ok(!mu.dead, 'no missile landed from a dead Mage'); assert.ok(P.ghostUntil > 0, 'the ghost run');
+});
