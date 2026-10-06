@@ -1880,7 +1880,7 @@
     if (window.SND) window.SND.play('open', { vol: 0.5 });
     const body = h('div', { class: 'sheet-b' });
     const titleEl = h('h2', null, title, sub ? h('small', null, sub) : null);
-    const backBtn = stack.length ? h('button', { class: 'sheet-backbtn', 'aria-label': 'Back', onclick: () => { const d = ui.sheetStack.pop(); openSheet(d.name, d.title, d.sub, d.fill, true); ui.sheetBody.scrollTop = d.scroll || 0; } }, '‹ Back') : null;
+    const backBtn = stack.length ? h('button', { class: 'sheet-backbtn', 'aria-label': 'Back', onclick: () => sheetBack() }, '‹ Back') : null;
     const sheet = h('div', { class: 'sheet sheet-' + name, onclick: (e) => e.stopPropagation() }, h('div', { class: 'sheet-h' }, backBtn, titleEl, h('button', { class: 'x', onclick: () => { if (window.SND) SND.play('close', { vol: 0.45 }); closeSheet(); }, 'aria-label': 'Close' }, '×')), body);
     const back = h('div', { class: 'sheet-back', onclick: closeSheet }, sheet);
     app.append(back);
@@ -1891,6 +1891,12 @@
   // in a run (#67) a sheet and its backdrop start below the scene, so the scene's menu stays one tap away: Bags -> Hero
   // is the menu, then Hero, as the tabs are outside a run
   function sheetTop() { if (ui.sheetEl) ui.sheetEl.style.top = app.classList.contains('runmode') && els.scene ? Math.round(els.scene.getBoundingClientRect().bottom - app.getBoundingClientRect().top) + 'px' : ''; }
+  // back to the sheet under this one, refreshed and where it was (the header's ‹ Back, and every Back on a sheet opened
+  // from another, #113), or fallback() when there is none. Reopening the one before instead stacked a layer per tap.
+  function sheetBack(fallback) {
+    const d = (ui.sheetStack || []).pop(); if (!d) return fallback ? fallback() : closeSheet();
+    openSheet(d.name, d.title, d.sub, d.fill, true); ui.sheetBody.scrollTop = d.scroll || 0;
+  }
   function closeSheet() { if (ui.sheetEl) ui.sheetEl.remove(); ui.sheet = null; ui.sheetFn = null; ui.sheetEl = null; ui.sheetDef = null; ui.sheetStack = []; }
   function showDialog(content, dismissable) {
     closeDialog();
@@ -2365,9 +2371,9 @@
       box.append(r);
     }
     const btns = h('div', { class: 'btn-row' });
-    if (st === 'available' && npc) btns.append(h('button', { class: 'btn', onclick: () => { G.accept(qid); openNpc(npc); } }, 'Accept'));
-    if (st === 'complete' && npc && D.QUESTS[qid].turnin === npc) btns.append(h('button', { class: 'btn', onclick: () => { G.turnIn(qid); openNpc(npc); } }, 'Complete Quest'));
-    if ((st === 'active' || st === 'complete') && !npc) btns.append(h('button', { class: 'btn alt', onclick: () => { G.abandon(qid); openQuests(); } }, 'Abandon'));
+    if (st === 'available' && npc) btns.append(h('button', { class: 'btn', onclick: () => { G.accept(qid); sheetBack(() => openNpc(npc)); } }, 'Accept'));
+    if (st === 'complete' && npc && D.QUESTS[qid].turnin === npc) btns.append(h('button', { class: 'btn', onclick: () => { G.turnIn(qid); sheetBack(() => openNpc(npc)); } }, 'Complete Quest'));
+    if ((st === 'active' || st === 'complete') && !npc) btns.append(h('button', { class: 'btn alt', onclick: () => { G.abandon(qid); sheetBack(openQuests); } }, 'Abandon'));
     return [box, btns];
   }
   // a bounty you hold (#109): where its target lives (in the board's zone first, nearest first), where it is handed in,
@@ -2384,8 +2390,7 @@
       h('p', { class: 'ai-note' }, x.weekly ? 'Lapses at the end of the week (Monday).' : 'Lapses at midnight.'),
       h('h4', null, 'Rewards'),
       h('div', { class: 'money', html: `${rw.xp || 0} experience · ` + moneyHtml(rw.money || 0) + (rw.marks ? ` · ${rw.marks} Mentor Marks` : '') + (x.weekly ? ' · bonus gear' : '') }));
-    // back the way the header's ‹ Back goes, so the log isn't opened again on top of itself
-    const back = () => { const d = (ui.sheetStack || []).pop(); if (d) openSheet(d.name, d.title, d.sub, d.fill, true); else openQuests(); };
+    const back = () => sheetBack(openQuests);
     const btns = h('div', { class: 'btn-row' });
     if (x.complete && x.hub === P.place && !P.travel) btns.append(h('button', { class: 'btn', onclick: () => { G.turnInBounty({ id: x.id }); back(); renderPanel(); } }, 'Hand in'));
     btns.append(h('button', { class: 'btn alt', onclick: back }, 'Back'));
@@ -2402,7 +2407,7 @@
       for (const qid of qs) {
         const st = G.questState(qid);
         const Q = D.QUESTS[qid];
-        b.append(h('button', { class: 'row', onclick: () => openSheet('quest', Q.name, 'Level ' + Q.lvl, (bb) => { bb.append(...questDetail(qid)); bb.append(h('button', { class: 'btn alt', onclick: openQuests }, 'Back')); }) },
+        b.append(h('button', { class: 'row', onclick: () => openSheet('quest', Q.name, 'Level ' + Q.lvl, (bb) => { bb.append(...questDetail(qid)); bb.append(h('button', { class: 'btn alt', onclick: () => sheetBack(openQuests) }, 'Back')); }) },
           h('div', { class: 'ic' }, qmark(st === 'complete' ? 'ready' : 'active', null, Q.main)),
           h('div', { class: 't' }, h('b', { style: { color: conColor(Q.lvl) } }, `[${Q.lvl}] ${Q.name}`), h('small', null, st === 'complete' ? 'Complete. Return to ' + D.NPCS[Q.turnin].name : G.questProgress(qid).map((p) => `${p.have}/${p.n}`).join(' · '))),
           h('div', { class: 'r' }, '›')));
@@ -2454,7 +2459,7 @@
       }
       for (const { qid, st } of qs) {
         const Q = D.QUESTS[qid];
-        b.append(h('button', { class: 'row', onclick: () => openSheet('quest', Q.name, N.name, (bb) => { bb.append(...questDetail(qid, npc)); bb.append(h('button', { class: 'btn alt', onclick: () => openNpc(npc) }, 'Back')); }) },
+        b.append(h('button', { class: 'row', onclick: () => openSheet('quest', Q.name, N.name, (bb) => { bb.append(...questDetail(qid, npc)); bb.append(h('button', { class: 'btn alt', onclick: () => sheetBack(() => openNpc(npc)) }, 'Back')); }) },
           h('div', { class: 'ic' }, qmark(st === 'available' ? 'new' : st === 'complete' ? 'ready' : 'active', null, Q.main)),
           h('div', { class: 't' }, h('b', { style: { color: conColor(Q.lvl) } }, Q.name), h('small', null, st === 'available' ? 'New quest' : st === 'complete' ? 'Ready to turn in' : 'In progress')),
           h('div', { class: 'r' }, '›')));
