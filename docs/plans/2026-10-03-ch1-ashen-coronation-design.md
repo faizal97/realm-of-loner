@@ -150,6 +150,10 @@ music.
 - **The real limits:** Faizal's reviews of the art contact sheets, the cutscenes and the music, and the gap between
   the releases.
 
+## Candidates for Chapter 1 (from player feedback)
+
+- **One original ability per class** (#142): learned at 60 through a short Chapter 1 quest, built for this game's systems (item effects, Omens, the party's bots), a sidegrade or a new decision, never more power. Designed when Chapter 1 resumes.
+
 ## Still open (for Faizal)
 
 1. **Final names** for the two dungeons and the raid (when he resumes Chapter 1). Each option below passes the Warcraft name map
