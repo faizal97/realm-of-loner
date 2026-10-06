@@ -3632,6 +3632,9 @@
 
   // ============================================================ main loop
   let acc = 0, worldAcc = 0, saveAcc = 0;
+  // the fight's clock for drawing (#116): the fight runs in fixed 0.1 s steps, so a bar drawn from C.t moved ten times a
+  // second; this adds the time already gathered toward the next step, so it moves every frame and never runs ahead
+  G.fightNow = () => (G.fight ? G.fight.t + Math.min(acc, 0.1) : 0);
   let socAcc = 0;
   // Battle speed (v10.3): fights run at 1x, 2x or 3x. Only fight time speeds up, and a group run's clock adds the fight
   // time gained, so par times and speed bonuses mean the same at every speed.
