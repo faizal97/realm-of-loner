@@ -37,6 +37,7 @@ const ACTIONS = {
   abandon: () => { const q = Object.keys(D.QUESTS)[0]; G.accept(q); G.abandon(first(G.S.player.quests) || q); },
   turnIn: () => { const q = first(G.S.player.quests) || Object.keys(D.QUESTS)[0]; G.turnIn(q); },
   acceptBounty: () => { const b = (G.bounties(G.S.player.place) || [])[0]; if (b) G.acceptBounty(b); },
+  unlearnProf: () => { G.S.player.prof = Object.assign(G.S.player.prof || {}, { mining: { skill: 5, max: 75, known: [] } }); G.unlearnProf('mining'); },
   turnInBounty: () => { const b = (G.bounties(G.S.player.place) || [])[0]; if (b) { G.acceptBounty(b); G.turnInBounty(b); } },
   invite: () => G.invite(botId()),
   acceptPartyInvite: () => G.acceptPartyInvite(botId()),
