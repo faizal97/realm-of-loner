@@ -1,5 +1,6 @@
 // Every class ability learned between MIN and MAX (env, default 44–48) fires in a real fight without errors.
 // `MIN=52 MAX=58 node sim/lvabilities.js` checks the v7/v8 spells.
+require('./_seed.js'); // seeded (#125): the same commit always gives the same result; SEED=n picks other dice
 require('../src/data.js'); require('../src/engine.js');
 const { D, E } = globalThis;
 const MIN = +(process.env.MIN || 44), MAX = +(process.env.MAX || 48), LV = MAX + 2;

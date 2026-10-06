@@ -1,5 +1,6 @@
 // Cloud save rules (src/cloud.js) against a fake Google Drive shared by fake devices, each with its own storage.
 // Every case from docs/plans/2026-09-29-cloud-save-design.md section 4. No Google code runs.  node sim/cloudsync.js
+require('./_seed.js'); // seeded (#125): the same commit always gives the same result; SEED=n picks other dice
 const mem = () => { const m = new Map(); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k), m }; };
 globalThis.localStorage = mem();
 require('../src/data.js'); require('../src/engine.js'); require('../src/bots.js'); require('../src/game.js'); require('../src/cloud.js');

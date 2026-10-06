@@ -1,6 +1,7 @@
 // Rares in the world (v10.9, issue #10): a starting place has none, the Fight list puts a rare first only when it is at
 // most 2 levels above you (a stronger one waits after the normal creatures), and an old save follows a rare that moved.
 //   node sim/rares.js
+require('./_seed.js'); // seeded (#125): the same commit always gives the same result; SEED=n picks other dice
 globalThis.localStorage = { getItem() { return null; }, setItem() {}, removeItem() {} };
 require('../src/data.js'); require('../src/engine.js'); require('../src/bots.js'); require('../src/game.js');
 const { G, D } = globalThis;

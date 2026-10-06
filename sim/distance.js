@@ -1,5 +1,6 @@
 // Distance in combat (v10.9, stage 1): the rules themselves, each tested by placing fighters at set distances.
 // docs/plans/2026-10-01-distance-design.md.   node sim/distance.js
+require('./_seed.js'); // seeded (#125): the same commit always gives the same result; SEED=n picks other dice
 globalThis.localStorage = { getItem() { return null; }, setItem() {}, removeItem() {} };
 require('../src/data.js'); require('../src/engine.js'); require('../src/bots.js'); require('../src/game.js');
 const { G, D, E } = globalThis;

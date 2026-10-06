@@ -1,4 +1,5 @@
 // Every v5 ability (levels 32 and 34) fires in a real fight without errors and does its thing.
+require('./_seed.js'); // seeded (#125): the same commit always gives the same result; SEED=n picks other dice
 require('../src/data.js'); require('../src/engine.js');
 const { D, E } = globalThis;
 const NEW = { warrior: ['shield_wall', 'slam'], mage: ['ice_block', 'pyroblast'], priest: ['holy_nova', 'greater_heal'], rogue: ['blind', 'vanish'], paladin: ['holy_shock', 'seal_command'], warlock: ['siphon_life', 'conflagrate'], hunter: ['scatter_shot', 'trueshot_aura'], druid: ['bash', 'innervate'], shaman: ['magma_totem', 'chain_heal'] };

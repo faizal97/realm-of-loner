@@ -1,5 +1,6 @@
 // Music (v10.8): every place plays the track meant for it, and a track that is not approved yet falls back to the
 // music it had before (so nothing changes until it ships). node sim/music.js
+require('./_seed.js'); // seeded (#125): the same commit always gives the same result; SEED=n picks other dice
 globalThis.localStorage = (() => { const m = new Map(); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k) }; })();
 require('../src/data.js'); require('../src/engine.js'); require('../src/bots.js'); require('../src/game.js');
 const { G, D } = globalThis;

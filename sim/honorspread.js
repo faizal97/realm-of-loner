@@ -2,6 +2,7 @@
 // bot's lifetime Honor from its id and level) and G.honorRank. Target (game designer): about half unranked; from rank 5
 // to 8 each rank about half the one below; rank 8 about 1-2% (at 60).
 //   ROOT=~/azeroth-solo-measure node sim/honorspread.js [bots per level, default 20000]
+require('./_seed.js'); // seeded (#125): the same commit always gives the same result; SEED=n picks other dice
 const ROOT = process.env.ROOT || require('path').join(__dirname, '..');
 globalThis.localStorage = { getItem() { return null; }, setItem() {}, removeItem() {} };
 for (const f of ['data', 'engine', 'bots', 'game']) require(ROOT + '/src/' + f + '.js');

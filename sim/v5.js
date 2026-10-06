@@ -1,6 +1,7 @@
 // Levels 30-35 flow in Stranglethorn (human and orc): a greedy player does every solo quest in the zone
 // the moment it is available and grinds only when none is left. Group and dungeon quests are left out.
 // Reports the quest share of XP and the longest grind. Target: quest share >= 70%.
+require('./_seed.js'); // seeded (#125): the same commit always gives the same result; SEED=n picks other dice
 globalThis.localStorage = { getItem() { return null; }, setItem() {}, removeItem() {} };
 require('../src/data.js'); require('../src/engine.js'); require('../src/bots.js'); require('../src/game.js');
 const { D, G } = globalThis;

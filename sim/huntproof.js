@@ -3,6 +3,7 @@
 // agree; "last seen" is never in the future; the trophy list follows the data.
 //   ROOT=~/azeroth-solo-measure node sim/huntproof.js       (runs each variant in its own process: the hunt list is
 //   read once per process, as in the game)
+require('./_seed.js'); // seeded (#125): the same commit always gives the same result; SEED=n picks other dice
 const ROOT = process.env.ROOT || require('path').join(__dirname, '..');
 const { execFileSync } = require('child_process');
 const DAYS = 60, FROM = Date.UTC(2026, 9, 5);

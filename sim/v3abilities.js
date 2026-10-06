@@ -1,4 +1,5 @@
 // Every v3 ability (levels 20 and 24) fires in a real fight without errors and does its thing.
+require('./_seed.js'); // seeded (#125): the same commit always gives the same result; SEED=n picks other dice
 require('../src/data.js'); require('../src/engine.js');
 const { D, E } = globalThis;
 const NEW = { warrior: ['shield_block', 'intimidating_shout'], mage: ['cone_of_cold', 'scorch'], priest: ['holy_fire', 'fade'], rogue: ['ambush', 'blade_flurry'], paladin: ['consecration', 'blessing_wisdom'], warlock: ['shadowburn', 'death_coil'], hunter: ['aspect_hawk', 'feign_death'], druid: ['starfire', 'insect_swarm'], shaman: ['lesser_healing_wave', 'fire_nova_totem'] };

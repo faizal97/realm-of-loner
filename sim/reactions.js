@@ -1,6 +1,7 @@
 // Class reactions (v10.4, D.PROCS) and the early game: the mechanics, how many different buttons each class uses in
 // fights at levels 1-10 (target: 3 or more by level 4), and how much the reactions change a fight (small).
 //   node sim/reactions.js
+require('./_seed.js'); // seeded (#125): the same commit always gives the same result; SEED=n picks other dice
 globalThis.localStorage = (() => { const m = new Map(); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k) }; })();
 require('../src/data.js'); require('../src/engine.js'); require('../src/bots.js'); require('../src/game.js');
 const { G, D, E } = globalThis;
