@@ -2,6 +2,7 @@
 // grinds only when none is left (group and dungeon quests left out). Entry quests (given elsewhere, turned in there)
 // count too. Target: quest share of XP >= 70%.
 //   REGIONS=ungoro,steppes FROM=50 TO=55 node sim/zoneflow.js
+require('./_seed.js'); // seeded (#125): the same commit always gives the same result; SEED=n picks other dice
 globalThis.localStorage = { getItem() { return null; }, setItem() {}, removeItem() {} };
 require('../src/data.js'); require('../src/engine.js'); require('../src/bots.js'); require('../src/game.js');
 const { D, G } = globalThis;

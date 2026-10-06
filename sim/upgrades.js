@@ -1,6 +1,7 @@
 // Gear upgrades (v10.3): Mentor Marks raise a level-57+ blue or purple item 3% of the ceiling at a time, up to the
 // ceiling (purples 100%, blues 92%). An item stores the power it reached (it.pw), so a new ceiling never changes it.
 // Design: docs/plans/2026-09-30-horizontal-progression-design.md. node sim/upgrades.js
+require('./_seed.js'); // seeded (#125): the same commit always gives the same result; SEED=n picks other dice
 globalThis.localStorage = (() => { const m = new Map(); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k) }; })();
 require('../src/data.js'); require('../src/engine.js'); require('../src/bots.js'); require('../src/game.js');
 const { G, D } = globalThis;

@@ -1,4 +1,5 @@
 // Every v2.0 ability fires once in a real fight without errors and does its thing.
+require('./_seed.js'); // seeded (#125): the same commit always gives the same result; SEED=n picks other dice
 require('../src/data.js'); require('../src/engine.js');
 const {D,E}=globalThis;
 const NEW={warrior:['hamstring','cleave'],mage:['frost_nova','arcane_explosion'],priest:['mind_blast','inner_fire'],rogue:['backstab','garrote'],paladin:['blessing_might','lay_on_hands'],warlock:['searing_pain','shadow_ward'],hunter:['wing_clip','multi_shot'],druid:['entangling_roots','thorns'],shaman:['flame_shock','strength_earth']};

@@ -1,5 +1,6 @@
 // Legends: Lyveus's questline is complete and in order, his story fight (lg_marrow) can be won with him in the group,
 // and once unlocked he joins a normal dungeon run in the tank slot and uses his own abilities.
+require('./_seed.js'); // seeded (#125): the same commit always gives the same result; SEED=n picks other dice
 globalThis.localStorage = { getItem() { return null; }, setItem() {}, removeItem() {} };
 require('../src/data.js'); require('../src/engine.js'); require('../src/bots.js'); require('../src/game.js');
 const { G, D, E } = globalThis;

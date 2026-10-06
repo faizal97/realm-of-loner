@@ -1,4 +1,5 @@
 // Every v2.1 ability (levels 16 and 18) fires in a real fight without errors and does its thing.
+require('./_seed.js'); // seeded (#125): the same commit always gives the same result; SEED=n picks other dice
 require('../src/data.js'); require('../src/engine.js');
 const { D, E } = globalThis;
 const NEW = { warrior: ['bloodrage', 'retaliation'], mage: ['flamestrike', 'mana_shield'], priest: ['heal', 'psychic_scream'], rogue: ['rupture', 'kidney_shot'], paladin: ['exorcism', 'retribution_aura'], warlock: ['rain_of_fire', 'demon_armor'], hunter: ['rapid_fire', 'immolation_trap'], druid: ['regrowth', 'swipe'], shaman: ['frost_shock', 'flametongue_weapon'] };

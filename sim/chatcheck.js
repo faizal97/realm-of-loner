@@ -1,10 +1,14 @@
 // Chat honesty: every bot message that reads like a request (LFG, trade, asking for help, invites) must be a real one
 // the player can act on (m.act), or point at one (m.ref). Also reports how varied each channel is.
 // Runs hours of chat at a few levels for both factions.  node sim/chatcheck.js
+require('./_seed.js'); // seeded (#125): the same commit always gives the same result; SEED=n picks other dice
 globalThis.localStorage = { getItem() { return null; }, setItem() {}, removeItem() {} };
 require('../src/data.js'); require('../src/engine.js'); require('../src/bots.js'); require('../src/game.js'); require('../src/social.js'); require('../src/trials.js');
 const { G, D, B, SOC } = globalThis;
-let t = Date.now(); Date.now = () => t;
+// a fixed start (#125): the real clock made every run different (who is online follows the local hour); a Wednesday
+// evening, as test/world.js; the sim moves t itself
+const RealDate = Date; let t = new RealDate(2026, 9, 7, 19).getTime();
+globalThis.Date = class extends RealDate { constructor(...a) { if (a.length) super(...a); else super(t); } static now() { return t; } };
 const REQ = /\b(LF\d?M|LFG|WTS|WTB|pst|inv pls|recruit(ing)?|group up|team up|party up|carry me|can (u|you) (help|carry|craft|make|run)|help me|need (a|an|\d+) |anyone (want|wanna|up for|free|selling|got|spare)|who has|spare \d|selling|buying|will pay|ill pay|ill tip)\b|\bduel\?/i;
 let bad = 0;
 const runs = [['human', 'warrior', 'stormwind', 60], ['orc', 'priest', 'orgrimmar', 60], ['human', 'paladin', 'goldshire', 10], ['human', 'mage', 'darkshire', 26], ['orc', 'warrior', 'crossroads', 18], ['undead', 'priest', 'tarren_mill', 32], ['dwarf', 'hunter', 'gadgetzan', 46], ['tauren', 'druid', 'everlook', 57]];

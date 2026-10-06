@@ -1,10 +1,14 @@
 // Battlegrounds (v10.7): the Battle for Highmoor, played to the end by a bot-driven player with three ways to pick the
 // banner each round, reading only what the player sees (the scouts' ranges). The choice must be real: the smart pick (gain a banner for the fewest enemies) clearly beats
 // charging the biggest group, and a game takes a sensible time. node sim/battleground.js [runs per case, default 12]
+require('./_seed.js'); // seeded (#125): the same commit always gives the same result; SEED=n picks other dice
 globalThis.localStorage = (() => { const m = new Map(); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k) }; })();
 require('../src/data.js'); require('../src/engine.js'); require('../src/bots.js'); require('../src/game.js');
 const { G, D } = globalThis;
-let t = Date.now(); Date.now = () => t;
+// a fixed start (#125): the real clock made every run different (who is online follows the local hour); a Wednesday
+// evening, as test/world.js; the sim moves t itself
+const RealDate = Date; let t = new RealDate(2026, 9, 7, 19).getTime();
+globalThis.Date = class extends RealDate { constructor(...a) { if (a.length) super(...a); else super(t); } static now() { return t; } };
 const N = +process.argv[2] || 12;
 // tuning knobs for trying values without editing the game (BG_SPREAD=2 BG_RG=0.5 node sim/battleground.js 24)
 if (process.env.BG_SPREAD) G.BG_SCOUT_SPREAD = +process.env.BG_SPREAD;

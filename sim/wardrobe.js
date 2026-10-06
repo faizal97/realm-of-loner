@@ -1,5 +1,6 @@
 // The wardrobe (v10.3): looks are account-wide (account.looks, 'place:artKey'), each character picks what shows
 // (P.wardrobe). Design: docs/plans/2026-09-30-wardrobe-design.md. node sim/wardrobe.js
+require('./_seed.js'); // seeded (#125): the same commit always gives the same result; SEED=n picks other dice
 const mem = () => { const m = new Map(); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k) }; };
 globalThis.localStorage = mem();
 require('../src/data.js'); require('../src/engine.js'); require('../src/bots.js'); require('../src/game.js'); require('../src/cloud.js');

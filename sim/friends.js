@@ -2,6 +2,7 @@
 // The fake applies the same checks as firebase/firestore.rules and database.rules.json (tested for real by
 // `cd firebase && npm test`), so a flow that would break the rules fails here too. No Firebase code runs.
 //   node sim/friends.js
+require('./_seed.js'); // seeded (#125): the same commit always gives the same result; SEED=n picks other dice
 const mem = () => { const m = new Map(); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k), m }; };
 globalThis.localStorage = mem();
 require('../src/data.js'); require('../src/engine.js'); require('../src/bots.js'); require('../src/game.js'); require('../src/social.js'); require('../src/friends.js');

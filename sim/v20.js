@@ -1,5 +1,6 @@
 // Levels 1-10 flow per starting zone: a greedy player does every solo quest the moment it is
 // available and grinds only when none is left. Reports quest share of XP and the longest grind.
+require('./_seed.js'); // seeded (#125): the same commit always gives the same result; SEED=n picks other dice
 globalThis.localStorage={getItem(){return null},setItem(){},removeItem(){}};
 require('../src/data.js');require('../src/engine.js');require('../src/bots.js');require('../src/game.js');
 const {D,G}=globalThis;

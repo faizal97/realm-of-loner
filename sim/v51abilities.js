@@ -1,4 +1,5 @@
 // Every v5.1 ability (levels 36 and 38) fires in a real fight without errors and does its thing.
+require('./_seed.js'); // seeded (#125): the same commit always gives the same result; SEED=n picks other dice
 require('../src/data.js'); require('../src/engine.js');
 const { D, E } = globalThis;
 const NEW = { warrior: ['mortal_strike', 'berserker_rage'], mage: ['arcane_power', 'fire_ward'], priest: ['shadowform', 'desperate_prayer'], rogue: ['adrenaline_rush', 'ghostly_strike'], paladin: ['blessing_kings', 'avenging_wrath'], warlock: ['curse_of_doom', 'hellfire'], hunter: ['explosive_trap', 'deterrence'], druid: ['swiftmend', 'frenzied_regeneration'], shaman: ['stormstrike', 'mana_tide_totem'] };

@@ -2,6 +2,7 @@
 // clear at the cap; a Hard run uses the Hard numbers and the boss's extra mechanic fires at its mark; the first kill of
 // a boss in a week drops its items two upgrade steps up and the second does not; the week resets on Monday; the
 // briefing text names the extra mechanic with its numbers; Hard clears count in the codex.
+require('./_seed.js'); // seeded (#125): the same commit always gives the same result; SEED=n picks other dice
 globalThis.localStorage = (() => { const m = new Map(); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k) }; })();
 require('../src/data.js'); require('../src/engine.js'); require('../src/bots.js'); require('../src/game.js'); require('../src/trials.js');
 const { G, D, E } = globalThis;
