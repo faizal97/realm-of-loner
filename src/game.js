@@ -1167,7 +1167,7 @@
     sys(`Received ${G.moneyText(m)}.`);
     if (it) { G.addItem(JSON.parse(JSON.stringify(it)), 1); loot(`You receive item: ${B.link(it.name, it.q)}.`); }
     G.gainXp(G.questXp(Q.lvl), false);
-    emit('questDone', { qid });
+    emit('questDone', { qid, text: 'Quest complete' });
     emit('change');
   };
   function questCheck() {
@@ -1251,10 +1251,12 @@
     const P = G.S.player, st = (P.bounty || {})[b.id]; if (!st || st.prog < st.n || st.done) return;
     st.done = true;
     P.money += st.reward.money; sys(`Bounty complete: ${D.MOBS[st.mob].name}. You receive ${G.moneyText(st.reward.money)}.`);
-    G.gainXp(st.reward.xp, false);
+    const xp = G.gainXp(st.reward.xp, false) || 0;
     if (st.reward.marks) G.addMarks(st.reward.marks, st.weekly ? 'weekly bounty' : 'bounty');
     if (st.weekly) { const it = G.genGear(pick(D.GEAR_SLOTS), P.level, 2); G.addItem(it, 1); loot(`Weekly bounty bonus: ${B.link(it.name, it.q)}.`); }
-    emit('questDone', {}); emit('change'); G.save();
+    // the line the screen shows (#115): a bounty says so, with what it paid; it used to show "Quest complete"
+    const paid = [xp ? `${xp} XP` : null, G.moneyText(st.reward.money), st.reward.marks ? `${st.reward.marks} Mentor Marks` : null, st.weekly ? 'bonus gear' : null].filter(Boolean);
+    emit('questDone', { bounty: true, text: `Bounty complete: ${D.MOBS[st.mob].name} · ${paid.join(' · ')}` }); emit('change'); G.save();
   };
   // v10.1.1: the board shows like a quest giver (! something to take, ? something to hand in), and the bounties you
   // hold are listed with your quests, each knowing its hub (the id starts with it)

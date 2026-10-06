@@ -4861,7 +4861,7 @@
       const pt = lv.parentNode; pt.append(h('span', { class: 'lvlburst' })); lv.classList.add('pop');
       setTimeout(() => { const b = pt.querySelector('.lvlburst'); if (b) b.remove(); lv.classList.remove('pop'); }, 1400);
     }, 60));
-    G.on('questDone', () => { toast('Quest complete', true); });
+    G.on('questDone', (d) => { toast((d && d.text) || 'Quest complete', true); }); // a bounty brings its own line (#115)
     G.on('selfheal', (n) => fct('me', '+' + n, 'heal'));
     G.on('xp', (d) => { if (G.pUnit && ui.spriteEls[G.pUnit.uid]) fct(G.pUnit.uid, '+' + d.amount + ' XP', 'xp'); xpFloat(d); });
     G.on('rollResult', (d) => { ui.rollQueue = ui.rollQueue || []; ui.rollQueue.push(d); if (!ui.rollCard) showRollCard(); });
