@@ -5914,7 +5914,20 @@
       var mx = 222, my = 162;
       out += P(D`M${mx - 58},${my} C${mx - 60},${my - 40} ${mx - 36},${my - 76} ${mx},${my - 78} C${mx + 36},${my - 76} ${mx + 60},${my - 40} ${mx + 58},${my} Z`, c.rg([[0, '#000000'], [0.6, '#05070a'], [1, '#1e2430']], 0.5, 0.8, 0.8), 2.6);
       out += S(D`M${mx - 56},${my - 20} C${mx - 54},${my - 52} ${mx - 30},${my - 74} ${mx},${my - 76} C${mx + 30},${my - 74} ${mx + 54},${my - 52} ${mx + 56},${my - 20}`, '#cfe4f4', 3, 0.7);
-      out += icicleRow(c, mx - 44, mx + 44, my - 70, 11, 14, 1);
+      // icicles hang from the arch's rim itself (#118): a straight row at one height stuck out past the rounded mouth at its
+      // ends once v10.10.1 showed the whole scene; along the rim's upper part they hang straight down, shorter to the sides
+      (function () {
+        var bez = function (p0, p1, p2, p3, t) { var u = 1 - t; return u * u * u * p0 + 3 * u * u * t * p1 + 3 * u * t * t * p2 + t * t * t * p3; };
+        var rim = function (t) { // t 0..1 across the whole rim, the two halves of the stroke drawn above
+          return t < 0.5 ? [bez(mx - 56, mx - 54, mx - 30, mx, t * 2), bez(my - 20, my - 52, my - 74, my - 76, t * 2)]
+            : [bez(mx, mx + 30, mx + 54, mx + 56, t * 2 - 1), bez(my - 76, my - 74, my - 52, my - 20, t * 2 - 1)];
+        };
+        var R_ = rnd(mx * 7 + my), n = 11;
+        for (var i = 0; i < n; i++) {
+          var t = 0.24 + 0.52 * i / (n - 1), p = rim(t), side = Math.abs(t - 0.5) / 0.26, l = 14 * (1 - 0.45 * side) * (0.75 + R_() * 0.5), w = 2.2;
+          out += P(D`M${p[0] - w},${p[1] + 1} L${p[0] + w},${p[1] + 1} L${p[0] + 0.3},${p[1] + 1 + l} Z`, c.lg(['#ffffff', '#bfe8ff', '#7ac4ee']), 1.2);
+        }
+      })();
       out += C(mx - 14, my - 30, 2.2, '#ffd23a', 0, 0.9) + C(mx - 4, my - 30, 2.2, '#ffd23a', 0, 0.9);
       [[mx - 64, my - 2, 26, -10], [mx - 52, my, 16, 12], [mx + 60, my - 2, 24, 8], [mx + 72, my, 14, -14]].forEach(function (s) { out += iceShard(c, s[0], s[1], s[2], s[3]); });
       out += snowPineRow(c, 166, 2, 234, '#20382f', 50, 70, 1.8, -20, 50) + snowPineRow(c, 166, 2, 235, '#20382f', 50, 66, 1.8, 350, 430);
