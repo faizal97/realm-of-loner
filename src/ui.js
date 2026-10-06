@@ -2074,7 +2074,16 @@
     hillsbrad: { tarren_mill: [220, 110], hillsbrad_fields: [160, 220], azurelode_mine: [85, 300], durnholde_keep: [265, 290], alterac_foothills: [210, 40], growless_cave: [110, 60], pyrewood_village: [40, 150] },
     stonetalon: { malakajin: [250, 362], webwinder_path: [205, 285], grimtotem_post: [300, 290], sun_rock_retreat: [160, 200], charred_vale: [55, 235], windshear_crag: [265, 150], cragpool_lake: [215, 60], mirkfallon_lake: [110, 100] },
     dunmorogh: { ironforge: [170, 70], kharanos: [175, 210], grizzled_den: [190, 325], frostmane_hold: [62, 165], amberstill_ranch: [292, 205], anvilmar: [78, 330], coldridge_cave: [34, 262], gnomeregan_gate: [95, 100] }, // the gates were missing from their maps (#134)
+    // #136: Saltmarsh's map, and Rumhook Bay's (a map of its own inside The Vinewild, opened from a marker on it)
+    dustwallow: { brackenwall_village: [90, 80], the_quagmire: [160, 180], theramore_isle: [280, 210], scorched_fen: [110, 280], the_wyrmbog: [200, 300], onyxias_lair_gate: [262, 352] },
+    rumhook: { thunderhowl_rise: [200, 70], bonegrin_warcamp: [262, 140], bloodsand_arena: [75, 110], rumhook_bay: [110, 190], bonded_yard: [250, 250], saltpenny_wharf: [80, 300], blackgull_cove: [175, 345] },
   };
+  // a map inside a zone's map (#136): its name, the zone it sits in, where its marker sits on that zone's map, the place
+  // there its road starts from, and where the way back sits on its own map
+  const SUBMAPS = { rumhook: { name: 'Rumhook Bay', parent: 'stranglethorn', at: [282, 344], from: 'zul_kunda', back: [100, 20], backFrom: 'thunderhowl_rise' } };
+  // the map a place is drawn on: a sub-map that holds it, or its zone's
+  const mapOf = (place) => { for (const k in SUBMAPS) if (MAPS[k][place]) return k; return (D.PLACES[place] || {}).region || 'elwynn'; };
+  const mapName = (k) => (SUBMAPS[k] ? SUBMAPS[k].name : (D.REGIONS[k] || {}).name || k);
   const MAP_BG = {
     tanaris: `<defs><radialGradient id="maptn" cx="50%" cy="45%" r="75%"><stop offset="0" stop-color="#e0c070"/><stop offset="1" stop-color="#9a7a3a"/></radialGradient></defs>
         <rect width="340" height="400" rx="6" fill="url(#maptn)"/>
@@ -2118,6 +2127,19 @@
         <rect width="340" height="400" rx="6" fill="url(#mapah)"/>
         <path d="M0 0 H20 V400 H0Z" fill="#5a5a50" opacity=".6"/>
         <text x="170" y="24" text-anchor="middle" font-family="Marcellus SC, serif" font-size="12" fill="#f8f4e0" opacity=".85">Kinloch Highlands · contested</text>`,
+    rumhook: `<defs><radialGradient id="maprh" cx="45%" cy="40%" r="75%"><stop offset="0" stop-color="#4a7a32"/><stop offset="1" stop-color="#1e3816"/></radialGradient></defs>
+        <rect width="340" height="400" rx="6" fill="url(#maprh)"/>
+        <path d="M0 140 C30 170 40 230 30 300 C24 340 60 372 130 384 C200 396 270 380 340 392 V400 H0Z" fill="#2f6a8a" opacity=".85"/>
+        <path d="M0 140 C20 120 10 60 0 40Z" fill="#2f6a8a" opacity=".6"/>
+        <ellipse cx="250" cy="250" rx="34" ry="20" fill="#5a4a32" opacity=".45"/>
+        <text x="330" y="392" text-anchor="end" font-family="Marcellus SC, serif" font-size="12" fill="#f0f8e0" opacity=".85">Rumhook Bay · The Vinewild</text>`,
+    dustwallow: `<defs><radialGradient id="mapsm" cx="45%" cy="45%" r="75%"><stop offset="0" stop-color="#5c6a46"/><stop offset="1" stop-color="#262e1c"/></radialGradient></defs>
+        <rect width="340" height="400" rx="6" fill="url(#mapsm)"/>
+        <path d="M340 0 H306 C320 120 300 260 318 400 H340Z" fill="#2f5a7a" opacity=".85"/>
+        <ellipse cx="150" cy="200" rx="64" ry="36" fill="#3a5a4a" opacity=".5"/>
+        <ellipse cx="110" cy="286" rx="34" ry="18" fill="#6a3a22" opacity=".45"/>
+        <ellipse cx="205" cy="312" rx="40" ry="22" fill="#4a3a5a" opacity=".35"/>
+        <text x="170" y="22" text-anchor="middle" font-family="Marcellus SC, serif" font-size="12" fill="#eef0e0" opacity=".85">Saltmarsh · contested</text>`,
     stranglethorn: `<defs><radialGradient id="mapv" cx="50%" cy="45%" r="75%"><stop offset="0" stop-color="#3f6a2c"/><stop offset="1" stop-color="#1c3314"/></radialGradient></defs>
         <rect width="340" height="400" rx="6" fill="url(#mapv)"/>
         <path d="M0 0 H24 C14 120 34 260 16 400 H0Z" fill="#2f6a8a" opacity=".85"/>
@@ -2213,15 +2235,16 @@
     ui.mapRegion = typeof regionPick === 'string' ? regionPick : null;
     openSheet('map', 'Map', 'Tap a place to travel there', (b, title) => {
       const P = G.S.player;
-      const hereRegion = (D.PLACES[(P.travel && P.travel.to) || P.place] || {}).region || 'elwynn';
+      const herePlace = (P.travel && P.travel.to) || P.place;
+      const hereRegion = (D.PLACES[herePlace] || {}).region || 'elwynn', hereMap = mapOf(herePlace); // a place in Rumhook Bay opens Rumhook Bay's map (#136)
       const tabs = h('div', { class: 'tabs' },
         h('button', { class: ui.mapView === 'zone' ? 'on' : '', onclick: () => { ui.mapView = 'zone'; ui.sheetFn(); } }, 'Zone'),
         h('button', { class: ui.mapView === 'world' ? 'on' : '', onclick: () => { ui.mapView = 'world'; ui.sheetFn(); } }, 'World'));
       b.append(tabs);
       if (ui.mapView === 'world') return worldMap(b, title, hereRegion);
-      const region = ui.mapRegion && MAPS[ui.mapRegion] ? ui.mapRegion : hereRegion;
-      title.firstChild.textContent = D.REGIONS[region].name;
-      if (region !== hereRegion) b.append(h('div', { class: 'chips' }, h('button', { class: 'chip', onclick: () => { ui.mapRegion = null; ui.sheetFn(); } }, '← Back to ' + D.REGIONS[hereRegion].name)));
+      const region = ui.mapRegion && MAPS[ui.mapRegion] ? ui.mapRegion : hereMap;
+      title.firstChild.textContent = mapName(region);
+      if (region !== hereMap) b.append(h('div', { class: 'chips' }, h('button', { class: 'chip', onclick: () => { ui.mapRegion = null; ui.sheetFn(); } }, '← Back to ' + mapName(hereMap))));
       const MAP = MAPS[region];
       const cur = P.travel ? null : P.place;
       const lines = [], nodes = [];
@@ -2254,11 +2277,27 @@
           <text x="${x}" y="${y + 40}" text-anchor="middle" font-family="Alegreya Sans, sans-serif" font-weight="700" font-size="11" fill="${conColor(Math.round((pl.lvl[0] + pl.lvl[1]) / 2))}" stroke="#120c05" stroke-width="3" paint-order="stroke">${pl.safe ? 'Town' : pl.lvl[0] + '-' + pl.lvl[1]}</text>
         </g>`);
       }
-      const svg = `<svg viewBox="0 0 340 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Map of ${esc(D.REGIONS[region].name)}">
+      // a map inside this one (#136): a marker that opens it, joined to the place its road starts from, with a quest mark
+      // when a quest needs a place in there; on such a map, the way back out
+      const marker = (key, x, y, label, from, kind) => {
+        if (from && MAP[from]) lines.push(`<line x1="${MAP[from][0]}" y1="${MAP[from][1]}" x2="${x}" y2="${y}" stroke="#8a6a3a" stroke-width="3" stroke-dasharray="6 5" stroke-linecap="round"/>`);
+        const w = Math.round(label.length * 6.6 + 22), q = kind && kind !== true ? kind : null;
+        nodes.push(`<g data-map="${key}" style="cursor:pointer">
+          <rect x="${x - w / 2}" y="${y - 12}" width="${w}" height="24" rx="12" fill="#2a1d0e" stroke="#c9a23a" stroke-width="2"/>
+          <text x="${x}" y="${y + 5}" text-anchor="middle" font-family="Alegreya Sans, sans-serif" font-weight="800" font-size="13" fill="#f3e6c6">${esc(label)}</text>
+          ${q ? `<image href="${qmarkSrc(q)}" x="${x + w / 2 - 6}" y="${y - 30}" width="15" height="24.5"/>` : ''}</g>`);
+      };
+      for (const k in SUBMAPS) if (SUBMAPS[k].parent === region) {
+        const S_ = SUBMAPS[k], inside = Object.keys(MAPS[k]).map((p) => qPlaces.get(p)).filter(Boolean);
+        marker(k, S_.at[0], S_.at[1], S_.name, S_.from, inside.includes('ready') ? 'ready' : inside.length ? 'new' : true);
+      }
+      if (SUBMAPS[region]) { const S_ = SUBMAPS[region]; marker(S_.parent, S_.back[0], S_.back[1] + 12, mapName(S_.parent), S_.backFrom, true); }
+      const svg = `<svg viewBox="0 0 340 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Map of ${esc(mapName(region))}">
         ${MAP_BG[region]}
         ${lines.join('')}${nodes.join('')}</svg>`;
       const m = h('div', { class: 'map', html: svg });
       m.addEventListener('click', (e) => {
+        const sub = e.target.closest('[data-map]'); if (sub) { ui.mapRegion = sub.dataset.map; ui.sheetFn(); return; } // open the map inside, or go back out (#136)
         const g = e.target.closest('[data-go]'); if (!g) return;
         const to = g.dataset.go;
         if (to === cur) return;
@@ -2270,7 +2309,7 @@
       b.append(m, h('div', { style: { color: 'var(--muted)', fontSize: '13px' } }, 'Gold: you are here. ! marks places your quests need, ? where a finished quest is handed in. Tap any place for the way there.'),
         ...(huntUpAt.size ? [h('div', { style: { color: '#ff8a3a', fontSize: '13px', fontWeight: 700 } }, `◆ Rare hunt up now: ${[...huntUpAt].map(([pk, k]) => `${D.MOBS[k].name} at ${D.PLACES[pk].name}`).join(', ')}`)] : [])); // no line when none is up (#53: append(null) wrote "null")
       // roads out of this zone, under the map so they never push it down
-      if (far.childNodes.length) b.append(h('div', { class: 'sec-h' }, 'Roads out of ' + D.REGIONS[region].name), far);
+      if (far.childNodes.length) b.append(h('div', { class: 'sec-h' }, 'Roads out of ' + mapName(region)), far);
     });
   }
 
@@ -2288,7 +2327,7 @@
     tirisfal: [44, 44], plaguelands: [124, 44], hillsbrad: [58, 100], arathi: [132, 112], wetlands: [100, 158], dunmorogh: [52, 204], steppes: [134, 214],
     elwynn: [62, 264], redridge: [140, 264], westfall: [36, 320], duskwood: [110, 320], stranglethorn: [72, 384],
     teldrassil: [236, 40], winterspring: [306, 66], ashenvale: [246, 108], stonetalon: [204, 154], durotar: [308, 154], barrens: [270, 208], mulgore: [214, 250],
-    feralas: [210, 310], tanaris: [298, 322], ungoro: [254, 380], tidewatch: [118, 458], stormveil: [196, 486], skullreef: [274, 458],
+    feralas: [210, 310], tanaris: [298, 322], dustwallow: [312, 262], ungoro: [254, 380], tidewatch: [118, 458], stormveil: [196, 486], skullreef: [274, 458],
   };
   function worldMap(b, title, hereRegion) {
     title.firstChild.textContent = 'Caldreth';
@@ -2344,7 +2383,10 @@
     const N = D.NPCS[Q.turnin], P = G.S.player;
     const at = npcPlace(Q.turnin);
     const where = !at ? '' : at === P.place && !P.travel ? ` here in ${D.PLACES[at].name}` : ` in ${D.PLACES[at].name}, ${D.PLACES[at].zone}`;
-    return h('div', { class: 'obj turnin-to' }, qmark('ready', null, Q.main), ' Return to ', h('b', null, N.name), where + '.');
+    // turned in somewhere else (#144: Thunderhowl Rise's quests go back to Rumhook Bay): the way there, one tap away
+    const away = at && (at !== P.place || P.travel);
+    return h('div', { class: 'obj turnin-to' }, qmark('ready', null, Q.main), ' Return to ', h('b', null, N.name), where + '.',
+      away ? h('button', { class: 'chip gold', style: { marginLeft: '6px' }, onclick: () => routeDialog(at) }, 'Show the way') : null);
   }
   function questDetail(qid, npc) {
     const Q = D.QUESTS[qid];
@@ -2386,7 +2428,8 @@
       h('p', null, `${x.weekly ? 'A weekly bounty' : 'A daily bounty'} from the ${x.hubName} board. Hunt ${M.name} anywhere in ${hub ? hub.zone : 'the zone'}, then hand it in at the board.`),
       h('h4', null, 'Progress'),
       h('div', { class: 'obj tnum' + (x.complete ? ' done' : '') }, `${M.name}: ${x.prog}/${x.n}`, !x.complete && where.length ? h('small', { class: 'obj-where' }, ' · ' + placeNames(where)) : null),
-      x.complete ? h('div', { class: 'obj turnin-to' }, qmark('ready'), ' Hand in at the ', h('b', null, 'Bounty Board'), x.hub === P.place && !P.travel ? ` here in ${x.hubName}.` : ` in ${x.hubName}${hub ? ', ' + hub.zone : ''}.`) : null,
+      x.complete ? h('div', { class: 'obj turnin-to' }, qmark('ready'), ' Hand in at the ', h('b', null, 'Bounty Board'), x.hub === P.place && !P.travel ? ` here in ${x.hubName}.` : ` in ${x.hubName}${hub ? ', ' + hub.zone : ''}.`,
+        x.hub !== P.place || P.travel ? h('button', { class: 'chip gold', style: { marginLeft: '6px' }, onclick: () => routeDialog(x.hub) }, 'Show the way') : null) : null,
       h('p', { class: 'ai-note' }, x.weekly ? 'Lapses at the end of the week (Monday).' : 'Lapses at midnight.'),
       h('h4', null, 'Rewards'),
       h('div', { class: 'money', html: `${rw.xp || 0} experience · ` + moneyHtml(rw.money || 0) + (rw.marks ? ` · ${rw.marks} Mentor Marks` : '') + (x.weekly ? ' · bonus gear' : '') }));
