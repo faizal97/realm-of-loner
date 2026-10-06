@@ -1766,7 +1766,7 @@
       if (cast) {
         els.cast.hidden = false;
         const ab = D.ABILITIES[cast.ab];
-        const pct = Math.min(1, (C.t - cast.start) / (cast.end - cast.start));
+        const pct = Math.max(0, Math.min(1, (G.fightNow() - cast.start) / (cast.end - cast.start))); // every frame, not every 0.1 s step (#116)
         els.cast.classList.toggle('channel', !!cast.channel);
         els.cast.querySelector('i').style.width = (cast.channel ? (1 - pct) : pct) * 100 + '%';
         els.cast.querySelector('b').textContent = ab.name;
