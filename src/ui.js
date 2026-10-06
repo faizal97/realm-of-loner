@@ -3009,10 +3009,25 @@
           h('button', { class: 'btn alt', onclick: () => { try { localStorage.setItem('azsolo.fx', on ? 'off' : 'on'); } catch (e) { } ui.sheetFn(); } }, 'Combat effects: ' + (on ? 'On' : 'Off'))),
           h('p', { class: 'ai-note', style: { margin: 0 } }, 'Slashes, spells in flight, heals and boss attacks drawn over the fight. Damage numbers stay either way.')])); }
         if (window.SND) {
+          // #120: a volume slider per channel (0-100%, steps of 5) under the On/Off buttons, which mute and keep the value.
+          // Dragging changes the sound at once and updates the labels in place (a sheet redraw would end the drag).
           const pr = window.SND.prefs;
-          b.append(...foldSec('set.sound', 'Sound', `Music ${pr.music ? 'on' : 'off'} · effects ${pr.sfx ? 'on' : 'off'}`, [h('div', { class: 'btn-row' },
+          const level = (k) => (pr[k] ? pr[k + 'Vol'] + '%' : 'off');
+          const summary = () => `Music ${level('music')} · effects ${level('sfx')}`;
+          let head = null;
+          const slider = (k, name) => {
+            const lab = h('b', null, `${name} ${pr[k + 'Vol']}%`);
+            const inp = h('input', { type: 'range', min: 0, max: 100, step: 5, value: pr[k + 'Vol'], 'aria-label': name + ' volume',
+              oninput: (e) => { window.SND.setVol(k, e.target.value); lab.textContent = `${name} ${pr[k + 'Vol']}%`; if (head) head.querySelector('small').textContent = summary(); },
+              onchange: () => { if (k === 'sfx') window.SND.play('click'); } }); // let go of Effects: hear the new level
+            return h('label', { class: 'vol' + (pr[k] ? '' : ' off') }, h('span', { class: 'vol-l' }, lab, pr[k] ? null : h('small', null, 'Off')), inp);
+          };
+          const parts = foldSec('set.sound', 'Sound', summary(), [h('div', { class: 'btn-row' },
             h('button', { class: 'btn alt', onclick: () => { window.SND.setPref('music', !pr.music); ui.sheetFn(); } }, 'Music: ' + (pr.music ? 'On' : 'Off')),
-            h('button', { class: 'btn alt', onclick: () => { window.SND.setPref('sfx', !pr.sfx); ui.sheetFn(); } }, 'Effects: ' + (pr.sfx ? 'On' : 'Off')))]));
+            h('button', { class: 'btn alt', onclick: () => { window.SND.setPref('sfx', !pr.sfx); ui.sheetFn(); } }, 'Effects: ' + (pr.sfx ? 'On' : 'Off'))),
+            slider('music', 'Music'), slider('sfx', 'Effects')]);
+          head = parts[0];
+          b.append(...parts);
         }
         if (window.UPD && (UPD.inApp() || UPD.onSite())) {
           // beta: test versions before everyone else (GitHub pre-releases in the app, the /beta/ page in a browser)

@@ -187,6 +187,19 @@ img { max-width: 100%; display: block; }
 .fold-arr { flex: none; width: 12px; color: var(--gold); font: 700 12px var(--body); text-align: center; }
 .fold-body { display: grid; gap: 8px; }
 .fold-body[hidden] { display: none; }
+/* volume sliders (Settings > Sound, #120): a label line, then a full-width track with a thumb-sized handle */
+.vol { display: grid; gap: 2px; padding: 4px 2px 0; }
+.vol-l { display: flex; align-items: baseline; gap: 8px; }
+.vol-l b { font-weight: 700; color: var(--gold); font-variant-numeric: tabular-nums; }
+.vol-l small { color: var(--muted); }
+.vol.off .vol-l b { color: var(--muted); }
+.vol input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 44px; margin: 0; background: transparent; touch-action: pan-y; cursor: pointer; }
+.vol input[type=range]::-webkit-slider-runnable-track { height: 8px; border-radius: 4px; background: #0c0906; border: 1px solid var(--edge); }
+.vol input[type=range]::-moz-range-track { height: 8px; border-radius: 4px; background: #0c0906; border: 1px solid var(--edge); }
+.vol input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 28px; height: 28px; margin-top: -11px; border-radius: 50%; border: 2px solid #000; background: linear-gradient(#f0c75e, #a5824a); box-shadow: 0 0 0 1px #6b4d20; }
+.vol input[type=range]::-moz-range-thumb { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #000; background: linear-gradient(#f0c75e, #a5824a); box-shadow: 0 0 0 1px #6b4d20; }
+.vol.off input[type=range]::-webkit-slider-thumb { background: linear-gradient(#9f8f73, #5c4526); }
+.vol.off input[type=range]::-moz-range-thumb { background: linear-gradient(#9f8f73, #5c4526); }
 /* the chat fold tab hangs from the chat strip's bottom edge */
 .chat { position: relative; z-index: 7; overflow: visible; }
 .chat.folded { height: 26px; align-items: center; }
