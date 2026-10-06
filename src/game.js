@@ -1249,13 +1249,16 @@
   };
   G.turnInBounty = function (b) {
     const P = G.S.player, st = (P.bounty || {})[b.id]; if (!st || st.prog < st.n || st.done) return;
+    // a weekly bounty gives gear: with no room it pays nothing and stays Ready, as a quest with an item reward does (#128)
+    if (st.weekly && G.bagsFull()) return toast('Make room in your bags first: this bounty gives an item.');
     st.done = true;
     P.money += st.reward.money; sys(`Bounty complete: ${D.MOBS[st.mob].name}. You receive ${G.moneyText(st.reward.money)}.`);
     const xp = G.gainXp(st.reward.xp, false) || 0;
     if (st.reward.marks) G.addMarks(st.reward.marks, st.weekly ? 'weekly bounty' : 'bounty');
-    if (st.weekly) { const it = G.genGear(pick(D.GEAR_SLOTS), P.level, 2); G.addItem(it, 1); loot(`Weekly bounty bonus: ${B.link(it.name, it.q)}.`); }
+    let gear = false; // chat and the toast name the gear only once it is in the bags (#128)
+    if (st.weekly) { const it = G.genGear(pick(D.GEAR_SLOTS), P.level, 2); gear = G.addItem(it, 1); if (gear) loot(`Weekly bounty bonus: ${B.link(it.name, it.q)}.`); }
     // the line the screen shows (#115): a bounty says so, with what it paid; it used to show "Quest complete"
-    const paid = [xp ? `${xp} XP` : null, G.moneyText(st.reward.money), st.reward.marks ? `${st.reward.marks} Mentor Marks` : null, st.weekly ? 'bonus gear' : null].filter(Boolean);
+    const paid = [xp ? `${xp} XP` : null, G.moneyText(st.reward.money), st.reward.marks ? `${st.reward.marks} Mentor Marks` : null, gear ? 'bonus gear' : null].filter(Boolean);
     emit('questDone', { bounty: true, text: `Bounty complete: ${D.MOBS[st.mob].name} · ${paid.join(' · ')}` }); emit('change'); G.save();
   };
   // v10.1.1: the board shows like a quest giver (! something to take, ? something to hand in), and the bounties you
