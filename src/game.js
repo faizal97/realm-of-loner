@@ -1649,7 +1649,19 @@
     loot(`You are now a${R.name[0] === 'A' ? 'n' : ''} ${R.name} in ${D.PROFESSIONS[id].name} (skill up to ${R.max}).`);
     emit('change'); G.save();
   };
-  G.unlearnProf = function (id) { delete G.profs()[id]; sys(`You unlearned ${D.PROFESSIONS[id].name}.`); emit('change'); G.save(); };
+  // what unlearning a profession takes (#145): its skill, its cap and the recipes known at that skill; for the confirmation
+  G.unlearnInfo = function (id) {
+    const p = G.profs()[id]; if (!p) return null;
+    return { name: D.PROFESSIONS[id].name, skill: p.skill, max: p.max, recipes: G.recipesFor(id).filter((r) => r.sk[0] <= p.skill).length, artisan: p.skill >= 300 };
+  };
+  // free and anywhere (#145). Cooking and Fishing take no slot, so they stay. A title earned at 300 stays: it is recorded
+  // here, since the title reads the skill (the keepsake already lives in the wardrobe)
+  G.unlearnProf = function (id) {
+    const P = G.S.player, p = G.profs()[id]; if (!p) return;
+    if (D.isSecondary(id)) return toast(`${D.PROFESSIONS[id].name} takes no profession slot, so it stays.`);
+    if (p.skill >= 300) { P.artisan = P.artisan || {}; P.artisan[id] = true; }
+    delete G.profs()[id]; sys(`You unlearned ${D.PROFESSIONS[id].name}.`); emit('change'); G.save();
+  };
   // colour of a recipe or node for your skill: 0 orange, 1 yellow, 2 green, 3 grey, -1 too hard
   G.skillColor = function (skill, sk) { if (skill < sk[0]) return -1; if (skill < sk[1]) return 0; if (skill < sk[2]) return 1; if (skill < sk[3]) return 2; return 3; };
   const SKILL_CHANCE = [1, 0.75, 0.25, 0];
@@ -2120,7 +2132,7 @@
     if (n.clear) return !!(r.clears[n.clear] && r.clears[n.clear].clears);
     if (n.hard) return !!(r.clears[n.hard] && r.clears[n.hard].hard); // a whole raid cleared on Hard (v10.7)
     if (n.quest) return !!G.S.player.done[n.quest];
-    if (n.prof) return ((G.S.player.prof || {})[n.prof] || {}).skill >= 300; // Artisan (v10.9): 300 in that skill
+    if (n.prof) return ((G.S.player.prof || {})[n.prof] || {}).skill >= 300 || !!(G.S.player.artisan || {})[n.prof]; // Artisan (v10.9): 300 in that skill, now or before it was unlearned (#145)
     if (n.guildRank != null) return !!(root.SOC && SOC.rank() >= n.guildRank);
     if (n.trial) return ((G.S.player.trials || {}).bestEver || 0) >= n.trial; // Trials (v10.4): best level beaten in time
     if (n.trialRank) { const r = (G.S.player.trials || {}).bestRank; return !!r && r <= n.trialRank; } // a month's final realm rank

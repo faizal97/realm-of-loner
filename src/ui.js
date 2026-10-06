@@ -3205,6 +3205,7 @@
         h('div', { class: 'r' }, R && R.ok && (p || !full) ? 'Train' : ''));
     };
     b.append(h('div', { class: 'sec-h' }, 'Professions', h('small', null, `${n}/${D.PROF_MAX} learned`)));
+    if (n >= D.PROF_MAX) b.append(h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', onclick: () => openProfessions() }, 'Unlearn a profession…'))); // the way to free a slot (#145)
     const list = h('div', { class: 'list' });
     for (const id in D.PROFESSIONS) if (!D.isSecondary(id)) list.append(rowFor(id, n >= D.PROF_MAX));
     // Cooking and Fishing (v10.9): on top of your two, for anyone
@@ -3239,6 +3240,18 @@
     if (crafted.length) rows.push(h('div', { class: 'row' }, h('div', { class: 'ic' }, itemIcon(crafted[0])), h('div', { class: 't' }, h('b', null, `Crafted looks: ${have} of ${crafted.length}`), h('small', { style: { whiteSpace: 'normal' } }, crafted.map((it) => `${it.name}${looks.has(it.look[0] + ':' + it.look[1]) ? ' ✓' : ''}`).join(' · ') + '. Only from crafting.'))));
     return h('div', null, h('div', { class: 'sec-h' }, 'Collections', h('small', null, 'for every character on this device')), h('div', { class: 'list' }, ...rows));
   }
+  // unlearning a profession (#145): free and anywhere, after a confirmation that says what is lost and what is kept; from
+  // skill 150 the button carries the skill, so it isn't tapped by habit
+  function unlearnDialog(k) {
+    const i = G.unlearnInfo(k); if (!i) return;
+    const lost = `Your skill (${i.skill} of ${i.max})` + (i.recipes ? ` and the ${i.recipes} recipe${i.recipes > 1 ? 's' : ''} you know are lost.` : ' is lost.');
+    showDialog([h('h3', null, `Unlearn ${i.name}?`),
+      h('p', null, `${lost} You can learn it again from a trainer, from skill 1.`),
+      h('p', { class: 'ai-note' }, 'You keep everything you made or gathered, and any keepsake or title you earned' + (i.artisan ? `, the Artisan ${i.name} title included` : '') + '.'),
+      h('div', { class: 'btn-row' },
+        h('button', { class: 'btn', onclick: () => { G.unlearnProf(k); closeDialog(); ui.profTab = null; if (ui.sheetFn) ui.sheetFn(); } }, `Unlearn ${i.name}` + (i.skill >= 150 ? ` (${i.skill})` : '')),
+        h('button', { class: 'btn alt', onclick: closeDialog }, 'Cancel'))], true);
+  }
   function openProfessions() {
     ui.profTab = ui.profTab || null;
     openSheet('profs', 'Professions', ' ', (b, title) => {
@@ -3251,6 +3264,7 @@
       const k = ui.profTab, Pd = D.PROFESSIONS[k], p = profs[k];
       const rank = (D.PROF_RANKS.find((r) => r.max === p.max) || {}).name || '';
       b.append(h('div', { class: 'people' }, Pd.desc), profBar(p), h('div', { class: 'ai-note', style: { margin: '2px 0 0' } }, `${p.skill} / ${p.max}${rank ? ' · ' + rank : ''}`), profCollections(k, p));
+      if (!D.isSecondary(k)) b.append(h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', onclick: () => unlearnDialog(k) }, 'Unlearn ' + Pd.name))); // #145
       const recipes = G.recipesFor(k);
       if (k === 'fishing') { // what bites, by water: common fish by skill, then the big and rare ones that fight on the reel
         const list = h('div', { class: 'list' });
