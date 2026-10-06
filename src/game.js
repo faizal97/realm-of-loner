@@ -376,6 +376,7 @@
   G.addItem = function (it, n) {
     const P = G.S.player;
     n = n || 1;
+    if (G.isQuestItem(it.id)) { P.qitems = P.qitems || {}; P.qitems[it.id] = (P.qitems[it.id] || 0) + n; return true; } // kept with the quests, no slot (#144)
     if (G.stackable(it)) {
       const st = P.bags.find((b) => b.item.id === it.id && b.n < 20);
       if (st) { st.n += n; return true; }
@@ -411,9 +412,15 @@
     return out;
   };
   G.ownsItem = function (id) { const P = G.S.player; return Object.values(P.equip || {}).some((x) => x && x.id === id) || (P.bags || []).some((b) => b.item.id === id) || (P.bank || []).some((b) => b.item && b.item.id === id); }; // worn, in bags or in the bank
-  G.countItem = function (id) { let n = 0; for (const b of G.S.player.bags) if (b.item.id === id) n += b.n; return n; };
+  // the items quests collect (#144) are kept with the quests (P.qitems), never in the bags, so a full bag can't lose one;
+  // ones an old save holds in its bags still count
+  let QITEMS = null;
+  G.isQuestItem = (id) => { if (!QITEMS) { QITEMS = new Set(); for (const q in D.QUESTS) for (const o of D.QUESTS[q].objs) if (o.type === 'collect') QITEMS.add(o.item); } return QITEMS.has(id); };
+  G.countItem = function (id) { let n = (G.S.player.qitems || {})[id] || 0; for (const b of G.S.player.bags) if (b.item.id === id) n += b.n; return n; };
   G.removeItem = function (id, n) {
     const P = G.S.player;
+    const held = (P.qitems || {})[id] || 0; // a quest's items first, then any an old save holds in its bags (#144)
+    if (held) { const take = Math.min(held, n); n -= take; if (held - take > 0) P.qitems[id] = held - take; else delete P.qitems[id]; }
     for (let i = P.bags.length - 1; i >= 0 && n > 0; i--) {
       const b = P.bags[i];
       if (b.item.id !== id) continue;
@@ -1114,7 +1121,12 @@
     questCheck();
     emit('change');
   };
-  G.abandon = function (qid) { delete G.S.player.quests[qid]; sys(`${D.QUESTS[qid].name} abandoned.`); emit('change'); };
+  G.abandon = function (qid) {
+    const P = G.S.player; delete P.quests[qid];
+    // the items it was collecting go with it, unless another quest you hold still collects them (#144)
+    for (const o of D.QUESTS[qid].objs) if (o.type === 'collect' && P.qitems && P.qitems[o.item] && !Object.keys(P.quests).some((q) => D.QUESTS[q].objs.some((x) => x.type === 'collect' && x.item === o.item))) delete P.qitems[o.item];
+    sys(`${D.QUESTS[qid].name} abandoned.`); emit('change');
+  };
   G.questXp = (L) => Math.round(L <= 5 ? 60 * L + 20 : (90 * L - 100) * 1.25); // v1.9.1: +25% from 6 so quests carry levelling, not grinding
   G.questMoney = (L) => Math.round(L * 30 + (L > 5 ? L * 25 : 0));
   // what fits a class (issue #13): quest rewards and dungeon bonuses read the same table, class only (not role or talents)
@@ -1158,7 +1170,7 @@
     const P = G.S.player, Q = D.QUESTS[qid];
     if (!G.questComplete(qid)) return;
     const it = G.rewardItem(qid);
-    if (it && G.bagsFull()) return toast('Inventory is full.');
+    if (it && G.bagsFull()) return toast('Make room in your bags first: this quest gives an item.'); // nothing paid, it stays complete (#144, as #128)
     for (const o of Q.objs) if (o.type === 'collect') G.removeItem(o.item, o.n);
     delete P.quests[qid]; P.done[qid] = true;
     sys(`${Q.name} completed.`);
