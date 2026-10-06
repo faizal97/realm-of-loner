@@ -13,7 +13,7 @@ let depth = 0, from = src.indexOf('{', at), to = -1;
 for (let k = from; k < src.length && to < 0; k++) { if (src[k] === '{') depth++; else if (src[k] === '}' && !--depth) to = k; }
 const MAPS = eval('(' + src.slice(from, to + 1) + ')');
 
-// known gaps, decided elsewhere (#136): Rumhook Bay doesn't fit on the Stranglethorn map, and Dustwallow has no map yet
+// known gaps, decided elsewhere (#136): Rumhook Bay doesn't fit on The Vinewild's map, and Saltmarsh has no map yet
 const NOT_YET = { places: ['rumhook_bay', 'saltpenny_wharf', 'thunderhowl_rise', 'blackgull_cove', 'bonegrin_warcamp', 'bonded_yard', 'bloodsand_arena'], regions: ['dustwallow'] };
 
 test('every place is on its zone map (dungeon and raid gates included)', () => {
