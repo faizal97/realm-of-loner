@@ -793,7 +793,7 @@
         else if (e.type === 'proc' && src && src.kind === 'player') S_.play('reaction', { vol: 0.75 });
         else if (e.type === 'heal' && e.amount > 0) S_.play('heal', { gap: 0.3, vol: 0.8 });
         else if (e.type === 'castStart' && src && src.kind === 'player') S_.play('cast', { vol: 0.5 });
-        else if (e.type === 'die' && C.units[e.uid] && C.units[e.uid].kind === 'player') S_.play('death');
+        else if (e.type === 'die' && C.units[e.uid] && C.units[e.uid].kind === 'player' && C.over !== 'win') S_.play('death'); // a kill in the same moment wins the fight and you live (#121): no death sound
       }
       // bosses (v10.8): a low gong before a special or a call for help, a roar when they frenzy
       if (S_ && e.type === 'emote' && C.units[e.uid] && C.units[e.uid].boss && C.units[e.uid].side === 'enemy') S_.play('warn', { gap: 1.2, vol: 0.7 });
@@ -4869,6 +4869,7 @@
   }
   let last = performance.now(), cloudTick = 0;
   function loop(t) {
+    requestAnimationFrame(loop); // first (#121): an error below shows once (REPORT) and the game keeps running; it used to stop every frame after it, so only a refresh brought the game back
     const dt = (t - last) / 1000; last = t;
     if (G.S) {
       if (dt > 20) resume();
@@ -4887,7 +4888,6 @@
         }
       }
     }
-    requestAnimationFrame(loop);
   }
   function resume() {
     autoUpdateCheck();

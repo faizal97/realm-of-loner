@@ -1471,6 +1471,7 @@
     if (C.wanderer) { const Hd = D.LEGENDS[C.wanderer.key].hooded; B.post(S, 'say', { name: Hd.name, cls: 'paladin' }, pick(Hd.leave)); sys('The hooded knight walks off without giving a name.'); }
     const pu = G.pUnit;
     recordFx(C, pu); E.writeBack(C, pu, now());
+    if (C.over === 'win' && pu.dead) P.hp = 1; // the kill and your death in the same moment: the kill counts, and you live (#121)
     petWriteBack(C);
     for (const u of C.allies) if (u.memberRef) { E.writeBack(C, u, now()); if (u.dead) u.memberRef.hp = Math.round(u.maxHp * 0.5); }
     const size = S.wparty ? 1 + S.wparty.members.length : 1;
@@ -2391,6 +2392,7 @@
   function endPvp(C) {
     const S = G.S, P = S.player, f = S.flags, info = C.pvp;
     recordFx(C, G.pUnit); E.writeBack(C, G.pUnit, now());
+    if (C.over === 'win' && G.pUnit.dead) P.hp = 1; // as in a solo fight (#121): the kill counts, and you live
     petWriteBack(C);
     for (const u of C.allies) if (u.memberRef) { E.writeBack(C, u, now()); if (u.dead) u.memberRef.hp = Math.round(u.maxHp * 0.5); }
     P.pvp = G.pvpStats();
@@ -3664,7 +3666,12 @@
           else B.post(S, 'party', null, 'extra pack!');
         }
         if (C.events.length) { emit('combat', C.events); C.events.length = 0; }
-        if (C.over) { if (C.kind === 'solo') endSolo(C); else if (C.kind === 'pvp') endPvp(C); else if (C.kind === 'duel') endDuel(C); else if (C.kind === 'bg') endBgFight(C); else if (C.kind === 'brawl') endBrawlFight(C); else endRunFight(C); }
+        if (C.over) {
+          // a fight always ends (#121): if a step of its ending throws, the fight is still closed, so the error shows once
+          // instead of the ending being retried every frame (paying the kill again each time) with the game stuck in it
+          try { if (C.kind === 'solo') endSolo(C); else if (C.kind === 'pvp') endPvp(C); else if (C.kind === 'duel') endDuel(C); else if (C.kind === 'bg') endBgFight(C); else if (C.kind === 'brawl') endBrawlFight(C); else endRunFight(C); }
+          finally { if (G.fight === C) { G.fight = null; G.pUnit = null; emit('fightEnd', { result: C.over }); } }
+        }
       }
     }
     worldAcc += dt;
