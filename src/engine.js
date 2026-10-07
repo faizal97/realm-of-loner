@@ -238,11 +238,14 @@
   };
 
   // mult: {hp, dmg} from dungeon; opts.level override
+  // early creatures take longer to bring down (#119): from level 4 a fight lasted 4-7 s, too short to use much of a kit.
+  // Read from the creature's level, so every starting region gets it; 1-3 (the first steps) and 8 and up are unchanged.
+  E.EARLY_HP = { 4: 1.4, 5: 1.4, 6: 1.3, 7: 1.2 };
   E.mobUnit = function (key, level, mult) {
     const M = D.MOBS[key];
     const L = level || rint(M.lvl[0], M.lvl[1]);
     mult = mult || { hp: 1, dmg: 1 };
-    const hp = Math.round(E.mobHp(L) * (M.hpMult || 1) * mult.hp);
+    const hp = Math.round(E.mobHp(L) * (E.EARLY_HP[L] || 1) * (M.hpMult || 1) * mult.hp);
     const [a, b] = E.mobDmg(L);
     const dm = (M.dmgMult || 1) * mult.dmg;
     return baseUnit({
