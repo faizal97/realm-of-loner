@@ -361,7 +361,9 @@
     if (q >= 2) {
       // stat budget per level, matched to the hand-made items (v10.4: random blues had 70% more than named ones, and
       // outranked raid purples): green 0.55, blue 0.55 + 1, purple 0.64 per level
-      const budget = Math.max(1, Math.round(q === 2 ? lvl * 0.55 + 1 : q === 3 ? lvl * 0.55 + 2 : lvl * 0.64 + 2));
+      // #141: from D.gearBudget; a green or blue below 60 rolls it +-10%, so a good find and a poor one exist in a band
+      const roll = lvl < 60 && (q === 2 || q === 3) ? 1 + rnd(-0.1, 0.1) : 1;
+      const budget = Math.max(1, Math.round(D.gearBudget(lvl, q) * roll));
       const af = opts.affix || pick(D.AFFIXES);
       const keys = Object.keys(af.stats);
       it.stats = {};
@@ -1149,6 +1151,16 @@
     const blues = []; for (const pl of Dg.pulls) for (const k of pl.mobs) for (const id of (D.MOBS[k].loot || [])) if (!blues.includes(id) && D.ITEMS[id] && G.canUseItem(D.ITEMS[id], cls)) blues.push(id);
     return blues.length ? G.copyItem(pick(blues)) : G.fittedGear(L, 3, cls);
   };
+  // purples before 60 (#141): from level 30, a dungeon's final boss has a 2% chance and a levelling rare 5% of a purple
+  // that fits your class (about 15% over a blue), so one is an event: about 1-3 over a whole levelling journey. It's
+  // yours, not rolled for, and never lost (bags, or the bank when they're full).
+  G.EPIC = { from: 30, boss: 0.02, rare: 0.05 };
+  G.epicDrop = function (kind, L) {
+    if (!(L >= G.EPIC.from && L < 60) || !(Math.random() < G.EPIC[kind])) return null;
+    const it = G.fittedGear(L, 4, G.S.player.cls);
+    loot(`Epic! You receive ${B.link(it.name, 4)}.`); G.giveReward(it, 'Epic drop'); emit('epic', { item: it });
+    return it;
+  };
   // a reward is never lost: with full bags it goes to the bank, and chat says so (as an expired auction does)
   G.giveReward = function (it, label) {
     const P = G.S.player;
@@ -1568,6 +1580,7 @@
           if (named && G.isHunt(e.key)) { P.huntKilled = P.huntKilled || {}; P.huntKilled[e.key] = G.huntNow(e.key, now()).w; e.inst.state = 'away'; G.takeTrophy(e.key); } // gone until its next window (#43)
         }
         onKill(e.key);
+        if (e.inst && e.inst.id.startsWith('n_') && !D.MOBS[e.key].boss) G.epicDrop('rare', e.level); // a rare's purple chance (#141)
         G.gainXp(Math.round(G.xpForKill(e.level, e.elite) * share), true);
         const l = rollLoot(e.key, e.level, 1 / size);
         if (size > 1) {
@@ -3466,6 +3479,7 @@
         for (const it of drops) addRoll(it);
         const rr = G.rareRecipeDrop(G.syncLevel(R.act)); if (rr) addRoll(rr);
         if (!(wbA && !wbFirst) && (!D.ACTIVITIES[R.act].dungeon || Math.random() < 0.25)) addRoll(G.genGear(pick(D.GEAR_SLOTS), G.syncLevel(R.act), !D.ACTIVITIES[R.act].dungeon ? 2 : 3));
+        if (D.ACTIVITIES[R.act].dungeon && !wbA && R.pulls.map((p) => !!p.boss).lastIndexOf(true) === R.idx) G.epicDrop('boss', G.syncLevel(R.act)); // #141
         if (pull.mobs[0] === 'vancleef' && G.S.player.quests.defias_brotherhood) { G.addItem(G.copyItem('vancleef_head'), 1); loot(`You receive loot: ${B.link("Head of Blackwell")}.`); questCheck(); }
         const talker = pick(S.group.members.filter((m) => !m.gone));
         if (talker) partySay(talker, B.partyLine(talker.bot, 'win'));

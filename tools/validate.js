@@ -171,5 +171,12 @@ if (D.EFFECTS) {
 const n = (t) => Object.keys(D[t]).length;
 console.log(`data: ${n('REGIONS')} zones, ${n('PLACES')} places, ${n('MOBS')} mobs, ${n('QUESTS')} quests, ${n('ITEMS')} items` + (warn.length ? ` · ${warn.length} warnings` : ''));
 if (process.argv.includes('-v')) warn.forEach((w) => console.log('  warn:', w));
+// a fixed blue below 60 is never weaker than a random blue of its level (#141: src/data/finalize.js lifts them; this
+// stops the build if one slips under, e.g. a new item added after the lift)
+for (const [id, it] of Object.entries(D.ITEMS)) {
+  if (it.q !== 3 || !(it.lvl < 60) || !it.stats) continue;
+  const have = Object.values(it.stats).reduce((a, v) => a + v, 0), need = Math.round(D.gearBudget(it.lvl, 3));
+  if (have > 0 && have < need) err(`${id}: a level-${it.lvl} blue with ${have} stat points, under the generated blue budget (${need})`);
+}
 if (errors.length) { errors.forEach((e) => console.error('  ERROR:', e)); console.error(`${errors.length} data error(s); build stopped.`); process.exit(1); }
 console.log('data OK');
