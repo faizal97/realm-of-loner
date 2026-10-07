@@ -794,6 +794,7 @@
         else if (e.type === 'castStart' && src && src.kind === 'player') S_.play('cast', { vol: 0.5 });
         else if (e.type === 'die' && C.units[e.uid] && C.units[e.uid].kind === 'player' && C.over !== 'win') S_.play('death'); // a kill in the same moment wins the fight and you live (#121): no death sound
       }
+      if (e.type === 'join') redraw = true; // a social add arrived: it takes the place of its "joins in" row (#122)
       // bosses (v10.8): a low gong before a special or a call for help, a roar when they frenzy
       if (S_ && e.type === 'emote' && C.units[e.uid] && C.units[e.uid].boss && C.units[e.uid].side === 'enemy') S_.play('warn', { gap: 1.2, vol: 0.7 });
       if (S_ && e.type === 'fx' && e.kind === 'enrage') S_.play('enrage', { gap: 1, vol: 0.8 });
@@ -1432,6 +1433,12 @@
           h('div', { class: 'r' }, h('span', { class: 'tnum', 'data-hp': u.uid }, ''), h('span', { class: 'markbtn', 'data-mk': u.uid, onclick: (e) => { e.stopPropagation(); G.cycleUnitMark(u.uid); } }, MARK_SYM[u.mark] || '◎')),
           h('div', { class: 'buffs rowbuffs', 'data-au': u.uid })));
       }
+      // a creature on its way (#122): in the list from the start, with when it joins, so the whole pull is seen up front
+      if (C.addAt && C.addAt.inst) {
+        const k = C.addAt.inst.key;
+        list.append(h('div', { class: 'row off joining' }, h('div', { class: 'ic mob' }, img(mobArt(k))),
+          h('div', { class: 't' }, h('b', null, D.MOBS[k].name), h('small', { 'data-joins': '1' }, `joins in ${Math.max(1, Math.ceil(C.addAt.t - C.t))} s`))));
+      }
       p.append(h('div', { class: 'sec-h' }, 'Enemies', h('small', null, 'tap ◎ to mark kill order')), list);
     } else {
       const row = h('div', { class: 'btn-row' });
@@ -1773,6 +1780,7 @@
       }
       document.querySelectorAll('[data-clock]').forEach((d) => { if (G.S.run) d.textContent = G.fmtClock(G.runClock()); });
       document.querySelectorAll('[data-mk]').forEach((d) => { const u = C.units[d.dataset.mk]; if (u) { setSym(d, MARK_SYM[u.mark] || '◎'); } });
+      document.querySelectorAll('[data-joins]').forEach((d) => { if (C.addAt) d.textContent = `joins in ${Math.max(1, Math.ceil(C.addAt.t - C.t))} s`; });
       document.querySelectorAll('[data-hp]').forEach((d) => { const u = C.units[d.dataset.hp]; if (u) d.textContent = u.dead ? '' : Math.round((u.hp / u.maxHp) * 100) + '%'; });
       document.querySelectorAll('[data-pf]').forEach((d) => { const u = C.units[d.dataset.pf]; if (u) setBar(d, u.hp, u.maxHp, Math.round(u.hp)); });
       // cast bar

@@ -3,7 +3,7 @@
 // back), a skilled player (bot skill 0.8), gear and talents for the level. The level is held fixed so every hour is at
 // the same level, with about 2 sec between pulls (loot, tap the next). Normal monsters only: a player levels on those, not
 // on the rare. Target (game designer, #4): every class within ±20% of the class average at 10, 25, 40 and 55, and at most 2 deaths an hour.
-//   node sim/lvpace.js [hours per class and level, default 4] [levels, default 10,25,40,55]
+//   node sim/lvpace.js [hours per class and level, default 4] [levels, default 10,15,20,25,40,55 (#153: 15 and 20 so a level between the sampled ones cannot hide a problem)]
 // SEED=n runs another fixed seed (default 0x5eed1e55, the numbers posted on #4), so a spread across seeds can be measured.
 { let s = (process.env.SEED ? (0x5eed1e55 ^ Math.imul(+process.env.SEED, 0x9E3779B1)) : 0x5eed1e55) >>> 0; Math.random = () => { s = (s + 0x6D2B79F5) >>> 0; let x = s; x = Math.imul(x ^ (x >>> 15), x | 1); x ^= x + Math.imul(x ^ (x >>> 7), x | 61); return ((x ^ (x >>> 14)) >>> 0) / 4294967296; }; }
 globalThis.localStorage = { getItem() { return null; }, setItem() {}, removeItem() {} };
@@ -24,7 +24,7 @@ if (process.env.PETDMG) globalThis.E.SOLO_PET_DMG = +process.env.PETDMG; // the 
 const PACK = !!process.env.PACK, PACKS = (process.env.PACKS || '2,3,4').split(',').map(Number), PACKAI = process.env.PACKAI || 'spread', KILLC = process.env.KILLS === 'creatures', FIGHTS = !!process.env.FIGHTS;
 const packSize = (cls, L) => (Object.values(D.ABILITIES).some((a) => a.cls === cls && a.target === 'aoe' && a.dmg && (a.lvl || 1) <= L) ? PACKS[L < 20 ? 0 : L < 40 ? 1 : 2] : 1);
 const BAND = 20; // game designer, #4: within ±20% of the class average (was ±15%), at most 2 deaths an hour
-const HOURS = +process.argv[2] || 4, LEVELS = (process.argv[3] || '10,25,40,55').split(',').map(Number);
+const HOURS = +process.argv[2] || 4, LEVELS = (process.argv[3] || '10,15,20,25,40,55').split(',').map(Number);
 const CLASSES = Object.keys(D.CLASSES).filter((c) => !D.CLASSES[c].hidden); // players can't make a hidden class (the Bard)
 if (process.env.CLASSES) CLASSES.splice(0, CLASSES.length, ...process.env.CLASSES.split(',')); // e.g. CLASSES=priest for a candidate run of one class; its % then reads against that subset only
 const step = (secs) => { G.update(secs); t += secs * 1000; };
