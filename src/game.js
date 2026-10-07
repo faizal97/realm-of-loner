@@ -1390,6 +1390,10 @@
   };
 
   // ============================================================ solo combat
+  // the social pull (#153): a humanoid or murloc brings a friend of its kind, 7% of the time below creature level 20
+  // (kits are small; Mages and Priests died in 39% and 16-19% of those fights at 15-25) and 14% from 20; the friend
+  // shows in the fight list at once (#122) and arrives after 4-7 s (it was 2-5), time to shield, slow it or step back
+  G.SOCIAL = { until: 20, low: 0.07, high: 0.14, after: [4, 7] };
   G.engage = function (mobId, useAbility) {
     const S = G.S, P = S.player;
     if (G.fight || P.travel || P.ghostUntil || S.run || S.bg) return;
@@ -1417,9 +1421,9 @@
     for (const o of extra) { o.state = 'fight'; const ou = E.mobUnit(o.key, o.level); ou.inst = o; E.addEnemy(G.fight, ou); }
     // social pull: humanoids and murlocs sometimes bring a friend
     const M = D.MOBS[m.key];
-    if (!M.named && (M.family === 'humanoid' || M.family === 'murloc') && Math.random() < 0.14) {
+    if (!M.named && (M.family === 'humanoid' || M.family === 'murloc') && Math.random() < (m.level < G.SOCIAL.until ? G.SOCIAL.low : G.SOCIAL.high)) {
       const friend = G.placeMobs().find((x) => x.state === 'alive' && x.key === m.key && x !== m);
-      if (friend) { friend.state = 'fight'; G.fight.addAt = { t: rnd(2, 5), inst: friend }; }
+      if (friend) { friend.state = 'fight'; G.fight.addAt = { t: rnd(G.SOCIAL.after[0], G.SOCIAL.after[1]), inst: friend }; }
     }
     emit('fightStart', { fight: G.fight });
     if (useAbility) G.useAbility(useAbility);
@@ -3793,7 +3797,7 @@
         if (C.kind === 'run') applyBossPlan(C);
         if (C.addAt && C.t >= C.addAt.t) {
           const mu = E.mobUnit(C.addAt.inst.key, C.addAt.inst.level); mu.inst = C.addAt.inst;
-          E.addEnemy(C, mu); C.addAt = null;
+          E.addEnemy(C, mu); C.addAt = null; C.events.push({ type: 'join', uid: mu.uid }); // the fight list swaps its "joins in" row for the creature (#122)
           B.post(S, 'combat', null, `${mu.name} joins the fight!`);
         }
         if (C.kind === 'solo' && !C.wandererTried && C.t >= 3) G.wandererCheck(C);
