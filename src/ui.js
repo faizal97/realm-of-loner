@@ -2379,13 +2379,14 @@
     return { name: A ? A.name : (D.DUNGEONS[Q.dungeon] || {}).name || 'the dungeon', raid: !!(A && A.size >= 10) };
   }
   // a finished quest says who takes it and where they stand ('Return to Marshal Brede in Brackenford, Ambermoor.')
-  function turninLine(Q) {
+  // where a quest is turned in: from the start (#144), "Turn in to …", and once done "Return to …"
+  function turninLine(Q, done) {
     const N = D.NPCS[Q.turnin], P = G.S.player;
     const at = npcPlace(Q.turnin);
     const where = !at ? '' : at === P.place && !P.travel ? ` here in ${D.PLACES[at].name}` : ` in ${D.PLACES[at].name}, ${D.PLACES[at].zone}`;
     // turned in somewhere else (#144: Thunderhowl Rise's quests go back to Rumhook Bay): the way there, one tap away
     const away = at && (at !== P.place || P.travel);
-    return h('div', { class: 'obj turnin-to' }, qmark('ready', null, Q.main), ' Return to ', h('b', null, N.name), where + '.',
+    return h('div', { class: 'obj turnin-to' }, qmark(done ? 'ready' : 'active', null, Q.main), done ? ' Return to ' : ' Turn in to ', h('b', null, N.name), where + '.',
       away ? h('button', { class: 'chip gold', style: { marginLeft: '6px' }, onclick: () => routeDialog(at) }, 'Show the way') : null);
   }
   function questDetail(qid, npc) {
@@ -2402,7 +2403,7 @@
       h('h4', null, 'Objectives'),
       ...pr.map((p) => { const where = p.have < p.n && p.o.type !== 'visit' ? byNearness(objPlaces(p.o)) : [];
         return h('div', { class: 'obj tnum' + (p.have >= p.n ? ' done' : '') }, `${p.label}: ${p.have}/${p.n}`, where.length ? h('small', { class: 'obj-where' }, ' · ' + placeNames(where)) : null); }),
-      st === 'complete' ? turninLine(Q) : null,
+      turninLine(Q, st === 'complete'),
       Q.group ? h('div', { class: 'obj', style: { color: '#8a1a10' } }, `Group quest (${Q.group} players). Use the group finder.`) : null,
       Q.dungeon ? h('div', { class: 'obj', style: { color: '#8a1a10' } }, `${questDungeon(Q).raid ? 'Raid' : 'Dungeon'} quest. Queue for ${questDungeon(Q).name} in Social.`) : null,
       h('h4', null, 'Rewards'),
