@@ -16,7 +16,7 @@ const fromUi = (() => {
 })();
 
 // reads that a handler calls to decide or show something; no state changes, and covered by the actions that use them
-const NOT_ACTIONS = new Set(['canDiscard', 'canUseItem', 'characters', 'copyItem', 'displayName', 'effectOf', 'enemyTown', 'isUpgrade', 'knownProfIds',
+const NOT_ACTIONS = new Set(['isHealPick', 'canDiscard', 'canUseItem', 'characters', 'copyItem', 'displayName', 'effectOf', 'enemyTown', 'isUpgrade', 'knownProfIds',
   'legendOn', 'moneyText', 'profs', 'rankName', 'role', 'travelSecs', 'treeSpent', 'usable',
   // these end or replace the character (the test world runs one): load, logout and wipeSave have their own test below
   'load', 'logout', 'wipeSave']);
@@ -37,6 +37,7 @@ const ACTIONS = {
   abandon: () => { const q = Object.keys(D.QUESTS)[0]; G.accept(q); G.abandon(first(G.S.player.quests) || q); },
   turnIn: () => { const q = first(G.S.player.quests) || Object.keys(D.QUESTS)[0]; G.turnIn(q); },
   acceptBounty: () => { const b = (G.bounties(G.S.player.place) || [])[0]; if (b) G.acceptBounty(b); },
+  pickHeal: () => { G.pickHeal(null); G.pickHeal({ name: 'Ally', bot: { id: 'b1' } }); G.pickHeal({ name: 'Ally', bot: { id: 'b1' } }); },
   unlearnProf: () => { G.S.player.prof = Object.assign(G.S.player.prof || {}, { mining: { skill: 5, max: 75, known: [] } }); G.unlearnProf('mining'); },
   turnInBounty: () => { const b = (G.bounties(G.S.player.place) || [])[0]; if (b) { G.acceptBounty(b); G.turnInBounty(b); } },
   invite: () => G.invite(botId()),

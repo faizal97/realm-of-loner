@@ -1271,6 +1271,8 @@
     }
     p.append(h('button', { style: { textAlign: 'left' }, onclick: () => openQuests() }, t));
   }
+  // "Heals go to: you · tap a member to heal them" or "Heals go to: Corrime" (#156)
+  function healLine() { const m = G.healPick(); return m ? `Heals go to: ${m.name}` : 'Heals go to: you · tap a member to heal them'; }
   function partyBlock(p) {
     const S = G.S, C = G.fight;
     const pf = h('div', { class: 'pf' });
@@ -1278,13 +1280,16 @@
       const u = C ? C.allies.find((x) => x.memberRef === m) : null;
       const st = E.statsFor(m); const hp = u ? u.hp : (m.hp == null ? st.maxHp : m.hp);
       const bar = h('div', { class: 'bar hp', 'data-pf': u ? u.uid : '' }, h('i', { style: { width: Math.max(0, hp / st.maxHp * 100) + '%' } }), h('b', { class: 'tnum' }, Math.round(hp)));
-      pf.append(h('button', { class: 'pfr' + (u && u.dead ? ' dead' : '') + (C && u && C.allyTarget === u.uid ? ' sel' : ''), onclick: () => { if (u) { G.setTarget(u.uid); renderTarget(); markTargets(); renderPanel(); } } }, // redraw so the row shows .sel at once, as a dungeon row does (#155)
+      // a tap picks (or, on the picked row, clears) whom heals go to, in a fight or not; redrawing the panel shows .sel at once (#155, #156)
+      pf.append(h('button', { class: 'pfr' + (u && u.dead ? ' dead' : '') + (G.isHealPick(m) ? ' sel' : ''), onclick: () => { G.pickHeal(m); renderTarget(); markTargets(); renderPanel(); } },
         h('div', { class: 'portrait' }, h('div', { class: 'pclip' }, img(art('portrait', looks(m))))),
         h('div', { class: 'uf-body' }, h('div', { class: 'uf-name cls-' + m.cls }, rankBadge(m), m.name, h('small', { class: 'rc' }, `${m.level} ${raceClass(m)}`)), bar, u ? h('div', { class: 'buffs rowbuffs', 'data-au': u.uid }) : null),
         h('div', { class: 'role' }, m.role === 'tank' ? 'TANK' : m.role === 'healer' ? 'HEAL' : 'DPS')));
     }
     const left = Math.max(0, S.wparty.until - Date.now());
-    p.append(h('div', { class: 'sec-h' }, 'Party', h('small', null, C ? 'XP is shared' : S.wparty.meet ? `meeting at ${D.PLACES[S.wparty.place].name}` : `about ${Math.ceil(left / 60000)} min left`)), pf);
+    // a player who can heal an ally always sees where heals go, in place of "XP is shared" (#156)
+    const heals = G.healsAllies() && !(S.wparty.meet && !C);
+    p.append(h('div', { class: 'sec-h' }, 'Party', h('small', { class: heals ? 'heal-to' : null }, heals ? healLine() : C ? 'XP is shared' : S.wparty.meet ? `meeting at ${D.PLACES[S.wparty.place].name}` : `about ${Math.ceil(left / 60000)} min left`)), pf);
     if (!C) p.append(h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', onclick: () => G.leaveParty() }, 'Leave party')));
   }
   function confirmInvite(b) {
@@ -1402,7 +1407,7 @@
     const members = [{ me: true, name: S.player.name, cls: S.player.cls, role: G.role(), char: S.player }].concat(S.group.members.map((m) => ({ name: m.name, cls: m.cls, role: m.role, char: m, gone: m.gone })));
     members.forEach((m, i) => {
       const u = units ? units.find((x) => (m.me ? x.kind === 'player' : x.memberRef === m.char)) : null;
-      const row = h('button', { class: 'pfr' + (u && u.dead ? ' dead' : '') + (C && u && C.allyTarget === u.uid ? ' sel' : ''), onclick: () => { if (u) { G.setTarget(u.uid); renderTarget(); markTargets(); renderPanel(); } } },
+      const row = h('button', { class: 'pfr' + (u && u.dead ? ' dead' : '') + (!m.me && G.isHealPick(m.char) ? ' sel' : ''), onclick: () => { G.pickHeal(m.me ? null : m.char); renderTarget(); markTargets(); renderPanel(); } },
         h('div', { class: 'portrait' }, h('div', { class: 'pclip' }, img(art('portrait', looks(m.me ? S.player : m.char.bot || m.char))))),
         h('div', { class: 'uf-body' }, h('div', { class: 'uf-name cls-' + m.cls }, rankBadge(m.me ? S.player : m.char, m.me), m.gone ? m.name + ' (left)' : m.name, h('small', { class: 'rc' }, (m.me ? S.player.level : (m.char.level || '')) + ' ' + raceClass(m.me ? S.player : m.char))), h('div', { class: 'bar hp', 'data-pf': u ? u.uid : '' }, h('i'), h('b', { class: 'tnum' })), u ? h('div', { class: 'buffs rowbuffs', 'data-au': u.uid }) : null),
         h('div', { class: 'role' }, m.role === 'tank' ? 'TANK' : m.role === 'healer' ? 'HEAL' : 'DPS'));
@@ -1412,6 +1417,7 @@
     runScore(p, R); // the clock against par, then the run's name and progress (#66: the decisions and the timer first)
     p.append(...head);
     pf.classList.add('compact'); p.prepend(pf); // the party first: five 30 px rows at the very top, then Pull and the pace (#65)
+    if (G.healsAllies()) p.prepend(h('div', { class: 'sec-h' }, 'Party', h('small', { class: 'heal-to' }, healLine()))); // where heals go (#156)
     if (C) {
       const list = h('div', { class: 'list' });
       for (const u of C.enemies) {
