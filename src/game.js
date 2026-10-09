@@ -104,6 +104,7 @@
     S.pending = []; S.chatTimers = {};
     if (S.run && S.run.phase === 'fight') S.run.phase = 'rest', S.run.restUntil = now() + 3000;
     try { G.refreshHeirlooms(); } catch (e) { /* older save */ }
+    pruneBounties(); // #154
     { const tw = G.account().trialsworn || {}; for (const k in tw) if (tw[k] && D.TRIALSWORN[k] && D.TRIALSWORN[k].mount) G.giveTrialswornMount(D.TRIALSWORN[k].mount); } // Trialsworn Chargers ride with every character
     if (S.player.keepsake) { S.player.wardrobe = Object.assign({ back: S.player.keepsake }, S.player.wardrobe); delete S.player.keepsake; } // v10.3: keepsakes moved into the wardrobe
     // v10: the world has new names. A save keeps copies of items, so their names come fresh from the data by id;
@@ -1254,8 +1255,8 @@
   G.bountyState = function (b) { const st = (G.S.player.bounty || {})[b.id]; return st ? (st.done ? 'done' : st.prog >= b.n ? 'complete' : 'active') : 'available'; };
   G.acceptBounty = function (b) {
     const P = G.S.player; P.bounty = P.bounty || {};
-    const active = Object.values(P.bounty).filter((x) => !x.done).length;
-    if (active >= 6) return toast('You can hold 6 bounties at a time.');
+    pruneBounties(); // an earlier day's bounty has lapsed and no longer takes a place (#154)
+    if (G.bountiesHeld() >= 6) return toast('You can hold 6 bounties at a time.');
     P.bounty[b.id] = { mob: b.mob, n: b.n, prog: 0, done: false, weekly: b.weekly, day: b.weekly ? weekKey() : dayKey(), reward: { xp: b.xp, money: b.money, marks: b.marks } };
     sys(`Bounty accepted: ${b.n} ${D.MOBS[b.mob].name}.`); emit('change');
   };
@@ -1275,7 +1276,8 @@
   };
   // v10.1.1: the board shows like a quest giver (! something to take, ? something to hand in), and the bounties you
   // hold are listed with your quests, each knowing its hub (the id starts with it)
-  G.bountiesHeld = () => Object.values((G.S.player.bounty || {})).filter((st) => !st.done).length;
+  // only live bounties count toward the 6, the same ones the Quest Log shows (#154: lapsed ones used to count)
+  G.bountiesHeld = () => Object.values((G.S.player.bounty || {})).filter((st) => !st.done && bountyLive(st)).length;
   G.bountyMarker = function (hub) {
     if (!G.isHub(hub)) return null;
     const bs = G.bounties(hub);
@@ -1292,14 +1294,17 @@
     }
     return out.sort((a, b) => (b.complete - a.complete) || (a.weekly - b.weekly));
   };
+  // old days' bounties lapse: they leave the save on load, on accepting and on a kill
+  function pruneBounties() {
+    const P = G.S && G.S.player; if (!P || !P.bounty) return;
+    for (const [id, st] of Object.entries(P.bounty)) if (!bountyLive(st)) delete P.bounty[id];
+  }
   function bountyKill(mobKey) {
     const P = G.S.player; if (!P.bounty) return;
-    // old days' bounties lapse; kills only count toward today's (and this week's)
-    for (const [id, st] of Object.entries(P.bounty)) {
-      if (!st.done && !bountyLive(st)) { delete P.bounty[id]; continue; }
+    pruneBounties(); // kills only count toward today's (and this week's)
+    for (const st of Object.values(P.bounty)) {
       if (!st.done && st.mob === mobKey && st.prog < st.n) { st.prog++; if (st.prog === st.n || st.prog % 5 === 0) sys(`Bounty: ${D.MOBS[mobKey].name} ${st.prog}/${st.n}`); }
     }
-    for (const [id, st] of Object.entries(P.bounty)) if (st.done && !bountyLive(st)) delete P.bounty[id];
   }
 
   // Loot for one kill. Returns list of {item,n} and copper.
