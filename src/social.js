@@ -519,10 +519,13 @@
     if (a.kind === 'craft_order') {
       const r = D.RECIPES[a.rid], it = D.ITEMS[r.makes];
       if (!a.sent) return [{ label: 'Take the order', primary: true, fn: () => {
+        // every material must fit before any is added; otherwise the order stays open (#162: they used to be lost)
+        const short = G.slotsShort(Object.keys(r.mats).map((k) => [D.ITEMS[k], r.mats[k]]));
+        if (short) return `Make room for ${short} material${short === 1 ? '' : 's'} first.`;
         for (const k in r.mats) G.addItem(G.copyItem(k), r.mats[k]);
         a.sent = true; a.until = now() + 20 * 60000;
         G.sys(`${b ? b.name : 'They'} sent you the materials for ${it.name}. Craft it, then hand it over here.`);
-        reply(pick(['sent the mats, ty!!', 'mats in ur mailbox', 'thanks, no rush']));
+        reply(pick(['sent the mats, ty!!', 'thanks, no rush'])); // no mail line: the game has no mail (#162)
         G.emitChange();
       } }, decline];
       const made = G.countItem(r.makes);
