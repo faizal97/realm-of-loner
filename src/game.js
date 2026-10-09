@@ -3550,6 +3550,44 @@
     R.rolls = R.rolls.filter((r) => !r.done || t - r.until < 4000);
   }
   G.paused = false;   // set by the UI while a cutscene plays
+  // What the pull waits for between pulls (#159), the one rule both the pull and the screen read: each row (you first,
+  // then the group in order) with its health, mana and whether it has met the pace's thresholds; your own row is ready
+  // only once your minimum rest is over too (Ready skips it). topped: everyone has met them (what the pull waits on).
+  const REST_CAP = 25000; // at most this long past the minimum rest, the group pulls anyway
+  G.restState = function () {
+    const S = G.S, R = S.run; if (!R || R.phase !== 'rest' || !S.group) return null;
+    const t = now(), P = S.player, v = G.vitals(), pace = PACE[R.pace || 'normal'];
+    const boss = R.pulls[R.idx] && R.pulls[R.idx].boss, need = boss ? { hp: Math.max(pace.hp, pace.bossHp), mana: Math.max(pace.mana, pace.bossHp) } : pace; // a group rests before a boss
+    const hp0 = P.hp == null ? v.maxHp : P.hp;
+    const rows = [{ me: true, name: P.name, hp: hp0, maxHp: v.maxHp, mana: v.resType === 'mana' ? P.res : null, maxMana: v.resType === 'mana' ? v.maxRes : 0,
+      met: !need.hp || (hp0 >= v.maxHp * need.hp && (v.resType !== 'mana' || P.res >= v.maxRes * need.mana)) }];
+    for (const m of S.group.members) {
+      const st = E.statsFor(m), isMana = D.CLASSES[m.cls].resource === 'mana';
+      const hp = m.hp == null ? st.maxHp : m.hp, mana = isMana ? (m.res == null ? st.maxMana : m.res) : null;
+      rows.push({ char: m, name: m.name, gone: !!m.gone, hp, maxHp: st.maxHp, mana, maxMana: isMana ? st.maxMana : 0,
+        met: !need.hp || m.gone || m.hp == null || (m.hp >= st.maxHp * need.hp && (!isMana || m.res == null || m.res >= st.maxMana * need.mana)) });
+    }
+    const rested = t >= R.restUntil;
+    for (const r of rows) r.ready = r.met && !r.gone && (!r.me || rested);
+    return { need, rows, topped: rows.every((r) => r.met), rested, restLeft: Math.max(0, R.restUntil - t), capped: t >= R.restUntil + REST_CAP, tank: G.role() === 'tank' };
+  };
+  // the status line between pulls (#159): who the group waits for, then your own rest, then everyone ready
+  G.restLine = function () {
+    const st = G.restState(); if (!st) return null;
+    if (st.rows.some((r) => r.gone)) return 'Looking for replacements...';
+    const short = st.rows.filter((r) => !r.met).map((r) => {
+      const h = r.hp / r.maxHp / st.need.hp, m = r.mana != null && r.maxMana ? r.mana / r.maxMana / st.need.mana : Infinity;
+      return { r, by: Math.min(h, m), mana: m < h };
+    }).sort((a, b) => a.by - b.by);
+    if (short.length) {
+      if (st.capped && !st.tank && st.rested) return 'Pulling anyway.';
+      const { r, mana } = short[0], who = r.me ? 'your' : `${r.name}'s`;
+      const what = mana ? `${who} mana (${Math.floor(r.mana / r.maxMana * 100)}% of ${Math.round(st.need.mana * 100)}%)` : `${who} health`;
+      return `Waiting for ${what}` + (short.length > 1 ? ` +${short.length - 1} more` : '');
+    }
+    if (!st.rested) return `Resting · ${Math.ceil(st.restLeft / 1000)} s`;
+    return st.tank ? 'Everyone ready. Pull when you are.' : 'Everyone ready. Pulling.';
+  };
   function runTick() {
     const S = G.S, R = S.run;
     if (!R || R.phase === 'fight') return;
@@ -3582,11 +3620,9 @@
         S.pending.push({ at: t + 1500, bot: nb.bot.id, ch: 'party', text: B.partyLine(nb.bot, 'hello'), fromName: nb.name });
       }
       const waiting = S.group.members.some((m) => m.gone);
-      // bot tank pulls on its own when rested; player tank pulls manually
-      const pace = PACE[R.pace || 'normal'];
-      const boss = R.pulls[R.idx] && R.pulls[R.idx].boss, need = boss ? { hp: Math.max(pace.hp, pace.bossHp), mana: Math.max(pace.mana, pace.bossHp) } : pace; // a group rests before a boss
-      const topped = !need.hp || (P.hp >= v.maxHp * need.hp && (v.resType !== 'mana' || P.res >= v.maxRes * need.mana) && S.group.members.every((m) => { if (m.gone || m.hp == null) return true; const st = E.statsFor(m); return m.hp >= st.maxHp * need.hp && (D.CLASSES[m.cls].resource !== 'mana' || m.res == null || m.res >= st.maxMana * need.mana); }));
-      if (G.role() !== 'tank' && t >= R.restUntil && (topped || t >= R.restUntil + 25000) && !waiting) G.runPull(); // rolls no longer hold the group: their clock waits for you instead (v10.4)
+      // bot tank pulls on its own when rested; player tank pulls manually. The rule is G.restState's, which the screen shows (#159)
+      const topped = G.restState().topped;
+      if (G.role() !== 'tank' && t >= R.restUntil && (topped || t >= R.restUntil + REST_CAP) && !waiting) G.runPull(); // rolls no longer hold the group: their clock waits for you instead (v10.4)
       emit('runTick');
     } else if (R.phase === 'wipe' && t >= R.restUntil) {
       R.phase = 'rest'; R.restUntil = t + 6000;
