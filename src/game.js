@@ -3532,7 +3532,10 @@
       // the result for the roll card, and a winner line in General (the per-player rolls stay in the Loot channel)
       emit('rollResult', { item: r.item, entries, winner: win.name, me: !!win.me, how: win.c, v: win.v });
       sys(`${win.me ? 'You' : win.name} won ${B.link(r.item.name, r.item.q)} (${win.c === 'need' ? 'Need' : 'Greed'} ${win.v}).`);
-      if (win.me) { if (G.addItem(r.item, 1)) loot(`You won: ${B.link(r.item.name, r.item.q)}`); }
+      if (win.me) { // full bags: the bank keeps it, and says so (#161: it used to be deleted)
+        if (G.giveReward(r.item, 'Loot roll') === 'bank') toast(`Bags full: ${r.item.name} sent to your bank`);
+        loot(`You won: ${B.link(r.item.name, r.item.q)}`);
+      }
       else {
         loot(`${win.name} won: ${B.link(r.item.name, r.item.q)}`);
         const usable = G.canUseItem(r.item, win.m.cls);
