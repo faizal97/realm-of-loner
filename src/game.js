@@ -1487,10 +1487,14 @@
     }
   };
   // Buffs out of combat (Battle Shout, Fortitude, Frost Armor) just apply.
+  // a buff shorter than a minute does nothing out of a fight (only buffs of 60 s or more are kept between fights), unless
+  // the ability also heals: it is refused there and dimmed on the bar (#165)
+  G.fightBuff = (abId) => { const ab = D.ABILITIES[abId]; return !!(ab && ab.buff && ab.buff.dur < 60 && !ab.heal && !ab.hot); };
   G.castOutOfCombat = function (abId) {
     const P = G.S.player, ab = D.ABILITIES[abId];
     if (G.fight) return G.useAbility(abId);
     if (ab.combatOnly) return 'Use it in combat';
+    if (G.fightBuff(abId)) return 'Use it in a fight.'; // before any cost (#165: it took the mana and the cooldown and applied nothing)
     if (ab.cd && ((P.cds || {})[abId] || 0) > now()) return 'Not ready yet';
     if (ab.lifetap) {
       const amt = Math.round(ab.lifetap.base + ab.lifetap.perLvl * P.level);

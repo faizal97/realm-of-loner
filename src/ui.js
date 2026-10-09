@@ -1844,7 +1844,7 @@
         btn.classList.toggle('on', on);
         const u2 = C && G.pUnit, lit = !!u2 && (E.lit(u2, id) || (u2.cp >= 5 && ((D.PROCS || {})[u2.cls] || []).some((pr) => pr.on.includes('cp5') && pr.lights.includes(id))));
         btn.classList.toggle('lit', lit); // a reaction lit this ability (v10.4)
-        btn.classList.toggle('unlit', !lit && !!(D.ABILITIES[id] || {}).needAura); // usable only while lit (Overpower): grey until then (v10.8)
+        btn.classList.toggle('unlit', (!lit && !!(D.ABILITIES[id] || {}).needAura) || (!C && G.fightBuff(id))); // usable only while lit (Overpower): grey until then (v10.8); a short buff out of a fight (#165)
         // distance (v10.9): too far from its target, the button greys and says how close it needs to be
         let far = 0;
         if (u2 && D.ABILITIES[id] && id !== 'attack') { const A = D.ABILITIES[id], tid = A.target === 'ally' ? (C.allyTarget != null && C.units[C.allyTarget] && !C.units[C.allyTarget].dead ? C.allyTarget : u2.uid) : u2.target; far = E.outOfRange(C, u2, id, C.units[tid]); }
