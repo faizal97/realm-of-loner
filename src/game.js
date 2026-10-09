@@ -1422,6 +1422,13 @@
     if (why) emit('error', why);
     return why;
   };
+  // the top frame shows the ally you picked when your class can heal, from the class data: its role or any of its
+  // roles is healer (#155: the frame used a hand-written list that left out Shaman and Bard)
+  G.healsAllies = (cls) => { const c = D.CLASSES[cls]; return !!c && (c.role === 'healer' || (c.roles || []).includes('healer')); };
+  G.frameTarget = function () {
+    const C = G.fight; if (!C || !G.pUnit) return null;
+    return C.allyTarget != null && C.units[C.allyTarget] && G.healsAllies(G.pUnit.cls) ? C.allyTarget : G.pUnit.target;
+  };
   G.setTarget = function (uid) { if (G.fight && G.pUnit) { const u = G.fight.units[uid]; if (u && !u.dead) { if (u.side === 'enemy') G.pUnit.target = uid; else G.fight.allyTarget = uid; emit('target'); } } };
   G.toggleAuto = function () { if (G.pUnit) G.pUnit.auto = !G.pUnit.auto; };
   G.flee = function () {
