@@ -1327,10 +1327,18 @@
     const P = G.S.player;
     if (l.money) { l.money = Math.round(l.money * (1 + racialPassive('lootMoneyPct') / 100) * G.warBonus()); P.money += l.money; loot(`You loot ${G.moneyText(l.money)}.`); }
     let got = 0; const gotItems = [];
-    for (const it of l.items) if (G.addItem(it, 1)) { got++; gotItems.push(it); loot(`You receive loot: ${B.link(it.name, it.q)}.`); }
+    // full bags (#164): green or better goes to the bank and says so; grey and white that don't fit are named, once a kill
+    const left = [];
+    for (const it of l.items) {
+      if ((it.q || 0) >= 2) { const to = G.giveReward(it, 'Loot'); if (to === 'bank') { toast(`Bags full: ${it.name} sent to your bank`); continue; } }
+      else if (!G.addItem(it, 1)) { left.push(it); continue; }
+      got++; gotItems.push(it); loot(`You receive loot: ${B.link(it.name, it.q)}.`);
+    }
+    if (left.length) sys(`Bags full: left behind ${left.map((it) => B.link(it.name, it.q)).join(', ')}`);
     if (l.money || got) emit('lootGain', { money: l.money, items: got, got: gotItems });
     questCheck();
   }
+  G.giveLoot = (l) => giveLoot(l); // for tests (#164)
 
   // ============================================================ warlock demons
   G.petUnitFor = function (pu) {
