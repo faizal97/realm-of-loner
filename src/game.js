@@ -1401,6 +1401,7 @@
     for (const m of ((S.wparty && S.wparty.members) || [])) { const u = E.charUnit(m, 'ally', 'bot', now()); u.bot = { skill: m.bot.skill, react: 0.9 - 0.6 * m.bot.skill }; u.memberRef = m; allies.push(u); }
     G.fight = E.fight(allies, [mu], { soloUid: pu.uid });
     G.fight.kind = 'solo';
+    healPickStart(G.fight); // #156
     G.fight.addAt = null;
     // a party pulls more: each extra member usually brings another nearby creature into it
     const extra = [];
@@ -1427,14 +1428,46 @@
     if (why) emit('error', why);
     return why;
   };
-  // the top frame shows the ally you picked when your class can heal, from the class data: its role or any of its
-  // roles is healer (#155: the frame used a hand-written list that left out Shaman and Bard)
-  G.healsAllies = (cls) => { const c = D.CLASSES[cls]; return !!c && (c.role === 'healer' || (c.roles || []).includes('healer')); };
+  // Heal target (#155, #156). A player whose abilities include one aimed at an ally (target: 'ally') picks whom heals go
+  // to by tapping a party row; the pick is kept by who the member is (S.healPick, their bot id), so it holds between
+  // pulls, and it goes back to you with one message when they die or leave. The top frame shows the pick (#155: it used
+  // a hand-written class list that left out Shaman). Forms are ignored, so a Druid in bear form keeps the header.
+  G.healsAllies = () => { const P = G.S.player; return D.CLASSES[P.cls].abilities.some((a) => D.ABILITIES[a] && D.ABILITIES[a].lvl <= P.level && D.ABILITIES[a].target === 'ally'); };
+  const pickKey = (m) => (m && m.bot && m.bot.id) || (m && m.name) || null;
+  const partyNow = () => { const S = G.S; return S.run && S.group ? S.group.members.filter((m) => !m.gone) : S.wparty ? S.wparty.members : []; };
+  G.healPick = () => { const k = G.S.healPick; return k ? partyNow().find((m) => pickKey(m) === k) || null : null; };
+  G.isHealPick = (m) => !!m && !!G.S.healPick && pickKey(m) === G.S.healPick;
+  // tapping a member picks them; tapping the picked one again (or your own row, m = null) sends heals back to you
+  G.pickHeal = function (m) {
+    const S = G.S, C = G.fight;
+    S.healPick = m && !G.isHealPick(m) ? pickKey(m) : null; S.healPickName = S.healPick ? m.name : null;
+    if (C) { const u = S.healPick && C.allies.find((x) => x.memberRef && pickKey(x.memberRef) === S.healPick); C.allyTarget = u && !u.dead ? u.uid : null; }
+    emit('target'); emit('change');
+  };
+  function healPickLost(name, why) { const S = G.S; S.healPick = null; S.healPickName = null; if (G.fight) G.fight.allyTarget = null; const t = `${name} ${why}. Heals go to you.`; sys(t); toast(t); emit('target'); emit('change'); }
+  // at the start of a pull: the kept pick is selected again, or lost with a note when the member is dead
+  function healPickStart(C) {
+    const S = G.S; if (!S.healPick) return;
+    const u = C.allies.find((x) => x.memberRef && pickKey(x.memberRef) === S.healPick);
+    if (!u) return; // not in this fight: healPickCheck says so if they left
+    if (u.dead) return healPickLost(u.memberRef.name, 'died');
+    C.allyTarget = u.uid;
+  }
+  // every step: the picked member died in this fight, or left the party; when the whole party or run ends it just clears
+  function healPickCheck() {
+    const S = G.S; if (!S.healPick) return;
+    if (!(S.run && S.group) && !S.wparty) { S.healPick = null; S.healPickName = null; return; }
+    const m = G.healPick();
+    if (!m) return healPickLost(S.healPickName || 'Your heal target', 'left the party');
+    const C = G.fight, u = C && C.allies.find((x) => x.memberRef === m);
+    if (u && u.dead) healPickLost(m.name, 'died');
+  }
+  G.healPickCheck = healPickCheck;
   G.frameTarget = function () {
     const C = G.fight; if (!C || !G.pUnit) return null;
-    return C.allyTarget != null && C.units[C.allyTarget] && G.healsAllies(G.pUnit.cls) ? C.allyTarget : G.pUnit.target;
+    return C.allyTarget != null && C.units[C.allyTarget] && G.healsAllies() ? C.allyTarget : G.pUnit.target;
   };
-  G.setTarget = function (uid) { if (G.fight && G.pUnit) { const u = G.fight.units[uid]; if (u && !u.dead) { if (u.side === 'enemy') G.pUnit.target = uid; else G.fight.allyTarget = uid; emit('target'); } } };
+  G.setTarget = function (uid) { if (G.fight && G.pUnit) { const u = G.fight.units[uid]; if (u && !u.dead) { if (u.side === 'enemy') G.pUnit.target = uid; else { G.fight.allyTarget = uid; G.S.healPick = u.memberRef ? pickKey(u.memberRef) : null; G.S.healPickName = u.memberRef ? u.memberRef.name : null; } emit('target'); } } };
   G.toggleAuto = function () { if (G.pUnit) G.pUnit.auto = !G.pUnit.auto; };
   G.flee = function () {
     const C = G.fight;
@@ -3348,6 +3381,7 @@
     G.fight = E.fight(allies, enemies, { puller: tank, dungeonMult: R.mult, omens: R.omens || null, killOrder: R.killOrder || 'focus' });
     G.fight.kind = 'run';
     pu.target = (enemies.find((e) => e.mark === 'skull') || enemies[0]).uid;
+    healPickStart(G.fight); // #156
     // Momentum: pulling again within 5 sec of the last fight stacks a group buff; resting resets it
     R.momentum = R.lastFightEnd && now() - R.lastFightEnd <= MOMENTUM_WINDOW ? Math.min(MOMENTUM_MAX, (R.momentum || 0) + 1) : 0;
     if (R.momentum) {
@@ -3688,12 +3722,14 @@
     if (S.player.fishing) try { fishTick(); } catch (e) { console.error(e); } // fishing (v10.9)
     socAcc += dt; if (socAcc >= 1) { socAcc = 0; if (root.SOC) try { SOC.tick(); } catch (e) { console.error(e); } try { G.brawlTick(); } catch (e) { console.error(e); } }
     S.player.played = (S.player.played || 0) + dt;
+    if (S.healPick && !G.fight) healPickCheck(); // #156: the picked member left the party
     // combat at fixed 0.1s steps
     while (acc >= 0.1) {
       acc -= 0.1;
       const C = G.fight;
       if (C) {
         E.tick(C, 0.1);
+        if (S.healPick) healPickCheck(); // #156: the picked member died
         if (C.kind === 'run') applyBossPlan(C);
         if (C.addAt && C.t >= C.addAt.t) {
           const mu = E.mobUnit(C.addAt.inst.key, C.addAt.inst.level); mu.inst = C.addAt.inst;
