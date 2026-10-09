@@ -1677,6 +1677,13 @@
   // P.prof = { mining: { skill, max, known: [rare recipe ids] } }. Two primary professions. Data in data/professions.js.
   G.bagCap = function () { const P = G.S.player; return 16 + (P.bagsEq || []).reduce((a, b) => a + (b.bag || 0), 0); };
   G.bagsFull = () => G.S.player.bags.length >= G.bagCap();
+  // how many more bag slots a set of items ([item, n] pairs) needs than are free, counted the way G.addItem places them:
+  // a stackable item joins a stack with room, a quest item takes no slot, anything else takes a slot. 0: they all fit (#162)
+  G.slotsShort = function (list) {
+    const P = G.S.player; let need = 0;
+    for (const [it] of list) { if (G.isQuestItem(it.id)) continue; if (G.stackable(it) && P.bags.some((b) => b.item.id === it.id && b.n < 20)) continue; need++; }
+    return Math.max(0, need - (G.bagCap() - P.bags.length));
+  };
   // the Bags tab warns before your bags are full (#90): free slots from the real capacity, so bigger bags need nothing here.
   // A badge only at BAG_WARN free or fewer (amber, the count), and "Full" at none; with more room, nothing
   G.BAG_WARN = 3;
