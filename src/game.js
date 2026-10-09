@@ -1590,8 +1590,10 @@
   };
   G.bankWithdraw = function (idx) {
     const P = G.S.player, b = (P.bank || [])[idx]; if (!b) return;
-    if (G.bagsFull() && !(G.stackable(b.item) && P.bags.some((x) => x.item.id === b.item.id))) return toast('Inventory is full.');
-    P.bank.splice(idx, 1); G.addItem(b.item, b.n); emit('change');
+    // a full stack (20) is no room, and the bank lets go only of what reached the bags (#163: a stack was deleted)
+    if (G.bagsFull() && !(G.stackable(b.item) && P.bags.some((x) => x.item.id === b.item.id && x.n < 20))) return toast('Inventory is full.');
+    if (G.addItem(b.item, b.n)) P.bank.splice(idx, 1);
+    emit('change');
   };
   // What other players pay: the vendor price times a factor by quality.
   G.ahValue = (it) => (G.ahTrade(it) && !D.GEAR_SLOTS.includes(it.slot) ? Math.max(4, Math.round((it.sell || 2) * (it.slot === 'recipe' ? 8 : 5))) : Math.max(10, Math.round((it.sell || 5) * [2, 3, 6, 9, 14, 0][it.q || 1])));
