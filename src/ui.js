@@ -367,8 +367,7 @@
     const C = G.fight;
     let u = null;
     if (C && G.pUnit) {
-      u = C.units[G.pUnit.target];
-      if (C.allyTarget != null && C.units[C.allyTarget] && ['priest', 'paladin', 'druid'].includes(G.pUnit.cls)) u = C.units[C.allyTarget];
+      u = C.units[G.frameTarget()]; // a healer's picked ally, else the enemy (#155)
     }
     // no target: your frame spans the header, and Rested / In queue sit in your name row (#65)
     const P0 = G.S.player;
@@ -1279,7 +1278,7 @@
       const u = C ? C.allies.find((x) => x.memberRef === m) : null;
       const st = E.statsFor(m); const hp = u ? u.hp : (m.hp == null ? st.maxHp : m.hp);
       const bar = h('div', { class: 'bar hp', 'data-pf': u ? u.uid : '' }, h('i', { style: { width: Math.max(0, hp / st.maxHp * 100) + '%' } }), h('b', { class: 'tnum' }, Math.round(hp)));
-      pf.append(h('button', { class: 'pfr' + (u && u.dead ? ' dead' : '') + (C && u && C.allyTarget === u.uid ? ' sel' : ''), onclick: () => { if (u) { G.setTarget(u.uid); renderTarget(); markTargets(); } } },
+      pf.append(h('button', { class: 'pfr' + (u && u.dead ? ' dead' : '') + (C && u && C.allyTarget === u.uid ? ' sel' : ''), onclick: () => { if (u) { G.setTarget(u.uid); renderTarget(); markTargets(); renderPanel(); } } }, // redraw so the row shows .sel at once, as a dungeon row does (#155)
         h('div', { class: 'portrait' }, h('div', { class: 'pclip' }, img(art('portrait', looks(m))))),
         h('div', { class: 'uf-body' }, h('div', { class: 'uf-name cls-' + m.cls }, rankBadge(m), m.name, h('small', { class: 'rc' }, `${m.level} ${raceClass(m)}`)), bar, u ? h('div', { class: 'buffs rowbuffs', 'data-au': u.uid }) : null),
         h('div', { class: 'role' }, m.role === 'tank' ? 'TANK' : m.role === 'healer' ? 'HEAL' : 'DPS')));
@@ -1734,7 +1733,7 @@
     }
     // target
     if (C && G.pUnit) {
-      const tid = ['priest', 'paladin', 'druid'].includes(G.pUnit.cls) && C.allyTarget != null ? C.allyTarget : G.pUnit.target;
+      const tid = G.frameTarget();
       if (tid !== els.tUid) renderTarget();
       const t = C.units[tid];
       if (t && els.tHp) setBar(els.tHp, t.hp, t.maxHp, Math.round((t.hp / t.maxHp) * 100) + '%');
