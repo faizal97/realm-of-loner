@@ -554,7 +554,7 @@
     if (bot && bot.legend && root.D && D.LEGENDS && D.LEGENDS[bot.legend]) { const c = D.LEGENDS[bot.legend].cameo || {}; const L = c[kind] || LEGEND_VOICE[kind] || LEGEND_VOICE.hello; return L[Math.floor(Math.random() * L.length)]; }
     const T = {
       hello: ['hi', 'hey all', 'yo', 'sup', 'hello', 'o/', 'halo'],
-      pull: ['pulling', 'ready?', 'go go', 'inc', 'lets go'],
+      pull: ['pulling', 'go go', 'inc', 'lets go'], // no "ready?": nothing on screen answers it (#159)
       wipe: bot.toxic > 0.6 ? ['healer??', 'wow', 'omg this group', 'who pulled that', 'gg noobs'] : ['lol wipe', 'oops', 'rip', 'my bad', 'run back?'],
       win: ['nice', 'ez', 'gj', 'yay', 'good'],
       loot: bot.ninja ? ['sorry misclick', 'i need it for offspec', 'lol'] : ['grats', 'gz', 'nice drop'],

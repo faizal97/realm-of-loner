@@ -869,6 +869,9 @@ svg.sym { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: 
 .pf.compact .pfr { grid-template-columns: minmax(0, 1fr) auto; min-height: 30px; padding: 1px 6px; gap: 6px; }
 .pf.compact .pfr .portrait { display: none; }
 .pf.compact .uf-body { gap: 1px; }
+.pfr .ready-mark { color: #5fe36f; font-size: 12px; margin-right: 4px; } /* #159: met the pace's thresholds */
+.rest-line { color: var(--muted); font-size: 13px; margin: 2px 0 4px; }
+.btn.done { opacity: .6; }
 .pf.compact .uf-name { font-size: 12px; line-height: 12px; }
 .pf.compact .rank-badge { width: 12px; height: 12px; vertical-align: -1px; }
 .pf.compact .uf-name .rc { font-size: 11px; }

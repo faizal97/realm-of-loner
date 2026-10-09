@@ -1398,7 +1398,8 @@
     R.pulls.forEach((pl, i) => dots.append(h('i', { class: (pl.boss ? 'boss ' : '') + (i < R.idx ? 'done' : i === R.idx ? 'now' : '') })));
     const status = R.phase === 'fight' ? 'Fighting: ' + R.pulls[R.idx].label : R.phase === 'rest' && S.group.members.some((m) => m.gone) ? 'Looking for replacements...' : R.phase === 'rest' ? (G.role() === 'tank' ? 'You are the tank. Pull when ready.' : 'Resting. The tank will pull soon.') : R.phase === 'wipe' ? 'Running back...' : 'Dungeon complete.';
     // the run's name, progress and status come after the party and the decisions (#65: decisions first)
-    const head = [h('div', { class: 'sec-h' }, R.name, h('small', null, `${Math.min(R.idx + (R.phase === 'done' ? 0 : 1), R.pulls.length)}/${R.pulls.length}${R.wipes ? ' · wipes ' + R.wipes : ''}`)), dots, h('div', { style: { color: 'var(--muted)', fontSize: '13px' } }, status)];
+    const resting = R.phase === 'rest' && !C; // between pulls the status line sits above Ready/Pull instead (#159)
+    const head = [h('div', { class: 'sec-h' }, R.name, h('small', null, `${Math.min(R.idx + (R.phase === 'done' ? 0 : 1), R.pulls.length)}/${R.pulls.length}${R.wipes ? ' · wipes ' + R.wipes : ''}`)), dots, resting ? null : h('div', { style: { color: 'var(--muted)', fontSize: '13px' } }, status)].filter(Boolean);
     // Pull / Ready / Leave sit right under the progress line and stay pinned there, so a 10-player raid's frames never push them off screen
     const actions = h('div', { class: 'run-actions' }); p.append(actions);
     // party frames
@@ -1409,8 +1410,11 @@
       const u = units ? units.find((x) => (m.me ? x.kind === 'player' : x.memberRef === m.char)) : null;
       const row = h('button', { class: 'pfr' + (u && u.dead ? ' dead' : '') + (!m.me && G.isHealPick(m.char) ? ' sel' : ''), onclick: () => { G.pickHeal(m.me ? null : m.char); renderTarget(); markTargets(); renderPanel(); } },
         h('div', { class: 'portrait' }, h('div', { class: 'pclip' }, img(art('portrait', looks(m.me ? S.player : m.char.bot || m.char))))),
-        h('div', { class: 'uf-body' }, h('div', { class: 'uf-name cls-' + m.cls }, rankBadge(m.me ? S.player : m.char, m.me), m.gone ? m.name + ' (left)' : m.name, h('small', { class: 'rc' }, (m.me ? S.player.level : (m.char.level || '')) + ' ' + raceClass(m.me ? S.player : m.char))), h('div', { class: 'bar hp', 'data-pf': u ? u.uid : '' }, h('i'), h('b', { class: 'tnum' })), u ? h('div', { class: 'buffs rowbuffs', 'data-au': u.uid }) : null),
-        h('div', { class: 'role' }, m.role === 'tank' ? 'TANK' : m.role === 'healer' ? 'HEAL' : 'DPS'));
+        h('div', { class: 'uf-body' }, h('div', { class: 'uf-name cls-' + m.cls }, rankBadge(m.me ? S.player : m.char, m.me), m.gone ? m.name + ' (left)' : m.name, h('small', { class: 'rc' }, (m.me ? S.player.level : (m.char.level || '')) + ' ' + raceClass(m.me ? S.player : m.char))), h('div', { class: 'bar hp', 'data-pf': u ? u.uid : '' }, h('i'), h('b', { class: 'tnum' })),
+          // between pulls: a thin mana bar for mana users, and ✓ once the member meets the pace's thresholds (#159)
+          resting && D.CLASSES[m.cls].resource === 'mana' ? h('div', { class: 'bar mana thin', 'data-rest-mana': i }, h('i')) : null,
+          u ? h('div', { class: 'buffs rowbuffs', 'data-au': u.uid }) : null),
+        h('div', { class: 'role' }, resting ? h('span', { class: 'ready-mark', 'data-rest-mark': i }) : null, m.role === 'tank' ? 'TANK' : m.role === 'healer' ? 'HEAL' : 'DPS'));
       pf.append(row);
     });
     if (!C && R.phase === 'rest') tacticsBlock(p, R); // the pace: decide before the pull
@@ -1431,7 +1435,12 @@
       p.append(h('div', { class: 'sec-h' }, 'Enemies', h('small', null, 'tap ◎ to mark kill order')), list);
     } else {
       const row = h('div', { class: 'btn-row' });
-      if (R.phase === 'rest') row.append(h('button', { class: 'btn', onclick: () => G.runReady() }, G.role() === 'tank' ? 'Pull' : 'Ready'));
+      if (R.phase === 'rest') {
+        actions.append(h('div', { class: 'rest-line', 'data-rest-line': '' }, G.restLine() || '')); // what the pull waits for, right above the button (#159)
+        // Ready says it counted: "Ready ✓", greyed where it was; the tank's Pull stays a real action
+        const st = G.restState(), done = G.role() !== 'tank' && st && st.rested;
+        row.append(h('button', { class: 'btn' + (done ? ' done' : ''), 'data-ready': G.role() === 'tank' ? null : '', disabled: done ? true : null, onclick: () => { G.runReady(); renderPanel(); } }, G.role() === 'tank' ? 'Pull' : done ? 'Ready ✓' : 'Ready'));
+      }
       if (R.phase === 'done' && S.player.quests.defias_brotherhood === undefined && !S.player.done.defias_brotherhood && R.act === 'deadmines') row.append(h('div', { style: { fontSize: '13px', color: 'var(--muted)' } }, 'Tip: Marshal Brede in Brackenford has a quest for Blackwell.'));
       row.append(h('button', { class: 'btn alt', onclick: confirmLeaveGroup }, R.phase === 'done' ? 'Leave group' : 'Leave'));
       actions.append(row);
@@ -1792,15 +1801,20 @@
       if (S.run) document.querySelectorAll('[data-pf]').forEach((d) => { d.style.opacity = '.9'; });
     }
     // party frames at rest
+    // party frames at rest: health, mana, the ✓ marks, the status line and Ready, all from G.restState (#159)
     if (!C && S.run && S.group) {
-      const rows = document.querySelectorAll('.pfr .bar');
-      const chars = [P].concat(S.group.members);
-      rows.forEach((bar, i) => {
-        const ch = chars[i]; if (!ch) return;
-        const st = E.statsFor(ch, ch === P ? null : null);
-        const hp = ch.hp == null ? st.maxHp : ch.hp;
-        setBar(bar, hp, st.maxHp, Math.round(hp));
-      });
+      const st = G.restState();
+      if (st) {
+        document.querySelectorAll('.pf.compact .pfr').forEach((row, i) => {
+          const r = st.rows[i]; if (!r) return;
+          setBar(row.querySelector('.bar.hp'), r.hp, r.maxHp, Math.round(r.hp));
+          const mb = row.querySelector('[data-rest-mana]'); if (mb && r.maxMana) setBar(mb, r.mana, r.maxMana);
+          const mk = row.querySelector('[data-rest-mark]'); if (mk) mk.textContent = r.ready ? '✓' : '';
+        });
+        const line = document.querySelector('[data-rest-line]'); if (line) line.textContent = G.restLine();
+        const rb = document.querySelector('[data-ready]');
+        if (rb && st.rested && !rb.disabled) { rb.disabled = true; rb.classList.add('done'); rb.textContent = 'Ready ✓'; }
+      }
     }
     // action bar cooldowns
     if (els.abs) {
