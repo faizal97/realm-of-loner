@@ -24,6 +24,12 @@ Every number, label, icon and glow has to explain itself, on the screen, without
   boss does, what an Omen changes, what drops) and let them work out what to do. Never recommend or suggest: no
   "this Omen needs X", no "counter:", no "finish it fast". Explaining how a mechanic works ("tap it while it glows")
   is fine; telling them the best choice is not.
+- **A disabled button says why.** Never a bare grey: its label or the line under it gives the reason ("Bags full",
+  "Need 2g 40s", "In queue for The Smoke Pit", "Learn Riding first"). A tap that can't act says why in a toast, and a
+  state known in advance (travelling, dead, unsellable) is shown before the tap.
+- **Every action shows its result, and only a real one.** A tap that changes something redraws, toasts or logs it;
+  a refused action never shows a success message; an automatic fallback (heals going back to you, a batch stopping,
+  an item going to the bank) is announced once; a wait names what it's waiting for; anything with a timer shows it.
 
 ## 2. UI must scale
 
