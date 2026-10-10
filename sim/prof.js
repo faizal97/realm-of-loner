@@ -72,7 +72,8 @@ G.newGame({ name: 'T', cls: 'warrior', race: 'human' });
   while (G.fight) tick(0.5, 0.1);
   // auction trade goods
   G.addItem(G.copyItem('copper_bar'), 1); P.place = 'stormwind_bank';
-  const idx = P.bags.findIndex((b) => b.item.id === 'copper_bar'), n = P.bags[idx].n, v = G.ahValue(D.ITEMS.copper_bar) * n;
+  // priced where a sale is certain (#20: the usual price sells 82% of the time), so the check doesn't ride on the seed
+  const idx = P.bags.findIndex((b) => b.item.id === 'copper_bar'), n = P.bags[idx].n, v = Math.floor(G.ahValue(D.ITEMS.copper_bar) * n * G.AH_CURVE.sure);
   G.ahPost(idx, v); ok(S.ah.mine.length === 1 && S.ah.mine[0].n === n, 'posted a stack of bars');
   const before = P.money; tick(3 * 3600, 30); ok(P.money > before, 'bar stack sold');
   ok(G.ahListings().some((l) => !D.GEAR_SLOTS.includes(l.item.slot)), 'bots list trade goods');
