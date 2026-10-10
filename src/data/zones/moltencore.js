@@ -69,7 +69,7 @@
 
   // the gate: down from Cinderpeak into its fiery heart
   Object.assign(D.PLACES, {
-    molten_core_gate: { name: 'The Magma Throne', zone: 'The Cinderfields', region: D.PLACES.blackrock_mountain.region, scene: 'molten_core_gate', lvl: [60, 60], mobs: [], pool: 0, npcs: [], links: { blackrock_mountain: 20 } },
+    molten_core_gate: { gate: true, name: 'The Magma Throne', zone: 'The Cinderfields', region: D.PLACES.blackrock_mountain.region, scene: 'molten_core_gate', lvl: [60, 60], mobs: [], pool: 0, npcs: [], links: { blackrock_mountain: 20 } },
   });
   D.PLACES.blackrock_mountain.links.molten_core_gate = 20;
 

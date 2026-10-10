@@ -31,7 +31,7 @@
   });
 
   Object.assign(D.PLACES, {
-    gnomeregan_gate: { name: 'Gates of Gearhollow', zone: 'Kaldvik', region: 'dunmorogh', scene: 'gnomeregan_gate', lvl: [29, 34], mobs: [['irradiated_pillager', 6]], pool: 7, npcs: [], links: { kharanos: 22 } },
+    gnomeregan_gate: { gate: true, name: 'Gates of Gearhollow', zone: 'Kaldvik', region: 'dunmorogh', scene: 'gnomeregan_gate', lvl: [29, 34], mobs: [['irradiated_pillager', 6]], pool: 7, npcs: [], links: { kharanos: 22 } },
   });
   D.PLACES.kharanos.links.gnomeregan_gate = 22;
 

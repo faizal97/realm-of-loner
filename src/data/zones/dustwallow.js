@@ -29,7 +29,7 @@
       links: { the_quagmire: 16, the_wyrmbog: 18 } },
     the_wyrmbog: { name: 'The Dragonmire', zone: 'Saltmarsh', region: 'dustwallow', scene: 'the_wyrmbog', lvl: [59, 60], mobs: [['brood_dragonspawn', 5], ['brood_drakonid', 3]], pool: 10, npcs: [],
       links: { the_quagmire: 20, scorched_fen: 18, onyxias_lair_gate: 16 } },
-    onyxias_lair_gate: { name: "Veshmira's Lair", zone: 'Saltmarsh', region: 'dustwallow', scene: 'onyxias_lair_gate', lvl: [60, 60], safe: true, mobs: [], pool: 0, npcs: [], links: { the_wyrmbog: 16 } },
+    onyxias_lair_gate: { gate: true, name: "Veshmira's Lair", zone: 'Saltmarsh', region: 'dustwallow', scene: 'onyxias_lair_gate', lvl: [60, 60], safe: true, mobs: [], pool: 0, npcs: [], links: { the_wyrmbog: 16 } },
   });
   D.PLACES.menethil_harbor.links.theramore_isle = 60; D.PLACES.menethil_harbor.via.theramore_isle = 'Ship to Harborwatch';
   D.PLACES.crossroads.links.brackenwall_village = 60; D.PLACES.crossroads.via.brackenwall_village = 'Road to Saltmarsh';

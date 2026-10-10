@@ -32,7 +32,7 @@
   });
 
   Object.assign(D.PLACES, {
-    razorfen_gate: { name: 'The Thorn Warrens', zone: 'The Scrublands', region: 'barrens', scene: 'razorfen_gate', lvl: [29, 34], mobs: [['razorfen_quilguard', 4], ['razorfen_geomancer', 3]], pool: 7, npcs: [], links: { baeldun_digsite: 22 } },
+    razorfen_gate: { gate: true, name: 'The Thorn Warrens', zone: 'The Scrublands', region: 'barrens', scene: 'razorfen_gate', lvl: [29, 34], mobs: [['razorfen_quilguard', 4], ['razorfen_geomancer', 3]], pool: 7, npcs: [], links: { baeldun_digsite: 22 } },
   });
   D.PLACES.baeldun_digsite.links.razorfen_gate = 22;
 

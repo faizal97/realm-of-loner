@@ -35,7 +35,7 @@
     loas_rest: { name: "Spirit's Rest", zone: 'Skullreef Isles', region: 'skullreef', scene: 'loas_rest', lvl: [60, 60], mobs: [['drowned_wavebreaker', 5], ['wavebreaker_hexer', 4]], pool: 10, npcs: [], links: { sunken_pier: 18, screaming_grotto: 18, temple_steps: 16, drowned_causeway: 20 } },
     temple_steps: { name: "Shal'zua's Steps", zone: 'Skullreef Isles', region: 'skullreef', faction: 'horde', scene: 'temple_steps', lvl: [60, 60], safe: true, mobs: [], pool: 0, npcs: [], links: { loas_rest: 16 } },
     drowned_causeway: { name: 'The Drowned Causeway', zone: 'The Stormveil Reach', region: 'stormveil', scene: 'drowned_causeway', lvl: [60, 60], mobs: [['tidebound_sentinel', 4], ['drowned_wavebreaker', 4]], pool: 8, npcs: [], links: { sael_anor_outskirts: 20, loas_rest: 20, tidecrown_gate: 18 } },
-    tidecrown_gate: { name: 'The Tidecrown Citadel', zone: 'The Stormveil Reach', region: 'stormveil', scene: 'tidecrown_gate', lvl: [60, 60], mobs: [['tidebound_sentinel', 3], ['tidebound_sorceress', 2]], pool: 5, npcs: [], links: { drowned_causeway: 18 } },
+    tidecrown_gate: { gate: true, name: 'The Tidecrown Citadel', zone: 'The Stormveil Reach', region: 'stormveil', scene: 'tidecrown_gate', lvl: [60, 60], mobs: [['tidebound_sentinel', 3], ['tidebound_sorceress', 2]], pool: 5, npcs: [], links: { drowned_causeway: 18 } },
   });
   D.PLACES.grom_gol.links.bloodtide_landing = 60; D.PLACES.grom_gol.via.bloodtide_landing = 'Bloodtide ship';
 

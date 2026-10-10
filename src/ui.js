@@ -2408,6 +2408,11 @@
     return h('div', { class: 'obj turnin-to' }, qmark(done ? 'ready' : 'active', null, Q.main), done ? ' Return to ' : ' Turn in to ', h('b', null, N.name), where + '.',
       away ? h('button', { class: 'chip gold', style: { marginLeft: '6px' }, onclick: () => routeDialog(at) }, 'Show the way') : null);
   }
+  // the XP a quest gives you now (#188): once you're more than 2 levels over it, less, drawn muted and saying why
+  function questXpLine(Q, money) {
+    const over = G.S.player.level - Q.lvl, cut = G.questXpShare(Q.lvl, G.S.player.level) < 1;
+    return h('div', { class: 'money xp-line' }, h('span', { class: cut ? 'xp-cut' : null }, `${G.questXpFor(Q)} experience` + (cut ? ` (reduced: you're ${over} levels over)` : '')), h('span', { html: ' · ' + moneyHtml(money) }));
+  }
   function questDetail(qid, npc) {
     const Q = D.QUESTS[qid];
     const st = G.questState(qid);
@@ -2426,7 +2431,7 @@
       Q.group ? h('div', { class: 'obj', style: { color: '#8a1a10' } }, `Group quest (${Q.group} players). Use the group finder.`) : null,
       Q.dungeon ? h('div', { class: 'obj', style: { color: '#8a1a10' } }, `${questDungeon(Q).raid ? 'Raid' : 'Dungeon'} quest. Queue for ${questDungeon(Q).name} in Social.`) : null,
       h('h4', null, 'Rewards'),
-      h('div', { class: 'money', html: `${G.questXp(Q.lvl)} experience · ` + moneyHtml(money) }));
+      questXpLine(Q, money));
     if (reward) {
       const r = h('button', { class: 'row', style: { background: 'rgba(60,40,15,.15)', borderColor: '#b08a4a' }, onclick: () => showDialog(itemTip(reward), true) },
         itemIcon(reward), h('div', { class: 't' }, h('b', { class: 'q' + reward.q, style: { textShadow: '0 1px 0 #000' } }, reward.name), h('small', { style: { color: blockReason(reward) ? '#a01010' : '#5a3a0c' } }, blockReason(reward) ? blockReason(reward).text : 'Tap to inspect')), h('div'));

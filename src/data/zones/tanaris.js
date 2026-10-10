@@ -50,8 +50,8 @@
     noxious_lair: { name: 'The Stinging Hive', zone: 'Sirocco', region: 'tanaris', scene: 'noxious_lair', lvl: [42, 44], mobs: [['centipaar_worker', 5], ['centipaar_stinger', 4]], pool: 10, npcs: [], links: { gadgetzan: 18, dunemaul_compound: 18 } },
     eastmoon_ruins: { name: 'Dawnstone Ruins', zone: 'Sirocco', region: 'tanaris', scene: 'eastmoon_ruins', lvl: [43, 45], mobs: [['scorpid_dunestalker', 7]], pool: 9, npcs: [], links: { waterspring_field: 18, dunemaul_compound: 16 } },
     dunemaul_compound: { name: 'Sandbrute Compound', zone: 'Sirocco', region: 'tanaris', scene: 'dunemaul_compound', lvl: [44, 46], mobs: [['dunemaul_brute', 5], ['dunemaul_ogre_mage', 4]], pool: 10, npcs: [], links: { noxious_lair: 18, eastmoon_ruins: 16 } },
-    coinworks_gate: { name: 'The Coinworks', zone: 'Sirocco', region: 'tanaris', scene: 'coinworks_gate', lvl: [40, 44], mobs: [['cw_coinguard', 4], ['cw_smelter', 3]], pool: 7, npcs: [], links: { gadgetzan: 8 } },
-    zul_farrak_gate: { name: "The Dune Temple", zone: 'Sirocco', region: 'tanaris', scene: 'zul_farrak_gate', lvl: [43, 47], mobs: [['sandfury_blood_drinker', 4], ['sandfury_shadowcaster', 3]], pool: 7, npcs: [], links: { thistleshrub_valley: 18 } },
+    coinworks_gate: { gate: true, name: 'The Coinworks', zone: 'Sirocco', region: 'tanaris', scene: 'coinworks_gate', lvl: [40, 44], mobs: [['cw_coinguard', 4], ['cw_smelter', 3]], pool: 7, npcs: [], links: { gadgetzan: 8 } },
+    zul_farrak_gate: { gate: true, name: "The Dune Temple", zone: 'Sirocco', region: 'tanaris', scene: 'zul_farrak_gate', lvl: [43, 47], mobs: [['sandfury_blood_drinker', 4], ['sandfury_shadowcaster', 3]], pool: 7, npcs: [], links: { thistleshrub_valley: 18 } },
   });
   D.PLACES.nesingwary_camp.links.gadgetzan = 50; D.PLACES.nesingwary_camp.via = Object.assign(D.PLACES.nesingwary_camp.via || {}, { gadgetzan: 'Goblin zeppelin' });
 
