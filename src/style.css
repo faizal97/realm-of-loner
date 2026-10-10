@@ -880,6 +880,9 @@ svg.sym { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: 
 .pf.compact .uf-body { gap: 1px; }
 .pfr .ready-mark { color: #5fe36f; font-size: 12px; margin-right: 4px; } /* #159: met the pace's thresholds */
 .rest-line { color: var(--muted); font-size: 13px; margin: 2px 0 4px; }
+.rest-line .recap-chip { color: var(--text); margin-right: 4px; } /* the death recap (#192) */
+.recap { display: flex; flex-direction: column; gap: 8px; margin: 6px 0 10px; }
+.recap-row small, .recap-more { display: block; color: var(--muted); font-size: 11px; margin-top: 1px; }
 .btn.done { opacity: .6; }
 .pf.compact .uf-name { font-size: 12px; line-height: 12px; }
 .pf.compact .rank-badge { width: 12px; height: 12px; vertical-align: -1px; }

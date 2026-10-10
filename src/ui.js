@@ -1448,7 +1448,9 @@
     } else {
       const row = h('div', { class: 'btn-row' });
       if (R.phase === 'rest') {
-        actions.append(h('div', { class: 'rest-line', 'data-rest-line': '' }, G.restLine() || '')); // what the pull waits for, right above the button (#159)
+        // after a wipe, the recap takes the status line's place until the next pull (#192)
+        if (G.recap && !G.recap.self) actions.append(h('div', { class: 'rest-line' }, h('button', { class: 'chip recap-chip', onclick: () => recapDialog() }, `Deaths (${G.recap.deaths.length})`), h('small', null, ' tap for who died and why')));
+        else actions.append(h('div', { class: 'rest-line', 'data-rest-line': '' }, G.restLine() || '')); // what the pull waits for, right above the button (#159)
         // Ready says it counted: "Ready ✓", greyed where it was; the tank's Pull stays a real action
         const st = G.restState(), done = G.role() !== 'tank' && st && st.rested;
         row.append(h('button', { class: 'btn' + (done ? ' done' : ''), 'data-ready': G.role() === 'tank' ? null : '', disabled: done ? true : null, onclick: () => { G.runReady(); renderPanel(); } }, G.role() === 'tank' ? 'Pull' : done ? 'Ready ✓' : 'Ready'));
@@ -1930,6 +1932,17 @@
     openSheet(d.name, d.title, d.sub, d.fill, true); ui.sheetBody.scrollTop = d.scroll || 0;
   }
   function closeSheet() { if (ui.sheetEl) ui.sheetEl.remove(); ui.sheet = null; ui.sheetFn = null; ui.sheetEl = null; ui.sheetDef = null; ui.sheetStack = []; }
+  // the death recap (#192): one line per death in order, at most 5 then "+N more": name in class colour and the killing
+  // blow, then the facts of the last 5 seconds in small muted text. Facts only.
+  function recapDialog() {
+    const R = G.recap; if (!R) return;
+    const shown = R.deaths.slice(0, 5), more = R.deaths.length - shown.length;
+    showDialog([h('h3', null, R.self ? 'You died' : `Deaths (${R.deaths.length})`),
+      h('div', { class: 'recap' }, ...shown.map((d) => { const x = G.recapText(d);
+        return h('div', { class: 'recap-row' }, h('div', null, h('b', { class: 'cls-' + d.cls }, d.name), ' ' + x.head), h('small', null, x.facts)); }),
+        more > 0 ? h('small', { class: 'recap-more' }, `+${more} more`) : null),
+      h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: closeDialog }, 'Close'))], true);
+  }
   function showDialog(content, dismissable) {
     closeDialog();
     const d = h('div', { class: 'dialog', onclick: () => { if (dismissable) closeDialog(); } }, h('div', { class: 'card', onclick: (e) => e.stopPropagation() }, content));
@@ -4910,6 +4923,7 @@
     G.on('questAccept', () => snd('quest_accept'));
     G.on('lootGain', (d) => { if (d.items) snd('loot'); else if (d.money) snd('coin'); });
     G.on('sold', () => snd('coin'));
+    G.on('recap', (r) => { if (r.self) setTimeout(recapDialog, 600); else renderPanel(); }); // your own death opens it at once (#192)
     G.on('bought', () => snd('coin', { vol: 0.7 }));
     G.on('pop', () => snd('pop'));
     G.on('error', () => snd('error', { gap: 0.4, vol: 0.6 }));

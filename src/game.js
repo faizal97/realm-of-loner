@@ -3787,6 +3787,56 @@
   G.isPvp = (C) => !!C && G.PVP_KINDS.includes(C.kind);
   let pvpSpeedTold = false;
   G.setSpeed = (x) => { G.speed = G.SPEEDS.includes(x) ? x : 1; return G.speed; };
+  // the death recap (#192): who died, to what, and the facts of their last 5 seconds, read from the fight's own events.
+  // Facts only: never blame, advice or a bot's skill. A ring of each ally's last 5 s of hits and heals, so nothing in
+  // combat changes; G.recap holds the lines after a wipe in a run or your own death in the world, until the next pull.
+  const RECAP_S = 5, RECAP_LOW_MANA = 0.15;
+  const RECAP_LABEL = { slam: 'slam', hogger: 'lunge', whirl: 'whirling blades', molten: 'molten metal' };
+  const fmtN = (n) => Math.round(n).toLocaleString('en-US');
+  const roleOf = (u) => u.role || (u.kind === 'player' ? G.role() : null);
+  function blowName(C, e) {
+    const by = C.units[e.src], who = by ? `${by.name}'s ` : '', special = by && by.kind === 'mob' && (RECAP_LABEL[e.ab] || /^hard_/.test(e.ab || ''));
+    const A = !special && e.ab && D.ABILITIES[e.ab]; // a creature's special shares ids with abilities ('slam')
+    if (A) return A.name;
+    if (!e.ab) return `${who}melee hit`;
+    if (RECAP_LABEL[e.ab]) return who + RECAP_LABEL[e.ab];
+    const hard = /^hard_(.+)$/.exec(e.ab);
+    if (hard) return who + (hard[1] === 'hit' ? 'heavy hit' : `${hard[1]} attack`);
+    return who + e.ab.replace(/_/g, ' ');
+  }
+  // the healer's state when an ally died, only when it says something: dead, out of range, low on mana, busy elsewhere
+  function healerFact(C, u) {
+    const hs = C.allies.filter((h) => h !== u && (h.kind === 'player' || h.kind === 'bot') && roleOf(h) === 'healer');
+    if (!hs.length) return null;
+    const live = hs.filter((h) => !h.dead);
+    if (!live.length) return hs.length > 1 ? 'healers dead' : 'healer dead';
+    if (live.every((h) => h.pos && u.pos && E.dist(h, u) > E.DIST.ally)) return `healer${live.length > 1 ? 's' : ''} out of range`;
+    const mana = live.filter((h) => h.resType === 'mana' && h.maxRes > 0);
+    if (mana.length === live.length && mana.every((h) => h.res / h.maxRes <= RECAP_LOW_MANA)) return `healer at ${Math.round(Math.min(...mana.map((h) => h.res / h.maxRes)) * 100)}% mana`;
+    const busy = live.filter((h) => h.cast && h.cast.tgt != null && h.cast.tgt !== u.uid && C.units[h.cast.tgt]);
+    if (live.length === 1 && busy.length === 1) return `healer casting on ${C.units[busy[0].cast.tgt].name}`;
+    return null;
+  }
+  G.recapFeed = function (C, evs) {
+    const R = C.recap = C.recap || { ring: {}, deaths: [] };
+    const ally = (u) => u && u.side === 'ally' && (u.kind === 'player' || u.kind === 'bot');
+    for (const e of evs) {
+      if ((e.type === 'dmg' || e.type === 'heal') && ally(C.units[e.tgt])) (R.ring[e.tgt] = R.ring[e.tgt] || []).push({ t: e.t != null ? e.t : C.t, type: e.type, amount: e.amount || 0, src: e.src, ab: e.ab, melee: e.melee });
+      else if (e.type === 'die' && ally(C.units[e.uid])) {
+        const u = C.units[e.uid], t = e.t != null ? e.t : C.t, ring = (R.ring[u.uid] || []).filter((x) => x.t >= t - RECAP_S);
+        const hits = ring.filter((x) => x.type === 'dmg'), heals = ring.filter((x) => x.type === 'heal'), kb = hits[hits.length - 1];
+        R.deaths.push({ uid: u.uid, name: u.name, cls: u.cls, t, by: kb ? blowName(C, kb) : null, blow: kb ? kb.amount : 0,
+          took: hits.reduce((a, x) => a + x.amount, 0), heal: heals.length ? t - heals[heals.length - 1].t : null, healer: healerFact(C, u) });
+      }
+    }
+    for (const k in R.ring) { const r = R.ring[k]; while (r.length && r[0].t < C.t - RECAP_S) r.shift(); }
+  };
+  G.recapText = (d) => ({
+    head: d.by ? `died to ${d.by} (${fmtN(d.blow)})` : 'died',
+    facts: [`took ${fmtN(d.took)} in 5 s`, d.heal != null ? `last heal ${d.heal.toFixed(1)} s before` : 'no heal in 5 s', d.healer].filter(Boolean).join(' · '),
+  });
+  G.recap = null;
+  G.on('fightStart', () => { G.recap = null; }); // until the next pull
   G.update = function (dt) {
     const S = G.S;
     if (!S) return;
@@ -3820,8 +3870,12 @@
           if (tb) partySay(tb, pick(['oops', 'my bad', 'extra pack sry', 'uh oh']));
           else B.post(S, 'party', null, 'extra pack!');
         }
-        if (C.events.length) { emit('combat', C.events); C.events.length = 0; }
+        if (C.events.length) { G.recapFeed(C, C.events); emit('combat', C.events); C.events.length = 0; }
         if (C.over) {
+          // a wipe in a run, or your own death out in the world: the recap of who died and why (#192)
+          if (C.over === 'lose' && C.recap && C.recap.deaths.length && (C.kind === 'run' || (C.kind === 'solo' && G.pUnit && G.pUnit.dead))) {
+            G.recap = { deaths: C.recap.deaths, self: C.kind === 'solo' }; emit('recap', G.recap);
+          }
           // a fight always ends (#121): if a step of its ending throws, the fight is still closed, so the error shows once
           // instead of the ending being retried every frame (paying the kill again each time) with the game stuck in it
           try { if (C.kind === 'solo') endSolo(C); else if (C.kind === 'pvp') endPvp(C); else if (C.kind === 'duel') endDuel(C); else if (C.kind === 'bg') endBgFight(C); else if (C.kind === 'brawl') endBrawlFight(C); else endRunFight(C); }
