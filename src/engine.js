@@ -776,12 +776,16 @@
     u.hp = Math.max(u.hp, Math.round(u.maxHp * hpPct));
     ev(C, { type: 'shift', src: u.uid, form });
   };
-  E.shiftOut = function (C, u) {
+  // back to caster form: the same health share, the mana kept from before the shift
+  const toCaster = (u) => {
     const hpPct = u.hp / u.maxHp;
     u.form = null; u.auras = u.auras.filter((a) => a.id !== 'bear_form');
     u.resType = 'mana'; E.recalc(u);
     u.maxRes = u.st.maxMana; u.res = Math.min(u.savedMana || 0, u.maxRes);
     u.hp = Math.max(1, Math.round(u.maxHp * hpPct));
+  };
+  E.shiftOut = function (C, u) {
+    toCaster(u);
     ev(C, { type: 'shift', src: u.uid, form: null });
   };
 
@@ -1413,8 +1417,9 @@
   };
 
   // Copy a unit's state back onto its character after a fight (hp, res, long buffs).
-  E.writeBack = function (C, u, nowMs) {
-    if (u.form && !u.dead) E.shiftOut(C, u);
+  // live: a save while the fight goes on (#217) writes the caster values from a copy, so the unit keeps its form and rage
+  E.writeBack = function (C, u, nowMs, live) {
+    if (u.form && !u.dead) { if (live) { u = Object.assign({}, u); toCaster(u); } else E.shiftOut(C, u); }
     const ch = u.char;
     ch.hp = u.dead ? 0 : Math.round(u.hp);
     ch.res = u.resType === 'energy' ? 100 : Math.round(u.res);
