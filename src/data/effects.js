@@ -44,7 +44,7 @@
       desc: (L, f) => `Each kill gives you ${n(D.EFFECTS.chase_the_next.haste * (f || 1))}% haste for ${D.EFFECTS.chase_the_next.dur} sec.`,
     },
     steady_fuse: {
-      name: 'Steady Fuse', role: 'damage', fires: 'on a timer while you are in combat', icon: 'cold_blood', icd: 45, cost: 0.6, grow: GROW_FUSE, // was every 30 at a 90% cost (#22: the 40% stat floor)
+      name: 'Steady Fuse', role: 'damage', fires: 'on a timer while you are in combat', icon: 'cold_blood', icd: 45, cost: 0.58, grow: GROW_FUSE, // was every 30 at a 90% cost (#22: the 40% stat floor); 0.58 since #191's talents
       desc: (L, f) => `Every ${n(D.EFFECTS.steady_fuse.icd / (f || 1))} sec in combat, your next hit is a sure critical hit.`, // an upgrade shortens the wait (#37)
     },
     glass_heart: {
@@ -73,7 +73,7 @@
     },
     // survival
     stubborn_blood: {
-      name: 'Stubborn Blood', role: 'survival', fires: 'you fall below a share of your health', icon: 'frenzied_regeneration', icd: 60, below: 0.3, pct: 0.06, dur: 6, cost: 0.5,
+      name: 'Stubborn Blood', role: 'survival', fires: 'you fall below a share of your health', icon: 'frenzied_regeneration', icd: 60, below: 0.3, pct: 0.06, dur: 6, cost: 0.52, // 0.52 since #191's talents (smallest cost that passes the effects gate)
       desc: (L, f) => { const F = D.EFFECTS.stubborn_blood; return `Falling below ${n(F.below * 100)}% health heals you for ${n(F.pct * (f || 1) * 100)}% of your health over ${F.dur} sec. At most once every ${F.icd} sec.`; },
     },
   };
