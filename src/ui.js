@@ -1362,6 +1362,14 @@
   // battle speed (v10.3): a chip on the battle scene, 1x → 2x → 3x, remembered on this device; shown in PvE fights only
   const speedFight = () => !!(G.fight && !G.isPvp(G.fight)); // no chip in a PvP fight: it always runs at 1× (#193)
   const speedChip = () => h('button', { class: 'speed-chip', id: 'speed', 'aria-label': 'Battle speed', hidden: !speedFight(), onclick: (e) => { e.stopPropagation(); const i = G.SPEEDS.indexOf(G.speed); G.setSpeed(G.SPEEDS[(i + 1) % G.SPEEDS.length]); try { localStorage.setItem('azsolo.speed', String(G.speed)); } catch (er) { } e.currentTarget.textContent = `${G.speed}×`; } }, `${G.speed}×`);
+  // a creature on its way (#122): in the fight list from the start, with when it joins, so the whole pull is seen up
+  // front; the row gives way to the creature when it arrives (the 'join' event redraws)
+  function joiningRow(C, list) {
+    if (!C.addAt || !C.addAt.inst) return;
+    const k = C.addAt.inst.key;
+    list.append(h('div', { class: 'row off joining' }, h('div', { class: 'ic mob' }, img(mobArt(k))),
+      h('div', { class: 't' }, h('b', null, D.MOBS[k].name), h('small', { 'data-joins': '1' }, `joins in ${Math.max(1, Math.ceil(C.addAt.t - C.t))} s`))));
+  }
   function fightPanel(p) {
     const C = G.fight;
     if (G.S.wparty) partyBlock(p);
@@ -1374,6 +1382,7 @@
         h('div', { class: 'r tnum', 'data-hp': u.uid }, ''),
         h('div', { class: 'buffs rowbuffs', 'data-au': u.uid })));
     }
+    joiningRow(C, list); // out questing too, where social pulls happen (#122)
     p.append(h('div', { class: 'sec-h' }, 'In combat', h('small', null, 'tap an enemy to target it')), list);
     p.append(h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', onclick: () => G.flee() }, G.fight && (G.fight.kind === 'duel' || G.fight.kind === 'brawl') ? 'Yield' : 'Run away')));
     tracker(p);
@@ -1473,12 +1482,7 @@
           h('div', { class: 'r' }, h('span', { class: 'tnum', 'data-hp': u.uid }, ''), h('span', { class: 'markbtn', 'data-mk': u.uid, onclick: (e) => { e.stopPropagation(); G.cycleUnitMark(u.uid); } }, MARK_SYM[u.mark] || '◎')),
           h('div', { class: 'buffs rowbuffs', 'data-au': u.uid })));
       }
-      // a creature on its way (#122): in the list from the start, with when it joins, so the whole pull is seen up front
-      if (C.addAt && C.addAt.inst) {
-        const k = C.addAt.inst.key;
-        list.append(h('div', { class: 'row off joining' }, h('div', { class: 'ic mob' }, img(mobArt(k))),
-          h('div', { class: 't' }, h('b', null, D.MOBS[k].name), h('small', { 'data-joins': '1' }, `joins in ${Math.max(1, Math.ceil(C.addAt.t - C.t))} s`))));
-      }
+      joiningRow(C, list);
       p.append(h('div', { class: 'sec-h' }, 'Enemies', h('small', null, 'tap ◎ to mark kill order')), list);
     } else {
       const row = h('div', { class: 'btn-row' });
