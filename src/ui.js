@@ -2612,9 +2612,32 @@
       denalan: 'The rootlings have been acting so oddly...', saelienne: 'Welcome to Nyrwen, child of the stars.', mydrannul: 'Fine Sylari steel. Look, but do not touch.',
     })[npc] || 'Hello.';
   }
+  // selling (#168): a green or better, or an upgrade, asks first; Keep carries the weight, since there is no buyback
+  function sellAsk(idx, done) {
+    const P = G.S.player, b = P.bags[idx]; if (!b) return;
+    const sell = () => { const i = P.bags.indexOf(b); if (i >= 0) G.sell(i); done(); };
+    if (!G.sellNeedsConfirm(b.item)) return sell();
+    const it = b.item, up = D.GEAR_SLOTS.includes(it.slot) && G.isUpgrade(it), cur = up ? P.equip[it.slot] : null;
+    showDialog([h('h3', null, 'Sell ', h('span', { class: 'q' + it.q }, it.name + (b.n > 1 ? ' ×' + b.n : '')), '?'),
+      h('p', { html: `The vendor pays ${moneyHtml((it.sell || 1) * b.n)}. Sold items can't be bought back.` }),
+      up ? h('p', null, cur ? ["It's an upgrade over your ", h('span', { class: 'q' + cur.q }, cur.name), '.'] : `It's an upgrade: nothing is in your ${D.SLOT_LABEL[it.slot]} slot.`) : null,
+      h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: closeDialog }, 'Keep'), h('button', { class: 'btn alt', onclick: () => { closeDialog(); sell(); } }, 'Sell'))], true);
+  }
   function openVendor(npc) {
+    ui.lastSale = null; ui.saleAt = 0;
     openSheet('vendor', D.NPCS[npc].name, 'Tap to buy · your money: ' + G.moneyText(G.S.player.money), (b, t) => {
-      t.querySelector('small').textContent = 'Tap to buy · your money: ' + G.moneyText(G.S.player.money);
+      const sub = t.querySelector('small'); sub.textContent = 'Tap to buy · your money: ';
+      const cash = h('span', { class: 'vend-money' }, G.moneyText(G.S.player.money)); sub.append(cash);
+      // the money answers the tap (#168): a gold flash once, where the eye checks
+      // timed from the sale, so the re-renders a sale causes continue one flash instead of cutting it
+      const since = Date.now() - (ui.saleAt || 0);
+      if (since < 400) { cash.classList.add('money-flash'); cash.style.animationDelay = `-${since}ms`; }
+      // the last sale, in one line that each sale replaces (#168): never a stack of toasts over the slots being tapped
+      const ls = ui.lastSale;
+      // in the sheet's fixed header, under the money row, so it stays in sight while you tap the bag slots below
+      t.querySelectorAll('.last-sale').forEach((x) => x.remove());
+      t.append(h('div', { class: 'last-sale' }, !ls ? h('span', { class: 'muted' }, 'Tap an item in your bags below to sell it.')
+        : ['Sold ', ls.item ? h('b', { class: 'q' + (ls.item.q || 0) }, ls.item.name) : `${ls.many} ${ls.grey ? 'grey ' : ''}item${ls.many > 1 ? 's' : ''}`, ls.item && ls.n > 1 ? ` ×${ls.n}` : '', h('span', { html: ' for ' + moneyHtml(ls.money) })]));
       const stock = G.vendorStock(npc);
       const list = h('div', { class: 'list' });
       for (const it of stock) {
@@ -2631,7 +2654,7 @@
       b.append(h('div', { class: 'sec-h' }, 'Sell', h('small', null, 'tap an item to sell it')));
       const junk = G.S.player.bags.filter((x) => x.item.q === 0).length;
       b.append(h('button', { class: 'btn alt wide', disabled: !junk, onclick: () => { G.sellJunk(); ui.sheetFn(); } }, junk ? `Sell all grey items (${junk})` : 'No grey items to sell'));
-      b.append(bagGrid((idx) => { G.sell(idx); ui.sheetFn(); }));
+      b.append(bagGrid((idx) => sellAsk(idx, () => ui.sheetFn())));
     });
   }
 
@@ -2722,7 +2745,7 @@
         if (G.usable(it)) acts.append(h('button', { class: 'btn', onclick: () => { G.useItem(ui.bagSel); ui.bagSel = null; ui.sheetFn(); } }, it.slot === 'bag' ? 'Equip bag' : it.slot === 'recipe' ? 'Learn' : 'Use'));
         if (it.id === 'hearthstone') acts.append(h('button', { class: 'btn', onclick: () => { G.hearth(); closeSheet(); } }, 'Use'));
         const vendorHere = D.PLACES[P.place].vendor || D.PLACES[P.place].gearVendor;
-        if (vendorHere && !it.noSell && it.slot !== 'quest') acts.append(h('button', { class: 'btn alt', onclick: () => { G.sell(ui.bagSel); ui.bagSel = null; ui.sheetFn(); } }, 'Sell'));
+        if (vendorHere && !it.noSell && it.slot !== 'quest') acts.append(h('button', { class: 'btn alt', onclick: () => sellAsk(ui.bagSel, () => { ui.bagSel = null; ui.sheetFn(); }) }, 'Sell'));
         if (!it.noSell && it.slot !== 'quest' && !vendorHere) acts.append(h('div', { style: { color: 'var(--muted)', fontSize: '13px', alignSelf: 'center' } }, 'Sell it at a vendor.'));
         if (G.canDiscard(it)) acts.append(h('button', { class: 'btn alt', style: { color: '#ff6a5a' }, onclick: () => throwAway(ui.bagSel) }, 'Throw away'));
         const cur = P.equip[it.slot];
@@ -4887,7 +4910,7 @@
     G.on('questDone', () => snd('quest_done'));
     G.on('questAccept', () => snd('quest_accept'));
     G.on('lootGain', (d) => { if (d.items) snd('loot'); else if (d.money) snd('coin'); });
-    G.on('sold', () => snd('coin'));
+    G.on('sold', (e) => { snd('coin'); ui.lastSale = e; ui.saleAt = Date.now(); });
     G.on('bought', () => snd('coin', { vol: 0.7 }));
     G.on('pop', () => snd('pop'));
     G.on('error', () => snd('error', { gap: 0.4, vol: 0.6 }));
