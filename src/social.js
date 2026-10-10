@@ -104,6 +104,12 @@
     G.sys(`You have left ${name}.`);
     G.emitChange();
   };
+  // a request's time left, as the chat line shows it (#166): "4m", "<1m", or "expired"; null for a line with no request
+  SOC.timeLeft = function (a) {
+    if (!a || (a.state !== 'open' && a.state !== 'expired')) return null;
+    const left = a.until - now();
+    return a.state === 'expired' || left <= 0 ? 'expired' : left < 60000 ? '<1m' : `${Math.floor(left / 60000)}m`;
+  };
   SOC.apply = function (g) {
     const S = G.S, P = S.player;
     if (P.guild >= 0) return G.toast('Leave your guild first.');
@@ -466,8 +472,9 @@
     }
     if (a.kind === 'help_wanted') {
       const r = (S.helpWanted || []).find((x) => x.id === a.hw);
-      if (!r) { close('expired'); return []; }
-      return [{ label: `Help as ${roleName(r.role)}`, primary: true, fn: () => { if (S.run || S.queue || G.fight) return 'Leave your current group first.'; G.joinHelpWanted(r.id); close(); help(); } }, decline];
+      if (!r) return [{ label: 'Someone else took this spot', disabled: true, fn: () => null }]; // says what happened (#166)
+      // the request closes only when the join worked; a refusal is told and the request stays (#166)
+      return [{ label: `Help as ${roleName(r.role)}`, primary: true, fn: () => { if (S.run || S.queue || G.fight) return 'Leave your current group first.'; const why = G.joinHelpWanted(r.id); if (why) return why; close(); help(); } }, decline];
     }
     if (a.kind === 'carry') {
       return [{ label: `Run it (tip ${coin(a.tip)})`, primary: true, fn: () => { if (G.joinChatGroup(a.act, G.role(), { leader: a.bot, soc: { kind: 'carry', tip: a.tip, bot: a.bot } })) { close(); help(); } } }, decline];
@@ -572,7 +579,7 @@
       } })).concat([decline]);
     }
     if (a.kind === 'guild_invite') return [{ label: `Join <${B.GUILDS[a.g]}>`, primary: true, disabled: P.guild >= 0, fn: () => { if (P.guild >= 0) return 'You are already in a guild.'; G.joinGuild(a.g); close(); } }, decline];
-    if (a.kind === 'guild_apply') return [{ label: `Apply to <${B.GUILDS[a.g]}>`, primary: true, disabled: P.guild >= 0, fn: () => { SOC.apply(a.g); close(); } }, decline];
+    if (a.kind === 'guild_apply') return [{ label: `Apply to <${B.GUILDS[a.g]}>`, primary: true, disabled: P.guild >= 0, fn: () => { const why = SOC.apply(a.g); if (why) return why; close(); } }, decline]; // closes only on success (#166)
     if (a.kind === 'g_mats') {
       const have = G.countItem(a.item);
       return [{ label: have >= a.n ? `Give ${a.n}` : `You have ${have}/${a.n}`, primary: true, disabled: have < a.n, fn: () => {
