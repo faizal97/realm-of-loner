@@ -466,10 +466,12 @@
   };
   // a sale that asks first (#168): green or better, or an upgrade; greys, whites and trade goods sell on one tap
   G.sellNeedsConfirm = (it) => !!it && ((it.q || 0) >= 2 || (D.GEAR_SLOTS.includes(it.slot) && G.isUpgrade(it)));
+  G.sellable = (it) => !!it && !it.noSell && it.slot !== 'quest';
   G.sell = function (idx) {
     const P = G.S.player;
     const b = P.bags[idx];
-    if (!b || b.item.noSell || b.item.slot === 'quest') return;
+    if (!b) return;
+    if (!G.sellable(b.item)) return toast(`The vendor won't buy ${b.item.name}.`); // (#167) the Waystone, keepsakes, quest items
     const v = (b.item.sell || 1) * b.n;
     P.money += v; P.bags.splice(idx, 1);
     sys(`Sold ${b.item.name}${b.n > 1 ? ' x' + b.n : ''} for ${G.moneyText(v)}.`);
@@ -966,7 +968,8 @@
   G.gather = function () {
     const S = G.S, P = S.player;
     const pl = D.PLACES[P.place];
-    if (!pl.gather || G.fight) return;
+    if (!pl.gather) return;
+    if (G.fight) return toast('Finish the fight first.'); // a tap that can't act says why (#167)
     const W = placeState(P.place);
     if (W.nodes.n <= 0) return toast('Nothing left to pick up. Wait for more to appear.');
     stopActions();
@@ -975,6 +978,15 @@
   };
   function stopActions() { const P = G.S.player; P.eating = null; P.drinking = null; P.casting = null; P.fishing = null; }
   G.EAT_SECS = 18; G.DRINK_SECS = 12; // a drink is quicker than a meal: casters' downtime while levelling (#4), the same mana back
+  // why the action bar can't act out of a fight (#167), known before the tap so the bar can dim: dead, nothing works;
+  // on the road, abilities wait, but food, drink and potions still do
+  G.barBlock = function (id) {
+    const P = G.S.player;
+    if (G.fight) return null;
+    if (P.ghostUntil) return `You're dead. You revive in ${Math.max(1, Math.ceil((P.ghostUntil - now()) / 1000))} sec.`;
+    if (P.travel && !['eat', 'drink', 'potion'].includes(id)) return "You're travelling.";
+    return null;
+  };
   G.consume = function (kind) {
     const S = G.S, P = S.player;
     if (G.fight) return toast('You can\'t do that while in combat.');
@@ -1790,7 +1802,8 @@
   };
   G.gatherNode = function (i) {
     const S = G.S, P = S.player;
-    if (G.fight || S.run || P.travel) return;
+    if (G.fight) return toast('Finish the fight first.'); // (#167) on the road the nodes aren't in the scene, so no tap reaches here
+    if (S.run || P.travel) return;
     const W = placeState(P.place), key = W.pnodes && W.pnodes.list[i]; if (!key) return;
     const N = D.NODES[key], p = G.profs()[N.prof];
     if (!p) return;
