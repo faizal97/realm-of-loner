@@ -70,7 +70,7 @@
   G.save = function () {
     if (!G.S) return;
     G.S.lastSeen = now();
-    if (G.fight && G.pUnit) E.writeBack(G.fight, G.pUnit, now());
+    if (G.fight && G.pUnit) E.writeBack(G.fight, G.pUnit, now(), true); // the fight goes on: don't shift it out (#217)
     ls.set(CHAR_KEY(G.S.id), JSON.stringify(G.S));
     const idx = readIndex().filter((c) => c.id !== G.S.id); idx.push(summary(G.S)); writeIndex(idx);
   };
