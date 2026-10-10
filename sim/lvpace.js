@@ -34,6 +34,19 @@ const placeFor = (L) => Object.keys(D.PLACES).filter((k) => { const p = D.PLACES
 function hour(cls, L) {
   G.newGame({ name: 'L', cls, race: 'human' }); const S = G.S, P = S.player; S.flags.warModeAsked = true; S.flags.warMode = false; S.flags.noInvites = true;
   P.level = L; P.equip = G.botChar({ name: 'x', cls, race: 'human', level: L, skill: 0.8 }).equip; P.talents = G.autoTalents(cls, 'dps', L, 0); P.role = 'dps';
+  // gear options (#194): GEARSET=green puts a class-fitted quest green in every slot (what a questing character wears);
+  // HEIR=1 then swaps the weapon, cloak and ring for heirlooms (+15% XP). HEIR_SHARE=0.9 scales their stats to that share of the
+  // green's (stat points, weapon damage, cloak armour); HEIR_SHARE unset is the game's own heirloom formula.
+  if (process.env.GEARSET === 'green' || process.env.HEIR) {
+    const C = D.CLASSES[cls], opts = (slot) => Object.assign({ affix: G.classAffix(cls) }, slot === 'weapon' ? { wtype: P.equip.weapon && P.equip.weapon.wtype || C.weapons[0] } : slot === 'ranged' ? {} : slot === 'back' || slot === 'finger' ? {} : { atype: C.armorType });
+    for (const slot of D.GEAR_SLOTS) if (slot !== 'offhand' && (slot !== 'ranged' || C.ranged)) P.equip[slot] = G.genGear(slot, L, 2, opts(slot));
+    if (process.env.HEIR) {
+      const SH = process.env.HEIR_SHARE ? +process.env.HEIR_SHARE : null;
+      if (SH != null && !G.makeHeirloom._scaled) { const mk = G.makeHeirloom; G.makeHeirloom = function (id, lv) { const it = mk.call(this, id, lv), g = Math.round(0.55 * Math.max(1, lv) + 1), keys = Object.keys(it.stats), tot = keys.reduce((a, k) => a + it.stats[k], 0), f = SH * g / tot; for (const k of keys) it.stats[k] = Math.max(1, Math.round(it.stats[k] * f)); if (it.dmg) { const k2 = SH * 1.1 / 1.22; it.dmg = it.dmg.map((x) => Math.max(1, Math.round(x * k2))); } if (it.armor) it.armor = Math.round(it.armor * SH * 0.297 / (1.1)); return it; }; G.makeHeirloom._scaled = true; }
+      const mine = Object.keys(D.HEIRLOOMS).filter((id) => { const H = D.HEIRLOOMS[id]; return ['weapon', 'back', 'finger'].includes(H.slot) && G.canUseItem(G.makeHeirloom(id, 30), cls); });
+      for (const slot of ['weapon', 'back', 'finger']) { const id = mine.filter((x) => D.HEIRLOOMS[x].slot === slot).sort((a, b) => G.itemScore(G.makeHeirloom(b, L), cls) - G.itemScore(G.makeHeirloom(a, L), cls))[0]; if (id) P.equip[slot] = G.makeHeirloom(id, L); }
+    }
+  }
   P.place = placeFor(L); P.bagsEq = [0, 1, 2, 3].map(() => G.copyItem('woolen_bag')); P.hp = null; P.res = null;
   // the pet a levelling player has (#4): a Warlock's Voidwalker from level 10 (it tanks), a Hunter's tamed beast of its
   // level from 10; below that a Warlock's imp, and a Hunter none (#34: a new Hunter's imp is a bug)

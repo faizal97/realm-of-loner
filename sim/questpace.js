@@ -67,7 +67,7 @@ function walk(race, from, to) {
     }
     travel += route(cur, giver) + route(giver, objAt || giver) + route(objAt || giver, turnin); talk += TALK; cur = turnin;
     kills[lvl] = (kills[lvl] || 0) + n;
-    gain(G.questXp(Q.lvl) + n * Math.round(G.xpForKill(Math.max(lvl, Q.lvl - 1), false)));
+    gain((G.questXpShare ? Math.round(G.questXp(Q.lvl) * G.questXpShare(Q.lvl, lvl)) : G.questXp(Q.lvl)) + n * Math.round(G.xpForKill(Math.max(lvl, Q.lvl - 1), false))); // the falloff for outlevelled quests (#188) where the build has it
   }
   return { free: travel + talk, travel, kills };
 }
