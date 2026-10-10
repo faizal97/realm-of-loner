@@ -99,7 +99,7 @@ const PLAN = [
   { effect: 'stubborn_blood', classes: ['warrior', 'rogue'], wins: ['solo'], loses: ['healed'] },
   { effect: 'kindled_edge', classes: ['rogue', 'warrior'], wins: ['boss'], loses: ['shorttrash'] },
   { effect: 'chase_the_next', classes: ['rogue', 'warrior'], wins: ['trash'], loses: ['boss'] },
-  { effect: 'steady_fuse', classes: ['mage', 'warrior'], wins: ['boss'], loses: ['highcrit'] },
+  { effect: 'steady_fuse', classes: ['mage', 'warrior'], wins: ['boss'], loses: ['highcrit'], loseBar: -1.75 }, // its own lose bar (game designer, #191): no cost passes both -2 and +2, and a sure crit on a timer barely loses where crits are already common
   { effect: 'glass_heart', classes: ['rogue', 'warrior'], wins: ['healed'], loses: ['solo'] },
   { effect: 'lavish_mend', classes: ['priest', 'druid'], wins: ['groupwide'], loses: ['tankonly'], provisional: '#40, judged on sim/capacity.js' }, // wins: survival, +5 to +15 points (game designer, #22),
   { effect: 'tethered_mend', classes: ['priest', 'druid'], wins: ['tankonly'], loses: ['groupwide'], provisional: '#40, judged on sim/capacity.js' },
@@ -161,7 +161,8 @@ const all = [];
       g(w, 5, 1, () => Math.max(...res.wins.map(mean)), (v) => `${P.effect} wins somewhere: at least +5 points of survival in a wins case (best ${v.toFixed(1)})`);
       g(p, 15, -1, () => Math.max(...pp.map(mean)), (v) => `${P.effect} is not too strong: at most +15 points of survival (${v.toFixed(1)})`);
     } else g(win, 2, 1, () => Math.max(...res.wins.map(mean)), (v) => `${P.effect} wins somewhere: at least +2% in a wins case (best ${v.toFixed(1)}%)`);
-    g(lose, -2, -1, () => Math.min(...res.loses.map(mean)), (v) => `${P.effect} loses somewhere: at least -2% in a loses case (worst ${v.toFixed(1)}%)`);
+    const loseBar = P.loseBar != null ? P.loseBar : -2; // -2 unless the plan gives the effect its own bar
+    g(lose, loseBar, -1, () => Math.min(...res.loses.map(mean)), (v) => `${P.effect} loses somewhere: at least ${loseBar}% in a loses case (worst ${v.toFixed(1)}%)`);
     g(best, 8, -1, () => Math.max(...pc.map(mean)), (v) => `${P.effect} is not too strong: at most +8% in its best case (${v.toFixed(1)}%)`);
   }
   // the ceiling holds: different effects worn together in the case that suits them stay within +10% of plain gear

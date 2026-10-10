@@ -44,7 +44,7 @@
       desc: (L, f) => `Each kill gives you ${n(D.EFFECTS.chase_the_next.haste * (f || 1))}% haste for ${D.EFFECTS.chase_the_next.dur} sec.`,
     },
     steady_fuse: {
-      name: 'Steady Fuse', role: 'damage', fires: 'on a timer while you are in combat', icon: 'cold_blood', icd: 45, cost: 0.58, grow: GROW_FUSE, // was every 30 at a 90% cost (#22: the 40% stat floor); 0.58 since #191's talents
+      name: 'Steady Fuse', role: 'damage', fires: 'on a timer while you are in combat', icon: 'cold_blood', icd: 45, cost: 0.51, grow: GROW_FUSE, // was every 30 at a 90% cost (#22: the 40% stat floor); 0.51 since #191's talents, with its own lose bar of -1.75 in sim/effects.js
       desc: (L, f) => `Every ${n(D.EFFECTS.steady_fuse.icd / (f || 1))} sec in combat, your next hit is a sure critical hit.`, // an upgrade shortens the wait (#37)
     },
     glass_heart: {
