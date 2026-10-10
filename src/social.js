@@ -472,7 +472,7 @@
     }
     if (a.kind === 'help_wanted') {
       const r = (S.helpWanted || []).find((x) => x.id === a.hw);
-      if (!r) return [{ label: 'Someone else took this spot', disabled: true, fn: () => null }]; // says what happened (#166)
+      if (!r) return [{ label: 'Someone else took this spot', disabled: true, why: true, fn: () => null }]; // says what happened (#166)
       // the request closes only when the join worked; a refusal is told and the request stays (#166)
       return [{ label: `Help as ${roleName(r.role)}`, primary: true, fn: () => { if (S.run || S.queue || G.fight) return 'Leave your current group first.'; const why = G.joinHelpWanted(r.id); if (why) return why; close(); help(); } }, decline];
     }
@@ -494,7 +494,7 @@
     }
     if (a.kind === 'wtb') {
       const have = G.countItem(a.item);
-      return [{ label: have >= a.n ? `Sell ${a.n} for ${coin(a.price)}` : `You have ${have}/${a.n}`, primary: true, disabled: have < a.n, fn: () => {
+      return [{ label: have >= a.n ? `Sell ${a.n} for ${coin(a.price)}` : `You have ${have}/${a.n}`, primary: true, disabled: have < a.n, why: have < a.n, fn: () => {
         if (G.countItem(a.item) < a.n) return `You need ${a.n}.`;
         G.removeItem(a.item, a.n); P.money += a.price;
         G.sys(`You sold ${a.n} ${D.ITEMS[a.item].name} to ${b ? b.name : 'them'} for ${coin(a.price)}.`);
@@ -502,7 +502,9 @@
       } }, decline];
     }
     if (a.kind === 'wts') {
-      return [{ label: `Buy for ${coin(a.price)}`, primary: true, disabled: P.money < a.price, fn: () => {
+      // a disabled button says why (#169): the label is the shortfall
+      const short = a.price - P.money;
+      return [{ label: short > 0 ? `Need ${coin(short)}` : `Buy for ${coin(a.price)}`, primary: true, disabled: short > 0, why: short > 0, need: short > 0 ? short : 0, fn: () => {
         if (P.money < a.price) return 'Not enough money.';
         if (G.bagsFull()) return 'Your bags are full.';
         P.money -= a.price; G.addItem(JSON.parse(JSON.stringify(a.itemData)), 1);
@@ -516,7 +518,8 @@
     }
     if (a.kind === 'swap') {
       const have = G.countItem(a.item);
-      return [{ label: have >= a.n ? `Swap ${a.n} ${D.ITEMS[a.item].name}` : `You have ${have}/${a.n}`, primary: true, disabled: have < a.n || G.bagsFull(), fn: () => {
+      const full = have >= a.n && G.bagsFull();
+      return [{ label: have < a.n ? `You have ${have}/${a.n}` : full ? 'Bags full' : `Swap ${a.n} ${D.ITEMS[a.item].name}`, primary: true, disabled: have < a.n || full, why: have < a.n || full, fn: () => {
         if (G.countItem(a.item) < a.n) return `You need ${a.n}.`;
         G.removeItem(a.item, a.n); G.addItem(JSON.parse(JSON.stringify(a.itemData)), 1);
         G.sys(`You traded ${a.n} ${D.ITEMS[a.item].name} for ${a.itemData.name}.`);
@@ -536,7 +539,7 @@
         G.emitChange();
       } }, decline];
       const made = G.countItem(r.makes);
-      return [{ label: made ? `Hand over ${it.name} (+${coin(a.tip)})` : `Craft ${it.name} first`, primary: true, disabled: !made, fn: () => {
+      return [{ label: made ? `Hand over ${it.name} (+${coin(a.tip)})` : `Craft ${it.name} first`, primary: true, disabled: !made, why: !made, fn: () => {
         if (!G.countItem(r.makes)) return `Craft ${it.name} first (Hero → Professions).`;
         G.removeItem(r.makes, 1); P.money += a.tip;
         G.sys(`You handed ${it.name} to ${b ? b.name : 'them'} and got ${coin(a.tip)}.`);
@@ -544,7 +547,8 @@
       } }, { label: 'Cancel', fn: () => { close('declined'); reply('ok no worries, keep the mats'); } }];
     }
     if (a.kind === 'duel') {
-      return [{ label: `Accept (${coin(a.wager)})`, primary: true, disabled: P.money < a.wager, fn: () => {
+      const short = a.wager - P.money; // (#169)
+      return [{ label: short > 0 ? `Need ${coin(short)}` : `Accept (${coin(a.wager)})`, primary: true, disabled: short > 0, why: short > 0, need: short > 0 ? short : 0, fn: () => {
         if (P.money < a.wager) return 'You can\'t cover the wager.';
         if (!G.startDuel(a.bot, a.wager)) return null;
         close();
@@ -552,7 +556,7 @@
     }
     if (a.kind === 'rare') {
       const M = D.MOBS[a.mob];
-      return [{ label: P.place === a.place ? `${M.name} is here` : 'Go there', primary: true, disabled: P.place === a.place, fn: () => (P.place === a.place ? null : 'route:' + a.place) }, { label: 'Not interested', fn: () => close('declined') }];
+      return [{ label: P.place === a.place ? `${M.name} is here` : 'Go there', primary: true, disabled: P.place === a.place, why: P.place === a.place, fn: () => (P.place === a.place ? null : 'route:' + a.place) }, { label: 'Not interested', fn: () => close('declined') }];
     }
     if (a.kind === 'gift') {
       return [{ label: 'Thank them', primary: true, fn: () => {
@@ -582,7 +586,7 @@
     if (a.kind === 'guild_apply') return [{ label: `Apply to <${B.GUILDS[a.g]}>`, primary: true, disabled: P.guild >= 0, fn: () => { const why = SOC.apply(a.g); if (why) return why; close(); } }, decline]; // closes only on success (#166)
     if (a.kind === 'g_mats') {
       const have = G.countItem(a.item);
-      return [{ label: have >= a.n ? `Give ${a.n}` : `You have ${have}/${a.n}`, primary: true, disabled: have < a.n, fn: () => {
+      return [{ label: have >= a.n ? `Give ${a.n}` : `You have ${have}/${a.n}`, primary: true, disabled: have < a.n, why: have < a.n, fn: () => {
         if (G.countItem(a.item) < a.n) return `You need ${a.n}.`;
         G.removeItem(a.item, a.n); P.money += a.pay;
         G.sys(`You gave ${a.n} ${D.ITEMS[a.item].name} to ${b ? b.name : 'your guildmate'}; they paid you ${coin(a.pay)}.`);
@@ -597,7 +601,7 @@
       } }, decline];
     }
     if (a.kind === 'g_event') {
-      if (a.signed) return [{ label: 'Signed up', disabled: true, fn: () => null }, { label: 'Drop out', fn: () => { a.signed = false; G.emitChange(); } }];
+      if (a.signed) return [{ label: 'Signed up', disabled: true, why: true, fn: () => null }, { label: 'Drop out', fn: () => { a.signed = false; G.emitChange(); } }];
       return [{ label: 'Sign up', primary: true, fn: () => { a.signed = true; reply(pick(['see u there!', 'great, one more', 'nice'])); G.sys(`You signed up for the guild run. It starts in ${Math.max(0, Math.ceil((a.startAt - now()) / 60000))} min.`); G.emitChange(); } }, decline];
     }
     return [];
