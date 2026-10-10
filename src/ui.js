@@ -224,6 +224,8 @@
   // ------------------------------------------------------------ formatting
   // money as coins, like the original: "12 (gold) 4 (silver) 30 (copper)"; the words stay for screen readers.
   // compact (the player frame): only the two largest coins, so it fits beside the name
+  // the group finder's rows while you're queued (#169): the bar at the top already names what for
+  const queuedChip = () => h('button', { class: 'chip why', disabled: true }, 'Queued');
   function moneyHtml(c, compact, noZero) {
     const m = G.money(c);
     let parts = [];
@@ -1248,7 +1250,8 @@
     const roads = h('div', { class: 'chips' });
     for (const to in place.links) { const foe = G.enemyTown(to); roads.append(h('button', { class: 'chip', disabled: foe, onclick: () => G.travelTo(to) }, D.PLACES[to].name, h('small', { style: foe ? { color: '#ff6a5a' } : null }, foe ? 'Enemy town' : (D.PLACES[to].zone !== place.zone ? D.PLACES[to].zone + ' · ' : '') + (place.via && place.via[to] ? place.via[to] + ' · ' : '') + G.travelSecs(P.place, to) + 's'))); }
     const hs = (P.hearthAt || 0) - now();
-    roads.append(h('button', { class: 'chip gold', onclick: () => G.hearth(), disabled: hs > 0 || P.place === P.bind }, 'Waystone', h('small', null, hs > 0 ? Math.ceil(hs / 60000) + 'm' : D.PLACES[P.bind].name)));
+    const home = P.place === P.bind; // a disabled button says why (#169)
+    roads.append(h('button', { class: 'chip ' + (hs > 0 || home ? 'why' : 'gold'), onclick: () => G.hearth(), disabled: hs > 0 || home }, 'Waystone', h('small', null, hs > 0 ? Math.ceil(hs / 60000) + 'm' : home ? "You're home" : D.PLACES[P.bind].name)));
     b.append(roads, h('button', { class: 'btn alt wide', onclick: () => openMap() }, 'Open map'));
   }
   function rankMob(m) {
@@ -3292,15 +3295,16 @@
   function stableBlock(b) {
     const P = G.S.player;
     b.append(h('div', { class: 'sec-h' }, 'Riding', h('small', null, P.riding ? 'you can ride' : `from level ${D.RIDING.lvl}`)));
-    if (!P.riding) b.append(h('button', { class: 'btn wide', disabled: P.level < D.RIDING.lvl || P.money < D.RIDING.cost, onclick: () => { G.learnRiding(); ui.sheetFn(); } },
-      P.level < D.RIDING.lvl ? `Riding at level ${D.RIDING.lvl} · ${G.moneyText(D.RIDING.cost)}` : `Learn Riding · ${G.moneyText(D.RIDING.cost)}`));
+    const rShort = D.RIDING.cost - P.money, rLow = P.level < D.RIDING.lvl; // a disabled button says why (#169)
+    if (!P.riding) b.append(h('button', { class: 'btn wide' + (rLow || rShort > 0 ? ' why' : ''), disabled: rLow || rShort > 0, onclick: () => { G.learnRiding(); ui.sheetFn(); } },
+      rLow ? `Riding at level ${D.RIDING.lvl} · ${G.moneyText(D.RIDING.cost)}` : rShort > 0 ? ['Need ', h('span', { html: moneyHtml(rShort, false, true) }), ' more'] : `Learn Riding · ${G.moneyText(D.RIDING.cost)}`));
     const list = h('div', { class: 'list' });
     for (const [k, M] of Object.entries(D.MOUNTS)) {
       if (M.faction !== G.myFaction()) continue;
       const owned = (P.mounts || []).includes(k);
-      list.append(h('button', { class: 'row', disabled: !owned && !P.riding, onclick: () => { G.buyMount(k); ui.sheetFn(); } },
+      list.append(h('button', { class: 'row' + (!owned && !P.riding ? ' why' : ''), disabled: !owned && !P.riding, onclick: () => { G.buyMount(k); ui.sheetFn(); } },
         h('div', { class: 'ic' }, img(art('icon', 'mount_' + k))),
-        h('div', { class: 't' }, h('b', { style: { color: D.QUALITY[1].color } }, M.name), h('small', null, owned ? (P.mount === k ? 'Riding this one' : 'Owned · tap to ride') : `${D.RACES[M.race].name} mount · every road 40% faster`)),
+        h('div', { class: 't' }, h('b', { style: { color: D.QUALITY[1].color } }, M.name), h('small', null, owned ? (P.mount === k ? 'Riding this one' : 'Owned · tap to ride') : !P.riding ? 'Learn Riding first' : `${D.RACES[M.race].name} mount · every road 40% faster`)),
         h('div', { class: 'r' }, owned ? '' : G.moneyText(M.cost))));
     }
     b.append(list, h('p', { class: 'ai-note' }, 'Boats, zeppelins, gryphons and the tram keep their own time.'));
@@ -3836,7 +3840,7 @@
         actPic(A),
         h('div', { class: 't' }, h('b', null, A.name), h('small', null, why || (best ? `Best: Trial ${best.lvl}, ${best.timed ? 'in time' : 'over par'}` : 'Not tried yet'))),
         queued ? h('button', { class: 'chip', onclick: () => { G.leaveQueue(); ui.sheetFn(); } }, 'Leave')
-          : h('button', { class: 'chip gold', style: { whiteSpace: 'nowrap' }, disabled: !!why || !!S.queue, onclick: () => openTrialBriefing(act) }, `Trial ${max}`)));
+          : S.queue && !why ? queuedChip() : h('button', { class: 'chip gold', style: { whiteSpace: 'nowrap' }, disabled: !!why, onclick: () => openTrialBriefing(act) }, `Trial ${max}`)));
     }
     b.append(note('Beat par to open the next level, or beat it by a wide margin to open two. Each clear pays 5 Mentor Marks plus the Trial level. Omens are extra rules that change every week: tap one to read it.'));
   }
@@ -3939,7 +3943,9 @@
       const why = trial ? G.trialBlock(act) : G.activityBlock(act), queued = G.S.queue && G.S.queue.act === act;
       b.append(h('div', { class: 'btn-row', style: { marginTop: '10px' } }, queued
         ? h('button', { class: 'btn alt', onclick: () => { G.leaveQueue(); ui.sheetFn(); } }, 'Leave the queue')
-        : h('button', { class: 'btn', disabled: !!why || !!G.S.queue, onclick: () => { if (trial ? G.queueTrial(act, ui.trialLvl) : (G.queueFor(act, hard ? { hard: true } : undefined), !!G.S.queue)) closeSheet(); } }, why ? (why === 'hidden' ? 'Only for the other faction' : why) : trial ? `Queue for Trial ${lvl}` : hard ? 'Queue for Hard' : 'Queue')));
+        : G.S.queue && !why ? [h('button', { class: 'btn why', disabled: true }, `In queue for ${D.ACTIVITIES[G.S.queue.act].name}`), // queued for something else says so (#169)
+          h('button', { class: 'btn alt', onclick: () => { G.leaveQueue(); ui.sheetFn(); } }, 'Leave the queue')]
+        : h('button', { class: 'btn' + (why ? ' why' : ''), disabled: !!why, onclick: () => { if (trial ? G.queueTrial(act, ui.trialLvl) : (G.queueFor(act, hard ? { hard: true } : undefined), !!G.S.queue)) closeSheet(); } }, why ? (why === 'hidden' ? 'Only for the other faction' : why) : trial ? `Queue for Trial ${lvl}` : hard ? 'Queue for Hard' : 'Queue')));
     });
   }
   // the boss card (v10.7): one boss (or both Twin Tides) in full: numbers, each ability as its own row (name, when, what,
@@ -4038,8 +4044,9 @@
       const synced = !x.why && P.level > A.maxLvl ? `synced to level ${A.maxLvl}` : '';
       const note = travel(x) ? `${A.desc.split('.')[0]}. ${x.why}.` : x.why || [A.desc, synced].filter(Boolean).join(' · ');
       const btn = queued ? h('button', { class: 'chip', onclick: () => { G.leaveQueue(); ui.sheetFn(); } }, 'Leave')
-        : travel(x) ? h('button', { class: 'chip', disabled: !!S.queue, onclick: () => { closeSheet(); G.travelRoute(A.where); renderAll(); } }, 'Travel')
-        : h('button', { class: 'chip gold', disabled: !!x.why || !!S.queue, onclick: () => { G.queueFor(x.k); ui.sheetFn(); } }, 'Queue');
+        : S.queue && (travel(x) || !x.why) ? queuedChip()
+        : travel(x) ? h('button', { class: 'chip', onclick: () => { closeSheet(); G.travelRoute(A.where); renderAll(); } }, 'Travel')
+        : h('button', { class: 'chip gold', disabled: !!x.why, onclick: () => { G.queueFor(x.k); ui.sheetFn(); } }, 'Queue');
       return h('div', { class: 'row gf-row tap' + (!doable(x) ? ' gf-locked' : '') + (queued ? ' gf-queued' : ''), onclick: (e) => { if (e.target.closest('button')) return; openBriefing(x.k, false); } }, // tap the row for its briefing (v10.4)
         actPic(A),
         h('div', { class: 't' }, h('b', null, A.name, h('span', { class: 'gf-lvl tnum' }, A.minLvl === A.maxLvl ? String(A.minLvl) : `${A.minLvl}–${A.maxLvl}`)),
@@ -4058,7 +4065,7 @@
             actPic(A),
             h('div', { class: 't' }, h('b', null, `${A.name} needs a ${r.role === 'dps' ? 'damage dealer' : r.role}`),
               h('small', { style: { whiteSpace: 'normal' } }, `${r.posterName}: ${r.startIdx ? 'stuck on ' + Dg.pulls[r.startIdx].label : 'full run'}${r.firstTimers ? ' · first-timers' : ''} · ${marks} · ${Math.ceil((r.expires - Date.now()) / 60000)} min left`)),
-            h('button', { class: 'chip gold', disabled: !!S.queue, onclick: () => { closeSheet(); G.joinHelpWanted(r.id); renderAll(); } }, 'Help')));
+            S.queue ? queuedChip() : h('button', { class: 'chip gold', onclick: () => { closeSheet(); G.joinHelpWanted(r.id); renderAll(); } }, 'Help')));
         }
       }
       const rr = G.rouletteReady(), ropts = G.rouletteOptions();
@@ -4066,7 +4073,7 @@
         h('div', { class: 'ic' }, img(art('icon', 'hearthstone'))),
         h('div', { class: 't' }, h('b', null, 'Dungeon Roulette', h('span', { class: 'gf-lvl' }, rr ? 'daily' : 'done today')),
           h('small', null, `${ropts.length === 1 ? 'The one dungeon you can reach' : `A random dungeon from the ${ropts.length} you can reach`}: +15 Mentor Marks, a bonus blue and gold.`)), // issue #14
-        h('button', { class: 'chip gold', disabled: !rr || !!S.queue, onclick: () => { closeSheet(); G.startRoulette(); renderAll(); } }, rr ? 'Go' : 'Tomorrow')));
+        rr && S.queue ? queuedChip() : h('button', { class: 'chip ' + (rr ? 'gold' : 'why'), disabled: !rr, onclick: () => { closeSheet(); G.startRoulette(); renderAll(); } }, rr ? 'Go' : 'Tomorrow')));
       let mine = all.filter(atLevel).sort(byLevel);
       b.append(h('div', { class: 'sec-h' }, 'At your level', h('small', null, `level ${P.level}`)));
       if (!mine.length) {
@@ -4164,14 +4171,14 @@
     const acts = window.SOC ? SOC.actions(m) : [];
     if (acts.length) {
       const row = h('div', { class: 'btn-row wrap' });
-      for (const x of acts) row.append(h('button', { class: 'btn' + (x.primary ? '' : ' alt'), disabled: !!x.disabled, onclick: () => {
+      for (const x of acts) row.append(h('button', { class: 'btn' + (x.why ? ' why' : x.primary ? '' : ' alt'), disabled: !!x.disabled, onclick: () => {
         const r = x.fn();
         // a refusal keeps the dialog open (the request is still open), so the player can fix it and try again (#166)
         if (typeof r === 'string' && !r.startsWith('route:') && a && a.state === 'open') { toast(r); renderAll(); msgDialog(m); return; }
         closeDialog(); renderAll();
         if (typeof r === 'string' && r.startsWith('route:')) { const to = r.slice(6); if (G.S.player.place !== to) routeDialog(to); }
         else if (r) toast(r);
-      } }, x.label));
+      } }, x.need ? ['Need ', h('span', { html: moneyHtml(x.need, false, true) })] : x.label)); // a shortfall in coin colours (#169)
       parts.push(row);
     }
     const reps = window.SOC && !(a && a.state === 'open' && a.kind !== 'chat') && !(a && a.state === 'expired') && !(a && (m.ch === 'lfg' || m.ch === 'general')) ? SOC.replies(m) : []; // an expired request: only Close (#166)
