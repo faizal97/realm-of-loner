@@ -89,6 +89,9 @@ for (const [cls, trees] of Object.entries(D.TALENTS || {})) {
     }
     if (t1 < D.TALENT_TIER_POINTS[2]) err(`talent tree ${cls}/${tree.id}: tier 1 has only ${t1} ranks, tier 2 needs ${D.TALENT_TIER_POINTS[2]}`);
   }
+  // every point a character earns can be spent (#191): the ranks across all trees cover the points at the level cap
+  const ranks = trees.reduce((a, tr) => a + tr.talents.reduce((b, t) => b + t.ranks, 0), 0), pts = D.LEVEL_CAP - D.TALENT_START + 1;
+  if (ranks < pts) err(`talents ${cls}: ${ranks} ranks across the trees, but a level-${D.LEVEL_CAP} character has ${pts} points (${pts - ranks} could never be spent)`);
 }
 for (const [role, m] of Object.entries(D.TALENT_BOT || {})) for (const [cls, ids] of Object.entries(m)) for (const id of ids) if (!(D.TALENTS[cls] || []).some((t) => t.id === id)) err(`bot talents ${role}/${cls}: unknown tree '${id}'`);
 if (D.XP_TO_LEVEL.length <= D.LEVEL_CAP) err(`XP_TO_LEVEL stops before the level cap (${D.LEVEL_CAP})`);
