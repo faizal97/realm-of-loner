@@ -1900,7 +1900,12 @@
     const on = document.getElementById('online');
     if (on && !on.dataset.t || on && now() - on.dataset.t > 10000) { on.dataset.t = now(); on.textContent = `${B.onlineCount(S, new Date())} online`; }
     // roll timers
-    if (ui.rollEl) ui.rollEl.querySelectorAll('[data-roll]').forEach((b) => { const r = S.run && S.run.rolls[b.dataset.roll]; if (r) b.style.width = Math.max(0, (r.until - now()) / 25000 * 100) + '%'; });
+    if (ui.rollEl) {
+      ui.rollEl.querySelectorAll('[data-roll]').forEach((b) => { const r = S.run && S.run.rolls[b.dataset.roll]; if (r) b.style.width = Math.max(0, (r.until - now()) / 25000 * 100) + '%'; });
+      // a stopped clock says so, on the bar (muted) and under it (#170)
+      const why = G.rollPaused(), pl = ui.rollEl.querySelector('[data-roll-paused]'), txt = why === 'fight' ? 'Paused while you fight' : why === 'look' ? 'Paused while you look' : '';
+      if (pl && pl.textContent !== txt) { pl.textContent = txt; ui.rollEl.classList.toggle('paused', !!why); }
+    }
   }
 
   // ============================================================ nav
@@ -3322,7 +3327,7 @@
       h('div', { class: 'cook-gold', style: { left: (z.gold[0] * 100) + '%', width: ((z.gold[1] - z.gold[0]) * 100) + '%' } }),
       h('div', { class: 'cook-burnt', style: { left: (z.burnt * 100) + '%' } }), needle);
     let start = null, done = false, raf = null, shown = 0; // shown: where the needle is on screen; the result is judged there
-    const finish = (q) => { if (done) return; done = true; cancelAnimationFrame(raf); sfx(q === 'burnt' ? 'burnt' : 'sizzle'); closeDialog(); closeSheet(); G.cook(rid, count, q);
+    const finish = (q) => { if (done) return; done = true; cancelAnimationFrame(raf); sfx(q === 'burnt' ? 'burnt' : 'sizzle'); closeDialog(); closeSheet(); if (!G.cook(rid, count, q)) return; // a refusal shows only its own red toast (#170)
       toast(q === 'perfect' ? `Perfect! ${it.name}: one extra serving per five.` : q === 'burnt' ? `Burnt: one set of ingredients is lost.` : `${it.name}: a normal batch.`, true); };
     const stop = () => { if (start == null) return; finish(G.cookResult(rid, shown)); };
     const go = h('button', { class: 'btn wide', onclick: () => { if (start == null) { start = performance.now(); go.textContent = 'Take it off the heat!'; const step = () => { const pos = (performance.now() - start) / 1000 / sweep; shown = Math.min(1, pos); needle.style.left = (shown * 100).toFixed(1) + '%'; if (pos >= 1) return finish('burnt'); raf = requestAnimationFrame(step); }; raf = requestAnimationFrame(step); } else stop(); } }, 'Start cooking');
@@ -4370,7 +4375,7 @@
       h('button', { style: { padding: 0 }, 'aria-label': 'See the item', onclick: () => inspectRoll(i) }, itemIcon(it, 'rollic')),
       h('div', { class: 'roll-t' },
         h('div', { class: 'q' + it.q, style: { fontWeight: 800 } }, it.name + (open.length > 1 ? `  (+${open.length - 1} more)` : ''), F ? h('span', { class: 'eff', style: { marginLeft: '5px', fontWeight: 700 } }, '◆ ' + F.name) : gearTag(it)),
-        h('div', { class: 'bar' }, h('i', { 'data-roll': i, style: { width: '100%' } }))),
+        h('div', { class: 'bar' }, h('i', { 'data-roll': i, style: { width: '100%' } })), h('small', { class: 'roll-paused', 'data-roll-paused': '' })),
       h('div', { class: 'roll-b' },
         h('button', { class: needFirst(it) ? 'btn' : 'btn alt', onclick: () => { G.roll(i, 'need'); renderRolls(); } }, 'Need'),
         h('button', { class: needFirst(it) ? 'btn alt' : 'btn', onclick: () => { G.roll(i, 'greed'); renderRolls(); } }, 'Greed'),

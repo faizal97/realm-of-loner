@@ -1899,9 +1899,13 @@
     if (G.craftable(rid) < 1) return toast('You are missing materials.');
     if (G.bagsFull() && !(G.stackable(D.ITEMS[r.makes]) && P.bags.some((b) => b.item.id === r.makes && b.n < 20))) return toast('Inventory is full.');
     stopActions();
-    P.casting = { what: 'craft', rid, left: Math.max(1, Math.min(count || 1, G.craftable(rid))), label: `${D.ITEMS[r.makes].name}`, start: now(), end: now() + 1500 };
+    const left = Math.max(1, Math.min(count || 1, G.craftable(rid)));
+    P.casting = { what: 'craft', rid, left, total: left, label: `${D.ITEMS[r.makes].name}`, start: now(), end: now() + 1500 };
     emit('castBegin', { what: 'craft' }); emit('change');
+    return true;
   };
+  // a batch that ends early because the bags filled says so, with how far it got (#170): information, not a refusal
+  function craftStopped(c) { if ((c.total || 1) > 1) { const t = `Bags full. Made ${c.made || 0} of ${c.total}.`; sys(t); info(t); } }
   function finishCraft(c) {
     const P = G.S.player, r = D.RECIPES[c.rid], p = G.profs()[r.prof];
     if (!p || G.craftable(c.rid) < 1) return;
@@ -1916,11 +1920,11 @@
     const extra = c.quality === 'perfect' && ((c.batch || 1) < 5 ? c.made === 1 : c.made % 5 === 0) ? 1 : 0;
     const it = G.copyItem(r.makes);
     if (D.GEAR_SLOTS.includes(it.slot)) { it.id = r.makes; it.crafter = P.name; }
-    if (!G.addItem(it, r.n + extra)) { for (const m in r.mats) G.addItem(G.copyItem(m), r.mats[m]); return; }
+    if (!G.addItem(it, r.n + extra)) { for (const m in r.mats) G.addItem(G.copyItem(m), r.mats[m]); c.made--; craftStopped(c); return; }
     loot(`You create: ${B.link(it.name, it.q)}${r.n + extra > 1 ? ' x' + (r.n + extra) : ''}${extra ? ' (Perfect)' : ''}.`);
     skillUp(r.prof, G.skillColor(p.skill, r.sk));
     G.S.stats = G.S.stats || {}; G.S.stats.crafted = (G.S.stats.crafted || 0) + 1;
-    if (c.left > 1 && G.craftable(c.rid) > 0 && !G.bagsFull()) P.casting = Object.assign({}, c, { left: c.left - 1, start: now(), end: now() + 1500 });
+    if (c.left > 1 && G.craftable(c.rid) > 0) { if (G.bagsFull()) craftStopped(c); else P.casting = Object.assign({}, c, { left: c.left - 1, start: now(), end: now() + 1500 }); }
   }
   // --- cooking (v10.9): the heat bar. A needle sweeps from cold (0) to burnt (1); where you stop it decides the batch:
   // the gold zone is Perfect, the rest Normal, the burnt end (and never stopping) Burnt. The gold zone is wider the
@@ -1935,9 +1939,11 @@
     return { gold: [B_.gold - w / 2, B_.gold + w / 2], burnt: B_.burnt };
   };
   G.cookResult = (rid, pos) => { const z = G.cookZone(rid); return pos == null || pos >= z.burnt ? 'burnt' : pos >= z.gold[0] && pos <= z.gold[1] ? 'perfect' : 'normal'; };
+  // true when a batch started; a refusal (in a fight, bags full, no materials) has already said why (#170)
   G.cook = function (rid, count, quality) {
-    G.craft(rid, count); const P = G.S.player;
+    if (G.craft(rid, count) !== true) return false; const P = G.S.player; // a refusal returns its message
     if (P.casting && P.casting.what === 'craft' && P.casting.rid === rid) Object.assign(P.casting, { quality: quality || 'normal', batch: P.casting.left });
+    return true;
   };
   // --- fishing (v10.9): cast, wait for the bite, tap; big and rare fish fight on the reel. DOM-free: the screen drives it
   // with G.fishStart / G.fishTap / G.fishReel, the sims do the same. Auto lands a common fish and never a big or rare one.
@@ -3584,11 +3590,18 @@
     R.rolls[idx].player = { c, v: c === 'pass' ? 0 : rint(1, 100) };
     emit('runUpdate');
   };
+  // why the loot-roll clock is stopped, if it is (#170): 'fight' (the group does not wait for you) or 'look' (you are
+  // inspecting the item; that pause lasts at most a minute)
+  G.rollPaused = function () {
+    const R = G.S.run; if (!R) return null;
+    if (R.phase === 'fight') return 'fight';
+    return R.rollPause && now() - (R.rollPauseAt || 0) < 60000 ? 'look' : null;
+  };
   function rollsTick() {
     const S = G.S, R = S.run;
     if (!R) return;
     const t = now(), dt = Math.max(0, t - (R.rollT || t)); R.rollT = t;
-    const still = (R.rollPause && t - (R.rollPauseAt || 0) < 60000) || R.phase === 'fight'; // an inspect pause lasts at most a minute // the clock waits during fights (the group does not wait for you) and while you inspect
+    const still = !!G.rollPaused();
     for (const r of R.rolls) {
       if (r.done) continue;
       if (!r.player) { if (r.left == null) r.left = r.until - t; if (!still) r.left -= dt; r.until = t + r.left; }
