@@ -80,7 +80,7 @@
       objs: [{ type: 'kill', mob: 'kobold_worker', n: 10 }], reward: { choice: ['fam_feet'] } },
     brotherhood_thieves: { name: 'Hoods in the Vineyard', lvl: 4, giver: 'willem', turnin: 'willem', text: 'The Grey Hoods has moved into the vineyards. Bring me 12 of their Red Burlap Bandanas.',
       objs: [{ type: 'collect', item: 'red_bandana', n: 12 }], reward: { choice: ['fam_hands'] } },
-    millys_harvest: { name: "Nell's Harvest", lvl: 4, giver: 'milly', turnin: 'milly', text: 'The thugs chased us off before we finished the harvest. Could you bring back 8 Crates of Grapes?',
+    millys_harvest: { name: "Nell's Harvest", lvl: 4, giver: 'milly', turnin: 'milly', text: 'The thugs chased us off before we finished the harvest. The crates are still stacked between the rows. Could you bring back 8 Crates of Grapes?',
       objs: [{ type: 'collect', item: 'grape_crate', n: 8 }], reward: {} },
     bounty_garrick: { name: 'Bounty on Jory Blackthumb', lvl: 5, giver: 'willem', turnin: 'willem', pre: ['brotherhood_thieves'], text: 'Their leader Jory Blackthumb hides in the vineyards. Bring me his head.',
       objs: [{ type: 'collect', item: 'garrick_head', n: 1 }], reward: { choice: ['fam_weapon5'] } },
