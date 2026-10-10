@@ -1277,8 +1277,22 @@
     }
     p.append(h('button', { style: { textAlign: 'left' }, onclick: () => openQuests() }, t));
   }
-  // "Heals go to: you · tap a member to heal them" or "Heals go to: Corrime" (#156)
-  function healLine() { const m = G.healPick(); return m ? `Heals go to: ${m.name}` : 'Heals go to: you · tap a member to heal them'; }
+  // the status line between pulls (#159, #178): the waited-for member's name in their class colour, green once everyone
+  // is ready; rebuilt only when the text changes, since it is refreshed every frame
+  function fillRestLine(el) {
+    const x = G.restLineInfo(), text = x ? x.text : '';
+    if (el.dataset.text === text) return el;
+    el.dataset.text = text; el.classList.toggle('ok', !!(x && x.ok)); el.textContent = '';
+    const i = x && x.who ? text.indexOf(x.who.name) : -1;
+    if (i < 0) el.textContent = text;
+    else el.append(text.slice(0, i), h('span', { class: 'cls-' + x.who.cls }, x.who.name), text.slice(i + x.who.name.length));
+    return el;
+  }
+  // "Healing: you" with the hint under it, or "Healing: Corrime" with the name in their class colour (#156, #178)
+  function healLine() {
+    const m = G.healPick();
+    return m ? ['Healing: ', h('span', { class: 'cls-' + m.cls }, m.name)] : ['Healing: ', h('span', { class: 'heal-you' }, 'you'), h('span', { class: 'heal-hint' }, 'tap a member to heal them')];
+  }
   function partyBlock(p) {
     const S = G.S, C = G.fight;
     const pf = h('div', { class: 'pf' });
@@ -1427,7 +1441,7 @@
     runScore(p, R); // the clock against par, then the run's name and progress (#66: the decisions and the timer first)
     p.append(...head);
     pf.classList.add('compact'); p.prepend(pf); // the party first: five 30 px rows at the very top, then Pull and the pace (#65)
-    if (G.healsAllies()) p.prepend(h('div', { class: 'sec-h' }, 'Party', h('small', { class: 'heal-to' }, healLine()))); // where heals go (#156)
+    if (G.healsAllies()) p.prepend(h('div', { class: 'sec-h' }, 'Party', h('small', { class: 'heal-to' }, ...healLine()))); // where heals go (#156)
     if (C) {
       const list = h('div', { class: 'list' });
       for (const u of C.enemies) {
@@ -1450,10 +1464,11 @@
       if (R.phase === 'rest') {
         // after a wipe, the recap takes the status line's place until the next pull (#192)
         if (G.recap && !G.recap.self) actions.append(h('div', { class: 'rest-line' }, h('button', { class: 'chip recap-chip', onclick: () => recapDialog() }, `Deaths (${G.recap.deaths.length})`), h('small', null, ' tap for who died and why')));
-        else actions.append(h('div', { class: 'rest-line', 'data-rest-line': '' }, G.restLine() || '')); // what the pull waits for, right above the button (#159)
-        // Ready says it counted: "Ready ✓", greyed where it was; the tank's Pull stays a real action
+        else actions.append(fillRestLine(h('div', { class: 'rest-line', 'data-rest-line': '' }))); // what the pull waits for, right above the button (#159)
+        // Ready says it counted: a green "Ready ✓" at full brightness (#178), no longer a button that does anything;
+        // the tank's Pull stays a real action
         const st = G.restState(), done = G.role() !== 'tank' && st && st.rested;
-        row.append(h('button', { class: 'btn' + (done ? ' done' : ''), 'data-ready': G.role() === 'tank' ? null : '', disabled: done ? true : null, onclick: () => { G.runReady(); renderPanel(); } }, G.role() === 'tank' ? 'Pull' : done ? 'Ready ✓' : 'Ready'));
+        row.append(h('button', { class: 'btn' + (done ? ' done' : ''), 'data-ready': G.role() === 'tank' ? null : '', 'aria-disabled': done ? 'true' : null, onclick: (e) => { if (e.currentTarget.classList.contains('done')) return; G.runReady(); renderPanel(); } }, G.role() === 'tank' ? 'Pull' : done ? 'Ready ✓' : 'Ready'));
       }
       if (R.phase === 'done' && S.player.quests.defias_brotherhood === undefined && !S.player.done.defias_brotherhood && R.act === 'deadmines') row.append(h('div', { style: { fontSize: '13px', color: 'var(--muted)' } }, 'Tip: Marshal Brede in Brackenford has a quest for Blackwell.'));
       row.append(h('button', { class: 'btn alt', onclick: confirmLeaveGroup }, R.phase === 'done' ? 'Leave group' : 'Leave'));
@@ -1826,9 +1841,9 @@
           const mb = row.querySelector('[data-rest-mana]'); if (mb && r.maxMana) setBar(mb, r.mana, r.maxMana);
           const mk = row.querySelector('[data-rest-mark]'); if (mk) mk.textContent = r.ready ? '✓' : '';
         });
-        const line = document.querySelector('[data-rest-line]'); if (line) line.textContent = G.restLine();
+        const line = document.querySelector('[data-rest-line]'); if (line) fillRestLine(line);
         const rb = document.querySelector('[data-ready]');
-        if (rb && st.rested && !rb.disabled) { rb.disabled = true; rb.classList.add('done'); rb.textContent = 'Ready ✓'; }
+        if (rb && st.rested && !rb.classList.contains('done')) { rb.classList.add('done'); rb.setAttribute('aria-disabled', 'true'); rb.textContent = 'Ready ✓'; }
       }
     }
     // action bar cooldowns
@@ -4951,6 +4966,7 @@
     }, true);
     G.on('chat', renderChat);
     G.on('toast', (t) => toast(t));
+    G.on('info', (t) => toast(t, true)); // yellow: worth knowing, not a refusal (#178)
     G.on('infoToast', (t) => toast(t, true)); // yellow: a note, not an error (#193)
     G.on('error', (t) => toast(t));
     G.on('pop', (q) => { renderNavDots(); showPop(q); });
