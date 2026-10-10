@@ -1456,7 +1456,7 @@
     if (C) { const u = S.healPick && C.allies.find((x) => x.memberRef && pickKey(x.memberRef) === S.healPick); C.allyTarget = u && !u.dead ? u.uid : null; }
     emit('target'); emit('change');
   };
-  function healPickLost(name, why) { const S = G.S; S.healPick = null; S.healPickName = null; if (G.fight) G.fight.allyTarget = null; const t = `${name} ${why}. Heals go to you.`; sys(t); toast(t); emit('target'); emit('change'); }
+  function healPickLost(name, why) { const S = G.S; S.healPick = null; S.healPickName = null; if (G.fight) G.fight.allyTarget = null; const t = `${name} ${why}. Heals go to you.`; sys(t); info(t); emit('target'); emit('change'); }
   // at the start of a pull: the kept pick is selected again, or lost with a note when the member is dead
   function healPickStart(C) {
     const S = G.S; if (!S.healPick) return;
@@ -3600,13 +3600,22 @@
     return { need, rows, topped: rows.every((r) => r.met), rested, restLeft: Math.max(0, R.restUntil - t), capped: t >= R.restUntil + REST_CAP, tank: G.role() === 'tank' };
   };
   // the status line between pulls (#159): who the group waits for, then your own rest, then everyone ready
+  // the line in parts for the screen (#178): who: the member it waits for (their name goes in their class colour),
+  // ok: everyone is ready (the line turns green)
+  G.restLineInfo = function () {
+    const text = G.restLine(); if (text == null) return null;
+    const st = G.restState(), w = G.restWaitsFor && G.restWaitsFor(st);
+    return { text, who: w && !w.me && text.includes(w.name) ? { name: w.name, cls: w.char.cls } : null, ok: /^Everyone ready/.test(text) };
+  };
+  const restShort = (st) => st.rows.filter((r) => !r.met).map((r) => {
+    const h = r.hp / r.maxHp / st.need.hp, m = r.mana != null && r.maxMana ? r.mana / r.maxMana / st.need.mana : Infinity;
+    return { r, by: Math.min(h, m), mana: m < h };
+  }).sort((a, b) => a.by - b.by);
+  G.restWaitsFor = (st) => { const s = st && restShort(st)[0]; return s ? s.r : null; };
   G.restLine = function () {
     const st = G.restState(); if (!st) return null;
     if (st.rows.some((r) => r.gone)) return 'Looking for replacements...';
-    const short = st.rows.filter((r) => !r.met).map((r) => {
-      const h = r.hp / r.maxHp / st.need.hp, m = r.mana != null && r.maxMana ? r.mana / r.maxMana / st.need.mana : Infinity;
-      return { r, by: Math.min(h, m), mana: m < h };
-    }).sort((a, b) => a.by - b.by);
+    const short = restShort(st);
     if (short.length) {
       if (st.capped && !st.tank && st.rested) return 'Pulling anyway.';
       const { r, mana } = short[0], who = r.me ? 'your' : `${r.name}'s`;
@@ -3764,6 +3773,7 @@
   function sys(text) { if (G.S) { B.post(G.S, 'system', null, text); emit('chat'); } }
   function loot(text) { B.post(G.S, 'loot', null, text); emit('chat'); }
   function toast(text) { emit('toast', text); return text; }
+  function info(text) { emit('info', text); return text; } // a yellow toast: something happened you should know, not a refusal (#178)
   G.sys = sys; G.toast = toast;
   G.emitChange = () => emit('change'); G.emitChat = () => emit('chat');
 
