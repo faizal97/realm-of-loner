@@ -847,8 +847,13 @@
     else if (m.ch === 'monster') pre = m.from ? `${esc(m.from)} says: ` : '';
     else if (m.from) pre = `${ch.label ? '[' + ch.label + '] ' : ''}${name}: `;
     const open = m.act && m.act.state === 'open';
-    const tap = open || (m.from && !m.me && m.ch !== 'combat') || /\[\[\d\|/.test(m.text);
-    return `<div class="ln${tap ? ' tap' : ''}${open ? ' act' : ''}" data-mid="${m.id || ''}" style="color:${color}">${open ? `<span class="act-mark">${symHtml('▸')}</span>` : ''}${pre}${richText(m.text)}</div>`;
+    const tap = open || !!m.act || (m.from && !m.me && m.ch !== 'combat') || /\[\[\d\|/.test(m.text);
+    // a request shows its time left at the right end, where the one-line strip clips the text first, never the time;
+    // an expired one stays, in the muted colour, with "expired" there (#166)
+    const left = window.SOC && SOC.timeLeft ? SOC.timeLeft(m.act) : null;
+    const body = `${open ? `<span class="act-mark">${symHtml('▸')}</span>` : ''}${pre}${richText(m.text)}`;
+    if (left) return `<div class="ln req${tap ? ' tap' : ''}${open ? ' act' : ' expired'}" data-mid="${m.id || ''}" style="color:${color}"><span class="ln-x">${body}</span><span class="ln-left tnum">${left}</span></div>`;
+    return `<div class="ln${tap ? ' tap' : ''}${open ? ' act' : ''}" data-mid="${m.id || ''}" style="color:${color}">${body}</div>`;
   }
   // ---------- chat tabs: your own named filters over the channels, kept on this phone for every character
   const CHAT_KEY = 'azsolo.chattabs';
@@ -4145,19 +4150,23 @@
     const who = m.me ? 'You' : m.from || ch.label || 'System';
     const parts = [h('h3', null, m.ch === 'whisper' ? `${who} whispers` : `${who}${ch.label ? ' · ' + ch.label : ''}`), h('p', { html: richText(m.text) })];
     for (const it of linkedItems(m).slice(0, 2)) parts.push(itemTip(it));
-    if (a && a.state !== 'open') parts.push(h('p', { class: 'ai-note' }, a.state === 'done' ? 'Done.' : a.state === 'declined' ? 'You said no.' : 'This has expired.'));
+    if (a && a.state !== 'open') parts.push(h('p', { class: 'ai-note' }, a.state === 'done' ? 'Done.' : a.state === 'declined' ? 'You said no.' : 'This request has expired.'));
+    if (a && a.state === 'open') { const mins = Math.floor((a.until - Date.now()) / 60000); parts.splice(1, 0, h('p', { class: 'ai-note' }, mins >= 1 ? `Open for ${mins} more minute${mins === 1 ? '' : 's'}.` : 'Open for less than a minute.')); } // (#166)
     if (a && a.kind === 'help_kill' && a.accepted) parts.push(h('p', { class: 'ai-note' }, `${a.got}/${a.n} ${D.MOBS[a.mob].name} at ${D.PLACES[a.place].name}.`));
     const acts = window.SOC ? SOC.actions(m) : [];
     if (acts.length) {
       const row = h('div', { class: 'btn-row wrap' });
       for (const x of acts) row.append(h('button', { class: 'btn' + (x.primary ? '' : ' alt'), disabled: !!x.disabled, onclick: () => {
-        const r = x.fn(); closeDialog(); renderAll();
+        const r = x.fn();
+        // a refusal keeps the dialog open (the request is still open), so the player can fix it and try again (#166)
+        if (typeof r === 'string' && !r.startsWith('route:') && a && a.state === 'open') { toast(r); renderAll(); msgDialog(m); return; }
+        closeDialog(); renderAll();
         if (typeof r === 'string' && r.startsWith('route:')) { const to = r.slice(6); if (G.S.player.place !== to) routeDialog(to); }
         else if (r) toast(r);
       } }, x.label));
       parts.push(row);
     }
-    const reps = window.SOC && !(a && a.state === 'open' && a.kind !== 'chat') && !(a && (m.ch === 'lfg' || m.ch === 'general')) ? SOC.replies(m) : [];
+    const reps = window.SOC && !(a && a.state === 'open' && a.kind !== 'chat') && !(a && a.state === 'expired') && !(a && (m.ch === 'lfg' || m.ch === 'general')) ? SOC.replies(m) : []; // an expired request: only Close (#166)
     if (reps.length) {
       parts.push(h('div', { class: 'sec-h' }, 'Reply', h('small', null, reps[0].ch === 'whisper' ? 'as a whisper' : 'in ' + reps[0].ch)));
       parts.push(h('div', { class: 'chips' }, ...reps.map((r) => h('button', { class: 'chip', onclick: () => { r.fn(); closeDialog(); renderChat(); } }, r.label))));

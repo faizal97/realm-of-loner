@@ -618,6 +618,12 @@ img { max-width: 100%; display: block; }
 .ln.tap { cursor: pointer; }
 .ln.act { background: linear-gradient(90deg, #3a2c1266, transparent); border-left: 2px solid var(--gold); padding-left: 4px; }
 .act-mark { color: var(--gold); margin-right: 3px; }
+/* #166: a request's time left sits at the right end; the text clips first. An expired one stays, muted */
+.ln.req { display: flex; align-items: baseline; gap: 6px; }
+.ln.req .ln-x { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.chat-full .ln.req .ln-x { overflow: visible; }
+.ln-left { flex: none; font-size: 11px; color: var(--muted); }
+.ln.expired, .ln.expired * { color: var(--muted) !important; }
 .btn-row.wrap { flex-wrap: wrap; }
 
 /* laptop and desktop browsers: a window wider than a phone and not very tall. Tighten the tall parts so the game
