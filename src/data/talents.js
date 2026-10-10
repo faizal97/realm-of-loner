@@ -31,6 +31,7 @@
         t('deflection', 1, 5, 'Deflection', 'retaliation', '+{v}% chance to dodge.', f('dodge', 1)),
         t('imp_rend', 2, 3, 'Improved Rend', 'rend', 'Rend deals {v}% more damage.', f('dot', 15, { ab: ['rend'] })),
         t('two_handed_spec', 2, 3, 'Weapon Specialization', 'cleave', 'Your physical damage is increased by {v}%.', f('school', 2, { school: 'physical' })),
+        t('heavy_swings', 2, 3, 'Heavy Swings', 'heroic_strike', 'Heroic Strike deals {v}% more damage.', f('abilDmg', 5, { ab: ['heroic_strike'] })), // #191
         t('sweeping_strikes', 3, 1, 'Sweeping Strikes', 'cleave', 'Cleave and Thunder Clap deal {v}% more damage.', f('abilDmg', 30, { ab: ['cleave', 'thunder_clap'] })),
       ] },
       { id: 'fury', name: 'Fury', icon: 'bloodrage', talents: [
@@ -68,6 +69,7 @@
         t('piercing_ice', 1, 5, 'Piercing Ice', 'frostbolt', 'Your Frost damage is increased by {v}%.', f('school', 2, { school: 'frost' })),
         t('imp_frost_nova', 2, 2, 'Improved Frost Nova', 'frost_nova', 'Frost Nova cooldown reduced by {v} sec.', f('abilCd', 2, { ab: ['frost_nova'] })),
         t('frost_warding', 2, 2, 'Frost Warding', 'frost_armor', 'Frost Armor gives {v}% more armor.', f('buff', 15, { ab: ['frost_armor'] })),
+        t('biting_cold', 2, 3, 'Biting Cold', 'frostbolt', '+{v}% spell critical strike chance.', f('spellCrit', 1)), // #191
         t('ice_barrier', 3, 1, 'Ice Barrier', 'frost_nova', 'You take {v}% less damage and your Frost damage is increased by 5%.', f('taken', 5), f('school', 5, { school: 'frost' })),
       ] },
     ],
@@ -100,11 +102,13 @@
         t('imp_eviscerate', 1, 3, 'Improved Eviscerate', 'eviscerate', 'Eviscerate deals {v}% more damage.', f('abilDmg', 5, { ab: ['eviscerate'] })),
         t('murder', 2, 2, 'Murder', 'garrote', 'Your physical damage is increased by {v}%.', f('school', 2, { school: 'physical' })),
         t('lethality', 2, 3, 'Lethality', 'sinister_strike', 'Sinister Strike and Backstab deal {v}% more damage.', f('abilDmg', 5, { ab: ['sinister_strike', 'backstab'] })),
+        t('quick_finish', 2, 3, 'Quick Finish', 'kidney_shot', 'Eviscerate and Rupture cost {v}% less energy.', f('abilCost', 5, { ab: ['eviscerate', 'rupture'] })), // #191: every class can spend its 51 points
         t('relentless_strikes', 3, 1, 'Relentless Strikes', 'rupture', 'Eviscerate and Rupture deal {v}% more damage.', f('abilDmg', 20, { ab: ['eviscerate', 'rupture'] }), f('dot', 20, { ab: ['rupture'] })),
       ] },
       { id: 'combat', name: 'Combat', icon: 'sinister_strike', talents: [
         t('imp_sinister_strike', 1, 2, 'Improved Sinister Strike', 'sinister_strike', 'Sinister Strike costs {v}% less energy.', f('abilCost', 5, { ab: ['sinister_strike'] })),
         t('lightning_reflexes', 1, 5, 'Lightning Reflexes', 'evasion', '+{v}% chance to dodge.', f('dodge', 1)),
+        t('precise_strikes', 1, 2, 'Precise Strikes', 'sinister_strike', '+{v}% critical strike chance.', f('crit', 1)), // #191
         t('dual_wield_spec', 2, 5, 'Weapon Expertise', 'sinister_strike', 'Your physical damage is increased by {v}%.', f('school', 2, { school: 'physical' })),
         t('imp_gouge', 2, 3, 'Improved Gouge', 'gouge', 'Gouge cooldown reduced by {v} sec.', f('abilCd', 1, { ab: ['gouge'] })),
         t('blade_flurry', 3, 1, 'Blade Flurry', 'slice_and_dice', 'You attack {v}% faster.', f('haste', 10)),
@@ -114,6 +118,7 @@
         t('elusiveness', 1, 2, 'Elusiveness', 'evasion', 'Evasion cooldown reduced by {v} sec.', f('abilCd', 30, { ab: ['evasion'] })),
         t('serrated_blades', 2, 3, 'Serrated Blades', 'rupture', 'Rupture and Garrote deal {v}% more damage.', f('dot', 10, { ab: ['rupture', 'garrote'] })),
         t('initiative', 2, 3, 'Initiative', 'kidney_shot', '+{v}% critical strike chance.', f('crit', 1)),
+        t('shadowed_step', 2, 2, 'Shadowed Step', 'evasion', 'You take {v}% less damage.', f('taken', 2)), // #191
         t('preparation', 3, 1, 'Preparation', 'garrote', 'Kidney Shot, Gouge and Evasion cooldowns reduced by {v} sec, and +2% critical strike chance.', f('abilCd', 5, { ab: ['kidney_shot', 'gouge', 'evasion'] }), f('crit', 2)),
       ] },
     ],
