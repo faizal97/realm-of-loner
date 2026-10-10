@@ -171,12 +171,16 @@ if (D.EFFECTS) {
 const n = (t) => Object.keys(D[t]).length;
 console.log(`data: ${n('REGIONS')} zones, ${n('PLACES')} places, ${n('MOBS')} mobs, ${n('QUESTS')} quests, ${n('ITEMS')} items` + (warn.length ? ` · ${warn.length} warnings` : ''));
 if (process.argv.includes('-v')) warn.forEach((w) => console.log('  warn:', w));
-// a fixed blue below 60 is never weaker than a random blue of its level (#141: src/data/finalize.js lifts them; this
+// a fixed blue below 57 is never weaker than a random blue of its level (#141: src/data/finalize.js lifts them; this
 // stops the build if one slips under, e.g. a new item added after the lift)
 for (const [id, it] of Object.entries(D.ITEMS)) {
-  if (it.q !== 3 || !(it.lvl < 60) || !it.stats) continue;
+  if (it.q !== 3 || !(it.lvl < D.BLUE_FLOOR_BELOW) || !it.stats) continue;
   const have = Object.values(it.stats).reduce((a, v) => a + v, 0), need = Math.round(D.gearBudget(it.lvl, 3));
   if (have > 0 && have < need) err(`${id}: a level-${it.lvl} blue with ${have} stat points, under the generated blue budget (${need})`);
 }
+// generated gear never gets worse as you level (#141: the 59 -> 60 cliff): for each quality, the budget at L+1 is at
+// least the budget at L, for every level to the cap
+for (const q of [2, 3, 4]) for (let L = 1; L < D.LEVEL_CAP; L++)
+  if (D.gearBudget(L + 1, q) < D.gearBudget(L, q) - 1e-9) err(`gear budget falls from level ${L} to ${L + 1} for quality ${q}: ${D.gearBudget(L, q).toFixed(2)} -> ${D.gearBudget(L + 1, q).toFixed(2)}`);
 if (errors.length) { errors.forEach((e) => console.error('  ERROR:', e)); console.error(`${errors.length} data error(s); build stopped.`); process.exit(1); }
 console.log('data OK');

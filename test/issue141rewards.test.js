@@ -64,3 +64,16 @@ test('white and fixed rewards stay a single item', () => {
   assert.strictEqual(G.rewardItems(white).length, 1);
   assert.strictEqual(G.rewardItems(fixed).length, 1);
 });
+
+test('gear never gets worse as you level: full blue and purple bonus to 50, a straight line to L60 by 59', () => {
+  for (const q of [2, 3, 4]) for (let L = 1; L < 60; L++) assert.ok(D.gearBudget(L + 1, q) >= D.gearBudget(L, q), `quality ${q}, ${L} -> ${L + 1}`);
+  for (const q of [3, 4]) assert.ok(Math.abs(D.gearBudget(59, q) - D.gearBudget(60, q)) < 1e-9, `quality ${q}: 59 reaches 60`);
+  assert.ok(Math.abs(D.gearBudget(50, 3) - D.gearBudget(50, 2) * 1.2) < 1e-9, 'the full blue bonus at 50');
+  assert.strictEqual(D.gearBudget(55, 2), 55 * 0.55 + 1, 'greens unchanged');
+});
+
+test('the level 57-59 fixed blues (the Mentor Mark upgrade base) keep their own stats', () => {
+  const low = Object.values(D.ITEMS).filter((it) => it.q === 3 && it.lvl >= 57 && it.lvl < 60 && it.stats);
+  assert.ok(low.length > 0);
+  assert.ok(low.some((it) => Object.values(it.stats).reduce((a, v) => a + v, 0) < Math.round(D.gearBudget(it.lvl, 3))), 'at least one stays under the generated budget, so none was lifted');
+});

@@ -635,13 +635,18 @@
     skeletal_horse: { name: 'Red Skeletal Horse', race: 'undead', faction: 'horde', cost: 100000 },
   };
   // ---- quest reward families
-  // generated gear's stat budget by level and quality (#141). Below 60 a blue is about 20% over a green and a purple
+  // generated gear's stat budget by level and quality (#141). Up to 50 a blue is about 20% over a green and a purple
   // 15% over a blue (a blue was a green plus 1 point, and purples didn't drop before 60); level 60 keeps v10.4's numbers,
-  // so the effects and the ceiling stay. Unrounded: the generator rolls on it, fixed blues are held to its blue.
+  // so the effects and the ceiling stay. From 51 to 59 a blue's and a purple's budget run in a straight line from L50's
+  // to L60's, reaching it at 59, so gear never gets worse as you level (tools/validate.js checks every level).
+  // Unrounded: the generator rolls on it, fixed blues are held to its blue.
+  const budgetAt60 = (q) => (q === 2 ? 60 * 0.55 + 1 : q === 3 ? 60 * 0.55 + 2 : 60 * 0.64 + 2);
+  const budgetLow = (L, q) => { const green = L * 0.55 + 1; return q === 2 ? green : q === 3 ? green * 1.2 : green * 1.2 * 1.15; };
+  D.BLUE_FLOOR_BELOW = 57; // fixed blues under this level are held to the generated blue budget (src/data/finalize.js)
   D.gearBudget = (L, q) => {
     if (L >= 60) return q === 2 ? L * 0.55 + 1 : q === 3 ? L * 0.55 + 2 : L * 0.64 + 2;
-    const green = L * 0.55 + 1;
-    return q === 2 ? green : q === 3 ? green * 1.2 : green * 1.2 * 1.15;
+    if (q === 2 || L <= 50) return budgetLow(L, q);
+    const a = budgetLow(50, q); return a + (budgetAt60(q) - a) * Math.min(1, (L - 50) / 9);
   };
   D.REWARD_FAMILIES = {
     fam_chest: { slot: 'chest', lvl: 2, q: 1 },
