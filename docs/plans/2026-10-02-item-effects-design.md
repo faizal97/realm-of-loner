@@ -154,3 +154,5 @@ v10.10 starts after v10.9.0 ships. Each beta is playable on its own.
 
 - Set bonuses (generic, by armour type, or per class).
 - Bots wearing effect items, and linking them in chat.
+
+**Per-effect bar (2026-10-10, #191):** Steady Fuse's loses bar is −1.75 instead of −2.0, at cost 0.51 (interval 45 s). After #141 and #191 moved the baseline, no cost or interval passed both of its bars. The wins bar was kept, because an effect is picked for its win. It's re-checked at the next effects baseline (#215), and goes back to −2.0 if a cost then passes it.
