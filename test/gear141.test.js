@@ -31,8 +31,8 @@ test('level 60 generated gear is exactly as before (no roll, the v10.4 budgets)'
   assert.deepStrictEqual([...new Set(many(60, 'chest', 60, 4))], [Math.round(60 * 0.64 + 2)]);
 });
 
-test('no fixed blue below 60 is weaker than a random blue of its level', () => {
-  const low = Object.entries(D.ITEMS).filter(([, it]) => it.q === 3 && it.lvl < 60 && sum(it) > 0 && sum(it) < Math.round(D.gearBudget(it.lvl, 3)));
+test('no fixed blue below 57 is weaker than a random blue of its level (57-59 are the Mentor Mark upgrade base, kept as made)', () => {
+  const low = Object.entries(D.ITEMS).filter(([, it]) => it.q === 3 && it.lvl < D.BLUE_FLOOR_BELOW && sum(it) > 0 && sum(it) < Math.round(D.gearBudget(it.lvl, 3)));
   assert.deepStrictEqual(low.map(([id]) => id), []);
 });
 

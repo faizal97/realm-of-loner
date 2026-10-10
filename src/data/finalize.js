@@ -12,12 +12,13 @@
     for (const k in D.PLACES) { const p = D.PLACES[k]; if (!p.lvl || !p.region || p.gate || p.lvl[1] - p.lvl[0] >= 50) continue; const r = z[p.region] = z[p.region] || [99, 0]; r[0] = Math.min(r[0], p.lvl[0]); r[1] = Math.max(r[1], p.lvl[1]); }
     return z;
   };
-  // a fixed blue below 60 is never weaker than a random one (#141): one under the generated blue budget of its level
+  // a fixed blue below 57 is never weaker than a random one (#141): one under the generated blue budget of its level
   // gets the missing points in its own stats, spread by their shares (tools/validate.js holds the line). Saves keep the
-  // copies they hold.
+  // copies they hold. The level 57-59 blues are the Mentor Mark upgrade base, so they stay as made (lifting them broke
+  // the upgrade ceiling and the Marks-per-step rule).
   for (const id in D.ITEMS) {
     const it = D.ITEMS[id], keys = Object.keys(it.stats || {}).filter((k) => it.stats[k] > 0);
-    if (it.q !== 3 || !(it.lvl < 60) || !keys.length) continue;
+    if (it.q !== 3 || !(it.lvl < D.BLUE_FLOOR_BELOW) || !keys.length) continue;
     const have = keys.reduce((a, k) => a + it.stats[k], 0), need = Math.round(D.gearBudget(it.lvl, 3));
     if (have >= need) continue;
     const add = need - have, share = keys.map((k) => ({ k, x: (add * it.stats[k]) / have }));
