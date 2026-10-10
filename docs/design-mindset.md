@@ -62,3 +62,21 @@ run must not swing the answer). Say the numbers and the gaps honestly.
 
 No Warcraft names in anything a player reads (abilities, reactions, talents, places). The lore bible
 (`docs/lore/canon.md`) and `tools/ipcheck.js` are the checks.
+
+## 7. Skill, gear and luck matter
+
+The game is never easy by default. It must feel like an MMO, not button-mashing or auto-battle.
+
+- **Undergeared loses.** Content tuned for its level fails a character clearly below it in gear; gear, talents and
+  consumables are the edge.
+- **Ability use is the skill.** The right ability at the right time (interrupts, defensives, cooldowns, priority)
+  wins; spamming one ability or ignoring the kit loses, even at the right level and gear.
+- **The player can't carry a bad group alone.** One player's strength doesn't make up for the whole group; bots make
+  visible mistakes the player has to play around.
+- **Luck is part of it.** Fairly often a group draws weaker teammates (a slow healer, a tank who loses threat, a DPS
+  who does little damage), and that still costs a well-geared player something: a slower clear, a close call, now and
+  then a wipe. Good play and good gear shrink the bad luck; they never remove it.
+- **Measured.** Each content type has a written target (a well-played, fitted character clears it; a button-masher or a
+  character a tier under in gear fails it; a bad-luck group makes even a fitted player work), and the sims prove it,
+  with "masher", "undergeared" and "bad draw" runs as the cases.
+- **Losing is readable.** Every loss says why (the death recap), so being punished feels fair, not random.
