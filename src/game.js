@@ -3772,11 +3772,18 @@
   // Battle speed (v10.3): fights run at 1x, 2x or 3x. Only fight time speeds up, and a group run's clock adds the fight
   // time gained, so par times and speed bonuses mean the same at every speed.
   G.SPEEDS = [1, 2, 3]; G.speed = 1;
+  // PvP fights always run at 1× (#193): at 3× a human reads and reacts three times slower in game time while a bot
+  // doesn't, so duels, war-mode ambushes, the Brawl and battlegrounds ignore the setting, which comes back in the next
+  // PvE fight. The first one of a session with the setting above 1× says so once.
+  G.PVP_KINDS = ['duel', 'pvp', 'brawl', 'bg'];
+  G.isPvp = (C) => !!C && G.PVP_KINDS.includes(C.kind);
+  let pvpSpeedTold = false;
   G.setSpeed = (x) => { G.speed = G.SPEEDS.includes(x) ? x : 1; return G.speed; };
   G.update = function (dt) {
     const S = G.S;
     if (!S) return;
-    const fast = G.fight && G.speed > 1 ? G.speed : 1;
+    const fast = G.fight && G.speed > 1 && !G.isPvp(G.fight) ? G.speed : 1;
+    if (G.speed > 1 && G.isPvp(G.fight) && !pvpSpeedTold) { pvpSpeedTold = true; emit('infoToast', 'PvP fights run at normal speed.'); }
     if (fast > 1 && S.run && !S.run.finishedAt) S.run.fastSecs = (S.run.fastSecs || 0) + dt * (fast - 1);
     acc += dt * fast;
     if (S.player.fishing) try { fishTick(); } catch (e) { console.error(e); } // fishing (v10.9)

@@ -1319,7 +1319,7 @@
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { closeDialog(); G.acceptPartyInvite(b.id); } }, 'Accept'), h('button', { class: 'btn alt', onclick: () => { closeDialog(); G.declinePartyInvite(b.id); } }, 'Decline'))]);
   }
   // battle speed (v10.3): a chip on the battle scene, 1x → 2x → 3x, remembered on this device; shown in PvE fights only
-  const speedFight = () => !!(G.fight && G.fight.kind !== 'duel' && G.fight.kind !== 'pvp');
+  const speedFight = () => !!(G.fight && !G.isPvp(G.fight)); // no chip in a PvP fight: it always runs at 1× (#193)
   const speedChip = () => h('button', { class: 'speed-chip', id: 'speed', 'aria-label': 'Battle speed', hidden: !speedFight(), onclick: (e) => { e.stopPropagation(); const i = G.SPEEDS.indexOf(G.speed); G.setSpeed(G.SPEEDS[(i + 1) % G.SPEEDS.length]); try { localStorage.setItem('azsolo.speed', String(G.speed)); } catch (er) { } e.currentTarget.textContent = `${G.speed}×`; } }, `${G.speed}×`);
   function fightPanel(p) {
     const C = G.fight;
@@ -4915,6 +4915,7 @@
     }, true);
     G.on('chat', renderChat);
     G.on('toast', (t) => toast(t));
+    G.on('infoToast', (t) => toast(t, true)); // yellow: a note, not an error (#193)
     G.on('error', (t) => toast(t));
     G.on('pop', (q) => { renderNavDots(); showPop(q); });
     G.on('invite', (d) => whenCalm(() => showInvite(d))); // the guild invitation (issues #12, #24)
