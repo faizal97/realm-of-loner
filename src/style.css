@@ -295,6 +295,10 @@ img { max-width: 100%; display: block; }
 .rw-note { display: block; margin: 6px 0 2px; color: #5a3a0c; font-weight: 700; }
 .chip.rw-pick { flex: none; white-space: nowrap; min-height: 0; padding: 6px 8px; font-size: 12px; }
 .chip:disabled { opacity: .45; }
+/* unavailable, with the reason on it (#169): readable (no fade), a dashed border where live buttons are solid, never gold */
+.chip.why, .chip.why:disabled, .btn.why, .btn.why:disabled { opacity: 1; filter: none; cursor: default; border: 1px dashed var(--edge); color: var(--muted); background: #1d160d; box-shadow: none; text-shadow: none; }
+.row.why, .row.why:disabled { opacity: 1; cursor: default; border-style: dashed; }
+.row.why small { color: var(--muted); }
 .task { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: center; padding: 6px 8px; border: 1px solid #9a7a24; border-left-width: 3px; border-radius: 3px; background: linear-gradient(90deg, #3a2c1266, transparent); }
 .task-b { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 8px; align-items: center; text-align: left; min-width: 0; }
 .task-b .t { display: grid; min-width: 0; }
