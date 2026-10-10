@@ -294,6 +294,7 @@ img { max-width: 100%; display: block; }
 .chip.gold { border-color: var(--gold); color: var(--gold); }
 .rw-note { display: block; margin: 6px 0 2px; color: #5a3a0c; font-weight: 700; }
 .chip.rw-pick { flex: none; white-space: nowrap; min-height: 0; padding: 6px 8px; font-size: 12px; }
+.chip.rw-pick:not(.gold) { color: #f2e5c3; border-color: #b08a4a; } /* on parchment the chip would inherit the dark ink: light text and outline, so "Choose" reads (#141) */
 .chip:disabled { opacity: .45; }
 /* unavailable, with the reason on it (#169): readable (no fade), a dashed border where live buttons are solid, never gold */
 .chip.why, .chip.why:disabled, .btn.why, .btn.why:disabled { opacity: 1; filter: none; cursor: default; border: 1px dashed var(--edge); color: var(--muted); background: #1d160d; box-shadow: none; text-shadow: none; }
