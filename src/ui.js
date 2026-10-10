@@ -1164,7 +1164,11 @@
       for (const bb of G.bounties(P.place)) {
         const st = G.bountyState(bb), rec = (P.bounty || {})[bb.id];
         const label = st === 'available' ? 'Take' : st === 'complete' ? 'Hand in' : st === 'done' ? 'Done' : `${rec.prog}/${bb.n}`;
-        list.append(h('button', { class: 'row' + (st === 'done' ? ' off' : ''), onclick: () => { if (st === 'available') G.acceptBounty(bb); else if (st === 'complete') G.turnInBounty(bb); ui.sheetFn(); renderPanel(); } },
+        list.append(h('button', { class: 'row' + (st === 'done' ? ' off' : ''), onclick: () => {
+          // a taken bounty opens its detail, a handed-in one says when the next come (#167)
+          if (st === 'done') return toast(bb.weekly ? 'Handed in this week. A new weekly bounty on Monday.' : 'Handed in today. New bounties at the daily reset.', true);
+          if (st !== 'available' && st !== 'complete') { const x = G.myBounties().find((m) => m.id === bb.id); if (x) return openSheet('quest', `${x.weekly ? 'Weekly bounty' : 'Bounty'}: ${D.MOBS[x.mob].name}`, x.hubName, (bd) => bd.append(...bountyDetail(x))); }
+          if (st === 'available') G.acceptBounty(bb); else if (st === 'complete') G.turnInBounty(bb); ui.sheetFn(); renderPanel(); } },
           h('div', { class: 'ic mob' }, img(mobArt(bb.mob))),
           h('div', { class: 't' }, h('b', null, `${bb.weekly ? 'Weekly: ' : ''}${bb.n} ${D.MOBS[bb.mob].name}`), h('small', { style: { whiteSpace: 'normal' } }, `${bb.xp} XP · ${G.moneyText(bb.money)} · ${bb.marks} Mentor Marks${bb.weekly ? ' · bonus gear' : ''}`)),
           h('div', { class: 'r' }, h('span', { class: st === 'complete' ? 'pill ready' : 'pill' }, label))));
@@ -1603,6 +1607,7 @@
   const PULL_GRACE = 1200;
   function pressAbility(id) {
     const S = G.S, P = S.player;
+    const blocked = G.barBlock(id); if (blocked) return toast(blocked); // on the road or dead: say why (#167)
     if (id === 'eat') return G.consume('food');
     if (id === 'drink') return G.consume('drink');
     if (id === 'potion') return G.usePotion(G.pUnit ? (G.pUnit.hp / G.pUnit.maxHp < 0.6 || !G.bestPotion('mana') ? null : 'mana') : null);
@@ -1612,7 +1617,6 @@
       if (why) toast(why);
       return;
     }
-    if (P.ghostUntil || P.travel) return;
     const ab = D.ABILITIES[id];
     if (ab.target === 'enemy') {
       if (S.run) return toast('Wait for the pull.');
@@ -1857,7 +1861,7 @@
         btn.classList.toggle('on', on);
         const u2 = C && G.pUnit, lit = !!u2 && (E.lit(u2, id) || (u2.cp >= 5 && ((D.PROCS || {})[u2.cls] || []).some((pr) => pr.on.includes('cp5') && pr.lights.includes(id))));
         btn.classList.toggle('lit', lit); // a reaction lit this ability (v10.4)
-        btn.classList.toggle('unlit', (!lit && !!(D.ABILITIES[id] || {}).needAura) || (!C && G.fightBuff(id))); // usable only while lit (Overpower): grey until then (v10.8); a short buff out of a fight (#165)
+        btn.classList.toggle('unlit', (!lit && !!(D.ABILITIES[id] || {}).needAura) || (!C && G.fightBuff(id)) || !!G.barBlock(id)); // on the road or dead the bar dims as #165's buffs do, cooldowns still sweeping (#167); usable only while lit (Overpower): grey until then (v10.8); a short buff out of a fight (#165)
         // distance (v10.9): too far from its target, the button greys and says how close it needs to be
         let far = 0;
         if (u2 && D.ABILITIES[id] && id !== 'attack') { const A = D.ABILITIES[id], tid = A.target === 'ally' ? (C.allyTarget != null && C.units[C.allyTarget] && !C.units[C.allyTarget].dead ? C.allyTarget : u2.uid) : u2.target; far = E.outOfRange(C, u2, id, C.units[tid]); }
@@ -2633,6 +2637,7 @@
   // selling (#168): a green or better, or an upgrade, asks first; Keep carries the weight, since there is no buyback
   function sellAsk(idx, done) {
     const P = G.S.player, b = P.bags[idx]; if (!b) return;
+    if (!G.sellable(b.item)) return toast(h('span', null, "The vendor won't buy ", h('span', { class: 'q' + (b.item.q || 0) }, b.item.name), '.')); // (#167)
     const sell = () => { const i = P.bags.indexOf(b); if (i >= 0) G.sell(i); done(); };
     if (!G.sellNeedsConfirm(b.item)) return sell();
     const it = b.item, up = D.GEAR_SLOTS.includes(it.slot) && G.isUpgrade(it), cur = up ? P.equip[it.slot] : null;
@@ -2672,21 +2677,22 @@
       b.append(h('div', { class: 'sec-h' }, 'Sell', h('small', null, 'tap an item to sell it')));
       const junk = G.S.player.bags.filter((x) => x.item.q === 0).length;
       b.append(h('button', { class: 'btn alt wide', disabled: !junk, onclick: () => { G.sellJunk(); ui.sheetFn(); } }, junk ? `Sell all grey items (${junk})` : 'No grey items to sell'));
-      b.append(bagGrid((idx) => sellAsk(idx, () => ui.sheetFn())));
+      b.append(bagGrid((idx) => sellAsk(idx, () => ui.sheetFn()), true));
     });
   }
 
   // ---------- bags
-  function bagGrid(onTap) {
+  // vendor: the grid at a vendor, where what it won't buy is dimmed and loses its marks before the tap (#167)
+  function bagGrid(onTap, vendor) {
     const P = G.S.player;
     const g = h('div', { class: 'bags' });
     for (let i = 0; i < G.bagCap(); i++) {
       const b = P.bags[i];
       if (!b) { g.append(h('div', { class: 'slot' })); continue; }
       const it = b.item;
-      const why = blockReason(it);
-      g.append(h('button', { class: 'slot qb' + it.q + (ui.bagSel === i || (ui.sellPick && ui.sellPick.has(i)) ? ' sel' : '') + (why ? ' cant' : ''), onclick: () => onTap(i) },
-        img(art('icon', it.icon)), ui.sellPick && ui.sellPick.has(i) ? h('span', { class: 'pick' }, '✓') : null, b.n > 1 ? h('span', { class: 'cnt tnum' }, b.n) : null, !why && G.isUpgrade(it) ? h('span', { class: 'up' }, '▲') : !why && G.effectOf(it) ? h('span', { class: 'up eff' }, '◆') : null,
+      const why = blockReason(it), keep = vendor && !G.sellable(it);
+      g.append(h('button', { class: 'slot qb' + it.q + (ui.bagSel === i || (ui.sellPick && ui.sellPick.has(i)) ? ' sel' : '') + (why ? ' cant' : '') + (keep ? ' nosell' : ''), onclick: () => onTap(i) },
+        img(art('icon', it.icon)), ui.sellPick && ui.sellPick.has(i) ? h('span', { class: 'pick' }, '✓') : null, b.n > 1 ? h('span', { class: 'cnt tnum' }, b.n) : null, keep ? null : !why && G.isUpgrade(it) ? h('span', { class: 'up' }, '▲') : !why && G.effectOf(it) ? h('span', { class: 'up eff' }, '◆') : null,
         why ? h('span', { class: 'why' }, why.kind === 'level' ? String(why.lvl) : '✕') : null));
     }
     return g;

@@ -536,6 +536,7 @@ img { max-width: 100%; display: block; }
 .cant > img { filter: grayscale(.5) sepia(1) hue-rotate(-50deg) saturate(4) brightness(.7); }
 .cant .why { position: absolute; left: 2px; bottom: 1px; font: 900 12px/1 var(--body); color: #ff4a3a; text-shadow: 0 1px 1px #000, 0 0 2px #000; }
 .slot.cant { box-shadow: 0 0 0 2px #b3261e; }
+.slot.nosell { opacity: .4; } /* the vendor will not buy it (#167) */
 .rollic { width: 40px; height: 40px; border: 1px solid #000; overflow: hidden; }
 .rollic img { width: 40px; height: 40px; }
 
