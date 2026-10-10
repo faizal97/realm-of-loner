@@ -466,6 +466,8 @@
     P.bags.push({ item: P.equip[slot], n: 1 }); delete P.equip[slot];
     clampVitals(); emit('change');
   };
+  // a sale that asks first (#168): green or better, or an upgrade; greys, whites and trade goods sell on one tap
+  G.sellNeedsConfirm = (it) => !!it && ((it.q || 0) >= 2 || (D.GEAR_SLOTS.includes(it.slot) && G.isUpgrade(it)));
   G.sell = function (idx) {
     const P = G.S.player;
     const b = P.bags[idx];
@@ -473,7 +475,7 @@
     const v = (b.item.sell || 1) * b.n;
     P.money += v; P.bags.splice(idx, 1);
     sys(`Sold ${b.item.name}${b.n > 1 ? ' x' + b.n : ''} for ${G.moneyText(v)}.`);
-    emit('sold', { money: v }); emit('change');
+    emit('sold', { money: v, item: b.item, n: b.n }); emit('change');
   };
   // Throw away (v10.1.1): the whole stack, anywhere. The Waystone stays (it is how you get home).
   G.canDiscard = (it) => !!it && it.id !== 'hearthstone';
@@ -487,9 +489,9 @@
   };
   G.sellJunk = function () {
     const P = G.S.player;
-    let v = 0;
-    P.bags = P.bags.filter((b) => { if (b.item.q === 0 && !b.item.noSell) { v += (b.item.sell || 1) * b.n; return false; } return true; });
-    if (v) { P.money += v; sys(`Sold junk for ${G.moneyText(v)}.`); emit('sold', { money: v }); }
+    let v = 0, k = 0;
+    P.bags = P.bags.filter((b) => { if (b.item.q === 0 && !b.item.noSell) { v += (b.item.sell || 1) * b.n; k++; return false; } return true; });
+    if (v) { P.money += v; sys(`Sold junk for ${G.moneyText(v)}.`); emit('sold', { money: v, many: k, grey: true }); }
     emit('change');
     return v;
   };
@@ -497,7 +499,7 @@
   G.sellMany = function (idxs) {
     const P = G.S.player, pick = [...new Set(idxs)].filter((i) => { const b = P.bags[i]; return b && !b.item.noSell && b.item.slot !== 'quest'; }).sort((a, b) => b - a);
     let v = 0; for (const i of pick) { const b = P.bags[i]; v += (b.item.sell || 1) * b.n; P.bags.splice(i, 1); }
-    if (v) { P.money += v; sys(`Sold ${pick.length} item${pick.length > 1 ? 's' : ''} for ${G.moneyText(v)}.`); emit('sold', { money: v }); }
+    if (v) { P.money += v; sys(`Sold ${pick.length} item${pick.length > 1 ? 's' : ''} for ${G.moneyText(v)}.`); emit('sold', { money: v, many: pick.length }); }
     emit('change');
     return { n: pick.length, money: v };
   };
