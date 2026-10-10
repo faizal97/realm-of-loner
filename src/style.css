@@ -878,9 +878,10 @@ svg.sym { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: 
 .frames .bar.xpmain { height: 4px; margin-top: 0; }
 .frames .bar.xpmain b { display: none; } /* tap the line for your experience */
 .uf-chips { display: inline-flex; gap: 4px; flex: none; }
-.uf-chips span { font: 700 11px/16px var(--body); padding: 0 6px; border-radius: 8px; background: #1a1209; border: 1px solid var(--edge); }
+.uf-chips > * { font: 700 11px/16px var(--body); padding: 0 6px; border-radius: 8px; background: #1a1209; border: 1px solid var(--edge); }
 .uf-chips .chip-rest { color: #6fa8ff; }
-.uf-chips .chip-queue { color: var(--gold); }
+.uf-chips .chip-queue { color: var(--gold); position: relative; white-space: nowrap; }
+.uf-chips .chip-queue::after { content: ''; position: absolute; left: -4px; right: -4px; top: -14px; bottom: -14px; } /* a 44 px tap area around the small chip (#173) */
 .frames .botfx { display: inline-block; margin-left: 5px; }
 /* scene: about a fifth of the screen; the art fills it, and sprites are sized from its height so they shrink with it */
 .scene { aspect-ratio: auto; height: clamp(140px, 21vh, 200px); max-height: none; container-type: size; }
@@ -957,3 +958,11 @@ svg.sym { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: 
 .scene .strip .run-menu::before { display: none; }
 .scene .strip .run-menu.dot::after { top: 4px; right: 6px; }
 .scene .bg, .scene .shade { top: 32px; height: calc(100% - 32px); }
+
+/* where a quest item comes from (#173): a muted second line under the objective; gold where you can collect it now */
+.tracker .o-src { font-size: 11px; color: var(--muted); padding-left: 10px; }
+.tracker .o-src.here { color: var(--gold); }
+.parch .obj-src { display: block; font-size: 12px; color: #7a6040; }
+.chip.flash { animation: collectFlash .6s ease-out 2; }
+@keyframes collectFlash { 50% { box-shadow: 0 0 0 2px var(--gold); } }
+@media (prefers-reduced-motion: reduce) { .chip.flash { animation: none; } }
