@@ -7,7 +7,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 const { G, D, B, character, advance } = require('./world');
 
-const toasts = []; G.on('toast', (t) => toasts.push(t));
+const toasts = [], infos = []; G.on('toast', (t) => toasts.push(t)); G.on('info', (t) => infos.push(t));
 const zoneFor = (L) => Object.keys(D.PLACES).find((k) => { const p = D.PLACES[k]; return p.lvl && p.lvl[0] <= L && p.lvl[1] >= L && !p.safe && (p.mobs || []).length; });
 // a character in a world party with two members, standing where creatures are
 function inParty(cls) {
@@ -57,11 +57,11 @@ test('the pick holds into the next pull, and tapping the picked row clears it', 
 test('the picked member dies: one log line and one toast, then heals go to you', () => {
   const { S, members } = inParty('shaman');
   const C = pull(); G.pickHeal(members[0]);
-  toasts.length = 0; const chat0 = S.chat.length;
+  toasts.length = 0; infos.length = 0; const chat0 = S.chat.length;
   const u = unitOf(C, members[0]); u.hp = 0; u.dead = true;
   advance(0.5);
   const want = `${members[0].name} died. Heals go to you.`;
-  assert.deepStrictEqual(toasts, [want]);
+  assert.deepStrictEqual(infos, [want], 'a yellow info toast (#178)'); assert.deepStrictEqual(toasts, []);
   assert.strictEqual(S.chat.slice(chat0).filter((m) => m.text === want).length, 1, 'one log line');
   assert.strictEqual(G.healPick(), null); assert.ok(G.fight ? G.fight.allyTarget == null : true);
   endFight(); G.leaveParty(true);
@@ -69,13 +69,13 @@ test('the picked member dies: one log line and one toast, then heals go to you',
 
 test('the picked member leaves the party: one message; the party ending clears it quietly', () => {
   const { S, members } = inParty('priest');
-  G.pickHeal(members[0]); toasts.length = 0;
+  G.pickHeal(members[0]); toasts.length = 0; infos.length = 0;
   const name = members[0].name; S.wparty.members.splice(0, 1);
   advance(0.2);
-  assert.deepStrictEqual(toasts, [`${name} left the party. Heals go to you.`]);
-  G.pickHeal(S.wparty.members[0]); toasts.length = 0;
+  assert.deepStrictEqual(infos, [`${name} left the party. Heals go to you.`]);
+  G.pickHeal(S.wparty.members[0]); toasts.length = 0; infos.length = 0;
   G.leaveParty(true); advance(0.2);
-  assert.deepStrictEqual(toasts, [], 'no message when the whole party ends');
+  assert.deepStrictEqual(toasts.concat(infos), [], 'no message when the whole party ends');
   assert.strictEqual(S.healPick, null);
 });
 
