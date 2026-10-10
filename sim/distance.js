@@ -74,7 +74,7 @@ const run = (C, s) => { for (let k = 0; k < s / 0.1 && !C.over; k++) E.tick(C, 0
   const m = ch('mage', 'ally'), w = ch('warrior', 'enemy'); const C = E.fight([m], [w], {}); at(m, 0); at(w, 3); w.target = m.uid; w.auras.push({ id: 'r', until: 2, root: true });
   const why = E.use(C, m, 'step_back'); check(why === null && E.dist(m, w) >= 10.5, `Step Back hops 8 m away (${why || E.dist(m, w).toFixed(1) + ' m'})`);
   w.res = 100; check(E.canUse(C, w, 'heroic_strike', m) === 'Out of range', 'the warrior cannot reach after the hop');
-  check(E.canUse(C, m, 'step_back') === 'Not ready yet', 'Step Back has a cooldown');
+  check(/isn't ready \(\d+s\)$/.test(E.canUse(C, m, 'step_back') || ''), 'Step Back has a cooldown');
 }
 // 9. a fear makes the target run away
 {

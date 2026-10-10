@@ -326,6 +326,8 @@
   // the Bags dot (issue #11): an upgrade landed since you last opened Bags, and one is still there (selling or wearing it clears it)
   G.bagDot = () => { const P = G.S.player; return !!P.bagUpgrade && P.bags.some((b) => G.isUpgrade(b.item) || b.item.fxNew); };
   G.seenBags = () => { const P = G.S.player; P.bagUpgrade = false; for (const b of P.bags) delete b.item.fxNew; }; // opening Bags: every new item is seen (#11, #23)
+  // what the loot card marks "▲ Upgrade" (gearTag): gear you can use at your level, without an effect, better than yours
+  G.markedUpgrade = (it) => { const P = G.S.player; return D.GEAR_SLOTS.includes(it.slot) && G.canUseItem(it) && (it.lvl || 1) <= P.level && !G.effectOf(it) && G.isUpgrade(it); };
   G.isUpgrade = function (it) {
     const P = G.S.player;
     if (G.effectOf(it)) return false; // an effect item shows ◆ Effect instead (v10.10)
@@ -1084,6 +1086,23 @@
       return { o, have: q && q.prog[i] ? 1 : 0, n: 1, label: 'Go to ' + D.PLACES[o.place].name };
     });
   };
+  // where a collect objective's item comes from (#173), worked out from the data so a new quest gets it with no extra
+  // work: the places whose gather gives it (a pick-up), else the creatures that drop it
+  G.objSource = function (item) {
+    const gather = Object.keys(D.PLACES).filter((k) => D.PLACES[k].gather && D.PLACES[k].gather.item === item);
+    if (gather.length) return { gather };
+    const mobs = Object.keys(D.MOBS).filter((k) => (D.MOBS[k].qdrops || []).concat(D.MOBS[k].drops || []).some((d) => d[0] === item)); // the sources validate.js checks
+    return mobs.length ? { mobs } : null;
+  };
+  // the objective's second line: "Collect them here" (you can act on it now), "Collect them in Halden Vineyards" or
+  // "Dropped by Grey Hood Thugs"
+  G.objHint = function (o) {
+    if (o.type !== 'collect') return null;
+    const s = G.objSource(o.item); if (!s) return null;
+    if (s.gather) return s.gather.includes(G.S.player.place) ? 'Collect them here' : `Collect them in ${s.gather.map((k) => D.PLACES[k].name).join(' or ')}`;
+    const names = s.mobs.slice(0, 2).map((k) => E.plural(k));
+    return `Dropped by ${names.join(' and ')}${s.mobs.length > 2 ? ' and others' : ''}`;
+  };
   G.questComplete = function (qid) { return G.questProgress(qid).every((p) => p.have >= p.n); };
   // the objectives still to do in your quests: a kill or collect you have finished is no longer one (v10.9)
   G.openObjectives = function () { const P = G.S.player, out = []; for (const qid in P.quests) for (const p of G.questProgress(qid)) if (p.have < p.n) out.push({ qid, o: p.o }); return out; };
@@ -1441,7 +1460,7 @@
     let tgt = G.pUnit.target;
     if (ab.target === 'ally') tgt = C.allyTarget != null && C.units[C.allyTarget] && !C.units[C.allyTarget].dead ? C.allyTarget : G.pUnit.uid;
     const why = E.use(C, G.pUnit, abId, tgt);
-    if (why) emit('error', why);
+    if (why && why !== E.GCD_WHY) emit('error', why); // the global cooldown says nothing (#173)
     return why;
   };
   // Heal target (#155, #156). A player whose abilities include one aimed at an ally (target: 'ally') picks whom heals go
@@ -1511,7 +1530,7 @@
     if (G.fight) return G.useAbility(abId);
     if (ab.combatOnly) return 'Use it in combat';
     if (G.fightBuff(abId)) return 'Use it in a fight.'; // before any cost (#165: it took the mana and the cooldown and applied nothing)
-    if (ab.cd && ((P.cds || {})[abId] || 0) > now()) return 'Not ready yet';
+    if (ab.cd && ((P.cds || {})[abId] || 0) > now()) return E.cooldownText(abId, (P.cds[abId] - now()) / 1000); // (#173)
     if (ab.lifetap) {
       const amt = Math.round(ab.lifetap.base + ab.lifetap.perLvl * P.level);
       const v0 = G.vitals();
@@ -3548,7 +3567,11 @@
       if (r.done) continue;
       if (!r.player) { if (r.left == null) r.left = r.until - t; if (!still) r.left -= dt; r.until = t + r.left; }
       const botsIn = Object.values(r.choices).every((c) => c.at <= t);
-      if (r.left <= 0 && !r.player) r.player = { c: 'pass', v: 0 };
+      if (r.left <= 0 && !r.player) { // time ran out: a pass, as the rule is, said in Loot (and a toast for an upgrade) (#173)
+        r.player = { c: 'pass', v: 0 };
+        const t = `Time ran out: you passed on ${B.link(r.item.name, r.item.q)}.`; loot(t);
+        if (G.markedUpgrade(r.item)) info(`Time ran out: you passed on ${r.item.name}.`);
+      }
       if (!(botsIn && r.player)) continue;
       r.done = true;
       const entries = Object.entries(r.choices).map(([name, c]) => ({ name, c: c.c, v: c.v, m: c.m })).concat([{ name: S.player.name, c: r.player.c, v: r.player.v, me: true }]);
@@ -3768,6 +3791,7 @@
   function sys(text) { if (G.S) { B.post(G.S, 'system', null, text); emit('chat'); } }
   function loot(text) { B.post(G.S, 'loot', null, text); emit('chat'); }
   function toast(text) { emit('toast', text); return text; }
+  function info(text) { emit('info', text); return text; } // a yellow toast: something happened you should know, not a refusal (#178)
   G.sys = sys; G.toast = toast;
   G.emitChange = () => emit('change'); G.emitChat = () => emit('chat');
 

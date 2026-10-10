@@ -372,7 +372,9 @@
     // no target: your frame spans the header, and Rested / In queue sit in your name row (#65)
     const P0 = G.S.player;
     els.frames.classList.toggle('solo', !u);
-    if (els.pChips) { els.pChips.innerHTML = ''; if (!u) els.pChips.append(...[P0.rested > 0 && P0.level < D.LEVEL_CAP ? h('span', { class: 'chip-rest' }, 'Rested') : null, G.S.queue ? h('span', { class: 'chip-queue' }, 'In queue') : null].filter(Boolean)); }
+    // the queue shows with a target too, short ("Queued 3m"), since it's live mid-fight; a tap opens it (#173)
+    if (els.pChips) { els.pChips.innerHTML = ''; els.pChips.append(...[!u && P0.rested > 0 && P0.level < D.LEVEL_CAP ? h('span', { class: 'chip-rest' }, 'Rested') : null,
+      G.S.queue ? h('button', { class: 'chip-queue', 'data-qchip': u ? 'short' : '', onclick: (e) => { e.stopPropagation(); openSocial('group'); } }, u ? queuedShort() : 'In queue') : null].filter(Boolean)); }
     if (!u) return;
     els.tUid = u.uid;
     const isMob = u.kind === 'mob';
@@ -1092,7 +1094,7 @@
     }
     if (place.gather && P.quests[place.gather.quest] && G.questState(place.gather.quest) !== 'complete') {
       const W = G.S.world[P.place]; const n = W ? W.nodes.n : 4;
-      b.append(h('button', { class: 'chip gold', disabled: !n, onclick: () => G.gather() }, 'Collect ' + place.gather.label, h('small', null, n ? n + ' nearby' : 'More soon')));
+      b.append(h('button', { class: 'chip gold', 'data-collect': '', disabled: !n, onclick: () => G.gather() }, 'Collect ' + place.gather.label, h('small', null, n ? n + ' nearby' : 'More soon')));
     }
     const nodes = G.placeNodes();
     if (nodes.length) {
@@ -1259,6 +1261,13 @@
   function questMobKeys() { const out = G.questMobs(); for (const k of (window.SOC ? SOC.taskMobs() : [])) out.add(k); return out; }
   // finished quests first (the ones to hand in), the rest in the order you took them
   const readyFirst = (qs) => qs.filter((q) => G.questState(q) === 'complete').concat(qs.filter((q) => G.questState(q) !== 'complete'));
+  const queuedShort = () => { const m = Math.floor((now() - G.S.queue.since) / 60000); return `Queued ${m >= 1 ? m + 'm' : '<1m'}`; };
+  // the tracker's "Collect them here": the Fight tab, scrolled to the Collect button (#173)
+  function goCollect() {
+    if (G.fight) return toast('Finish the fight first.');
+    ui.tab = 'fight'; ui.tabAuto = G.S.player.place; renderPanel();
+    const b = document.querySelector('[data-collect]'); if (b) { b.scrollIntoView({ block: 'center' }); b.classList.add('flash'); setTimeout(() => b.classList.remove('flash'), 1200); }
+  }
   function tracker(p, all) {
     const P = G.S.player;
     const qs = readyFirst(Object.keys(P.quests)), bs = G.myBounties();
@@ -1269,7 +1278,12 @@
       const fresh = ui.flashQ && ui.flashQ.qid === qid && Date.now() - ui.flashQ.at < 2500;
       t.append(h('div', { class: 'q' + (fresh ? ' flash' : '') }, Q.main ? qmark(st === 'complete' ? 'ready' : 'active', 'tq', true) : null, Q.name + (st === 'complete' ? ' (Complete)' : '')));
       if (st === 'complete') { const at = npcPlace(Q.turnin); t.append(h('div', { class: 'o done' }, `- Return to ${D.NPCS[Q.turnin].name}${at ? ', ' + D.PLACES[at].name : ''}`)); }
-      else for (const pr of G.questProgress(qid)) t.append(h('div', { class: 'o tnum' + (pr.have >= pr.n ? ' done' : '') }, `- ${pr.label}: ${pr.have}/${pr.n}`));
+      else for (const pr of G.questProgress(qid)) {
+        t.append(h('div', { class: 'o tnum' + (pr.have >= pr.n ? ' done' : '') }, `- ${pr.label}: ${pr.have}/${pr.n}`));
+        // where it comes from (#173); at the place, gold, and a tap goes to the Collect button
+        const hint = pr.have < pr.n && G.objHint(pr.o), here = hint === 'Collect them here';
+        if (hint) t.append(h('div', { class: 'o-src' + (here ? ' here' : ''), onclick: here ? (e) => { e.stopPropagation(); goCollect(); } : null }, hint));
+      }
     }
     for (const x of bs.slice(0, all ? 6 : Math.max(0, 4 - qs.length))) {
       t.append(h('div', { class: 'q' }, `${x.weekly ? 'Weekly bounty' : 'Bounty'}: ${D.MOBS[x.mob].name}` + (x.complete ? ' (Complete)' : '')));
@@ -1609,7 +1623,7 @@
     if (G.fight) {
       if (id === 'attack') { G.toggleAuto(); return; }
       const why = G.useAbility(id);
-      if (why) toast(why);
+      if (why && why !== E.GCD_WHY) toast(why); // the global cooldown says nothing: the bar's sweep shows it (#173)
       return;
     }
     if (P.ghostUntil || P.travel) return;
@@ -1873,6 +1887,7 @@
     if (gt && P.ghostUntil) gt.textContent = `Running back to your body... ${Math.ceil((P.ghostUntil - now()) / 1000)}s`;
     const qt = document.getElementById('q-time');
     if (qt && S.queue) qt.textContent = `Waiting ${fmtTime(now() - S.queue.since)} · as ${G.role() === 'tank' ? 'Tank' : G.role() === 'healer' ? 'Healer' : 'Damage'}`;
+    const qc = document.querySelector('[data-qchip="short"]'); if (qc && S.queue && qc.textContent !== queuedShort()) qc.textContent = queuedShort(); // (#173)
     const on = document.getElementById('online');
     if (on && !on.dataset.t || on && now() - on.dataset.t > 10000) { on.dataset.t = now(); on.textContent = `${B.onlineCount(S, new Date())} online`; }
     // roll timers
@@ -2438,8 +2453,10 @@
       h('p', null, Q.text),
       questStory(qid),
       h('h4', null, 'Objectives'),
-      ...pr.map((p) => { const where = p.have < p.n && p.o.type !== 'visit' ? byNearness(objPlaces(p.o)) : [];
-        return h('div', { class: 'obj tnum' + (p.have >= p.n ? ' done' : '') }, `${p.label}: ${p.have}/${p.n}`, where.length ? h('small', { class: 'obj-where' }, ' · ' + placeNames(where)) : null); }),
+      ...pr.map((p) => { const hint = p.have < p.n ? G.objHint(p.o) : null, pick = hint && /^Collect/.test(hint); // a pick-up names its place in the hint (#173)
+        const where = p.have < p.n && p.o.type !== 'visit' && !pick ? byNearness(objPlaces(p.o)) : [];
+        return h('div', { class: 'obj tnum' + (p.have >= p.n ? ' done' : '') }, `${p.label}: ${p.have}/${p.n}`, where.length ? h('small', { class: 'obj-where' }, ' · ' + placeNames(where)) : null,
+          hint ? h('small', { class: 'obj-src' }, hint) : null); }),
       turninLine(Q, st === 'complete'),
       Q.group ? h('div', { class: 'obj', style: { color: '#8a1a10' } }, `Group quest (${Q.group} players). Use the group finder.`) : null,
       Q.dungeon ? h('div', { class: 'obj', style: { color: '#8a1a10' } }, `${questDungeon(Q).raid ? 'Raid' : 'Dungeon'} quest. Queue for ${questDungeon(Q).name} in Social.`) : null,

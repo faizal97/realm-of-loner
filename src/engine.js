@@ -601,14 +601,20 @@
     const rg = rangeOf(ab), at = ab.target === 'aoe' ? C.units[u.target] : tgt;
     return rg != null && at && at !== u && at.pos && u.pos && E.dist(u, at) > rg + 0.01 ? rg : 0;
   };
+  // why a tap didn't work, in one pattern (#173): the ability's name, then the reason; the screen and the out-of-combat
+  // path both use these, so the wording can't drift. The global cooldown is a refusal too, but the screen says nothing
+  // for it (it is under 1.5 s and the bar's sweep shows it).
+  E.GCD_WHY = 'Not ready';
+  E.cooldownText = (abId, secs) => `${D.ABILITIES[abId].name} isn't ready (${Math.max(1, Math.ceil(secs))}s)`;
+  E.castingText = (abId) => `Still casting ${D.ABILITIES[abId].name}`;
   E.canUse = function (C, u, abId, tgt) {
     const ab = D.ABILITIES[abId];
     if (!ab) return 'Unknown';
     if (u.dead) return 'You are dead';
     if (stunned(C, u) && !ab.freeOf) return 'Stunned';
-    if (u.cast) return 'Busy';
-    if (ab.gcd !== false && u.gcdUntil > C.t) return 'Not ready';
-    if ((u.cds[abId] || 0) > C.t) return 'Not ready yet';
+    if (u.cast) return E.castingText(u.cast.ab);
+    if (ab.gcd !== false && u.gcdUntil > C.t) return E.GCD_WHY;
+    if ((u.cds[abId] || 0) > C.t) return E.cooldownText(abId, u.cds[abId] - C.t);
     if (ab.needAura && !auraOf(u, ab.needAura)) return 'Not lit yet';
     if (abCost(ab, u) > u.res + 0.001) return u.resType === 'rage' ? 'Not enough rage' : u.resType === 'energy' ? 'Not enough energy' : 'Not enough mana';
     if (ab.finisher && (u.cp <= 0 || (ab.target === 'enemy' && u.cpTarget !== (tgt && tgt.uid)))) return 'No combo points';
