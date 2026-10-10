@@ -73,7 +73,7 @@
     },
     // survival
     stubborn_blood: {
-      name: 'Stubborn Blood', role: 'survival', fires: 'you fall below a share of your health', icon: 'frenzied_regeneration', icd: 60, below: 0.3, pct: 0.06, dur: 6, cost: 0.52, // 0.52 since #191's talents (smallest cost that passes the effects gate)
+      name: 'Stubborn Blood', role: 'survival', fires: 'you fall below a share of your health', icon: 'frenzied_regeneration', icd: 60, below: 0.3, pct: 0.06, dur: 6, cost: 0.56, // 0.56 since #191's talents (smallest cost that passes the effects gate on CI's 5-seed mean; 0.52-0.55 give -1.99)
       desc: (L, f) => { const F = D.EFFECTS.stubborn_blood; return `Falling below ${n(F.below * 100)}% health heals you for ${n(F.pct * (f || 1) * 100)}% of your health over ${F.dur} sec. At most once every ${F.icd} sec.`; },
     },
   };
