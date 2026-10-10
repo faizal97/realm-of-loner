@@ -155,6 +155,16 @@ if (D.EFFECTS) {
     const pts = Object.values(it.stats || {}).reduce((a, b) => a + b, 0);
     if (it.fxBudget && pts < Math.floor(it.fxBudget * (1 - cap))) err(`item '${id}' keeps ${pts} of ${it.fxBudget} stat points; an effect item keeps at least ${Math.round((1 - cap) * 100)}%`); }
 }
+// a solo quest sits in its zone's levels (#188): at most 2 over the zone's top (a quest 10+ levels over its zone levels
+// whoever does it there far ahead); its zone is where it is handed in, else where it is given. Dungeon and group quests
+// follow their instance, and a Legend's questline (lg_) follows its Legend across zones, offered only at its level
+{
+  const at = {}; for (const k in D.PLACES) for (const nk of (D.PLACES[k].npcs || [])) if (!at[nk]) at[nk] = k;
+  const regionOf = (nk) => (D.PLACES[at[nk]] || {}).region, zl = D.zoneLevels();
+  for (const q in D.QUESTS) { const Q = D.QUESTS[q]; if (Q.dungeon || Q.group || q.startsWith('lg_')) continue;
+    const r = regionOf(Q.turnin) || regionOf(Q.giver), z = r && zl[r];
+    if (z && Q.lvl > z[1] + 2) err(`quest '${q}' is level ${Q.lvl}, but its zone (${r}) is ${z[0]}-${z[1]}: at most ${z[1] + 2} (move it, or set its level)`); }
+}
 const n = (t) => Object.keys(D[t]).length;
 console.log(`data: ${n('REGIONS')} zones, ${n('PLACES')} places, ${n('MOBS')} mobs, ${n('QUESTS')} quests, ${n('ITEMS')} items` + (warn.length ? ` · ${warn.length} warnings` : ''));
 if (process.argv.includes('-v')) warn.forEach((w) => console.log('  warn:', w));

@@ -43,7 +43,7 @@
   });
 
   Object.assign(D.PLACES, {
-    scarlet_monastery_gate: { name: 'The Pyre Abbey', zone: 'Pallmoor', region: 'tirisfal', scene: 'scarlet_monastery_gate', lvl: [33, 40], mobs: [['scarlet_monk', 4], ['scarlet_chaplain', 3]], pool: 7, npcs: [], links: { brill: 30, scarlet_watch_post: 20, alterac_foothills: 45 }, via: { alterac_foothills: 'Vaskar pass' } },
+    scarlet_monastery_gate: { gate: true, name: 'The Pyre Abbey', zone: 'Pallmoor', region: 'tirisfal', scene: 'scarlet_monastery_gate', lvl: [33, 40], mobs: [['scarlet_monk', 4], ['scarlet_chaplain', 3]], pool: 7, npcs: [], links: { brill: 30, scarlet_watch_post: 20, alterac_foothills: 45 }, via: { alterac_foothills: 'Vaskar pass' } },
   });
   D.PLACES.brill.links.scarlet_monastery_gate = 30;
   D.PLACES.scarlet_watch_post.links.scarlet_monastery_gate = 20;

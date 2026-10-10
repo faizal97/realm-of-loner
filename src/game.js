@@ -1129,6 +1129,10 @@
     sys(`${D.QUESTS[qid].name} abandoned.`); emit('change');
   };
   G.questXp = (L) => Math.round(L <= 5 ? 60 * L + 20 : (90 * L - 100) * 1.25); // v1.9.1: +25% from 6 so quests carry levelling, not grinding
+  // quest XP falls once you outlevel the quest (#188): full up to 2 levels over it, then 20% less for each level beyond,
+  // never under 20%, so the main path keeps its XP and a second zone of the same band levels you less
+  G.questXpShare = (qlvl, plvl) => { const over = plvl - qlvl; return over <= 2 ? 1 : Math.max(0.2, 1 - 0.2 * (over - 2)); };
+  G.questXpFor = (Q) => Math.round(G.questXp(Q.lvl) * G.questXpShare(Q.lvl, G.S.player.level));
   G.questMoney = (L) => Math.round(L * 30 + (L > 5 ? L * 25 : 0));
   // what fits a class (issue #13): quest rewards and dungeon bonuses read the same table, class only (not role or talents)
   G.CLASS_AFFIX = { warrior: 'of the Bear', rogue: 'of the Monkey', mage: 'of the Owl', priest: 'of the Whale', paladin: 'of the Bear', warlock: 'of the Eagle', hunter: 'of the Monkey', druid: 'of the Owl', shaman: 'of the Tiger', bard: 'of the Whale' };
@@ -1179,7 +1183,7 @@
     P.money += m;
     sys(`Received ${G.moneyText(m)}.`);
     if (it) { G.addItem(JSON.parse(JSON.stringify(it)), 1); loot(`You receive item: ${B.link(it.name, it.q)}.`); }
-    G.gainXp(G.questXp(Q.lvl), false);
+    G.gainXp(G.questXpFor(Q), false);
     emit('questDone', { qid, text: 'Quest complete' });
     emit('change');
   };
