@@ -77,3 +77,11 @@ test('the level 57-59 fixed blues (the Mentor Mark upgrade base) keep their own 
   assert.ok(low.length > 0);
   assert.ok(low.some((it) => Object.values(it.stats).reduce((a, v) => a + v, 0) < Math.round(D.gearBudget(it.lvl, 3))), 'at least one stays under the generated budget, so none was lifted');
 });
+
+test('both versions of an armour reward are in the class\'s own armour type, at every level', () => {
+  for (const cls of Object.keys(D.CLASSES)) for (const L of [5, 30, 59]) {
+    character(L, cls, 'human');
+    const armour = genQuests(60).filter((q) => !['weapon', 'back', 'finger'].includes(D.REWARD_FAMILIES[D.QUESTS[q].reward.choice[0]].slot));
+    for (const q of armour) for (const it of G.rewardItems(q)) assert.strictEqual(it.atype, D.CLASSES[cls].armorType, `${cls} ${L} ${q}: ${it.name} is ${it.atype}`);
+  }
+});
