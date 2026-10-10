@@ -2443,7 +2443,8 @@
     const Q = D.QUESTS[qid];
     const st = G.questState(qid);
     const pr = G.questProgress(qid);
-    const reward = G.rewardItem(qid);
+    const rewards = G.rewardItems(qid);
+    let chosen = 0; // two versions (#141): the class's own mix is chosen until you tap the other
     const money = (Q.reward.money || 0) + G.questMoney(Q.lvl);
     const box = h('div', { class: 'parch' },
       h('h3', null, Q.name),
@@ -2458,14 +2459,14 @@
       Q.dungeon ? h('div', { class: 'obj', style: { color: '#8a1a10' } }, `${questDungeon(Q).raid ? 'Raid' : 'Dungeon'} quest. Queue for ${questDungeon(Q).name} in Social.`) : null,
       h('h4', null, 'Rewards'),
       questXpLine(Q, money));
-    if (reward) {
-      const r = h('button', { class: 'row', style: { background: 'rgba(60,40,15,.15)', borderColor: '#b08a4a' }, onclick: () => showDialog(itemTip(reward), true) },
-        itemIcon(reward), h('div', { class: 't' }, h('b', { class: 'q' + reward.q, style: { textShadow: '0 1px 0 #000' } }, reward.name), h('small', { style: { color: blockReason(reward) ? '#a01010' : '#5a3a0c' } }, blockReason(reward) ? blockReason(reward).text : 'Tap to inspect')), h('div'));
-      box.append(r);
-    }
+    const rewardRow = (reward, i) => h('button', { class: 'row', style: { background: 'rgba(60,40,15,.15)', borderColor: '#b08a4a' }, onclick: () => showDialog(itemTip(reward), true) },
+      itemIcon(reward), h('div', { class: 't' }, h('b', { class: 'q' + reward.q, style: { textShadow: '0 1px 0 #000' } }, reward.name), h('small', { style: { color: blockReason(reward) ? '#a01010' : '#5a3a0c' } }, blockReason(reward) ? blockReason(reward).text : 'Tap to inspect')),
+      rewards.length > 1 ? h('span', { class: 'chip rw-pick' + (i === chosen ? ' gold' : ''), 'data-rw': i, onclick: (e) => { e.stopPropagation(); chosen = i; box.querySelectorAll('[data-rw]').forEach((c) => { const on = +c.dataset.rw === chosen; c.classList.toggle('gold', on); c.textContent = on ? 'Chosen ✓' : 'Choose'; }); } }, i === chosen ? 'Chosen ✓' : 'Choose') : h('div'));
+    if (rewards.length > 1) box.append(h('small', { class: 'rw-note' }, 'Choose one of these:'));
+    rewards.forEach((reward, i) => box.append(rewardRow(reward, i)));
     const btns = h('div', { class: 'btn-row' });
     if (st === 'available' && npc) btns.append(h('button', { class: 'btn', onclick: () => { G.accept(qid); sheetBack(() => openNpc(npc)); } }, 'Accept'));
-    if (st === 'complete' && npc && D.QUESTS[qid].turnin === npc) btns.append(h('button', { class: 'btn', onclick: () => { G.turnIn(qid); sheetBack(() => openNpc(npc)); } }, 'Complete Quest'));
+    if (st === 'complete' && npc && D.QUESTS[qid].turnin === npc) btns.append(h('button', { class: 'btn', onclick: () => { G.turnIn(qid, chosen); sheetBack(() => openNpc(npc)); } }, 'Complete Quest'));
     if ((st === 'active' || st === 'complete') && !npc) btns.append(h('button', { class: 'btn alt', onclick: () => { G.abandon(qid); sheetBack(openQuests); } }, 'Abandon'));
     return [box, btns];
   }

@@ -1168,25 +1168,41 @@
     P.bank = P.bank || []; P.bank.push({ item: it, n: 1 });
     sys(`${label}: your bags were full, so the ${it.name} went to your bank.`); return 'bank';
   };
-  G.rewardItem = function (qid) {
+  // a quest reward offers two versions (#141): the class's own stat mix and a second mix it plays with, and a weapon in
+  // any weapon type the class uses (a Hunter's can be a ranged one); white and fixed rewards stay one item
+  G.CLASS_AFFIX2 = { warrior: 'of the Tiger', rogue: 'of Agility', mage: 'of the Eagle', priest: 'of the Owl', paladin: 'of Strength', warlock: 'of the Owl', hunter: 'of the Falcon', druid: 'of the Eagle', shaman: 'of the Falcon', bard: 'of the Monkey' };
+  G.rewardItems = function (qid) {
     const Q = D.QUESTS[qid];
-    if (!Q.reward.choice) return null;
+    if (!Q.reward.choice) return [];
     const fam = D.REWARD_FAMILIES[Q.reward.choice[0]];
     const P = G.S.player, C = D.CLASSES[P.cls];
-    if (fam.fixed) return G.copyItem(fam.fixed[P.cls]);
+    if (fam.fixed) return [G.copyItem(fam.fixed[P.cls])];
     // deterministic per quest so the preview matches what you get
-    const key = 'rw_' + qid;
-    if (!G.S.flags[key]) {
-      const opts = fam.slot === 'weapon' ? { wtype: C.weapons[0] } : { atype: C.armorType };
-      const aff = fam.q >= 2 && G.classAffix(P.cls) ? { affix: G.classAffix(P.cls) } : {};
-      G.S.flags[key] = G.genGear(fam.slot, fam.lvl, fam.q, Object.assign(opts, aff));
+    const key = 'rw_' + qid, two = fam.q >= 2 && G.classAffix(P.cls);
+    let had = G.S.flags[key];
+    if (had && !Array.isArray(had)) had = [had]; // a save from before #141 keeps the one it showed
+    if (had && had.length >= (two ? 2 : 1)) return had;
+    const kinds = fam.slot === 'weapon' ? C.weapons.concat(C.ranged ? ['ranged'] : []) : [null];
+    const make = (kind, affName) => {
+      const slot = kind === 'ranged' ? 'ranged' : fam.slot;
+      const opts = slot === 'ranged' ? {} : fam.slot === 'weapon' ? { wtype: kind } : { atype: C.armorType };
+      const aff = affName ? D.AFFIXES.find((a) => a.name === affName) : null;
+      return G.genGear(slot, fam.lvl, fam.q, Object.assign(opts, aff ? { affix: aff } : {}));
+    };
+    const first = had ? had[0] : make(pick(kinds), two ? G.CLASS_AFFIX[P.cls] : null);
+    const out = [first];
+    if (two) {
+      const k1 = first.slot === 'ranged' ? 'ranged' : first.wtype || null, rest = kinds.filter((k) => k !== k1);
+      out.push(make(rest.length ? pick(rest) : k1, G.CLASS_AFFIX2[P.cls]));
     }
-    return G.S.flags[key];
+    G.S.flags[key] = out;
+    return out;
   };
-  G.turnIn = function (qid) {
+  G.rewardItem = (qid) => G.rewardItems(qid)[0] || null;
+  G.turnIn = function (qid, choice) {
     const P = G.S.player, Q = D.QUESTS[qid];
     if (!G.questComplete(qid)) return;
-    const it = G.rewardItem(qid);
+    const opts = G.rewardItems(qid), it = opts[Math.min(choice | 0, opts.length - 1)] || null; // the version picked (#141)
     if (it && G.bagsFull()) return toast('Make room in your bags first: this quest gives an item.'); // nothing paid, it stays complete (#144, as #128)
     for (const o of Q.objs) if (o.type === 'collect') G.removeItem(o.item, o.n);
     delete P.quests[qid]; P.done[qid] = true;

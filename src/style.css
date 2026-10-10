@@ -292,6 +292,8 @@ img { max-width: 100%; display: block; }
 .chip { padding: 8px 10px; border: 1px solid #5c4526; border-radius: 3px; background: #1d160d; font: 700 13px var(--body); min-height: 38px; }
 .chip small { color: var(--muted); font-weight: 600; margin-left: 4px; }
 .chip.gold { border-color: var(--gold); color: var(--gold); }
+.rw-note { display: block; margin: 6px 0 2px; color: #5a3a0c; font-weight: 700; }
+.chip.rw-pick { flex: none; white-space: nowrap; min-height: 0; padding: 6px 8px; font-size: 12px; }
 .chip:disabled { opacity: .45; }
 .task { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: center; padding: 6px 8px; border: 1px solid #9a7a24; border-left-width: 3px; border-radius: 3px; background: linear-gradient(90deg, #3a2c1266, transparent); }
 .task-b { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 8px; align-items: center; text-align: left; min-width: 0; }
