@@ -1460,9 +1460,11 @@
 
   // ============================================================ solo combat
   // the social pull (#153): a humanoid or murloc brings a friend of its kind, 7% of the time below creature level 20
-  // (kits are small; Mages and Priests died in 39% and 16-19% of those fights at 15-25) and 14% from 20; the friend
-  // shows in the fight list at once (#122) and arrives after 4-7 s (it was 2-5), time to shield, slow it or step back
-  G.SOCIAL = { until: 20, low: 0.07, high: 0.14, after: [4, 7] };
+  // (kits are small; Mages and Priests died in 39% and 16-19% of those fights at 15-25) and 12% from 20; the friend
+  // shows in the fight list at once (#122) and arrives after 4-7 s (it was 2-5), time to shield, slow it or step back.
+  // #214: below creature level 20 the friend hits for 75% (Mage L15 3.8 -> 2.7 deaths an hour), and from 20 the pull is 12% (it was 14%;
+  // Priest L25 2.7 -> 1.5, L30 2.4 -> 1.6). The creature you pulled is unchanged
+  G.SOCIAL = { until: 20, low: 0.07, high: 0.12, after: [4, 7], lowDmg: 0.75 };
   G.engage = function (mobId, useAbility) {
     const S = G.S, P = S.player;
     if (G.fight || P.travel || P.ghostUntil || S.run || S.bg) return;
@@ -3974,7 +3976,7 @@
         if (S.healPick) healPickCheck(); // #156: the picked member died
         if (C.kind === 'run') applyBossPlan(C);
         if (C.addAt && C.t >= C.addAt.t) {
-          const mu = E.mobUnit(C.addAt.inst.key, C.addAt.inst.level); mu.inst = C.addAt.inst;
+          const L = C.addAt.inst.level; const mu = E.mobUnit(C.addAt.inst.key, L, L < G.SOCIAL.until ? { hp: 1, dmg: G.SOCIAL.lowDmg } : null); mu.inst = C.addAt.inst;
           E.addEnemy(C, mu); C.addAt = null; C.events.push({ type: 'join', uid: mu.uid }); // the fight list swaps its "joins in" row for the creature (#122)
           B.post(S, 'combat', null, `${mu.name} joins the fight!`);
         }
