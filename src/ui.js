@@ -3018,7 +3018,7 @@
   // the facts rows: label on the left, value on the right
   const factRow = (label, value, good) => h('div', { class: 'ev-fact' }, h('span', null, label), h('b', { class: good ? 'ok' : '' }, value));
   function lwTodayFacts() {
-    const Ev = D.EVENTS.lanternwake, st = G.lw(), a = G.lwAccount().lw, daily = G.lwDaily();
+    const Ev = D.EVENTS.lanternwake, st = G.lw(), a = G.lwRec(), daily = G.lwDaily();
     if (!st) return [];
     return [
       factRow('Candles today', `${st.today} of ${Ev.cap} (resets at midnight)`, st.today >= Ev.cap),
@@ -3080,7 +3080,7 @@
         h('div', { class: 'sec-h' }, 'On Hard', h('small', null, 'opens after one Normal clear')), h('div', { class: 'ev-facts' }, ...hardRows.map((r) => factRow(r.name, `${r.when}: ${r.what}`))));
       if (live) b.append(...lwQueueButtons(() => ui.sheetFn()));
       // rewards
-      const a = G.lwAccount().lw, season = String(new Date().getFullYear());
+      const a = G.lwRec(), season = String(new Date().getFullYear());
       b.append(h('div', { class: 'sec-h' }, 'Rewards', h('small', null, live ? 'bought from Wakekeeper Ondine in any town with a profession trainer' : 'sold again when Lanternwake returns')), lwShopList(false));
       b.append(h('div', { class: 'list' },
         h('div', { class: 'row' }, h('div', { class: 'ic' }, img(art('icon', 'mount_wickless_steed'))), h('div', { class: 't' }, h('b', { style: { color: D.QUALITY[4].color } }, 'Wickless Steed'), h('small', null, `Mount · from the Wickless Knight's daily loot, always by the ${Ev.steedAt}th daily kill`)), h('div', { class: 'r' }, a.steed ? h('span', { class: 'ok' }, 'Have it') : `${a.steedKills} of ${Ev.steedAt}`)),

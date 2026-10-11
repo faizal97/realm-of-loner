@@ -105,7 +105,8 @@
     if (S.run && S.run.phase === 'fight') S.run.phase = 'rest', S.run.restUntil = now() + 3000;
     try { G.refreshHeirlooms(); } catch (e) { /* older save */ }
     pruneBounties(); // #154
-    if ((G.account().lw || {}).steed) G.giveTrialswornMount('wickless_steed'); // the Wickless Steed rides with every character
+    G.lwRevokeTest(); // rewards from a test build's season stay in test builds
+    if (G.lwRec().steed) G.giveTrialswornMount('wickless_steed'); // the Wickless Steed rides with every character
     G.lwExpire(); // candles from a festival that has ended
     { const tw = G.account().trialsworn || {}; for (const k in tw) if (tw[k] && D.TRIALSWORN[k] && D.TRIALSWORN[k].mount) G.giveTrialswornMount(D.TRIALSWORN[k].mount); } // Trialsworn Chargers ride with every character
     if (S.player.keepsake) { S.player.wardrobe = Object.assign({ back: S.player.keepsake }, S.player.wardrobe); delete S.player.keepsake; } // v10.3: keepsakes moved into the wardrobe
@@ -2291,7 +2292,7 @@
     if (n.clear) return !!(r.clears[n.clear] && r.clears[n.clear].clears);
     if (n.hard) return !!(r.clears[n.hard] && r.clears[n.hard].hard); // a whole raid cleared on Hard (v10.7)
     if (n.quest) return !!G.S.player.done[n.quest];
-    if (n.event) return G.lwAccount().lw.owned.includes(n.event); // bought from a festival (v10.13)
+    if (n.event) return G.lwRec().owned.includes(n.event); // bought from a festival (v10.13)
     if (n.prof) return ((G.S.player.prof || {})[n.prof] || {}).skill >= 300 || !!(G.S.player.artisan || {})[n.prof]; // Artisan (v10.9): 300 in that skill, now or before it was unlearned (#145)
     if (n.guildRank != null) return !!(root.SOC && SOC.rank() >= n.guildRank);
     if (n.trial) return ((G.S.player.trials || {}).bestEver || 0) >= n.trial; // Trials (v10.4): best level beaten in time
@@ -4043,10 +4044,32 @@
   G.eventSeason = function (key) { const d = new Date(now()); return inWindow(D.EVENTS[key], d) ? String(d.getFullYear()) : 'test-' + d.getFullYear(); };
   const LW = () => D.EVENTS.lanternwake;
   G.lwAccount = function () { const a = G.account(); a.lw = Object.assign({ owned: [], steed: false, steedKills: 0, keepsakes: [], town: {} }, a.lw); return a; };
+  // a test build's season (a beta or dev build outside the dates) keeps what it gives apart, in account.lwTest, so a beta
+  // tester's characters (shared with the live game) never carry it: G.lwRevokeTest takes it back outside test seasons
+  G.lwTesting = () => G.eventLive('lanternwake') && /^test/.test(G.eventSeason('lanternwake'));
+  const lwRec = (a) => { if (!G.lwTesting()) return a.lw; a.lwTest = Object.assign({ owned: [], steed: false, steedKills: 0, keepsakes: [], town: {}, looks: [] }, a.lwTest); return a.lwTest; };
+  G.lwRec = () => lwRec(G.lwAccount());
+  // a look given in a test season is noted, so it can be taken back
+  const lwCollect = (it) => { if (!G.collectLook(it) || !G.lwTesting()) return false; const a = G.lwAccount(), l = it.look || D.ITEMS[it.id].look; lwRec(a).looks.push(l[0] + ':' + l[1]); G.saveAccount(a); return true; };
+  // outside a test season: the test record's looks leave the wardrobe and the record goes (once for the account); then this
+  // character keeps only what the real record backs: the Steed, Flicker, the title, worn looks, and no festival use items
+  G.lwRevokeTest = function () {
+    if (G.lwTesting()) return;
+    const a = G.lwAccount();
+    if (a.lwTest) { const gone = new Set(a.lwTest.looks || []); a.looks = (a.looks || []).filter((k) => !gone.has(k)); delete a.lwTest; G.saveAccount(a); }
+    const P = G.S && G.S.player; if (!P) return;
+    const owned = a.lw.owned, looks = G.account().looks || [];
+    if (P.mounts && !a.lw.steed && P.mounts.includes('wickless_steed')) { P.mounts = P.mounts.filter((m) => m !== 'wickless_steed'); if (P.mount === 'wickless_steed') P.mount = null; }
+    if (P.companion && D.COMPANIONS[P.companion] && D.COMPANIONS[P.companion].event && !owned.includes(P.companion)) P.companion = null;
+    const t = D.TITLES.find((x) => x.id === P.title); if (t && t.need.event && !owned.includes(t.need.event)) P.title = null;
+    for (const pl in P.wardrobe || {}) { const k = P.wardrobe[pl]; if (/^lw_/.test(k) && !looks.includes(pl + ':' + k)) delete P.wardrobe[pl]; }
+    if (!G.eventLive('lanternwake') || (P.lw && /^test/.test(P.lw.season))) P.bags = (P.bags || []).filter((b) => !(D.ITEMS[b.item.id] || {}).event); // festival wares go with the festival
+  };
   // this character's festival state; null when Lanternwake is not on. A new season (or a new day) starts it fresh
   G.lw = function () {
     const P = G.S && G.S.player; if (!P || !G.eventLive('lanternwake')) return null;
     const season = G.eventSeason('lanternwake');
+    if (P.lw && P.lw.season !== season && /^test/.test(P.lw.season)) G.lwRevokeTest(); // the real season starts while playing
     if (!P.lw || P.lw.season !== season) P.lw = { season, candles: 0, day: null, today: 0, lit: [], lootDay: null, hardDay: null };
     if (P.lw.day !== dayKey()) Object.assign(P.lw, { day: dayKey(), today: 0, lit: [] });
     return P.lw;
@@ -4083,7 +4106,7 @@
     emit('change'); G.save();
   };
   // the keeper's wares: looks, Flicker and the title once each for the account; the candle sink as often as you like
-  G.lwOwned = (id) => G.lwAccount().lw.owned.includes(id) || (D.ITEMS[id] && D.ITEMS[id].look && (G.account().looks || []).includes(D.ITEMS[id].look.join(':')));
+  G.lwOwned = (id) => G.lwRec().owned.includes(id) || (D.ITEMS[id] && D.ITEMS[id].look && (G.account().looks || []).includes(D.ITEMS[id].look.join(':')));
   G.lwShopName = (s) => s.kind === 'companion' ? D.COMPANIONS[s.id].name : s.kind === 'title' ? G.titleName(D.TITLES.find((t) => t.id === s.id), G.S.player.name) : D.ITEMS[s.id].name;
   G.lwBuy = function (id) {
     const s = LW().shop.find((x) => x.id === id), st = G.lw();
@@ -4093,14 +4116,14 @@
     if (st.candles < s.cost) return toast(`Need ${s.cost} Wake Candles (you have ${st.candles}).`);
     if (s.kind === 'use' && !G.addItem(G.copyItem(id), 1)) return toast('Bags full.');
     st.candles -= s.cost;
-    if (s.kind !== 'use') { const a = G.lwAccount(); a.lw.owned.push(id); G.saveAccount(a); }
-    if (s.kind === 'look') G.collectLook(D.ITEMS[id]); // after the save above, which would otherwise write over it
+    if (s.kind !== 'use') { const a = G.lwAccount(); lwRec(a).owned.push(id); G.saveAccount(a); }
+    if (s.kind === 'look') lwCollect(D.ITEMS[id]); // after the save above, which would otherwise write over it
     if (s.kind === 'companion') emit('collected', { companion: id });
     loot(`You buy ${s.kind === 'look' || s.kind === 'use' ? B.link(D.ITEMS[id].name, D.ITEMS[id].q) : G.lwShopName(s)} for ${s.cost} Wake Candles.` + (s.kind === 'look' ? ' It is in your wardrobe (Hero → Character → Wardrobe).' : s.kind === 'title' ? ' Wear it from Hero → Journey → Titles.' : s.kind === 'companion' ? ' Call it from Hero → Journey → Companions.' : ''));
     emit('bought'); emit('change'); G.save();
   };
   // companions (v10.13): a small friend that follows you, only a look. Owned by the account, chosen per character
-  G.companions = () => Object.keys(D.COMPANIONS || {}).filter((k) => G.lwAccount().lw.owned.includes(k));
+  G.companions = () => Object.keys(D.COMPANIONS || {}).filter((k) => G.lwRec().owned.includes(k));
   G.setCompanion = function (key) { const P = G.S.player; if (key && !G.companions().includes(key)) return; P.companion = key || null; emit('change'); G.save(); };
   // the candle sink, used from your bags
   G.lwUse = function (idx) {
@@ -4118,28 +4141,28 @@
       S.pending.push({ at: now() + 1200 + Math.random() * 1500, bot: bot.id, ch: 'say', text: pick([`thanks for the treat ${P.name}!`, `ty for the treat!`, `oh a Lanternwake treat, thank you ${P.name}`, `ty ${P.name}, happy Lanternwake`]), fromName: bot.name });
     } else if (it.townLantern) {
       if (!D.PLACES[P.place].safe) return toast('Hang town lanterns in a town.');
-      const a = G.lwAccount(), t = a.lw.town; G.removeItem(it.id, 1);
+      const a = G.lwAccount(), t = lwRec(a).town; G.removeItem(it.id, 1);
       const key = G.eventSeason('lanternwake') + ':' + P.place; t[key] = (t[key] || 0) + 1; G.saveAccount(a);
       sys(`You hang a lantern in ${D.PLACES[P.place].name}. Lanterns hung here this festival: ${t[key]}.`);
     } else return;
     emit('change'); G.save();
   };
-  G.lwTownLanterns = (place) => (G.lwAccount().lw.town[G.eventSeason('lanternwake') + ':' + place] || 0);
+  G.lwTownLanterns = (place) => (G.lwRec().town[G.eventSeason('lanternwake') + ':' + place] || 0);
   G.costumeOf = (P) => (P && P.costume && P.costume.until > now() && D.MOBS[P.costume.mob] ? P.costume.mob : null);
   // the Snuffed Road's loot, once a day each on Normal and on Hard; every daily Normal kill counts toward the Steed
   G.lwDaily = () => { const st = G.lw(); return { normal: !!st && st.lootDay !== dayKey(), hard: !!st && st.hardDay !== dayKey() }; };
   G.lwHardOpen = () => !!(((G.S.player.codex || {})[LW().act] || {}).clears);
   G.lwHardLeft = () => LW().set.filter((id) => !(G.account().looks || []).includes(D.ITEMS[id].look[0] + ':' + D.ITEMS[id].look[1] + '_hard'));
   function lwBossLoot(R) {
-    const Ev = LW(), st = G.lw(), a = G.lwAccount(), d = dayKey();
+    const Ev = LW(), st = G.lw(), a = G.lwAccount(), r = lwRec(a), d = dayKey();
     if (!st) return;
     const season = G.eventSeason('lanternwake');
-    if (!a.lw.keepsakes.includes(season) && !/^test/.test(season)) { a.lw.keepsakes.push(season); G.saveAccount(a); loot(`A keepsake for your collection: Lanternwake ${season}.`); }
+    if (!r.keepsakes.includes(season) && !/^test/.test(season)) { r.keepsakes.push(season); G.saveAccount(a); loot(`A keepsake for your collection: Lanternwake ${season}.`); }
     if (R.hard) {
       if (st.hardDay === d) return sys('The Wickless Knight\'s Hard loot is taken today: it drops again after midnight.');
       st.hardDay = d;
       const left = G.lwHardLeft();
-      if (left.length) { const it = D.ITEMS[pick(left)]; G.collectLook({ look: [it.look[0], it.look[1] + '_hard'] }); loot(`Hard: a new look for your wardrobe, ${B.link(it.name + ' (Hard)', it.q)}.`); }
+      if (left.length) { const it = D.ITEMS[pick(left)]; lwCollect({ look: [it.look[0], it.look[1] + '_hard'] }); loot(`Hard: a new look for your wardrobe, ${B.link(it.name + ' (Hard)', it.q)}.`); }
       else sys('You have every Hard Lanternwake look.');
       G.lwEarn(Ev.earn.daily, 'the Wickless Knight on Hard');
       return;
@@ -4147,12 +4170,12 @@
     if (st.lootDay === d) return sys('The Wickless Knight\'s loot is taken today: it drops again after midnight.');
     st.lootDay = d;
     G.lwEarn(Ev.earn.daily, 'the Wickless Knight');
-    if (a.lw.steed) return;
-    a.lw.steedKills++;
-    if (a.lw.steedKills >= Ev.steedAt || Math.random() < Ev.steedChance) {
-      a.lw.steed = true; G.giveTrialswornMount('wickless_steed');
+    if (r.steed) return;
+    r.steedKills++;
+    if (r.steedKills >= Ev.steedAt || Math.random() < Ev.steedChance) {
+      r.steed = true; G.giveTrialswornMount('wickless_steed');
       loot(`The Wickless Knight drops ${B.link('Wickless Steed', 4)}! It is in your mounts (Hero → Character).`);
-    } else sys(`No Wickless Steed this time (daily kill ${a.lw.steedKills} of ${Ev.steedAt}: the ${Ev.steedAt}th always drops it).`);
+    } else sys(`No Wickless Steed this time (daily kill ${r.steedKills} of ${Ev.steedAt}: the ${Ev.steedAt}th always drops it).`);
     G.saveAccount(a);
   }
   G.lwBossLoot = lwBossLoot;
