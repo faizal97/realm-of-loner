@@ -993,7 +993,7 @@ svg.sym { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: 
 @keyframes ev-bob { 50% { transform: translateY(-6%); } }
 @media (prefers-reduced-motion: reduce) { .sprite.companion { animation: none; } }
 /* the title screens during Lanternwake (#226): a night sky, and small lanterns drifting up behind the title */
-.create.fest-lanternwake { background: radial-gradient(90% 60% at 50% 18%, #26345e, #0a0f22 62%, #06070f); }
+.create.fest-lanternwake { box-sizing: border-box; min-height: 100vh; min-height: 100dvh; background: radial-gradient(90% 60% at 50% 18%, #26345e, #0a0f22 62%, #06070f); }
 .create.fest-lanternwake > :not(.fest-sky) { position: relative; z-index: 1; }
 .fest-sky { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
 .fest-sky i { position: absolute; bottom: -40px; width: calc(14px * var(--s, 1)); height: calc(20px * var(--s, 1)); border-radius: 30% 30% 40% 40%; background: radial-gradient(circle at 50% 60%, #fff6d0, #ffc24a 45%, #c8601a); box-shadow: 0 0 calc(18px * var(--s, 1)) rgba(255, 194, 74, .6); opacity: .8; animation: fest-rise 26s linear infinite; }
