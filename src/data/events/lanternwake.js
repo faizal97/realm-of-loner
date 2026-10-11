@@ -15,8 +15,8 @@
       'The old tale says a knight lost his way centuries ago, and now he puts out every lantern he passes. Some years, the tale is true.',
     ],
     currency: { name: 'Wake Candles', one: 'Wake Candle', icon: 'lw_candle' },
-    cap: 100, // candles a day from play: about 40 minutes of normal play (sim/lanternwake.js)
-    earn: { kill: 1, elite: 3, quest: 4, boss: 5, light: 20, daily: 20 },
+    cap: 160, // candles a day from play: about 40 minutes of normal play (sim/lanternwake.js: 29 to 48 min of killing alone)
+    earn: { kill: 1, elite: 3, quest: 6, boss: 8, light: 30, daily: 30 },
     light: 5, // Light the Way: lanterns to light a day, each at a different place out in the world
     act: 'ev_snuffed_road',
     steedAt: 10, steedChance: 0.1, // the Wickless Steed: 1 in 10 a daily kill, and the 10th daily kill always drops it
@@ -37,11 +37,11 @@
     { id: 'lw_lantern', kind: 'look', cost: day(2) },
     { id: 'flicker', kind: 'companion', cost: day(2) },
     { id: 'lantern_bearer', kind: 'title', cost: day(2) },
-    { id: 'lw_costume_ghost', kind: 'use', cost: 10 },
-    { id: 'lw_costume_bones', kind: 'use', cost: 10 },
-    { id: 'lw_costume_local', kind: 'use', cost: 15 },
-    { id: 'lw_treat', kind: 'use', cost: 2 },
-    { id: 'lw_town_lantern', kind: 'use', cost: 5 },
+    { id: 'lw_costume_ghost', kind: 'use', cost: 15 },
+    { id: 'lw_costume_bones', kind: 'use', cost: 15 },
+    { id: 'lw_costume_local', kind: 'use', cost: 25 },
+    { id: 'lw_treat', kind: 'use', cost: 3 },
+    { id: 'lw_town_lantern', kind: 'use', cost: 8 },
   ];
   // the candle sink: cheap, endless, no power. A costume shows you as a creature for an hour
   const use = (id, name, icon, desc, o) => D.item(id, Object.assign({ name, slot: 'event', q: 1, icon, noSell: true, sell: 0, stack: 20, desc, event: 'lanternwake' }, o));

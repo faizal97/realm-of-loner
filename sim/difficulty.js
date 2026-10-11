@@ -11,13 +11,14 @@
 //   and nothing else; undergeared = white gear ten levels below the activity; baddraw = every bot in the group at skill 0.2 (gear
 //   unchanged). Default: today's player (bot gear, skill 0.7). All four are done in the sim, with no engine hook.
 //   HARD=1 queues a raid on Hard (needs a Normal clear first: the sim records one); JSON=1 prints the raw rows.
+//   Lanternwake's run (v10.13): ACTS=ev_snuffed_road DATE=2026-10-28T19:00 LVOFF=5|25|50 (levels 15, 35, 60).
 require('./_seed.js');
 const ROOT = process.env.ROOT || require('path').join(__dirname, '..');
 globalThis.localStorage = { getItem() { return null; }, setItem() {}, removeItem() {} };
 for (const f of ['data', 'engine', 'bots', 'game']) require(ROOT + '/src/' + f + '.js');
 require(ROOT + '/src/trials.js');
 const { G, D } = globalThis;
-const RealDate = Date; let t = new RealDate(2026, 9, 14, 19).getTime();
+const RealDate = Date; let t = process.env.DATE ? new RealDate(process.env.DATE).getTime() : new RealDate(2026, 9, 14, 19).getTime(); // DATE=2026-10-28T19:00 plays on that day (a festival run needs its dates, v10.13)
 globalThis.Date = class extends RealDate { constructor(...a) { if (a.length) super(...a); else super(t); } static now() { return t; } };
 const PROFILE = process.env.PROFILE || 'today';
 const N = +(process.env.N || 8), CLS = (process.env.CLASSES || 'mage,warrior,priest').split(','), LVOFF = +(process.env.LVOFF || 0), HARD = !!process.env.HARD, BLUE = process.env.GEAR === 'blue';
