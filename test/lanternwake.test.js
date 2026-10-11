@@ -113,3 +113,42 @@ test('outside the festival the run and the keeper\'s wares are gone', () => {
   assert.strictEqual(G.lw(), null);
   assert.ok(/over/.test(G.lwBuy('lw_robe') || ''), 'the keeper is gone');
 });
+
+test('a beta shares characters with the live game: what a test season gives stays in test builds, and real buys stay', () => {
+  const { P } = character(30); fresh();
+  // a real season first: the robe is bought for real and stays
+  at(2026, 10, 25, 10); G.lw().candles = 5000; G.lwBuy('lw_robe');
+  at(2027, 10, 12); globalThis.AZ_VERSION = '10.13.0-beta.1';
+  try {
+    assert.ok(G.lwTesting(), 'a beta outside the dates is a test season');
+    G.lw().candles = 5000;
+    G.lwBuy('lw_trousers'); G.lwBuy('flicker'); G.lwBuy('lantern_bearer'); G.lwBuy('lw_costume_ghost');
+    G.setCompanion('flicker'); G.setTitle('lantern_bearer'); G.setWardrobe('legs', 'lw_trousers');
+    { const a = G.account(); a.lwTest.steedKills = LW.steedAt - 1; G.saveAccount(a); } playRoad();
+    assert.ok(P.mounts.includes('wickless_steed') && (G.account().looks || []).includes('legs:lw_trousers'), 'a tester gets them in the beta');
+    G.save();
+  } finally { delete globalThis.AZ_VERSION; }
+  // the same character opened in the live game, before the festival
+  G.load(G.S.id); const Q = G.S.player, looks = G.account().looks || [];
+  assert.ok(!looks.includes('legs:lw_trousers'), 'the test look left the wardrobe');
+  assert.ok(looks.includes('chest:lw_robe'), 'the robe bought in a real season stays');
+  assert.ok(!(Q.mounts || []).includes('wickless_steed'), 'no Steed');
+  assert.strictEqual(Q.companion, null, 'no Flicker');
+  assert.strictEqual(Q.title, null, 'no title');
+  assert.ok(!(Q.wardrobe || {}).legs, 'the trousers are not worn');
+  assert.ok(!Q.bags.some((b) => D.ITEMS[b.item.id].event), 'no festival wares in the bags');
+  assert.strictEqual(G.account().lwTest, undefined, 'the test record is gone');
+  assert.deepStrictEqual(G.companions(), [], 'Flicker is not owned for real');
+});
+
+test('a beta tester online when the real season starts loses the test rewards then', () => {
+  const { P } = character(30); fresh();
+  at(2026, 10, 23, 23); globalThis.AZ_VERSION = '10.13.0-beta.2';
+  try {
+    G.lw().candles = 5000; G.lwBuy('flicker'); G.setCompanion('flicker');
+    at(2026, 10, 24, 0); assert.ok(!G.lwTesting(), 'the real season, even in a beta');
+    assert.strictEqual(G.lw().candles, 0, 'fresh candles');
+    assert.strictEqual(P.companion, null, 'the test Flicker went');
+    assert.deepStrictEqual(G.companions(), []);
+  } finally { delete globalThis.AZ_VERSION; }
+});
