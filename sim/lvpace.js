@@ -15,6 +15,9 @@ globalThis.Date = class extends RealDate { constructor(...a) { if (a.length) sup
 if (process.env.DRINK) G.DRINK_SECS = +process.env.DRINK; // #4 levers, to compare: a drink's seconds, the solo self-heal line
 if (process.env.HEALAT) globalThis.E.SOLO_HEAL_AT = +process.env.HEALAT;
 if (process.env.PETDMG) globalThis.E.SOLO_PET_DMG = +process.env.PETDMG; // the Hunter's beast alone against monsters
+if (process.env.SOCIAL) G.SOCIAL.high = +process.env.SOCIAL; // #214: the social pull rate from creature level 20, to compare
+// #214, design-mindset §7: SKILL=0.3 plays like a button-masher (default 0.8, a skilled player); UNDERGEAR=n wears the gear of n levels lower
+const SKILL = +(process.env.SKILL || 0.8), UNDERGEAR = +(process.env.UNDERGEAR || 0);
 // Pack pulls (#139, not in the game yet): PACK=1 lets a class that knows an area attack (a damaging 'aoe' ability) pull a
 // pack of the creature it attacks: 2 below level 20, 3 from 20, 4 from 40 (PACKS=2,3,4 sets them), as many as are alive
 // there, fought in the game's 'spread' kill order (area attacks from 2 enemies, as a player who pulled the group to use
@@ -33,7 +36,7 @@ const normal = (k) => D.MOBS[k] && !D.MOBS[k].named && !D.MOBS[k].elite && !D.MO
 const placeFor = (L) => Object.keys(D.PLACES).filter((k) => { const p = D.PLACES[k]; return p.lvl && !p.safe && !p.city && (p.mobs || []).length && p.mobs.every(([m]) => normal(m)) && p.lvl[0] <= L && p.lvl[1] >= L; }).sort((a, b) => Math.abs((D.PLACES[a].lvl[0] + D.PLACES[a].lvl[1]) / 2 - L) - Math.abs((D.PLACES[b].lvl[0] + D.PLACES[b].lvl[1]) / 2 - L))[0];
 function hour(cls, L) {
   G.newGame({ name: 'L', cls, race: 'human' }); const S = G.S, P = S.player; S.flags.warModeAsked = true; S.flags.warMode = false; S.flags.noInvites = true;
-  P.level = L; P.equip = G.botChar({ name: 'x', cls, race: 'human', level: L, skill: 0.8 }).equip; P.talents = G.autoTalents(cls, 'dps', L, 0); P.role = 'dps';
+  P.level = L; P.equip = G.botChar({ name: 'x', cls, race: 'human', level: Math.max(1, L - UNDERGEAR), skill: 0.8 }).equip; P.talents = G.autoTalents(cls, 'dps', L, 0); P.role = 'dps';
   // gear options (#194): GEARSET=green puts a class-fitted quest green in every slot (what a questing character wears);
   // HEIR=1 then swaps the weapon, cloak and ring for heirlooms (+15% XP). HEIR_SHARE=0.9 scales their stats to that share of the
   // green's (stat points, weapon damage, cloak armour); HEIR_SHARE unset is the game's own heirloom formula.
@@ -57,7 +60,7 @@ function hour(cls, L) {
   while (t < end) {
     if (food && G.countItem(food.id) < 5) G.addItem(G.copyItem(food.id), 20); if (drink && G.countItem(drink.id) < 5) G.addItem(G.copyItem(drink.id), 20);
     if (P.ghostUntil) { tm.dead += 1; step(1); continue; }
-    if (G.fight) { tm.fight += 0.1; if (G.pUnit && G.pUnit.kind === 'player') { G.pUnit.kind = 'bot'; G.pUnit.bot = { skill: 0.8, react: 0.4 }; G.pUnit.role = 'dps'; } const lv0 = P.level, x0 = P.xp, Cf = G.fight; maxN = Math.max(maxN, Cf.enemies.length); step(0.1); if (!G.fight) { const died = !!P.ghostUntil, dead = Cf.enemies.filter((e) => e.dead || e.hp <= 0).length; if (died) deaths++; if (KILLC) kills += dead; else if (!died) kills++; const z = size[maxN] = size[maxN] || { n: 0, d: 0 }; z.n++; if (died) z.d++; maxN = 0; xp += P.xp - x0; P.level = L; P.xp = 0; } continue; }
+    if (G.fight) { tm.fight += 0.1; if (G.pUnit && G.pUnit.kind === 'player') { G.pUnit.kind = 'bot'; G.pUnit.bot = { skill: SKILL, react: SKILL === 0.8 ? 0.4 : 0.9 - 0.6 * SKILL }; G.pUnit.role = 'dps'; } const lv0 = P.level, x0 = P.xp, Cf = G.fight; maxN = Math.max(maxN, Cf.enemies.length); step(0.1); if (!G.fight) { const died = !!P.ghostUntil, dead = Cf.enemies.filter((e) => e.dead || e.hp <= 0).length; if (died) deaths++; if (KILLC) kills += dead; else if (!died) kills++; const z = size[maxN] = size[maxN] || { n: 0, d: 0 }; z.n++; if (died) z.d++; maxN = 0; xp += P.xp - x0; P.level = L; P.xp = 0; } continue; }
     // rest: start below 60% health or 35% mana, then eat and drink back up like a player (to 95% health, 90% mana), not
     // just over the line: pulling again at 35% mana ran casters dry mid-fight (#4)
     const v = G.vitals(), low = v.hp < v.maxHp * 0.6 || (v.resType === 'mana' && v.res < v.maxRes * 0.35);

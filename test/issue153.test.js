@@ -1,5 +1,5 @@
 // The social pull (#153): a humanoid or murloc sometimes brings a friend of its kind. Below creature level 20 it happens
-// 7% of the time (it was 14%; Mages and Priests died in many of those fights at 15-25), from 20 it stays 14%, and the
+// 7% of the time (it was 14%; Mages and Priests died in many of those fights at 15-25), from 20 12% (#214; it was 14%), and the
 // friend arrives after 4-7 s (it was 2-5 s), giving a caster time to shield, slow it or step back.
 'use strict';
 const test = require('node:test');
@@ -25,11 +25,11 @@ function pulls(lo, hi, n) {
   return { rate: social / tries, delays, tries };
 }
 
-test('below creature level 20 about 7% of pulls bring a friend; from 20 about 14%', () => {
+test('below creature level 20 about 7% of pulls bring a friend; from 20 about 12%', () => {
   const low = pulls(1, 20, 3000), high = pulls(20, 60, 3000);
   assert.ok(low.tries > 1000 && high.tries > 1000, `${low.tries} and ${high.tries} pulls`);
   assert.ok(low.rate > 0.05 && low.rate < 0.09, `below 20: ${(low.rate * 100).toFixed(1)}%`);
-  assert.ok(high.rate > 0.11 && high.rate < 0.17, `from 20: ${(high.rate * 100).toFixed(1)}%`);
+  assert.ok(high.rate > 0.10 && high.rate < 0.14, `from 20: ${(high.rate * 100).toFixed(1)}%`);
 });
 
 test('the friend arrives 4-7 s into the fight', () => {
