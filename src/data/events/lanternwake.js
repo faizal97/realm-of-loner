@@ -71,17 +71,19 @@
     wickless_knight: { name: 'The Wickless Knight', lvl: [10, 60], family: 'undead', boss: true, elite: true, named: true, special: 'slam', specialText: 'The Wickless Knight snuffs the light out of his target!', aggro: 'Another light. Another light to put out.' },
   });
   // his mechanics are the Hard-raid system's (`extra`, hard: false on Normal); Hard adds faster blows and more wisps
-  const gallop = { kind: 'hit', every: 13, mult: 0.55, who: 'all', school: 'shadow', hard: false, text: 'The Wickless Knight gallops through the group!' };
+  const gallop = { kind: 'hit', every: 15, mult: 0.4, who: 'all', school: 'shadow', hard: false, text: 'The Wickless Knight gallops through the group!' };
   const wisps = (at, n, hard) => ({ kind: 'adds', at, mob: 'lw_wisp', n, lvl: 0, hard, text: 'The Wickless Knight calls his wisps to relight his lantern!' });
   const midnight = (after, hard) => ({ kind: 'enrage', after, mult: 2.5, hard, text: 'Midnight! The Wickless Knight\'s lantern blazes black!' });
   D.ACTIVITIES.ev_snuffed_road = {
     name: 'The Snuffed Road', where: 'stormwind', size: 5, minLvl: 10, maxLvl: 60, event: 'lanternwake', scale: true, music: 'lanternwake', since: '2026-10-24',
     desc: 'Lanternwake. 5 players, fought at your own level. The Wickless Knight puts out every lantern he passes.',
     boss: 'wickless_knight',
-    trashMult: { hp: 2.2, dmg: 2.2 }, bossMult: { hp: 10, dmg: 4.2 },
-    hard: { trashMult: { hp: 2.6, dmg: 2.6 }, bossMult: { hp: 12, dmg: 4.8 } },
-    extra: { wickless_knight: [gallop, wisps(0.66, 2, false), wisps(0.33, 2, false), midnight(150, false)] },
-    hardExtra: { wickless_knight: [Object.assign({}, gallop, { every: 10, hard: true }), wisps(0.75, 2, true), wisps(0.5, 3, true), wisps(0.25, 3, true), midnight(120, true)] },
+    trashMult: { hp: 2.2, dmg: 2.2 }, bossMult: { hp: 7, dmg: 3.6 },
+    hard: { trashMult: { hp: 2.6, dmg: 2.6 }, bossMult: { hp: 8.5, dmg: 4.2 } },
+    // at the level cap groups wear raid gear, so from level 40 the numbers rise to these at 60
+    atCap: { from: 40, trashMult: { hp: 2.8, dmg: 2.6 }, bossMult: { hp: 9, dmg: 4.2 }, hard: { trashMult: { hp: 3.2, dmg: 3 }, bossMult: { hp: 10.5, dmg: 4.8 } } },
+    extra: { wickless_knight: [gallop, wisps(0.66, 2, false), wisps(0.33, 2, false), midnight(100, false)] },
+    hardExtra: { wickless_knight: [Object.assign({}, gallop, { every: 12, hard: true }), wisps(0.75, 2, true), wisps(0.5, 3, true), wisps(0.25, 3, true), midnight(85, true)] },
     pulls: [
       { scene: 'snuffed_road', label: 'Lantern-wisps', mobs: ['lw_wisp', 'lw_wisp', 'lw_wisp'] },
       { scene: 'snuffed_road', label: 'The Wickless Knight', mobs: ['wickless_knight'], boss: true },
