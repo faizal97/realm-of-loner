@@ -74,7 +74,7 @@ test('Light the Way: a lantern at 5 different places out in the world a day pays
 
 test('the Wakekeeper: looks, Flicker and the title once each for the account; the candle sink as often as you like', () => {
   const { P } = character(30); fresh(); at(2026, 10, 25, 10);
-  const st = G.lw(); st.candles = 1000;
+  const st = G.lw(); st.candles = 5000;
   G.lwBuy('lw_robe'); assert.ok((G.account().looks || []).includes('chest:lw_robe'), 'the robe is in the wardrobe');
   const left = G.lw().candles; G.lwBuy('lw_robe'); assert.strictEqual(G.lw().candles, left, 'not twice');
   G.lwBuy('lantern_bearer'); assert.ok(G.titleUnlocked(D.TITLES.find((t) => t.id === 'lantern_bearer')), 'the title is earned');
@@ -82,7 +82,7 @@ test('the Wakekeeper: looks, Flicker and the title once each for the account; th
   G.lwBuy('lw_treat'); G.lwBuy('lw_treat'); assert.strictEqual(P.bags.filter((b) => b.item.id === 'lw_treat').reduce((n, b) => n + (b.n || 1), 0), 2, 'two treats');
   st.candles = 3; G.lwBuy('lw_lantern'); assert.ok(!(G.account().looks || []).includes('back:lw_lantern'), 'not without the candles');
   // a costume is only a look, for an hour
-  G.lw().candles = 50; G.lwBuy('lw_costume_ghost');
+  G.lw().candles = 100; G.lwBuy('lw_costume_ghost');
   const idx = P.bags.findIndex((b) => b.item.id === 'lw_costume_ghost'); G.useItem(idx);
   assert.strictEqual(G.costumeOf(P), 'lw_ghost'); advance(1); at(2026, 10, 25, 12); assert.strictEqual(G.costumeOf(P), null, 'gone after an hour');
 });
