@@ -198,6 +198,8 @@ several sharing a line separated by " / ".
 - **Anvil Throne / Throne** — Grimmark's throne room in Cinderpeak Depths; also the thorn throne of the Thorn Warrens
 - **Isle** — as in Stormveil Isle
 - **Forgehall** — the Slagborn's hall of learning in Cinderpeak Depths
+- **Lanternwake** — the autumn festival (24 October to 7 November): Caldreth lights candles for its dead so they can find the road home. Its folk tale is the Wickless Knight, a shade who lost his way centuries ago and puts out every lantern he passes; he is a tale, not part of the main story, and spoils nothing
+- **Wake Candles** — the festival's candles, spent at the Wakekeeper's stall
 - **Pyre Bastion** — the Order's stronghold in Graymouth
 - **King's Square** — the old market square of Graymouth
 - **Bracken Arms** — the inn at Brackenford

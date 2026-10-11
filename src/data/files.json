@@ -47,6 +47,7 @@
  "zones/worldbosses.js",
  "zones/legends.js",
  "professions.js",
+ "events/lanternwake.js",
  "lore.js",
  "lore_places.js",
  "lore_books.js",
