@@ -427,6 +427,17 @@ TRACKS = {
             'r:4 | r:4 | r:4 | r:4 | r:4 | r:4 | r:4 | r:4 |'
             'F#5:1.5 E5:.5 D5:1 B4:1 | D5:1.5 E5:.5 G5:2 | F#5:1 A5:1 F#5:1 D5:1 | E5:3 C#5:1 | B4:1 E5:1 G5:1.5 F#5:.5 | E5:1 D5:1 B4:2 | C#5:1 E5:1 A5:2 | G5:1 E5:1 C#5:1 A4:1'}],
         'room': 0.4},
+    # Lanternwake (v10.13): the autumn festival, a D minor waltz like a music box left on a windowsill for the dead;
+    # flute over harp and bells, a soft choir joining on the second half. Plays in the Snuffed Road and on the festival menu
+    'lanternwake': {'bpm': 84, 'beats': 3, 'key': 'D minor', 'meter': '3/4', 'prog': 'Dm Bb F A Dm Gm A A Dm Bb F C Gm Dm A Dm', 'layers': [
+        {'type': 'pad', 'cut': 1000, 'gain': 0.1, 'a': 0.8, 'r': 0.9},
+        {'type': 'bass', 'pat': [(0, 0, 1)], 'gain': 0.22, 'square': 0.1},
+        {'type': 'stab', 'at': [1, 2], 'gain': 0.045, 'len': 0.25, 'bright': 1800},
+        {'type': 'arp', 'voice': 'bell', 'pat': [0, 2, 4, 2, 3, 2], 'gain': 0.07, 'len': 1.4},
+        {'type': 'choir', 'from': 9, 'gain': 0.08, 'cut': 760},
+        {'type': 'lead', 'voice': 'flute', 'gain': 0.14, 'mel':
+            'A4:1 D5:1 F5:1 | F5:1.5 E5:.5 D5:1 | C5:1 F5:1 A5:1 | G5:1.5 F5:.5 E5:1 | D5:1 F5:1 A5:1 | Bb5:1.5 A5:.5 G5:1 | A5:1 E5:1 C#5:1 | A4:3 |A4:1 D5:1 F5:1 | F5:1.5 G5:.5 F5:1 | E5:1 C5:1 A4:1 | G4:1.5 C5:.5 E5:1 | D5:1 Bb4:1 G4:1 | F5:1.5 E5:.5 D5:1 | r:.5 C#5:1 B4:.5 A4:1 | D5:3'}],
+        'room': 0.42},
 }
 
 
