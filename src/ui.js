@@ -589,7 +589,7 @@
     } else if (!P.travel) {
       const cos = G.costumeOf(P), me = spriteEl(cos ? mobArt(cos) : art('hero', looks(P)), { l: 4, b: 5, w: 26 }, 'idle' + (cos ? ' flip' : '')); // a Lanternwake costume shows a creature
       ui.spriteEls.me = me; sc.append(me);
-      if (P.companion && D.COMPANIONS && D.COMPANIONS[P.companion]) sc.append(spriteEl(art('mob', P.companion), { l: 1, b: 30, w: 9 }, 'idle companion'));
+      if (P.companion && D.COMPANIONS && D.COMPANIONS[P.companion]) sc.append(spriteEl(art('mob', P.companion), { l: 16, b: 34, w: 12 }, 'idle companion'));
       if (S.bg) { // the battleground: your team stands with you, nobody else from the place you queued in
         G.S.bg.team.forEach((m, i) => { const pos = [{ l: 20, b: 14, w: 21 }, { l: 33, b: 22, w: 18 }, { l: 44, b: 10, w: 20 }, { l: 55, b: 20, w: 17 }][i];
           if (pos) sc.append(spriteEl(art('hero', looks(m)), pos, 'idle friend', h('div', { class: 'np' }, h('span', { class: 'cls-' + m.cls }, m.name.split('-')[0])))); });
@@ -3143,7 +3143,7 @@
     const btn = ui.evBtn; if (!btn) return;
     const p = lwPrefs(), r = app.getBoundingClientRect(), bar = els.bottom && els.bottom.getBoundingClientRect();
     const lo = 64, hi = Math.max(lo, (bar && bar.top > 0 ? bar.top - r.top : r.height * 0.7) - 64);
-    const y = Math.max(lo, Math.min(hi, (p.y == null ? 0.42 : p.y) * r.height - 28));
+    const y = p.y == null ? hi : Math.max(lo, Math.min(hi, p.y * r.height - 28)); // first place: just above the ability bar
     btn.style.top = Math.round(y) + 'px';
     if (p.side === 'l') { btn.style.left = '6px'; btn.style.right = 'auto'; } else { btn.style.right = '6px'; btn.style.left = 'auto'; }
   }
@@ -4968,9 +4968,10 @@
     root.classList.add('fest-' + k);
     const sky = h('div', { class: 'fest-sky', 'aria-hidden': 'true' });
     for (let i = 0; i < 12; i++) sky.append(h('i', { style: { left: (4 + ((i * 37) % 92)) + '%', animationDelay: (-i * 2.3).toFixed(1) + 's', animationDuration: (22 + (i % 4) * 4) + 's', '--s': (0.6 + ((i * 7) % 5) / 10).toFixed(2) } }));
-    root.prepend(sky);
+    root.prepend(sky); root._sky = sky;
     return root;
   }
+  const clearScreen = (root) => { root.innerHTML = ''; if (root._sky) root.append(root._sky); }; // a redraw keeps the sky
   const discordLink = () => window.UPD ? h('button', { class: 'discord-link', onclick: () => UPD.open(UPD.DISCORD) }, 'Join us on Discord') : null;
   const privacyLink = (label) => window.UPD ? h('button', { class: 'discord-link', onclick: () => UPD.open(UPD.PRIVACY) }, label || 'Privacy') : null;
   const footLinks = () => h('div', { class: 'foot-links' }, discordLink(), privacyLink());
@@ -5055,7 +5056,7 @@
     const root = festSky(h('div', { class: 'create' }));
     app.append(root);
     const draw = () => {
-      root.innerHTML = '';
+      clearScreen(root);
       const cur = list.find((c) => c.id === sel) || list[0];
       const rows = h('div', { class: 'list' });
       for (const c of list) {
@@ -5118,7 +5119,7 @@
     const root = festSky(h('div', { class: 'create' }));
     app.append(root);
     const draw = () => {
-      root.innerHTML = '';
+      clearScreen(root);
       const nameIn = h('input', { type: 'text', id: 'cc-name', value: st.name, maxlength: '12', 'aria-label': 'Character name' });
       nameIn.addEventListener('input', () => { st.name = nameIn.value.replace(/[^A-Za-z]/g, '').slice(0, 12); });
       const factions = h('div', { class: 'looks', style: { gridTemplateColumns: '1fr 1fr' } });
