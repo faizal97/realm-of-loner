@@ -407,6 +407,58 @@
   }
 
   /* ================= the mounts (all face RIGHT; seat at 72,60; hooves on y 121) ================= */
+  /* the skeletal horse, drawn from a palette so the Wickless Steed shares its bones */
+  var SKEL_VOID = { bone: '#e6dcc2', dbone: '#a89e84', voidc: '#241a30', glow: '#b060ff', cloth: '#3e2650', light: '#e0b8ff', deep: '#4a1a7a', pale: '#e8c8ff', eye: '#d8a0ff' };
+  var SKEL_WICK = { bone: '#d6dce6', dbone: '#8e98aa', voidc: '#141a2e', glow: '#ffb03a', cloth: '#1e2a4a', light: '#fff0b8', deep: '#7a3a08', pale: '#ffe6a0', eye: '#fff2c0',
+    lantern: function (c) { return L('M58,64 L58,74', OL, 2.6) + P('M52,74 L64,74 L62,88 L54,88 Z', c.cel('#3a3428'), 2) + P('M55,77 L61,77 L60,85 L56,85 Z', '#ffd06a', 0) + C(58, 81, 7, glow(c, '#ffb03a', 0.55), 0); } };
+  function skelHorse(c, o, K) {
+      var bone = K.bone, dbone = K.dbone, voidc = K.voidc, glowc = K.glow, cloth = K.cloth, s = o.icon ? '' : shadow(c, 80, 56);
+      var bl = function (d, w, cc) { return L(d, OL, w + 3.8) + L(d, cc || bone, w); };
+      var knob = function (x, y, r, cc) { return C(x, y, r, c.cel(cc || bone), 1.6); };
+      // far legs
+      s += bl('M52,84 L58,98 L50,108 L51,117', 4, dbone) + knob(58, 98, 3.2, dbone) + knob(50, 108, 2.6, dbone) + hoof(51, 121, 8, '#1a1418');
+      s += bl('M104,86 L106,100 L106,110 L107,117', 4, dbone) + knob(106, 100, 3, dbone) + knob(106, 110, 2.6, dbone) + hoof(107, 121, 8, '#1a1418');
+      // ghost-flame tail
+      var T = taper([[40, 62], [28, 66], [20, 80], [22, 96], [16, 106]], 14, 2, 5);
+      s += F(T.d, glow(c, glowc, 0.7)) + P(fringe(T, 2, 20, 6, 'a'), c.lg([[0, K.light], [0.5, glowc], [1, K.deep]]), 1.6);
+      s += bl('M40,62 C34,64 30,68 28,74', 2.6);
+      // body silhouette filled with dark void and glow
+      var bd = 'M36,72 C33,60 42,54 54,56 C64,58 76,61 90,57 C98,55 104,52 110,54 C122,58 125,76 119,88 C113,96 101,96 90,94 C76,97 60,97 48,94 C38,90 37,82 36,72 Z';
+      s += body(c, bd, voidc, C(100, 76, 26, glow(c, glowc, 0.7)) + C(48, 76, 14, glow(c, glowc, 0.4)), 2.4);
+      // ribs + sternum
+      var rb = '';
+      [[96, 0], [102, 1], [108, 2], [114, 3]].forEach(function (k) { rb += 'M' + pt([k[0] - 2, 58]) + 'C' + pt([k[0] + 6, 66]) + ' ' + pt([k[0] + 4, 80]) + ' ' + pt([k[0] - 2 + k[1], 90]); });
+      s += bl(rb, 2.6) + bl('M92,92 C102,94 110,92 116,86', 2.4);
+      // spine
+      s += bl('M40,60 C54,56 70,60 90,57 C100,55 106,53 110,54', 3) + (function () { var v = ''; for (var i = 0; i < 9; i++) { var x = 44 + i * 8; v += C(x, i < 4 ? 58.4 - i * 0.2 : 58 - (i - 4) * 0.9, 1.8, bone, 1.2); } return v; })();
+      // pelvis
+      s += P('M36,64 C40,58 50,58 54,64 C56,72 50,78 44,80 C40,76 36,72 36,64 Z', c.cel(bone), 1.8) + E(46, 68, 3.4, 4, voidc, 1.2);
+      // neck: vertebrae over a void strip, ghostly mane
+      var N = taper([[104, 76], [112, 60], [122, 46], [131, 36]], 20, 12, 5);
+      s += F(fringe(N, 1, 15, 9, 'b'), glow(c, glowc, 0.9)) + P(fringe(N, 1, 15, 7, 'b'), c.lg([[0, K.deep], [0.6, glowc], [1, K.pale]], 0, 1, 1, 0), 1.6);
+      s += P(N.d, voidc, 2);
+      [0, 3, 6, 9, 12, 15].forEach(function (i) { var p = N.s[i]; s += E(p[0], p[1], 5.4, 3.6, c.cel(bone), 1.4); });
+      // skull
+      var hd = 'M124,28 C128,20 138,20 143,27 L155,47 C158,52 155,58 149,58 C143,58 139,56 135,52 C129,46 121,38 124,28 Z';
+      s += P('M130,24 L133,12 L138,22 Z', c.cel(dbone), 1.6);
+      s += body(c, hd, bone, F('M140,22 L160,22 L160,60 L150,60 C156,50 150,40 140,22 Z', dk(bone, 0.25), 0.8), 2.3);
+      s += P('M125,26 L125,13 L132,22 Z', c.cel(bone), 1.6);
+      s += E(134, 33, 4.2, 3.6, voidc, 1.4) + glowEye(c, 134.4, 33.4, 1.8, K.eye);
+      s += P('M146,42 L150,47 L147,49 Z', voidc, 1) + P('M138,52 L154,53 L152,57 L140,56 Z', voidc, 1.2) + L('M141,53 L141,56 M144,53.4 L144,56.4 M147,53.6 L147,56.6 M150,53.8 L150,56.6', bone, 1.2);
+      s += L('M127,38 C131,44 136,46 139,45', dk(bone, 0.4), 1.2);
+      // tattered barding + black spiked saddle
+      var rag = 'M50,57 L94,56 C96,66 96,76 95,86 L91,93 L88,85 L83,94 L79,86 L73,95 L69,86 L63,94 L59,85 L54,92 L50,85 C48,76 48,66 50,57 Z';
+      s += saddle(c, { leather: '#2a2230', blanket: cloth, blanketD: rag, trim: null, metal: '#8a8a96', rim: glowc, pattern: L('M50,62 L95,61', '#8a8a96', 2) + F('M64,70 L72,64 L80,70 L72,78 Z', glowc, 0.8) });
+      s += spikes([[57, 52, -2.2], [89, 53, -1]], 5.4, '#b8bcc8');
+      // near legs
+      s += bl('M44,80 L50,97 L40,108 L41,117', 5) + knob(50, 97, 3.8) + knob(40, 108, 3) + hoof(41, 121, 8.5, '#1a1418');
+      s += bl('M112,82 L115,100 L116,110 L118,117', 5) + knob(112, 82, 5) + knob(115, 100, 3.4) + knob(116, 110, 3) + hoof(118, 121, 8.5, '#1a1418');
+      // chain bridle + reins
+      s += L('M127,27 L134,41 L147,55', OL, 3) + L('M127,27 L134,41 L147,55', '#6a6a76', 1.4) + C(146.6, 55, 1.8, '#9a9aa6', 1);
+      s += reins([147, 55], [89, 57], '#2a2230', 7);
+      if (K.lantern) s += K.lantern(c);
+      return s;
+  }
   var MOUNTS = {
     /* human: a brown Kingsmere horse in blue-and-gold barding, steel chanfron and a blue plume */
     horse: function (c, o) {
@@ -716,53 +768,10 @@
     },
 
     /* undead: a skeletal horse, bones over a dark void, purple glow, tattered barding and a black spiked saddle */
-    skeletal_horse: function (c, o) {
-      var bone = '#e6dcc2', dbone = '#a89e84', voidc = '#241a30', glowc = '#b060ff', cloth = '#3e2650', s = o.icon ? '' : shadow(c, 80, 56);
-      var bl = function (d, w, cc) { return L(d, OL, w + 3.8) + L(d, cc || bone, w); };
-      var knob = function (x, y, r, cc) { return C(x, y, r, c.cel(cc || bone), 1.6); };
-      // far legs
-      s += bl('M52,84 L58,98 L50,108 L51,117', 4, dbone) + knob(58, 98, 3.2, dbone) + knob(50, 108, 2.6, dbone) + hoof(51, 121, 8, '#1a1418');
-      s += bl('M104,86 L106,100 L106,110 L107,117', 4, dbone) + knob(106, 100, 3, dbone) + knob(106, 110, 2.6, dbone) + hoof(107, 121, 8, '#1a1418');
-      // ghost-flame tail
-      var T = taper([[40, 62], [28, 66], [20, 80], [22, 96], [16, 106]], 14, 2, 5);
-      s += F(T.d, glow(c, glowc, 0.7)) + P(fringe(T, 2, 20, 6, 'a'), c.lg([[0, '#e0b8ff'], [0.5, glowc], [1, '#4a1a7a']]), 1.6);
-      s += bl('M40,62 C34,64 30,68 28,74', 2.6);
-      // body silhouette filled with dark void and glow
-      var bd = 'M36,72 C33,60 42,54 54,56 C64,58 76,61 90,57 C98,55 104,52 110,54 C122,58 125,76 119,88 C113,96 101,96 90,94 C76,97 60,97 48,94 C38,90 37,82 36,72 Z';
-      s += body(c, bd, voidc, C(100, 76, 26, glow(c, glowc, 0.7)) + C(48, 76, 14, glow(c, glowc, 0.4)), 2.4);
-      // ribs + sternum
-      var rb = '';
-      [[96, 0], [102, 1], [108, 2], [114, 3]].forEach(function (k) { rb += 'M' + pt([k[0] - 2, 58]) + 'C' + pt([k[0] + 6, 66]) + ' ' + pt([k[0] + 4, 80]) + ' ' + pt([k[0] - 2 + k[1], 90]); });
-      s += bl(rb, 2.6) + bl('M92,92 C102,94 110,92 116,86', 2.4);
-      // spine
-      s += bl('M40,60 C54,56 70,60 90,57 C100,55 106,53 110,54', 3) + (function () { var v = ''; for (var i = 0; i < 9; i++) { var x = 44 + i * 8; v += C(x, i < 4 ? 58.4 - i * 0.2 : 58 - (i - 4) * 0.9, 1.8, bone, 1.2); } return v; })();
-      // pelvis
-      s += P('M36,64 C40,58 50,58 54,64 C56,72 50,78 44,80 C40,76 36,72 36,64 Z', c.cel(bone), 1.8) + E(46, 68, 3.4, 4, voidc, 1.2);
-      // neck: vertebrae over a void strip, ghostly mane
-      var N = taper([[104, 76], [112, 60], [122, 46], [131, 36]], 20, 12, 5);
-      s += F(fringe(N, 1, 15, 9, 'b'), glow(c, glowc, 0.9)) + P(fringe(N, 1, 15, 7, 'b'), c.lg([[0, '#4a1a7a'], [0.6, glowc], [1, '#e8c8ff']], 0, 1, 1, 0), 1.6);
-      s += P(N.d, voidc, 2);
-      [0, 3, 6, 9, 12, 15].forEach(function (i) { var p = N.s[i]; s += E(p[0], p[1], 5.4, 3.6, c.cel(bone), 1.4); });
-      // skull
-      var hd = 'M124,28 C128,20 138,20 143,27 L155,47 C158,52 155,58 149,58 C143,58 139,56 135,52 C129,46 121,38 124,28 Z';
-      s += P('M130,24 L133,12 L138,22 Z', c.cel(dbone), 1.6);
-      s += body(c, hd, bone, F('M140,22 L160,22 L160,60 L150,60 C156,50 150,40 140,22 Z', dk(bone, 0.25), 0.8), 2.3);
-      s += P('M125,26 L125,13 L132,22 Z', c.cel(bone), 1.6);
-      s += E(134, 33, 4.2, 3.6, voidc, 1.4) + glowEye(c, 134.4, 33.4, 1.8, '#d8a0ff');
-      s += P('M146,42 L150,47 L147,49 Z', voidc, 1) + P('M138,52 L154,53 L152,57 L140,56 Z', voidc, 1.2) + L('M141,53 L141,56 M144,53.4 L144,56.4 M147,53.6 L147,56.6 M150,53.8 L150,56.6', bone, 1.2);
-      s += L('M127,38 C131,44 136,46 139,45', dk(bone, 0.4), 1.2);
-      // tattered barding + black spiked saddle
-      var rag = 'M50,57 L94,56 C96,66 96,76 95,86 L91,93 L88,85 L83,94 L79,86 L73,95 L69,86 L63,94 L59,85 L54,92 L50,85 C48,76 48,66 50,57 Z';
-      s += saddle(c, { leather: '#2a2230', blanket: cloth, blanketD: rag, trim: null, metal: '#8a8a96', rim: glowc, pattern: L('M50,62 L95,61', '#8a8a96', 2) + F('M64,70 L72,64 L80,70 L72,78 Z', glowc, 0.8) });
-      s += spikes([[57, 52, -2.2], [89, 53, -1]], 5.4, '#b8bcc8');
-      // near legs
-      s += bl('M44,80 L50,97 L40,108 L41,117', 5) + knob(50, 97, 3.8) + knob(40, 108, 3) + hoof(41, 121, 8.5, '#1a1418');
-      s += bl('M112,82 L115,100 L116,110 L118,117', 5) + knob(112, 82, 5) + knob(115, 100, 3.4) + knob(116, 110, 3) + hoof(118, 121, 8.5, '#1a1418');
-      // chain bridle + reins
-      s += L('M127,27 L134,41 L147,55', OL, 3) + L('M127,27 L134,41 L147,55', '#6a6a76', 1.4) + C(146.6, 55, 1.8, '#9a9aa6', 1);
-      s += reins([147, 55], [89, 57], '#2a2230', 7);
-      return s;
-    },
+    skeletal_horse: function (c, o) { return skelHorse(c, o, SKEL_VOID); },
+    /* the Wickless Steed (Lanternwake, v10.13): the same bones, burning lantern-gold in a night-blue void, a lantern
+       hung from the saddle */
+    wickless_steed: function (c, o) { return skelHorse(c, o, SKEL_WICK); },
     /* the Trialsworn charger and its Trial 15 and Trial 20 tiers (drawn by twCharger) */
     trialsworn_charger: function (c, o) { return twCharger(c, o, 0); },
     trialsworn_charger_t15: function (c, o) { return twCharger(c, o, 1); },
@@ -805,6 +814,7 @@
     raptor: [134, 38, 1.04, ['#8ac848', '#0e2408']],
     kodo: [132, 70, 0.96, ['#d0a060', '#281808']],
     skeletal_horse: [134, 36, 1.02, ['#7a3ab0', '#0e0418']],
+    wickless_steed: [134, 36, 1.02, ['#c07a20', '#0a0e1e']],
     trialsworn_charger: [127, 44, 0.8, ['#b8964a', '#101a3c']],
     trialsworn_charger_t15: [127, 44, 0.8, ['#d8b860', '#101a3c']],
     trialsworn_charger_t20: [127, 44, 0.8, ['#fff0b0', '#1a2450']]

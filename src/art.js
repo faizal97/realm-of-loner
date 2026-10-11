@@ -3099,6 +3099,50 @@
   rsChest('tc_mail', tcMail, TC, TC_H);
   rsLegs('tc_legs', tcLegs, TC, TC_H);
 
+  /* ---- Lanternwake (v10.13): the festival set, bought with Wake Candles. Night-blue cloth trimmed in candle-gold with
+     small flames along the hem; a lantern on a pole on the back. Hard (from the Wickless Knight on Hard): his colours,
+     ash-black cloth, violet trim and black flames rimmed in violet. ---- */
+  var LWK = { base: '#26345e', base2: '#1e2a4e', dark: '#141c36', trim: '#e6b450', flame: '#ffc24a', flameDk: '#ff8a1e', core: '#fff6d0', pants: '#1e2a4e', glass: '#ffd46a', halo: '#ffc24a' };
+  var LWK_H = { base: '#262230', base2: '#1c1826', dark: '#0e0b14', trim: '#8a6ac0', flame: '#2a1a40', flameDk: '#05030a', core: '#9a6aff', pants: '#1c1826', glass: '#1a0e2a', halo: '#9a5aff' };
+  function lwFlame(c, x, y, h, pal) {
+    var w = h * 0.45, d = D`M${x},${y - h} C${x + w},${y - h * 0.4} ${x + w},${y} ${x},${y} C${x - w},${y} ${x - w},${y - h * 0.4} ${x},${y - h} Z`;
+    return C(x, y - h * 0.4, h * 1.1, c.rg([[0, pal.halo, 0.45], [1, pal.halo, 0]]), 0) + P(d, c.lg([[0, pal.flame], [1, pal.flameDk]]), 0.9) + C(x, y - h * 0.3, w * 0.32, pal.core, 0);
+  }
+  function lwRobe(o, pal) {
+    o.torsoC = pal.base; o.sleeve = pal.base2; o.bell = pal.dark;
+    o.robe = pal.base;
+    o.belt = pal.dark; o.buckle = pal.trim;
+    o.robeFx = function (c, g) {
+      var fy = g.fy, x0 = g.wl - 16, x1 = g.wr + 18, hem = D`M${x0},${fy - 7} Q${g.sx},${fy - 2.5} ${x1},${fy - 7}`, fl = '';
+      [0.25, 0.5, 0.75].forEach(function (u) { var x = x0 + (x1 - x0) * u; fl += lwFlame(c, x, fy - 8 + Math.sin(Math.PI * u) * 1.6, 6, pal); });
+      return CG(F(hem + D` L${x1},${fy + 4} L${x0},${fy + 4} Z`, pal.dark) + S(hem, pal.trim, 2.2) + S(D`M${g.sx + 5},${g.hy - 6} L${g.sx + 7},${fy - 8}`, pal.trim, 1.4, 0.8) + fl, c.clip(g.robeD));
+    };
+    o.torsoFx = function (c, g) {
+      return CG(S(D`M${g.scx - 8},${g.sy} L${g.scx + 3},${g.sy + 10} L${g.scx + 13},${g.sy + 1}`, pal.trim, 1.8), c.clip(g.torsoD));
+    };
+  }
+  function lwLegs(c, g, L, front, pal) {
+    var w = g.b.legW, a = lpt(L[1], L[2], 0.82, -w * 0.5), b = lpt(L[1], L[2], 0.82, w * 0.5), a2 = lpt(L[1], L[2], 0.72, -w * 0.5), b2 = lpt(L[1], L[2], 0.72, w * 0.5);
+    return S(D`M${a[0]},${a[1]} L${b[0]},${b[1]}`, pal.trim, front ? 2.2 : 1.8) + S(D`M${a2[0]},${a2[1]} L${b2[0]},${b2[1]}`, pal.trim, 1, front ? 0.8 : 0.5);
+  }
+  function lwLantern(pal) {
+    return {
+      back: function (c, g) {
+        var x0 = g.scx - g.b.shW - 6, y0 = g.sy - 34, x1 = g.scx + 4, y1 = g.hy + 8, lx = x0 - 1, ly = y0 + 14;
+        return S(D`M${x0},${y0} L${x1},${y1}`, '#1a1009', 4.6) + S(D`M${x0},${y0} L${x1},${y1}`, '#6a4a2a', 2.6) +
+          S(D`M${x0},${y0} L${lx},${ly - 7}`, '#1a1009', 1.4) +
+          C(lx, ly, 13, c.rg([[0, pal.halo, 0.5], [1, pal.halo, 0]]), 0) +
+          P(D`M${lx - 4},${ly - 5} L${lx + 4},${ly - 5} L${lx + 3},${ly - 7.5} L${lx - 3},${ly - 7.5} Z`, '#4a3a26', 1.2) +
+          P(D`M${lx - 4.6},${ly - 5} L${lx + 4.6},${ly - 5} L${lx + 4},${ly + 5} L${lx - 4},${ly + 5} Z`, c.rg([[0, pal.core], [0.5, pal.glass], [1, pal.flameDk]]), 1.4) +
+          P(D`M${lx - 4.6},${ly + 5} L${lx + 4.6},${ly + 5} L${lx + 3.4},${ly + 7} L${lx - 3.4},${ly + 7} Z`, '#4a3a26', 1.2);
+      },
+      torso: function (c, g) { return S(D`M${g.scx - 9},${g.sy + 2} L${g.scx + 9},${g.hy - 2}`, '#1a1009', 3.4) + S(D`M${g.scx - 9},${g.sy + 2} L${g.scx + 9},${g.hy - 2}`, pal.dark, 2); }
+    };
+  }
+  rsChest('lw_robe', lwRobe, LWK, LWK_H);
+  rsLegs('lw_trousers', lwLegs, LWK, LWK_H);
+  rsBack('lw_lantern', lwLantern, LWK, LWK_H);
+
   /* ---- raid weapon looks: like the armour, each weapon is ONE drawing that takes its raid's palette, registered as
      <key> (Normal) and <key>_hard (Hard). The weapon palettes are the armour palettes plus a few weapon-only colours.
      Drawn grip at the origin, blade up (-y), the same frame as the other weapon looks. ---- */
