@@ -17,7 +17,7 @@ const fromUi = (() => {
 
 // reads that a handler calls to decide or show something; no state changes, and covered by the actions that use them
 const NOT_ACTIONS = new Set(['isHealPick', 'canDiscard', 'canUseItem', 'characters', 'copyItem', 'displayName', 'effectOf', 'enemyTown', 'isUpgrade', 'knownProfIds',
-  'legendOn', 'moneyText', 'profs', 'rankName', 'role', 'travelSecs', 'treeSpent', 'usable',
+  'legendOn', 'lwHardOpen', 'moneyText', 'profs', 'rankName', 'role', 'travelSecs', 'treeSpent', 'usable',
   // these end or replace the character (the test world runs one): load, logout and wipeSave have their own test below
   'load', 'logout', 'wipeSave']);
 
@@ -81,6 +81,10 @@ const ACTIONS = {
   buyMonthCloak: () => { const c = G.monthCloak ? G.monthCloak() : null; G.buyMonthCloak(c && c.id ? c.id : 'none'); },
   buyMount: () => G.buyMount(first(D.MOUNTS)),
   setMount: () => G.setMount(null),
+  // Lanternwake (v10.13): outside the festival these say so and change nothing; inside it they buy, light and call
+  lwBuy: () => G.lwBuy('lw_robe'),
+  lwLight: () => G.lwLight(),
+  setCompanion: () => G.setCompanion(null),
   learnRiding: () => G.learnRiding(),
   setWardrobe: () => { G.setWardrobe('chest', 'hidden'); G.setWardrobe('chest', null); },
   setKeepsake: () => G.setKeepsake(first(D.LEGENDS)),

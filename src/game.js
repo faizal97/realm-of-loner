@@ -2063,7 +2063,7 @@
     else { const v = G.vitals(); if (isHeal) P.hp = Math.min(v.maxHp, P.hp + amt); else P.res = Math.min(v.maxRes, P.res + amt); }
     emit(isHeal ? 'selfheal' : 'change', amt); sys(`${it.name}: +${amt} ${isHeal ? 'health' : 'mana'}.`); emit('change');
   };
-  G.usable = (it) => ['potion', 'elixir', 'stone', 'kit', 'bag', 'recipe'].includes(it.slot);
+  G.usable = (it) => ['potion', 'elixir', 'stone', 'kit', 'bag', 'recipe', 'event'].includes(it.slot);
   G.useItem = function (idx) {
     const S = G.S, P = S.player, b = P.bags[idx]; if (!b) return;
     const it = b.item, t = now();
