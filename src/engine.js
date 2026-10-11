@@ -832,6 +832,7 @@
       const kind = x.kind || 'adds';
       const hd = x.hard !== false; // world bosses use the same mechanics without the Hard tag
       if (kind === 'adds') out.push({ name: 'Calls help', when: `At ${Math.round(x.at * 100)}% health`, what: joinText(x.n, x.mob, addLvl(u, x.lvl)), hard: hd });
+      else if (kind === 'enrage' && x.after != null) out.push({ name: 'Time limit', when: `After ${x.after} sec`, what: `hits ${Math.round((x.mult - 1) * 100)}% harder until the fight ends.`, hard: hd });
       else if (kind === 'enrage') out.push({ name: 'Frenzy', when: `Below ${Math.round(x.at * 100)}% health`, what: `hits ${Math.round((x.mult - 1) * 100)}% harder.`, hard: hd });
       else if (kind === 'heal') healRow(x.every, x.every / 2, x.heal, hd);
       else hitRow(x.every, x.every / 2, x.mult, x.who, x.school, hd);
@@ -849,7 +850,7 @@
     for (const x of m.hardX) {
       const kind = x.kind || 'adds';
       if (kind === 'adds' || kind === 'enrage') {
-        if (x.done || pct >= x.at) continue;
+        if (x.done || (x.after != null ? C.t < x.after : pct >= x.at)) continue; // after: seconds into the fight (a time limit)
         x.done = true; emote(x);
         if (kind === 'enrage') { m.enrage = (m.enrage || 1) * x.mult; ev(C, { type: 'fx', uid: m.uid, kind: 'enrage' }); }
         else for (let i = 0; i < x.n; i++) E.addEnemy(C, E.mobUnit(x.mob, addLvl(m, x.lvl), (C.opts.dungeonMult || { hp: 1, dmg: 1 })));

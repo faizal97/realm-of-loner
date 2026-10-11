@@ -105,6 +105,8 @@
     if (S.run && S.run.phase === 'fight') S.run.phase = 'rest', S.run.restUntil = now() + 3000;
     try { G.refreshHeirlooms(); } catch (e) { /* older save */ }
     pruneBounties(); // #154
+    if ((G.account().lw || {}).steed) G.giveTrialswornMount('wickless_steed'); // the Wickless Steed rides with every character
+    G.lwExpire(); // candles from a festival that has ended
     { const tw = G.account().trialsworn || {}; for (const k in tw) if (tw[k] && D.TRIALSWORN[k] && D.TRIALSWORN[k].mount) G.giveTrialswornMount(D.TRIALSWORN[k].mount); } // Trialsworn Chargers ride with every character
     if (S.player.keepsake) { S.player.wardrobe = Object.assign({ back: S.player.keepsake }, S.player.wardrobe); delete S.player.keepsake; } // v10.3: keepsakes moved into the wardrobe
     // v10: the world has new names. A save keeps copies of items, so their names come fresh from the data by id;
@@ -1245,6 +1247,7 @@
     sys(`Received ${G.moneyText(m)}.`);
     if (it) { G.addItem(JSON.parse(JSON.stringify(it)), 1); loot(`You receive item: ${B.link(it.name, it.q)}.`); }
     G.gainXp(G.questXpFor(Q), false);
+    G.lwEarn(D.EVENTS.lanternwake.earn.quest, 'a quest');
     emit('questDone', { qid, text: 'Quest complete' });
     emit('change');
   };
@@ -1628,7 +1631,7 @@
           e.inst.until = now() + (named ? D.PLACES[P.place].named[e.key] * 1000 : rnd(15, 28) * 1000);
           if (named && G.isHunt(e.key)) { P.huntKilled = P.huntKilled || {}; P.huntKilled[e.key] = G.huntNow(e.key, now()).w; e.inst.state = 'away'; G.takeTrophy(e.key); } // gone until its next window (#43)
         }
-        onKill(e.key);
+        onKill(e.key); G.lwKill(e.level, e.elite); // Lanternwake candles
         if (e.inst && e.inst.id.startsWith('n_') && !D.MOBS[e.key].boss) G.epicDrop('rare', e.level); // a rare's purple chance (#141)
         G.gainXp(Math.round(G.xpForKill(e.level, e.elite) * share), true);
         const l = rollLoot(e.key, e.level, 1 / size);
@@ -2064,6 +2067,7 @@
   G.useItem = function (idx) {
     const S = G.S, P = S.player, b = P.bags[idx]; if (!b) return;
     const it = b.item, t = now();
+    if (it.slot === 'event') { if (G.fight) return toast('You are in combat.'); return G.lwUse(idx); } // Lanternwake's candle sink
     if ((it.lvl || 1) > P.level) return toast(`Requires level ${it.lvl}.`);
     if (it.slot === 'potion') return G.usePotion(it.heal ? 'heal' : 'mana');
     if (G.fight) return toast('You are in combat.');
@@ -2287,6 +2291,7 @@
     if (n.clear) return !!(r.clears[n.clear] && r.clears[n.clear].clears);
     if (n.hard) return !!(r.clears[n.hard] && r.clears[n.hard].hard); // a whole raid cleared on Hard (v10.7)
     if (n.quest) return !!G.S.player.done[n.quest];
+    if (n.event) return G.lwAccount().lw.owned.includes(n.event); // bought from a festival (v10.13)
     if (n.prof) return ((G.S.player.prof || {})[n.prof] || {}).skill >= 300 || !!(G.S.player.artisan || {})[n.prof]; // Artisan (v10.9): 300 in that skill, now or before it was unlearned (#145)
     if (n.guildRank != null) return !!(root.SOC && SOC.rank() >= n.guildRank);
     if (n.trial) return ((G.S.player.trials || {}).bestEver || 0) >= n.trial; // Trials (v10.4): best level beaten in time
@@ -3154,6 +3159,12 @@
   };
   G.activityBlock = function (act) {
     const S = G.S, P = S.player, A = D.ACTIVITIES[act];
+    if (A.event) { // a festival's run (v10.13): only while it is on, at your own level, queued from anywhere
+      if (!G.eventLive(A.event)) return 'hidden';
+      if (P.level < A.minLvl) return `Requires level ${A.minLvl}`;
+      if ((S.flags.deserterUntil || 0) > now()) return `Deserter: ${Math.ceil((S.flags.deserterUntil - now()) / 60000)} min`;
+      return null;
+    }
     const region = A.where && D.PLACES[A.where].region;
     if (A.where && G.stormBlocks(A.where) && P.level >= 60) return 'Requires Veshmira\'s defeat: her storm hides the isle'; // listed, but no group or summon can take you there
     if (A.where && !G.canReach(P.place, A.where)) return 'hidden';
@@ -3234,7 +3245,8 @@
     const S = G.S, A = D.ACTIVITIES[act], hard = !!(opts && opts.hard);
     const why = G.activityBlock(act);
     if (why) return toast(why === 'hidden' ? 'Only for the other faction.' : why + '.');
-    if (hard && !G.hardOpen(act)) return toast('Hard opens after a Normal clear at level ' + D.LEVEL_CAP + '.');
+    if (hard && A.event && !G.lwHardOpen()) return toast('Hard opens after one Normal clear of ' + A.name + '.');
+    if (hard && !A.event && !G.hardOpen(act)) return toast('Hard opens after a Normal clear at level ' + D.LEVEL_CAP + '.');
     if (S.wparty) disbandParty('You left your party to use the group finder.');
     if (S.run || S.group || G.bgBusy()) return toast('Leave your current group first.');
     if (S.bg) G.leaveBg(); // a finished battleground's result closes as you queue
@@ -3368,7 +3380,7 @@
     const trial = opts && opts.trial, lvl = trial ? D.LEVEL_CAP : G.syncLevel(act);
     const members = roles.map((r) => G.botChar(recruit(r, lvl, used, usedCls, opts && opts.guild, !!trial)));
     // everyone fights at the activity's level (a Trial: at the level cap)
-    const cap = trial ? D.LEVEL_CAP : A.maxLvl || D.LEVEL_CAP;
+    const cap = trial ? D.LEVEL_CAP : A.scale ? lvl : A.maxLvl || D.LEVEL_CAP; // a festival run is fought at your own level
     for (const m of members) m.syncLevel = cap;
     if (trial) { const sk = TR().botSkill(G.trialRating()); for (const m of members) m.bot.skill = clamp(sk + rnd(-0.08, 0.05), 0.3, 0.95); } // your rating draws better players
     if (opts && opts.hard) { const sk = TR().botSkill(G.trialRating()) + 0.05; for (const m of members) m.bot.skill = clamp(sk + rnd(-0.06, 0.05), 0.3, 0.95); } // Hard: skilled players, a little above your Trial rating
@@ -3416,10 +3428,14 @@
       const Dg = D.DUNGEONS[A.dungeon];
       pulls = Dg.pulls; mult = Dg.trashMult; bossMult = Dg.bossMult;
       if (hard && Dg.hard) { mult = Dg.hard.trashMult; bossMult = Dg.hard.bossMult; name += ' · Hard'; } else hard = false;
+    } else if (A.event) { // a festival run (v10.13): its own pulls, fought at your level, with its own Hard
+      pulls = A.pulls; mult = A.trashMult; bossMult = A.bossMult;
+      if (hard && A.hard) { mult = A.hard.trashMult; bossMult = A.hard.bossMult; name += ' · Hard'; } else hard = false;
     } else {
       pulls = A.pulls; hard = false;
     }
     S.run = { act, name, pulls, mult, bossMult, idx: 0, phase: 'rest', restUntil: now() + 6000, wipes: 0, rolls: [], returnTo: S.player.place, started: now(), hard: hard || undefined };
+    if (A.scale) S.run.mobLevel = G.syncLevel(act);
     { // a bot shows off the effect item it wears (#56): a link to the real item, tappable like any other
       const m = S.group.members.find((x) => !x.gone && x.bot && Object.values(x.equip || {}).some((it) => G.effectOf(it)));
       if (m && Math.random() < 0.35) { const it = Object.values(m.equip).find((x) => G.effectOf(x)), L = B.link(it.name, it.q);
@@ -3461,7 +3477,8 @@
       const u = E.mobUnit(k, R.mobLevel || null, M.boss ? mult : (R.mult || { hp: 1, dmg: 1 }));
       if (marks[i]) u.mark = marks[i];
       const hx = R.hard && G.hardExtra(R.act, k); if (hx) u.hardX = hx; // Hard: the boss's extra mechanic
-      const wx = D.ACTIVITIES[R.act].extra && D.ACTIVITIES[R.act].extra[k]; if (wx) u.hardX = wx.map((e) => Object.assign({}, e)); // a world boss's mechanics
+      const XA = D.ACTIVITIES[R.act], xs = R.hard && XA.hardExtra ? XA.hardExtra : XA.extra; // a festival boss has its own Hard set
+      const wx = xs && xs[k]; if (wx) u.hardX = wx.map((e) => Object.assign({}, e)); // a world boss's mechanics
       return u;
     });
     if ((R.omens || []).some((k) => k === 'warded' || k === 'vengeful' || k === 'sheltered') && enemies.length >= 2) enemies[pull.mobs.length - 1].focus = true; // Tier 3: the last enemy listed
@@ -3512,16 +3529,18 @@
     G.fight = null;
     const pu = G.pUnit; G.pUnit = null;
     if (result === 'win') {
-      const size = 1 + S.group.members.filter((m) => !m.gone).length;
+      const size = 1 + S.group.members.filter((m) => !m.gone).length, evA = D.ACTIVITIES[R.act].event;
       for (const e of C.enemies) {
-        onKill(e.key);
+        onKill(e.key); G.lwKill(e.level, false);
+        if (e.boss && !evA) G.lwEarn(D.EVENTS.lanternwake.earn.boss, 'a dungeon boss');
         G.gainXp(Math.round(G.xpForKill(e.level, true) / size * 1.4), true);
         const l = rollLoot(e.key, e.level, 1 / size);
         giveLoot({ money: l.money, items: l.items.filter((it) => !D.GEAR_SLOTS.includes(it.slot)) });
-        const gear = l.items.filter((it) => D.GEAR_SLOTS.includes(it.slot) && it.q >= 2);
+        const gear = evA ? [] : l.items.filter((it) => D.GEAR_SLOTS.includes(it.slot) && it.q >= 2); // a festival run drops no gear
         for (const it of gear) addRoll(it);
       }
-      if (pull.boss) {
+      if (pull.boss && evA) { lwBossLoot(R); const talker = pick(S.group.members.filter((m) => !m.gone)); if (talker) partySay(talker, B.partyLine(talker.bot, 'win')); }
+      else if (pull.boss) {
         const M = D.MOBS[pull.mobs[0]];
         const table = (M.loot || []).slice().sort(() => Math.random() - 0.5);
         // Hard: the first kill of each boss in a week drops its loot two upgrade steps up; after that, the Normal items
@@ -3796,6 +3815,7 @@
   G.par = (Dg) => (Dg && Dg.par ? Math.round(Dg.par * G.PAR_SCALE) : 0);
   function runBonuses(R) {
     const S = G.S, P = S.player, A = D.ACTIVITIES[R.act], Dg = A.dungeon && D.DUNGEONS[A.dungeon];
+    if (A.event) { const cx = (P.codex = P.codex || {})[R.act] = Object.assign({ clears: 0, hard: 0 }, (P.codex || {})[R.act]); cx.clears++; if (R.hard) cx.hard++; return; } // a festival run: counted (Hard opens after one)
     if (!Dg) return;
     R.finishedAt = now();
     const secs = G.runClock(), L = G.syncLevel(R.act);
@@ -3996,6 +4016,141 @@
     saveAcc += dt;
     if (saveAcc >= 10) { saveAcc = 0; G.save(); }
   };
+
+  // ============================================================ festivals (v10.13): Lanternwake
+  // A festival (D.EVENTS[key]) is on from its `from` to its `to` day every year, in the player's own time, so it comes
+  // back by itself with no release. `force: 'test'` keeps it on in test builds (beta and dev) until it is set back by
+  // hand. Candles are per character, earned up to a daily cap and gone when the festival ends; what they buy is kept by
+  // the account (account.lw). Nothing here gives power. Design: docs/plans/2026-10-11-lanternwake-design.md
+  G.testBuild = () => !!(root.AZ_DEV || /-beta\./.test(String(root.AZ_VERSION || '')));
+  const evDays = (Ev, y) => [new Date(y, Ev.from[0] - 1, Ev.from[1]), new Date(y, Ev.to[0] - 1, Ev.to[1] + 1)]; // [start, end)
+  const inWindow = (Ev, d) => { const [a, b] = evDays(Ev, d.getFullYear()); return d >= a && d < b; };
+  G.eventLive = function (key, date) {
+    const Ev = (D.EVENTS || {})[key]; if (!Ev) return false;
+    const d = date || new Date(now());
+    return inWindow(Ev, d) || (Ev.force === 'test' && G.testBuild());
+  };
+  G.liveEvents = (date) => Object.keys(D.EVENTS || {}).filter((k) => G.eventLive(k, date));
+  // when it ends (null while a test build keeps it on outside its dates), and when it next starts
+  G.eventEnds = function (key) { const Ev = D.EVENTS[key], d = new Date(now()); return inWindow(Ev, d) ? evDays(Ev, d.getFullYear())[1] : null; };
+  G.eventNext = function (key) { const Ev = D.EVENTS[key], d = new Date(now()), [a] = evDays(Ev, d.getFullYear()); return d < a ? a : evDays(Ev, d.getFullYear() + 1)[0]; };
+  // the season's id: the year, or 'test-<year>' for a test build outside the dates, so test candles never carry over
+  G.eventSeason = function (key) { const d = new Date(now()); return inWindow(D.EVENTS[key], d) ? String(d.getFullYear()) : 'test-' + d.getFullYear(); };
+  const LW = () => D.EVENTS.lanternwake;
+  G.lwAccount = function () { const a = G.account(); a.lw = Object.assign({ owned: [], steed: false, steedKills: 0, keepsakes: [], town: {} }, a.lw); return a; };
+  // this character's festival state; null when Lanternwake is not on. A new season (or a new day) starts it fresh
+  G.lw = function () {
+    const P = G.S && G.S.player; if (!P || !G.eventLive('lanternwake')) return null;
+    const season = G.eventSeason('lanternwake');
+    if (!P.lw || P.lw.season !== season) P.lw = { season, candles: 0, day: null, today: 0, lit: [], lootDay: null, hardDay: null };
+    if (P.lw.day !== dayKey()) Object.assign(P.lw, { day: dayKey(), today: 0, lit: [] });
+    return P.lw;
+  };
+  // candles left out of a festival that has ended go (they are worth nothing after it)
+  G.lwExpire = function () { const P = G.S && G.S.player; if (P && P.lw && !G.eventLive('lanternwake')) delete P.lw; };
+  // earn candles from play, up to the daily cap; returns how many were given
+  G.lwEarn = function (n, why, quiet) {
+    const st = G.lw(); if (!st || !n) return 0;
+    const cap = LW().cap, got = Math.max(0, Math.min(n, cap - st.today));
+    if (!got) return 0;
+    st.today += got; st.candles += got;
+    if (!quiet) loot(`+${got} Wake Candle${got === 1 ? '' : 's'} (${why}). Today: ${st.today} of ${cap}.`);
+    if (st.today >= cap) sys(`You have all ${cap} Wake Candles for today: more after midnight. The Snuffed Road and the Wakekeeper stay open.`);
+    emit('candles', { got, why });
+    return got;
+  };
+  // a creature you can still learn from (not grey: 5 or more levels under you) pays a candle, even at the level cap
+  G.lwKill = function (mobLvl, elite) { if (G.S.player.level - mobLvl >= 5) return 0; return G.lwEarn(elite ? LW().earn.elite : LW().earn.kill, 'a kill', true); };
+  // Light the Way: once a day, light a lantern at 5 different places out in the world (not in towns)
+  G.lwCanLight = function (place) {
+    const st = G.lw(), Pl = D.PLACES[place || G.S.player.place];
+    if (!st || !Pl || Pl.safe || G.S.run || G.S.bg) return null;
+    if (st.lit.length >= LW().light) return 'done';
+    return st.lit.includes(place || G.S.player.place) ? 'lit' : 'ready';
+  };
+  G.lwLight = function () {
+    const P = G.S.player, st = G.lw(), can = G.lwCanLight(P.place);
+    if (can !== 'ready') return toast(can === 'lit' ? 'You already lit the lantern here today.' : can === 'done' ? 'You lit every lantern for today.' : 'There is no lantern to light here.');
+    if (G.fight) return toast('You are in combat.');
+    st.lit.push(P.place);
+    sys(`You light a lantern at ${D.PLACES[P.place].name} (${st.lit.length} of ${LW().light} today).`);
+    if (st.lit.length >= LW().light) G.lwEarn(LW().earn.light, 'Light the Way');
+    emit('change'); G.save();
+  };
+  // the keeper's wares: looks, Flicker and the title once each for the account; the candle sink as often as you like
+  G.lwOwned = (id) => G.lwAccount().lw.owned.includes(id) || (D.ITEMS[id] && D.ITEMS[id].look && (G.account().looks || []).includes(D.ITEMS[id].look.join(':')));
+  G.lwShopName = (s) => s.kind === 'companion' ? D.COMPANIONS[s.id].name : s.kind === 'title' ? G.titleName(D.TITLES.find((t) => t.id === s.id), G.S.player.name) : D.ITEMS[s.id].name;
+  G.lwBuy = function (id) {
+    const s = LW().shop.find((x) => x.id === id), st = G.lw();
+    if (!s) return;
+    if (!st) return toast('Lanternwake is over: the Wakekeeper is gone until next year.');
+    if (s.kind !== 'use' && G.lwOwned(id)) return toast('You already have it.');
+    if (st.candles < s.cost) return toast(`Need ${s.cost} Wake Candles (you have ${st.candles}).`);
+    if (s.kind === 'use' && !G.addItem(G.copyItem(id), 1)) return toast('Bags full.');
+    st.candles -= s.cost;
+    if (s.kind !== 'use') { const a = G.lwAccount(); a.lw.owned.push(id); G.saveAccount(a); }
+    if (s.kind === 'look') G.collectLook(D.ITEMS[id]); // after the save above, which would otherwise write over it
+    if (s.kind === 'companion') emit('collected', { companion: id });
+    loot(`You buy ${s.kind === 'look' || s.kind === 'use' ? B.link(D.ITEMS[id].name, D.ITEMS[id].q) : G.lwShopName(s)} for ${s.cost} Wake Candles.` + (s.kind === 'look' ? ' It is in your wardrobe (Hero → Character → Wardrobe).' : s.kind === 'title' ? ' Wear it from Hero → Journey → Titles.' : s.kind === 'companion' ? ' Call it from Hero → Journey → Companions.' : ''));
+    emit('bought'); emit('change'); G.save();
+  };
+  // companions (v10.13): a small friend that follows you, only a look. Owned by the account, chosen per character
+  G.companions = () => Object.keys(D.COMPANIONS || {}).filter((k) => G.lwAccount().lw.owned.includes(k));
+  G.setCompanion = function (key) { const P = G.S.player; if (key && !G.companions().includes(key)) return; P.companion = key || null; emit('change'); G.save(); };
+  // the candle sink, used from your bags
+  G.lwUse = function (idx) {
+    const S = G.S, P = S.player, b = P.bags[idx], it = b && D.ITEMS[b.item.id]; if (!it) return;
+    if (it.costume) {
+      let mob = it.costume;
+      if (mob === 'local') { const Pl = D.PLACES[P.place], pool = Object.values(D.PLACES).filter((x) => x.region === Pl.region).flatMap((x) => (x.mobs || []).map((m) => m[0])).filter((k) => D.MOBS[k] && !D.MOBS[k].boss); if (!pool.length) return toast('No creatures live in this zone to dress up as.'); mob = pick(pool); }
+      P.costume = { mob, until: now() + 3600000 };
+      G.removeItem(it.id, 1); sys(`You look like ${/^[AEIOU]/.test(D.MOBS[mob].name) ? 'an' : 'a'} ${D.MOBS[mob].name} for an hour. Only a look.`);
+    } else if (it.treat) {
+      const near = (B.onlineIn(S, P.place, new Date(now())) || []).filter((x) => B.factionOf(x) === B.factionOf(P));
+      if (!D.PLACES[P.place].safe || !near.length) return toast('Toss treats in a town, where people are around.');
+      const bot = pick(near); G.removeItem(it.id, 1);
+      sys(`You toss a Lanternwake Treat to ${bot.name}.`);
+      S.pending.push({ at: now() + 1200 + Math.random() * 1500, bot: bot.id, ch: 'say', text: pick([`thanks for the treat ${P.name}!`, `ty for the treat!`, `oh a Lanternwake treat, thank you ${P.name}`, `ty ${P.name}, happy Lanternwake`]), fromName: bot.name });
+    } else if (it.townLantern) {
+      if (!D.PLACES[P.place].safe) return toast('Hang town lanterns in a town.');
+      const a = G.lwAccount(), t = a.lw.town; G.removeItem(it.id, 1);
+      const key = G.eventSeason('lanternwake') + ':' + P.place; t[key] = (t[key] || 0) + 1; G.saveAccount(a);
+      sys(`You hang a lantern in ${D.PLACES[P.place].name}. Lanterns hung here this festival: ${t[key]}.`);
+    } else return;
+    emit('change'); G.save();
+  };
+  G.lwTownLanterns = (place) => (G.lwAccount().lw.town[G.eventSeason('lanternwake') + ':' + place] || 0);
+  G.costumeOf = (P) => (P && P.costume && P.costume.until > now() && D.MOBS[P.costume.mob] ? P.costume.mob : null);
+  // the Snuffed Road's loot, once a day each on Normal and on Hard; every daily Normal kill counts toward the Steed
+  G.lwDaily = () => { const st = G.lw(); return { normal: !!st && st.lootDay !== dayKey(), hard: !!st && st.hardDay !== dayKey() }; };
+  G.lwHardOpen = () => !!(((G.S.player.codex || {})[LW().act] || {}).clears);
+  G.lwHardLeft = () => LW().set.filter((id) => !(G.account().looks || []).includes(D.ITEMS[id].look[0] + ':' + D.ITEMS[id].look[1] + '_hard'));
+  function lwBossLoot(R) {
+    const Ev = LW(), st = G.lw(), a = G.lwAccount(), d = dayKey();
+    if (!st) return;
+    const season = G.eventSeason('lanternwake');
+    if (!a.lw.keepsakes.includes(season) && !/^test/.test(season)) { a.lw.keepsakes.push(season); G.saveAccount(a); loot(`A keepsake for your collection: Lanternwake ${season}.`); }
+    if (R.hard) {
+      if (st.hardDay === d) return sys('The Wickless Knight\'s Hard loot is taken today: it drops again after midnight.');
+      st.hardDay = d;
+      const left = G.lwHardLeft();
+      if (left.length) { const it = D.ITEMS[pick(left)]; G.collectLook({ look: [it.look[0], it.look[1] + '_hard'] }); loot(`Hard: a new look for your wardrobe, ${B.link(it.name + ' (Hard)', it.q)}.`); }
+      else sys('You have every Hard Lanternwake look.');
+      G.lwEarn(Ev.earn.daily, 'the Wickless Knight on Hard');
+      return;
+    }
+    if (st.lootDay === d) return sys('The Wickless Knight\'s loot is taken today: it drops again after midnight.');
+    st.lootDay = d;
+    G.lwEarn(Ev.earn.daily, 'the Wickless Knight');
+    if (a.lw.steed) return;
+    a.lw.steedKills++;
+    if (a.lw.steedKills >= Ev.steedAt || Math.random() < Ev.steedChance) {
+      a.lw.steed = true; G.giveTrialswornMount('wickless_steed');
+      loot(`The Wickless Knight drops ${B.link('Wickless Steed', 4)}! It is in your mounts (Hero → Character).`);
+    } else sys(`No Wickless Steed this time (daily kill ${a.lw.steedKills} of ${Ev.steedAt}: the ${Ev.steedAt}th always drops it).`);
+    G.saveAccount(a);
+  }
+  G.lwBossLoot = lwBossLoot;
 
   root.G = G;
 })(typeof window !== 'undefined' ? window : globalThis);
