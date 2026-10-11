@@ -525,5 +525,12 @@
   "key": "G major",
   "meter": "6/8",
   "loop_s": 34.2857
+ },
+ "lanternwake": {
+  "bpm": 84,
+  "bars": 16,
+  "key": "D minor",
+  "meter": "3/4",
+  "loop_s": 34.2857
  }
 }
