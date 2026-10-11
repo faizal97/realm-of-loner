@@ -79,11 +79,11 @@
     desc: 'Lanternwake. 5 players, fought at your own level. The Wickless Knight puts out every lantern he passes.',
     boss: 'wickless_knight',
     trashMult: { hp: 2.2, dmg: 2.2 }, bossMult: { hp: 7, dmg: 3.6 },
-    hard: { trashMult: { hp: 2.6, dmg: 2.6 }, bossMult: { hp: 8.5, dmg: 4.2 } },
+    hard: { trashMult: { hp: 2.4, dmg: 2.4 }, bossMult: { hp: 7.4, dmg: 3.6 } },
     // at the level cap groups wear raid gear, so from level 40 the numbers rise to these at 60
-    atCap: { from: 40, trashMult: { hp: 2.8, dmg: 2.6 }, bossMult: { hp: 9, dmg: 4.2 }, hard: { trashMult: { hp: 3.2, dmg: 3 }, bossMult: { hp: 10.5, dmg: 4.8 } } },
+    atCap: { from: 40, trashMult: { hp: 2.8, dmg: 2.6 }, bossMult: { hp: 9, dmg: 4.2 }, hard: { trashMult: { hp: 3, dmg: 2.8 }, bossMult: { hp: 9.3, dmg: 4.2 } } },
     extra: { wickless_knight: [gallop, wisps(0.66, 2, false), wisps(0.33, 2, false), midnight(100, false)] },
-    hardExtra: { wickless_knight: [Object.assign({}, gallop, { every: 12, hard: true }), wisps(0.75, 2, true), wisps(0.5, 3, true), wisps(0.25, 3, true), midnight(85, true)] },
+    hardExtra: { wickless_knight: [Object.assign({}, gallop, { every: 14, hard: true }), wisps(0.7, 2, true), wisps(0.45, 2, true), wisps(0.2, 2, true), midnight(90, true)] },
     pulls: [
       { scene: 'snuffed_road', label: 'Lantern-wisps', mobs: ['lw_wisp', 'lw_wisp', 'lw_wisp'] },
       { scene: 'snuffed_road', label: 'The Wickless Knight', mobs: ['wickless_knight'], boss: true },
