@@ -132,3 +132,16 @@ The player always knows what the event is, how long is left and what they still 
 
 To be live on 31 October it rides the **Saturday 24 October** train (freeze Thursday 22 October), with betas before.
 Art is the largest piece, which is why the set stays at 4 pieces.
+
+## The main menu during Lanternwake
+
+The title screen wears the festival only while it is live, switching on and off with the dates. The look is keyed by
+the active event, so a later festival can bring its own menu skin the same way.
+
+- The sky turns to night behind the title.
+- One moving piece: small lanterns drifting slowly up behind the lantern logo. It stays still with reduced motion on,
+  and it is light enough for the Android WebView (measure with the hidden frame-rate readout, #99).
+- The tagline becomes "Lanternwake: 24 October to 7 November".
+- A festival menu track, composed with `audio/compose_game.py` and played only once it is listed in `audio/approved.txt`;
+  until then the normal menu music plays.
+- Character select, What's new and every button work exactly as they do the rest of the year.
