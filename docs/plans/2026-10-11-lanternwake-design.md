@@ -18,6 +18,9 @@ Decided 2026-10-11. Realm of Loner's first limited-time event, Caldreth's answer
   returns each year, so a player who starts later can still collect it all.
 - **Content-proof.** The event switches on and off from the calendar, and nothing in it depends on which zones or
   dungeons exist.
+- **Test builds.** Beta and dev builds keep it on whatever the date (`force: 'test'` in
+  `src/data/events/lanternwake.js`) until that is set back to null by hand. Candles earned there belong to a separate
+  test season, so they never carry into the real one, and no keepsake is given.
 
 ## Wake Candles (the currency)
 
@@ -26,7 +29,9 @@ Decided 2026-10-11. Realm of Loner's first limited-time event, Caldreth's answer
   - quests and dungeon bosses (pay more than kills)
   - the daily hub quest **"Light the Way"**: light 5 lanterns in your current zone
 - **Scaled by level.** A level 8 and a level 60 earn at the same rate.
-- **Daily cap:** about **40 minutes** of normal play. After the cap, candles stop until the daily reset; the boss and
+- **Daily cap:** **160 candles**, about **40 minutes** of normal play. Earn: kill 1, elite 3, quest 6, dungeon boss 8,
+  Light the Way 30, the Knight's daily loot 30. `sim/lanternwake.js` (killing only, 5 classes): mean 27 min at level 10,
+  41 at 30, 47 at 60. After the cap, candles stop until the daily reset; the boss and
   the candle sink stay open.
 - **Expiry.** Candles vanish when the festival ends, so there is no reason to hoard them.
 
@@ -39,10 +44,10 @@ Prices are set in **days at the cap**, not raw candles, so a later change to dro
   Weaker bot teammates are drawn as often as anywhere else.
 - **Sync** to the player's own level band, floor about level 10, so every level gets a real fight.
 - **Mechanics** (all existing engine features):
-  1. **Snuff** puts out the party's lantern; the next hit lands harder unless **dodged**.
+  1. **Snuff** is a heavy hit on his target (the engine's `slam`; it has no dodge mechanic, so it is a healing check).
   2. **Wisp call** brings **adds** that each relight his lantern if they reach him.
-  3. **Gallop** is a charging **aoe** down a lane: move or take a large hit.
-  4. **Midnight** is an **enrage** timer: a long, button-mashed fight wipes.
+  3. **Gallop** hits the whole group every 13 seconds (10 on Hard).
+  4. **Midnight** is an **enrage** after 150 seconds (120 on Hard): a long, button-mashed fight wipes.
 - **Hard mode:** faster Snuff, more wisps, a shorter Midnight.
 - **Loot:** the first kill each day rolls loot and pays a stack of candles. Every kill counts toward the mount guarantee.
 - Ships with a first-entry lore intro, like every dungeon.
@@ -51,7 +56,7 @@ Prices are set in **days at the cap**, not raw candles, so a later change to dro
 
 | Reward | How | Price |
 |---|---|---|
-| Lanternwake set: hood, mantle, robe, lantern on a pole (back) | Vendor | 1.5 days each, 6 days |
+| Lanternwake set: robe, trousers, lantern on a pole (back) | Vendor | 2 days each, 6 days |
 | Wisp pet "Flicker" | Vendor | 2 days |
 | Title "the Lantern-Bearer" | Vendor | 2 days |
 | Wickless Steed (mount) | Boss drop, small chance per daily kill, **guaranteed by the 10th kill** | |
@@ -85,17 +90,17 @@ The player always knows what the event is, how long is left and what they still 
   - It starts on the right edge, can be dragged, snaps to the nearest edge, and remembers its place on this device.
     It never covers the ability bar.
   - A tap opens the **tracker card**: ends in N days, candles today X of Y, Light the Way, daily loot, Wickless Steed
-    kill N of 10, Hard recolour N of 4, and two buttons, "Queue for The Snuffed Road" and "Full event page".
+    kill N of 10, Hard recolour N of 3, and two buttons, "Queue for The Snuffed Road" and "Full event page".
   - Layer 58: above dialogs (57), below toasts (59) and cutscenes (60).
   - Settings → "Event lantern: show / hide", for players who don't want it.
   - If two events ever overlap, there is still one button and the card lists both.
 - **Contents, top to bottom:**
   1. What it is: two lines of story, and the dates with the time left ("Ends in 6 days").
-  2. Today: "Candles today: 180 of 300 (resets at midnight)" and the candles held, with "Candles vanish when
+  2. Today: "Candles today: 120 of 160 (resets at midnight)" and the candles held, with "Candles vanish when
      Lanternwake ends".
   3. Where candles come from: the three sources, with today's "Light the Way" done or not.
   4. The Snuffed Road: what the Knight does (the four mechanics, as facts), "Daily loot: taken today / not yet",
-     "Wickless Steed: kill 4 of 10, guaranteed by the 10th", Hard recolour "2 of 4 pieces".
+     "Wickless Steed: kill 4 of 10, guaranteed by the 10th", Hard recolour "2 of 3 pieces".
   5. Rewards: every vendor item, collected or not, with its price; the keepsake for this year, earned or not.
 - **Rules it follows:** every number names what it compares with, no advice ("give every fact, never the answer"), and
   bounded counters only.
@@ -104,7 +109,7 @@ The player always knows what the event is, how long is left and what they still 
 ┌ Lanternwake ─────────────── Ends in 6 days ┐
 │ Caldreth lights candles for its dead...     │
 ├ Today ──────────────────────────────────────┤
-│ Candles today  180 of 300 · resets midnight │
+│ Candles today  120 of 160 · resets midnight │
 │ Candles held   420 (vanish when it ends)    │
 ├ Where candles come from ────────────────────┤
 │ Kills that give XP · Quests and bosses      │
@@ -113,9 +118,9 @@ The player always knows what the event is, how long is left and what they still 
 │ Snuff · Wisp call · Gallop · Midnight       │
 │ Daily loot     not taken yet                │
 │ Wickless Steed kill 4 of 10                 │
-│ Hard recolour  2 of 4 pieces                │
+│ Hard recolour  2 of 3 pieces                │
 ├ Rewards ────────────────────────────────────┤
-│ [hood ✓][mantle][robe][lantern][Flicker]... │
+│ [robe ✓][trousers][lantern][Flicker][title] │
 └─────────────────────────────────────────────┘
 ```
 
@@ -131,7 +136,7 @@ The player always knows what the event is, how long is left and what they still 
 ## Timing
 
 To be live on 31 October it rides the **Saturday 24 October** train (freeze Thursday 22 October), with betas before.
-Art is the largest piece, which is why the set stays at 4 pieces.
+Art is the largest piece. The set is 3 pieces because the wardrobe has no head or shoulder places.
 
 ## The main menu during Lanternwake
 
