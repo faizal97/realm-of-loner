@@ -76,8 +76,19 @@ Cheap, endless and powerless:
 The player always knows what the event is, how long is left and what they still need (`docs/design-mindset.md` §1).
 
 - **Where.** Hero → Journey → **Events**, one row per event, so it scales when more festivals come (Darkmoon Faire week
-  is already on the roadmap). While an event is live, a small lantern chip on the main screen opens its page. Outside
-  the dates the row reads "Returns 24 October" and the page still lists what it offers.
+  is already on the roadmap). Outside the dates the row reads "Returns 24 October" and the page still lists what it
+  offers.
+- **The event lantern (reachable from anywhere).** While an event is live, a small floating lantern button sits on
+  every screen: the world, sheets, dungeons and combat. Only cutscenes cover it.
+  - A ring around it fills with today's candles against the cap; a dot shows while something resets daily and is
+    still open (daily loot, Light the Way). Both are facts, not advice.
+  - It starts on the right edge, can be dragged, snaps to the nearest edge, and remembers its place on this device.
+    It never covers the ability bar.
+  - A tap opens the **tracker card**: ends in N days, candles today X of Y, Light the Way, daily loot, Wickless Steed
+    kill N of 10, Hard recolour N of 4, and two buttons, "Queue for The Snuffed Road" and "Full event page".
+  - Layer 58: above dialogs (57), below toasts (59) and cutscenes (60).
+  - Settings → "Event lantern: show / hide", for players who don't want it.
+  - If two events ever overlap, there is still one button and the card lists both.
 - **Contents, top to bottom:**
   1. What it is: two lines of story, and the dates with the time left ("Ends in 6 days").
   2. Today: "Candles today: 180 of 300 (resets at midnight)" and the candles held, with "Candles vanish when
