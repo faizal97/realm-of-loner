@@ -329,6 +329,7 @@
     applyRunMode();
     renderFrames(); renderScene(); renderPanel(); renderBar(); renderChat(); renderNavDots(); renderRolls();
     if (ui.sheet && ui.sheetFn) ui.sheetFn();
+    evLantern(); // the festival lantern (v10.13)
   }
 
   // ============================================================ unit frames
@@ -425,10 +426,11 @@
     return { cls, race: races[(x >> 3) % races.length], skin: (x >> 7) % 4, hair: (x >> 11) % 5, gender };
   }
   const P0 = (place) => Object.keys(D.PLACES).find((k) => D.PLACES[k] === place);
+  const npcOn = (n) => !D.NPCS[n] || !D.NPCS[n].event || G.eventLive(D.NPCS[n].event); // festival people only while it is on
   function npcSprites(sc, place) {
     if (!place || !(place.npcs || []).length) return;
     const rank = (n) => { const mk = G.npcMarker(n); if (D.NPCS[n].legend || n === 'hooded_stranger') return -1; return mk === '?' ? 0 : mk === '!' ? 1 : /^(mentor|banker|auctioneer|crafts|stable)_/.test(n) ? 3 : 2; };
-    const list = place.npcs.filter((n) => D.NPCS[n]).slice().sort((a, b) => rank(a) - rank(b)).slice(0, place.safe ? 3 : 1);
+    const list = place.npcs.filter((n) => D.NPCS[n] && npcOn(n)).slice().sort((a, b) => rank(a) - rank(b)).slice(0, place.safe ? 3 : 1);
     const slots = place.safe ? [{ r: 4, b: 6, w: 19 }, { r: 23, b: 13, w: 16 }, { r: 11, b: 27, w: 13 }] : [{ l: 46, b: 26, w: 14 }];
     // the tag over a townsperson: a long name shows its last word ("Shadow Hunter Zul'kesh" is Zul'kesh), and a quoted
     // nickname shows the name before it (Pell "Twice Over" is Pell, not Over")
@@ -568,8 +570,9 @@
         const i = slotOf.get(u);
         const pos = C.allies.length > 7 ? (POS_RAID[i] || POS_RAID[POS_RAID.length - 1]) : (POS_ALLY[i] || POS_ALLY[4]);
         const np = C.allies.length > 1 ? h('div', { class: 'np' }, h('span', { class: 'cls-' + u.cls }, u.kind === 'player' ? '' : u.name.split('-')[0]), h('div', { class: 'hpb' }, h('i'))) : null;
-        const src = u.kind === 'pet' ? petArt(u) : u.form === 'bear' ? art('pet', 'bear_form') : u.char && u.char.legend ? art('legend', u.char.legendArt || u.char.legend) : art('hero', looks(u.char));
-        const el = spriteEl(src, u.kind === 'pet' && u.key === 'imp' ? Object.assign({}, pos, { w: pos.w * 0.7 }) : pos, 'friend idle' + (u.dead ? ' dead' : '') + (u.kind === 'pet' && u.key === 'beast' ? ' flip' : ''), np);
+        const cos = u.kind === 'player' && !u.form && G.costumeOf(G.S.player);
+        const src = cos ? mobArt(cos) : u.kind === 'pet' ? petArt(u) : u.form === 'bear' ? art('pet', 'bear_form') : u.char && u.char.legend ? art('legend', u.char.legendArt || u.char.legend) : art('hero', looks(u.char));
+        const el = spriteEl(src, u.kind === 'pet' && u.key === 'imp' ? Object.assign({}, pos, { w: pos.w * 0.7 }) : pos, 'friend idle' + (u.dead ? ' dead' : '') + (u.kind === 'pet' && u.key === 'beast' || cos ? ' flip' : ''), np);
         el.addEventListener('click', () => { G.setTarget(u.uid); renderTarget(); markTargets(); renderPanel(); });
         ui.spriteEls[u.uid] = el; sc.append(el);
       });
@@ -584,8 +587,9 @@
       });
       markTargets();
     } else if (!P.travel) {
-      const me = spriteEl(art('hero', looks(P)), { l: 4, b: 5, w: 26 }, 'idle');
+      const cos = G.costumeOf(P), me = spriteEl(cos ? mobArt(cos) : art('hero', looks(P)), { l: 4, b: 5, w: 26 }, 'idle' + (cos ? ' flip' : '')); // a Lanternwake costume shows a creature
       ui.spriteEls.me = me; sc.append(me);
+      if (P.companion && D.COMPANIONS && D.COMPANIONS[P.companion]) sc.append(spriteEl(art('mob', P.companion), { l: 1, b: 30, w: 9 }, 'idle companion'));
       if (S.bg) { // the battleground: your team stands with you, nobody else from the place you queued in
         G.S.bg.team.forEach((m, i) => { const pos = [{ l: 20, b: 14, w: 21 }, { l: 33, b: 22, w: 18 }, { l: 44, b: 10, w: 20 }, { l: 55, b: 20, w: 17 }][i];
           if (pos) sc.append(spriteEl(art('hero', looks(m)), pos, 'idle friend', h('div', { class: 'np' }, h('span', { class: 'cls-' + m.cls }, m.name.split('-')[0])))); });
@@ -1079,6 +1083,7 @@
   }
   function fightTab(b, place, mobs) {
     const P = G.S.player, Cl = D.CLASSES[P.cls];
+    lwLightCard(b); // Lanternwake's Light the Way
     // pets and demons, compact
     if (P.cls === 'hunter' || Cl.pets) {
       const row = h('div', { class: 'chips' });
@@ -1143,6 +1148,7 @@
         h('div', { class: 't' }, h('b', { style: { color: '#ffd100' } }, 'Bounty Board'), h('small', null, ready ? `${ready} ready to hand in` : open ? `${open} bount${open === 1 ? 'y' : 'ies'} to take` : 'all taken today'))));
     }
     for (const npc of place.npcs) {
+      if (!npcOn(npc)) continue; // a festival's keeper, outside it
       const N = D.NPCS[npc]; const mk = G.npcMarker(npc);
       const ready = mk === '?' ? G.npcQuests(npc).filter((q) => q.st === 'complete').length : 0;
       here.append(h('button', { class: 'mcard' + (ready ? ' turnin' : ''), onclick: () => openNpc(npc) },
@@ -2575,6 +2581,7 @@
       if (/^banker_/.test(npc)) b.append(h('button', { class: 'btn wide', onclick: () => openBank() }, 'Open your bank'));
       if (/^crafts_/.test(npc)) trainerBlock(b);
       if (/^stable_/.test(npc)) stableBlock(b);
+      if (npc === 'lw_keeper') lwKeeperBlock(b);
       if (/^auctioneer_/.test(npc)) b.append(h('button', { class: 'btn wide', onclick: () => openAuction() }, 'Browse the auction house'));
       if (npc === 'mentor_alliance' || npc === 'mentor_horde') {
         const acc = G.account();
@@ -2609,7 +2616,7 @@
       }
       if (place.vendor === npc || place.gearVendor === npc) b.append(h('button', { class: 'btn wide', onclick: () => openVendor(npc) }, 'Browse goods'));
       if (npc === 'farley') b.append(h('button', { class: 'btn alt wide', disabled: P.bind === P.place, onclick: () => { G.bindHere(); ui.sheetFn(); } }, P.bind === P.place ? 'This inn is your home' : 'Make this inn your home'));
-      if (!qs.length && place.vendor !== npc && npc !== 'farley' && place.gearVendor !== npc && !/^(mentor|banker|auctioneer|crafts|stable)_/.test(npc)) b.append(h('p', { style: { color: 'var(--muted)' } }, 'Nothing for you right now. Come back when you have grown stronger.'));
+      if (!qs.length && place.vendor !== npc && npc !== 'farley' && place.gearVendor !== npc && !/^(mentor|banker|auctioneer|crafts|stable|lw)_/.test(npc)) b.append(h('p', { style: { color: 'var(--muted)' } }, 'Nothing for you right now. Come back when you have grown stronger.'));
     });
   }
   window.UI_GREETING = (npc) => greeting(npc);
@@ -2900,6 +2907,7 @@
     if (dg.length || rd.length || wa.length) add('hearthstone', [dg.length ? `${dg.length} dungeon${dg.length > 1 ? 's' : ''}` : '', rd.length ? `${rd.length} raid${rd.length > 1 ? 's' : ''}` : '', wa.length ? `${wa.length} Wanted` : ''].filter(Boolean).join(', ') + ' at your level', dg.concat(rd, wa).slice(0, 3).map((k) => D.ACTIVITIES[k].name).join(', ') + (dg.length + rd.length + wa.length > 3 ? ', ...' : ''), () => { closeSheet(); openSocial('groups'); });
     if (G.rouletteOptions().length) add('hearthstone', G.rouletteReady() ? 'Dungeon Roulette: ready today' : 'Dungeon Roulette: done today', null, () => { closeSheet(); openSocial('groups'); });
     const bh = G.bountiesHeld(); if (bh) add('journal', `${bh} bount${bh === 1 ? 'y' : 'ies'} in progress`, null, null);
+    if (G.eventLive('lanternwake')) { const st = G.lw(), Ev = D.EVENTS.lanternwake; add('event_lanternwake', 'Lanternwake', `${lwEndsText()} · candles today ${st ? st.today : 0} of ${Ev.cap}`, () => openLanternwake()); }
     { const wb = P.level >= cap && G.worldBoss(); if (wb) add('hearthstone', `World boss: ${D.MOBS[D.ACTIVITIES[wb].boss].name}`, `${D.PLACES[D.ACTIVITIES[wb].where].name}, ${D.PLACES[D.ACTIVITIES[wb].where].zone} · ${G.worldBossLooted(wb) ? 'looted this week' : 'loot open this week'}`, () => { ui.gfTab = 'raid'; closeSheet(); openSocial('groups'); }); }
     if (P.level >= G.BRAWL.minLvl) { const w = G.brawlWindow(), fought = (P.brawl || {}).last === w.id;
       add('sword', w.open && !fought ? `The Bloodsand Brawl: open until ${brawlClock(w.closesAt)}` : `The Bloodsand Brawl: opens at ${brawlClock(w.open ? new Date(w.opensAt.getTime() + G.BRAWL.every * 3600000) : w.opensAt)}`,
@@ -2931,6 +2939,8 @@
     const LK = Object.keys(D.LEGENDS || {});
     if (LK.length) { const done = LK.filter((k) => G.legendUnlocked(k)).length, going = LK.filter((k) => !G.legendUnlocked(k) && legendStarted(k)).length; list.append(nav('Legends', going ? `${going} stor${going === 1 ? 'y' : 'ies'} in progress` : 'Characters with their own story, who then join your groups', `${done} / ${LK.length}`, () => openLegends())); }
     const tOwn = D.TITLES.filter(G.titleUnlocked).length, tNow = P.title && D.TITLES.find((t) => t.id === P.title);
+    if (D.EVENTS) { const on = G.liveEvents(); list.append(nav('Events', on.length ? `${on.map((k) => D.EVENTS[k].name).join(', ')} is on: ${lwEndsText().toLowerCase()}` : `Lanternwake returns ${dayName(G.eventNext('lanternwake'))}`, on.length ? 'On now' : '', () => openEvents(), on.length > 0)); }
+    if (D.COMPANIONS) list.append(nav('Companions', G.S.player.companion ? 'With you: ' + D.COMPANIONS[G.S.player.companion].name : 'Small friends that follow you', `${G.companions().length} / ${Object.keys(D.COMPANIONS).length}`, () => openCompanions()));
     list.append(nav('Titles', tNow ? 'Wearing: ' + G.titleName(tNow, P.name) : 'No title worn', `${tOwn} / ${D.TITLES.length}`, () => openTitles()));
     list.append(nav('Trophies', 'Level-60 rares and world bosses, shared by all your characters', `${G.trophyCount()} / ${G.trophyList().length}`, () => openTrophies()));
     { const own = effectsOwned(); list.append(nav('Effects', 'Every item effect: which you own, and where the rest drop', `${Object.keys(D.EFFECTS).filter((k) => own.has(k)).length} / ${Object.keys(D.EFFECTS).length}`, () => openEffects())); }
@@ -2971,6 +2981,189 @@
     });
   }
   // every title, earned ones first; the ones still to earn are greyed with how to earn them
+  // ============================================================ festivals (v10.13): Lanternwake
+  // One place for everything (Hero → Journey → Events → Lanternwake), a floating lantern that opens a tracker from any
+  // screen while it is on, the Wakekeeper's stall, Light the Way out in the world. Facts only, never advice.
+  const LW_KEY = 'azsolo.evLantern'; // this device: { off, side: 'l'|'r', y: 0..1 } for the event lantern
+  const lwPrefs = () => { try { return JSON.parse(localStorage.getItem(LW_KEY) || '{}') || {}; } catch (e) { return {}; } };
+  const lwSavePrefs = (p) => { try { localStorage.setItem(LW_KEY, JSON.stringify(p)); } catch (e) { } };
+  const nCandles = (n) => `${n} Wake Candle${n === 1 ? '' : 's'}`;
+  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const dayName = (d) => `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  const lwDates = () => { const Ev = D.EVENTS.lanternwake; return `${Ev.from[1]} ${MONTHS[Ev.from[0] - 1]} to ${Ev.to[1]} ${MONTHS[Ev.to[0] - 1]}, every year`; };
+  // "Ends in 6 days" / "Ends at midnight tonight"; a test build keeping it on says so
+  function lwEndsText() {
+    const end = G.eventEnds('lanternwake'); if (!end) return 'Test build: on until it is switched off';
+    const days = Math.ceil((end.getTime() - Date.now()) / 86400000);
+    return days <= 1 ? 'Ends at midnight tonight' : `Ends in ${days} days`;
+  }
+  const lwStatus = (k) => G.eventLive(k) ? lwEndsText() : `Returns ${dayName(G.eventNext(k))}`;
+  // the Wickless Knight's mechanics at your level, as the group finder's briefing gives them
+  function lwKnightRows(hard) {
+    const A = D.ACTIVITIES[D.EVENTS.lanternwake.act], L = Math.max(A.minLvl, Math.min(G.S.player.level, A.maxLvl));
+    const u = E.mobUnit(A.boss, L, hard ? A.hard.bossMult : A.bossMult); u.hardX = (hard ? A.hardExtra : A.extra)[A.boss];
+    return E.specialRows(u);
+  }
+  // what to do now about the run: queue (Normal, Hard), or why not
+  function lwQueueButtons(after) {
+    const S = G.S, act = D.EVENTS.lanternwake.act, A = D.ACTIVITIES[act], why = G.activityBlock(act), out = [];
+    if (S.run && S.run.act === act) return [h('p', { class: 'ai-note' }, 'You are in The Snuffed Road now.')];
+    if (S.queue && S.queue.act === act) return [h('button', { class: 'btn alt wide', onclick: () => { G.leaveQueue(); after(); } }, `In queue for ${A.name}${S.queue.hard ? ' (Hard)' : ''} · Leave queue`)];
+    if (why) return [h('button', { class: 'btn wide', disabled: true }, why === 'hidden' ? 'Lanternwake is not on' : why)];
+    if (S.run || S.group || S.queue) return [h('button', { class: 'btn wide', disabled: true }, 'Leave your current group or queue first')];
+    out.push(h('button', { class: 'btn wide', onclick: () => { G.queueFor(act); after(); } }, `Queue for ${A.name}`));
+    out.push(G.lwHardOpen() ? h('button', { class: 'btn alt wide', onclick: () => { G.queueFor(act, { hard: true }); after(); } }, `Queue for ${A.name} (Hard)`) : h('button', { class: 'btn alt wide', disabled: true }, 'Hard opens after one Normal clear'));
+    return out;
+  }
+  // the facts rows: label on the left, value on the right
+  const factRow = (label, value, good) => h('div', { class: 'ev-fact' }, h('span', null, label), h('b', { class: good ? 'ok' : '' }, value));
+  function lwTodayFacts() {
+    const Ev = D.EVENTS.lanternwake, st = G.lw(), a = G.lwAccount().lw, daily = G.lwDaily();
+    if (!st) return [];
+    return [
+      factRow('Candles today', `${st.today} of ${Ev.cap} (resets at midnight)`, st.today >= Ev.cap),
+      factRow('Candles held', `${st.candles} (they vanish when Lanternwake ends)`),
+      factRow('Light the Way', st.lit.length >= Ev.light ? 'Done today' : `${st.lit.length} of ${Ev.light} lanterns today`, st.lit.length >= Ev.light),
+      factRow('Wickless Knight loot', daily.normal ? 'Not taken today' : 'Taken today (again after midnight)', !daily.normal),
+      factRow('Wickless Knight Hard loot', !G.lwHardOpen() ? 'Opens after one Normal clear' : daily.hard ? 'Not taken today' : 'Taken today', G.lwHardOpen() && !daily.hard),
+      factRow('Wickless Steed', a.steed ? 'Yours' : `Daily kill ${a.steedKills} of ${Ev.steedAt} (1 in ${Math.round(1 / Ev.steedChance)} each; the ${Ev.steedAt}th always drops it)`, a.steed),
+      factRow('Hard looks', `${Ev.set.length - G.lwHardLeft().length} of ${Ev.set.length}`, !G.lwHardLeft().length),
+    ];
+  }
+  // the keeper's wares: one row each with its price and whether you have it. buy: rows have a Buy button (at the keeper)
+  function lwShopList(buy) {
+    const Ev = D.EVENTS.lanternwake, st = G.lw(), list = h('div', { class: 'list' });
+    for (const s of Ev.shop) {
+      const it = D.ITEMS[s.id], own = s.kind !== 'use' && G.lwOwned(s.id);
+      const icon = s.kind === 'companion' ? 'companion_' + s.id : s.kind === 'title' ? 'journal' : it.icon;
+      const sub = s.kind === 'look' ? `Look for your ${it.slot === 'back' ? 'back' : it.slot === 'chest' ? 'chest' : 'legs'} · no stats` : s.kind === 'companion' ? D.COMPANIONS[s.id].desc : s.kind === 'title' ? 'Title' : it.desc;
+      const short = st && !own && st.candles < s.cost;
+      const right = own ? h('span', { class: 'ok' }, 'Have it') : buy && st ? h('button', { class: 'chip gold', disabled: short, onclick: (e) => { e.stopPropagation(); G.lwBuy(s.id); ui.sheetFn && ui.sheetFn(); } }, short ? `Need ${s.cost}` : `Buy · ${s.cost}`) : `${s.cost} candles`;
+      list.append(h('div', { class: 'row' }, h('div', { class: 'ic' }, img(art('icon', icon))), h('div', { class: 't' }, h('b', { style: { color: D.QUALITY[s.kind === 'use' ? 1 : 4].color } }, G.lwShopName(s)), h('small', { style: { whiteSpace: 'normal' } }, sub)), h('div', { class: 'r' }, right)));
+    }
+    return list;
+  }
+  // the Wakekeeper's stall (in the NPC sheet)
+  function lwKeeperBlock(b) {
+    const st = G.lw();
+    if (!st) { b.append(h('p', { class: 'ai-note' }, `Lanternwake is over. ${lwStatus('lanternwake')}.`)); return; }
+    b.append(h('div', { class: 'sec-h' }, 'Lanternwake wares', h('small', null, `You hold ${nCandles(st.candles)}`)), lwShopList(true),
+      h('p', { class: 'ai-note' }, 'Looks, Flicker and the title are kept by all your characters. Costumes, treats and town lanterns are used from your bags.'),
+      h('button', { class: 'btn alt wide', onclick: () => openLanternwake() }, 'Lanternwake: everything about it'));
+  }
+  // Hero → Journey → Events: a row per festival, so the list grows by rows as more come
+  function openEvents() {
+    openSheet('events', 'Events', 'Festivals come back every year by themselves', (b) => {
+      const list = h('div', { class: 'list' });
+      for (const k in D.EVENTS || {}) list.append(h('button', { class: 'row nav', onclick: () => openLanternwake() }, h('div', { class: 'ic' }, img(art('icon', 'event_' + k))),
+        h('div', { class: 't' }, h('b', null, D.EVENTS[k].name), h('small', null, `${lwDates()} · ${lwStatus(k)}`)), h('div', { class: 'r' }, '›')));
+      b.append(list);
+    });
+  }
+  function openLanternwake() {
+    openSheet('lanternwake', 'Lanternwake', lwStatus('lanternwake'), (b, title) => {
+      const Ev = D.EVENTS.lanternwake, live = G.eventLive('lanternwake'), A = D.ACTIVITIES[Ev.act];
+      title.querySelector('small').textContent = `${lwDates()} · ${lwStatus('lanternwake')}`;
+      b.append(h('div', { class: 'ev-story' }, ...Ev.story.map((t) => h('p', null, t))));
+      if (live) b.append(h('div', { class: 'sec-h' }, 'Today'), h('div', { class: 'ev-facts' }, ...lwTodayFacts()));
+      // where candles come from
+      const E1 = Ev.earn;
+      b.append(h('div', { class: 'sec-h' }, 'Where Wake Candles come from', h('small', null, `up to ${Ev.cap} a day`)), h('div', { class: 'ev-facts' },
+        factRow('A kill that is not grey', `${E1.kill} (an elite: ${E1.elite})`), factRow('A quest', String(E1.quest)), factRow('A dungeon boss', String(E1.boss)),
+        factRow('Light the Way', `${E1.light}: light a lantern at ${Ev.light} places out in the world (the Fight tab there), once a day`),
+        factRow('The Wickless Knight', `${E1.daily}: the first kill each day, on Normal and on Hard`)));
+      // the run
+      const rows = lwKnightRows(false), hardRows = lwKnightRows(true).filter((r) => r.hard);
+      b.append(h('div', { class: 'sec-h' }, A.name, h('small', null, `5 players · fought at your own level (${A.minLvl} to ${A.maxLvl})`)),
+        h('p', { class: 'ai-note' }, 'A pack of Lantern-Wisps, then the Wickless Knight. No gear drops here.'),
+        h('div', { class: 'ev-facts' }, ...rows.map((r) => factRow(r.name, `${r.when}: ${r.what}`))),
+        h('div', { class: 'sec-h' }, 'On Hard', h('small', null, 'opens after one Normal clear')), h('div', { class: 'ev-facts' }, ...hardRows.map((r) => factRow(r.name, `${r.when}: ${r.what}`))));
+      if (live) b.append(...lwQueueButtons(() => ui.sheetFn()));
+      // rewards
+      const a = G.lwAccount().lw, season = String(new Date().getFullYear());
+      b.append(h('div', { class: 'sec-h' }, 'Rewards', h('small', null, live ? 'bought from Wakekeeper Ondine in any town with a profession trainer' : 'sold again when Lanternwake returns')), lwShopList(false));
+      b.append(h('div', { class: 'list' },
+        h('div', { class: 'row' }, h('div', { class: 'ic' }, img(art('icon', 'mount_wickless_steed'))), h('div', { class: 't' }, h('b', { style: { color: D.QUALITY[4].color } }, 'Wickless Steed'), h('small', null, `Mount · from the Wickless Knight's daily loot, always by the ${Ev.steedAt}th daily kill`)), h('div', { class: 'r' }, a.steed ? h('span', { class: 'ok' }, 'Have it') : `${a.steedKills} of ${Ev.steedAt}`)),
+        h('div', { class: 'row' }, h('div', { class: 'ic' }, img(art('icon', 'lw_robe'))), h('div', { class: 't' }, h('b', { style: { color: D.QUALITY[4].color } }, 'The set on Hard'), h('small', null, 'Looks in the Knight\'s colours: one a day from the Knight on Hard')), h('div', { class: 'r' }, `${Ev.set.length - G.lwHardLeft().length} of ${Ev.set.length}`)),
+        h('div', { class: 'row' }, h('div', { class: 'ic' }, img(art('icon', 'event_lanternwake'))), h('div', { class: 't' }, h('b', null, `Keepsake: Lanternwake ${season}`), h('small', null, 'For your first kill of the Wickless Knight this year. Each year has its own, never sold.')), h('div', { class: 'r' }, a.keepsakes.includes(season) ? h('span', { class: 'ok' }, 'Have it') : 'Not yet'))));
+      if (a.keepsakes.length) b.append(h('p', { class: 'ai-note' }, `Your keepsakes: ${a.keepsakes.map((y) => 'Lanternwake ' + y).join(', ')}.`));
+    });
+  }
+  // Hero → Journey → Companions: small friends that follow you, only a look
+  function openCompanions() {
+    openSheet('companions', 'Companions', 'Shared by all your characters · only a look', (b) => {
+      const P = G.S.player, own = G.companions(), list = h('div', { class: 'list' });
+      list.append(h('button', { class: 'row nav' + (!P.companion ? ' sel-char' : ''), onclick: () => { G.setCompanion(null); ui.sheetFn(); } }, h('div', { class: 't' }, h('b', null, 'No companion'))));
+      for (const k in D.COMPANIONS || {}) {
+        const C = D.COMPANIONS[k], has = own.includes(k);
+        list.append(h('button', { class: 'row nav' + (has ? '' : ' off') + (P.companion === k ? ' sel-char' : ''), onclick: has ? () => { G.setCompanion(k); ui.sheetFn(); } : null },
+          h('div', { class: 'ic' }, img(art('icon', 'companion_' + k))), h('div', { class: 't' }, h('b', null, C.name), h('small', null, has ? C.desc : `${C.how} · not yet yours`)), h('div', { class: 'r' }, P.companion === k ? 'With you' : has ? 'Call' : '')));
+      }
+      b.append(list);
+    });
+  }
+  // Light the Way: the lantern to light, on the Fight tab of a place out in the world
+  function lwLightCard(b) {
+    const P = G.S.player, can = G.lwCanLight(P.place), st = G.lw(); if (!can || can === 'done') return;
+    const Ev = D.EVENTS.lanternwake;
+    b.append(h('div', { class: 'task ev-task' }, h('div', { class: 'task-b' }, h('div', { class: 'ic' }, img(art('icon', 'event_lanternwake'))),
+      h('div', { class: 't' }, h('b', null, 'Light the Way'), h('span', null, can === 'lit' ? 'The lantern here is lit' : 'A lantern stands here, unlit'), h('small', null, `${st.lit.length} of ${Ev.light} today · ${Ev.earn.light} candles for all ${Ev.light}`))),
+      can === 'ready' ? h('button', { class: 'chip gold', disabled: !!G.fight, onclick: () => { G.lwLight(); renderPanel(); } }, 'Light it') : null));
+  }
+  // the event lantern: floats over every screen while a festival is on (only cutscenes cover it); a ring fills with
+  // today's candles, a dot shows while today's daily loot or Light the Way is still open. Drag it; it snaps to an edge
+  function evLantern() {
+    const live = G.S && G.liveEvents().length && !lwPrefs().off && !app.querySelector('.create');
+    if (!live) { if (ui.evBtn) { ui.evBtn.remove(); ui.evBtn = null; } return; }
+    const Ev = D.EVENTS.lanternwake, st = G.lw(), daily = G.lwDaily(), frac = st ? Math.min(1, st.today / Ev.cap) : 0;
+    const open = st && (daily.normal || st.lit.length < Ev.light), R = 25, L = 2 * Math.PI * R;
+    if (!ui.evBtn) {
+      const btn = h('button', { class: 'ev-lantern', 'aria-label': 'Lanternwake: today\'s progress' });
+      let drag = null;
+      btn.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, moved: false }; btn.setPointerCapture(e.pointerId); });
+      btn.addEventListener('pointermove', (e) => {
+        if (!drag) return; if (!drag.moved && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 8) return;
+        drag.moved = true; const r = app.getBoundingClientRect(); btn.style.left = (e.clientX - r.left - 28) + 'px'; btn.style.right = 'auto'; btn.style.top = (e.clientY - r.top - 28) + 'px';
+      });
+      btn.addEventListener('pointerup', (e) => {
+        if (!drag) return; const moved = drag.moved; drag = null;
+        if (!moved) return lwTracker();
+        const r = app.getBoundingClientRect(), p = lwPrefs(); p.side = e.clientX - r.left < r.width / 2 ? 'l' : 'r'; p.y = (e.clientY - r.top) / r.height; lwSavePrefs(p); placeEvLantern();
+      });
+      ui.evBtn = btn; app.append(btn);
+    }
+    ui.evBtn.innerHTML = '';
+    ui.evBtn.append(img(art('icon', 'event_lanternwake')));
+    ui.evBtn.insertAdjacentHTML('beforeend', `<svg class="ring" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="${R}" class="bg"/><circle cx="28" cy="28" r="${R}" class="fg" stroke-dasharray="${(L * frac).toFixed(1)} ${L.toFixed(1)}" transform="rotate(-90 28 28)"/></svg>`);
+    if (open) ui.evBtn.append(h('i', { class: 'dot' }));
+    placeEvLantern();
+  }
+  // its place: the saved edge and height, kept between the top strip and the ability bar
+  function placeEvLantern() {
+    const btn = ui.evBtn; if (!btn) return;
+    const p = lwPrefs(), r = app.getBoundingClientRect(), bar = els.bottom && els.bottom.getBoundingClientRect();
+    const lo = 64, hi = Math.max(lo, (bar && bar.top > 0 ? bar.top - r.top : r.height * 0.7) - 64);
+    const y = Math.max(lo, Math.min(hi, (p.y == null ? 0.42 : p.y) * r.height - 28));
+    btn.style.top = Math.round(y) + 'px';
+    if (p.side === 'l') { btn.style.left = '6px'; btn.style.right = 'auto'; } else { btn.style.right = '6px'; btn.style.left = 'auto'; }
+  }
+  // the first time into a festival run on this device: its story, once (like a dungeon's first-entry intro)
+  function lwIntro(act) {
+    const key = 'azsolo.evIntro.' + act; try { if (localStorage.getItem(key)) return; localStorage.setItem(key, '1'); } catch (e) { return; }
+    const Ev = D.EVENTS[D.ACTIVITIES[act].event];
+    setTimeout(() => showDialog([h('h3', null, D.ACTIVITIES[act].name), ...Ev.story.map((t) => h('p', { style: { textAlign: 'left' } }, t)),
+      h('p', { style: { textAlign: 'left', color: 'var(--muted)' } }, 'Tonight the road is dark. The Wickless Knight rides it, and the lanterns go out as he passes. Light them again.'),
+      h('button', { class: 'btn wide', onclick: () => closeDialog() }, 'Walk the road')], true), 500);
+  }
+  // the tracker card: today's facts and the two things to do from anywhere
+  function lwTracker() {
+    if (!G.eventLive('lanternwake')) return;
+    showDialog([h('button', { class: 'x-close', 'aria-label': 'Close', onclick: () => closeDialog() }, '×'),
+      h('h3', null, 'Lanternwake'), h('p', { class: 'ai-note', style: { margin: 0 } }, lwEndsText()),
+      h('div', { class: 'ev-facts' }, ...lwTodayFacts()),
+      ...lwQueueButtons(() => { closeDialog(); renderAll(); }),
+      h('button', { class: 'btn alt wide', onclick: () => { closeDialog(); openLanternwake(); } }, 'Full event page')], true);
+  }
   function openTitles() {
     openSheet('titles', 'Titles', 'Tap an earned title to wear it', (b, title) => {
       const P = G.S.player, own = D.TITLES.filter(G.titleUnlocked), rest = D.TITLES.filter((t) => !G.titleUnlocked(t));
@@ -3181,6 +3374,9 @@
         { const on = fxOn(); b.append(...foldSec('set.fx', 'Combat effects', on ? 'On' : 'Off', [h('div', { class: 'btn-row' },
           h('button', { class: 'btn alt', onclick: () => { try { localStorage.setItem('azsolo.fx', on ? 'off' : 'on'); } catch (e) { } ui.sheetFn(); } }, 'Combat effects: ' + (on ? 'On' : 'Off'))),
           h('p', { class: 'ai-note', style: { margin: 0 } }, 'Slashes, spells in flight, heals and boss attacks drawn over the fight. Damage numbers stay either way.')])); }
+        if (D.EVENTS) { const off = !!lwPrefs().off; b.append(...foldSec('set.evl', 'Event lantern', off ? 'Hidden' : 'Shown', [h('div', { class: 'btn-row' },
+          h('button', { class: 'btn alt', onclick: () => { const p = lwPrefs(); p.off = !off; lwSavePrefs(p); evLantern(); ui.sheetFn(); } }, 'Event lantern: ' + (off ? 'Hidden' : 'Shown'))),
+          h('p', { class: 'ai-note', style: { margin: 0 } }, 'While a festival is on, a lantern floats over every screen and opens today\'s progress. Drag it to move it. The festival page stays in Hero → Journey → Events either way.')])); }
         if (window.SND) {
           // #120: a volume slider per channel (0-100%, steps of 5) under the On/Off buttons, which mute and keep the value.
           // Dragging changes the sound at once and updates the labels in place (a sheet redraw would end the drag).
@@ -4139,7 +4335,7 @@
       return h('div', { class: 'row gf-row tap' + (!doable(x) ? ' gf-locked' : '') + (queued ? ' gf-queued' : ''), onclick: (e) => { if (e.target.closest('button')) return; openBriefing(x.k, false); } }, // tap the row for its briefing (v10.4)
         actPic(A),
         h('div', { class: 't' }, h('b', null, A.name, h('span', { class: 'gf-lvl tnum' }, A.minLvl === A.maxLvl ? String(A.minLvl) : `${A.minLvl}–${A.maxLvl}`)),
-          h('small', null, showKind ? h('span', { class: 'gf-kind k-' + kind }, KIND_LABEL[kind]) : null, x.k === G.featuredRaid() ? h('span', { class: 'gf-kind k-featured' }, 'Featured this week') : null, A.worldBoss ? h('span', { class: 'gf-kind k-featured' }, G.worldBossLooted(x.k) ? 'World boss · looted this week' : 'World boss this week') : null, note)),
+          h('small', null, showKind ? h('span', { class: 'gf-kind k-' + kind }, KIND_LABEL[kind]) : null, x.k === G.featuredRaid() ? h('span', { class: 'gf-kind k-featured' }, 'Featured this week') : null, A.worldBoss ? h('span', { class: 'gf-kind k-featured' }, G.worldBossLooted(x.k) ? 'World boss · looted this week' : 'World boss this week') : null, A.event ? h('span', { class: 'gf-kind k-featured' }, `${D.EVENTS[A.event].name} · ${G.lwDaily().normal ? 'loot open today' : 'looted today'}`) : null, note)),
         btn);
     };
     const byLevel = (a, c) => a.A.minLvl - c.A.minLvl || kinds.indexOf(actKind(a.A)) - kinds.indexOf(actKind(c.A));
@@ -4762,15 +4958,26 @@
     + '<path d="M-5.5,6 C-5.5,-3 0,-9 0,-15 C3.5,-8 6.5,-3 6.5,5 C6.5,10 3.5,13 0.5,13 C-3,13 -5.5,10 -5.5,6 Z" fill="#ff9a2e" stroke="#c85a10" stroke-width="1.3"/>'
     + '<path d="M-14.5,-9 L14,-9 M-13.5,7 L13,7 M0,-24 L0,22" stroke="#6a4c26" stroke-width="2.2"/>'
     + '<path d="M-16,22 L16,22 L12,29 L-12,29 Z" fill="#6a4c26" stroke="#140f09" stroke-width="3" stroke-linejoin="round"/></svg>';
+  // while a festival is on, the title screens wear it (v10.13, #226): festSky() behind them, its tagline under the title
+  const festNow = () => (window.G && G.liveEvents ? G.liveEvents()[0] : null);
   const titleMark = () => [h('div', { class: 'title-lantern', html: LANTERN_MARK }),
-    h('h1', { class: 'title-word' }, 'Realm ', h('span', { class: 'of' }, 'of'), ' Loner'), h('div', { class: 'tagline' }, 'A World of Your Own')];
+    h('h1', { class: 'title-word' }, 'Realm ', h('span', { class: 'of' }, 'of'), ' Loner'), h('div', { class: 'tagline' }, festNow() === 'lanternwake' ? 'Lanternwake: 24 October to 7 November' : 'A World of Your Own')];
+  // the menu's one moving piece during Lanternwake: small lanterns drifting slowly up behind the title (still with reduced motion)
+  function festSky(root) {
+    const k = festNow(); if (!k) return root;
+    root.classList.add('fest-' + k);
+    const sky = h('div', { class: 'fest-sky', 'aria-hidden': 'true' });
+    for (let i = 0; i < 12; i++) sky.append(h('i', { style: { left: (4 + ((i * 37) % 92)) + '%', animationDelay: (-i * 2.3).toFixed(1) + 's', animationDuration: (22 + (i % 4) * 4) + 's', '--s': (0.6 + ((i * 7) % 5) / 10).toFixed(2) } }));
+    root.prepend(sky);
+    return root;
+  }
   const discordLink = () => window.UPD ? h('button', { class: 'discord-link', onclick: () => UPD.open(UPD.DISCORD) }, 'Join us on Discord') : null;
   const privacyLink = (label) => window.UPD ? h('button', { class: 'discord-link', onclick: () => UPD.open(UPD.PRIVACY) }, label || 'Privacy') : null;
   const footLinks = () => h('div', { class: 'foot-links' }, discordLink(), privacyLink());
   // which music plays (v10.8): a cutscene's own, else G.musicFor (game.js) with the tracks this build ships
   const musicNow = () => ui.csMusic || G.musicFor((n) => !!(window.SND && SND.has(n)));
   // the main menu has its own theme once approved (before that, the menu stays as it was)
-  const menuMusic = () => { if (window.SND && SND.has('menu')) SND.music('menu'); };
+  const menuMusic = () => { if (!window.SND) return; const f = festNow(); if (f && SND.has(f)) SND.music(f); else if (SND.has('menu')) SND.music('menu'); }; // a festival's own theme once it ships
   // What's new (issue #29): the notes bundled with this build (window.AZ_NOTES), shown once per device on the first open of
   // a new version, and any time from the version tag on the main menu. A brand-new device is marked seen silently.
   const SEEN_KEY = 'azsolo.seenVersion', verNow = () => (window.UPD ? UPD.current() : String(window.AZ_VERSION || ''));
@@ -4845,7 +5052,7 @@
     if (!list.length) return showCreate();
     app.innerHTML = '';
     let sel = list[0].id;
-    const root = h('div', { class: 'create' });
+    const root = festSky(h('div', { class: 'create' }));
     app.append(root);
     const draw = () => {
       root.innerHTML = '';
@@ -4908,7 +5115,7 @@
     menuMusic();
     app.innerHTML = '';
     const st = { name: B.makeName(new Set()), faction: 'alliance', race: 'human', cls: 'warrior', gender: 'm', skin: 1, hair: 0 };
-    const root = h('div', { class: 'create' });
+    const root = festSky(h('div', { class: 'create' }));
     app.append(root);
     const draw = () => {
       root.innerHTML = '';
@@ -4992,6 +5199,7 @@
     G.on('levelup', (d) => { const ch = window.CS && CS.CHAPTERS.find((c) => c.level === d.level && c.shots && c.id !== 'intro' && (!c.scene || c.beat) && (!c.faction || c.faction === G.myFaction()) && !CS.unlocked().has(c.id) && chapterReady(c)); if (ch) ui.pendingChapter = ch.id; renderAll(); banner('Level ' + d.level, d.learned.length ? 'New: ' + d.learned.map((a) => D.ABILITIES[a].name).join(', ') : 'Health and mana restored'); });
     G.on('combat', onCombat);
     G.on('instanceEnter', (d) => {
+      if (d.act && (D.ACTIVITIES[d.act] || {}).event) lwIntro(d.act); // a festival run's first-entry story
       const ch = d.dungeon && window.CS && CS.forInstance(d.dungeon);
       if (ch && !CS.unlocked().has(ch.id)) setTimeout(() => playChapter(ch.id), 400);
     });
