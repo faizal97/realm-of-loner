@@ -3431,6 +3431,11 @@
     } else if (A.event) { // a festival run (v10.13): its own pulls, fought at your level, with its own Hard
       pulls = A.pulls; mult = A.trashMult; bossMult = A.bossMult;
       if (hard && A.hard) { mult = A.hard.trashMult; bossMult = A.hard.bossMult; name += ' · Hard'; } else hard = false;
+      const top = A.atCap && (hard ? A.atCap.hard : A.atCap), L = G.syncLevel(act); // stronger toward the level cap, where groups are better geared
+      if (top && L > A.atCap.from) {
+        const f = Math.min(1, (L - A.atCap.from) / (D.LEVEL_CAP - A.atCap.from)), mix = (lo, hi) => ({ hp: lo.hp + (hi.hp - lo.hp) * f, dmg: lo.dmg + (hi.dmg - lo.dmg) * f });
+        mult = mix(mult, top.trashMult); bossMult = mix(bossMult, top.bossMult);
+      }
     } else {
       pulls = A.pulls; hard = false;
     }
