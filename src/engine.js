@@ -149,6 +149,12 @@
     return CASTERS[u.cls] ? DIST.spell - 2 : DIST.melee - 1;
   }
   E.reachOf = reachOf;
+  // step in (#245): which abilities a ranged fighter walks in for, and when
+  E.stepInAbility = (u, ab) => !!(u && u.side === 'ally' && u.pos && !u.form && u.kind !== 'pet' && reachOf(u) > DIST.melee && ab && ab.dmg && !ab.fear &&
+    ((ab.target === 'aoe' && !aoeAtTarget(ab)) || (ab.dmg.weapon && ab.target === 'enemy')));
+  const closeReach = (ab) => (ab.dmg && ab.dmg.weapon && ab.target === 'enemy' ? DIST.melee : ab.radius || DIST.radius);
+  E.stepInNeeded = (C, u, ab) => E.stepInAbility(u, ab) && ab.target === 'aoe' && !alive(foes(C, u)).some((e) => !e.pos || E.dist(u, e) <= closeReach(ab));
+  E.nearestFoe = (C, u, pref) => (pref && !pref.dead && pref.pos ? pref : alive(foes(C, u)).filter((e) => e.pos).sort((a, b) => E.dist(u, a) - E.dist(u, b))[0] || null);
   // where a fighter stands when a fight begins: in contact (stage 1), or `apart` metres from the other side
   // stage 4: in a group with a tank, its casters, hunters and healers start behind the line (the tank holds the front);
   // alone, in a duel (which starts apart) or with no tank, everyone starts in contact as before
@@ -190,6 +196,19 @@
     }
     if (rooted || stunned(C, u)) return;
     if (u.cast) return; // a fighter who chose to cast stands still for it (the run to close in or to kite waits)
+    if (u.stepIn) { // step in (#245): walk to the enemies, then use it there
+      const S = u.stepIn, ab = D.ABILITIES[S.ab], near = E.nearestFoe(C, u, ab.target === 'enemy' ? C.units[S.tgt] : null);
+      if (!near || C.t > S.until) { u.stepIn = null; u.returnTo = S.from; return; }
+      const reach = closeReach(ab) - 1;
+      if (E.dist(u, near) > reach) { stepToward(u, near, Math.min(speed, E.dist(u, near) - reach + 0.01)); return; }
+      u.stepIn = null; const why = E.use(C, u, S.ab, ab.target === 'enemy' ? near.uid : null); u.returnTo = S.from;
+      if (why) ev(C, { type: 'stepFail', src: u.uid, ab: S.ab, why });
+      return;
+    }
+    if (u.returnTo) { // ...and back to where it stood
+      const dx = u.returnTo.x - u.pos.x, dy = u.returnTo.y - u.pos.y, h = Math.hypot(dx, dy);
+      if (h <= 0.3) u.returnTo = null; else { stepToward(u, { pos: u.returnTo }, Math.min(speed, h)); return; }
+    }
     if (u.kiteUntil > C.t) { const f = C.units[u.target]; if (f && f.pos && !f.dead) { stepAway(u, f, speed); return; } }
     const t = C.units[u.target]; if (!t || t.dead || t.side === u.side || !t.pos) return;
     const d = E.dist(u, t), want = reachOf(u);
@@ -641,6 +660,13 @@
     if (ab.target === 'self' || ab.target === 'party' || ab.target === 'aoe') tgt = u;
     if (ab.target === 'ally' && !tgt) tgt = u;
     const why = E.canUse(C, u, abId, ab.target === 'self' || ab.target === 'party' || ab.target === 'aoe' ? u : tgt);
+    u.stepIn = null; // anything else you use calls off a step in
+    // step in (#245): a fighter who stands back (a caster) uses a close attack (an area attack around itself, or a weapon
+    // strike) with no enemy in its reach: it walks in, uses it there, and walks back to where it stood
+    if ((!why && E.stepInNeeded(C, u, ab)) || (why === 'Out of range' && E.stepInAbility(u, ab))) {
+      const near = E.nearestFoe(C, u, ab.target === 'enemy' ? tgt : null);
+      if (near) { u.stepIn = { ab: abId, tgt: near.uid, until: C.t + 5, from: u.returnTo || { x: u.pos.x, y: u.pos.y } }; u.returnTo = null; ev(C, { type: 'stepIn', src: u.uid, ab: abId }); return null; }
+    }
     if (why) return why;
     if (ab.gcd !== false) u.gcdUntil = C.t + (ab.gcdLen || 1.5);
     if (ab.cast && !((litAura(u, abId) || {}).proc || {}).instant) {
@@ -1115,6 +1141,7 @@
     return false;
   }
   function botThink(C, u) {
+    if (u.stepIn) return; // walking in to use a close attack (#245)
     if (u.dead || u.cast) return;
     if (stunned(C, u)) { const rac = u.race && D.RACIALS[u.race] && D.RACIALS[u.race].active; if (rac && D.ABILITIES[rac].freeOf && Math.random() < 0.3) E.use(C, u, rac); return; }
     const b = u.bot || {};

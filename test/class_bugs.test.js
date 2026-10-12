@@ -147,3 +147,20 @@ test('a Paladin tank has a taunt: Hand of Challenge (#245)', () => {
   assert.strictEqual(e.target, u.uid, 'it attacks the paladin');
   assert.ok(e.threat[u.uid] > 5000, 'top threat');
 });
+
+test('a caster at the back steps in for a close area attack, uses it, and walks back (#245)', () => {
+  const { P } = character(60, 'mage', 'human');
+  const tank = E.charUnit(G.botChar(Object.assign(require('./world').B.makeBot(9001, new Set(), { level: 60 }), { cls: 'warrior', role: 'tank' })), 'ally', 'bot', 1); tank.role = 'tank'; tank.bot = { skill: 1, react: 0.2 };
+  const u = E.charUnit(P, 'ally', 'player', 1); u.role = 'dps';
+  const key = Object.keys(D.MOBS).find((k) => { const M = D.MOBS[k]; return !M.boss && !M.elite && !M.ranged && M.lvl && M.lvl[0] <= 60 && M.lvl[1] >= 60; });
+  const C = E.fight([tank, u], [0, 1, 2].map(() => E.mobUnit(key, 60, { hp: 20, dmg: 0.2 })), {});
+  for (let i = 0; i < 30; i++) E.tick(C, 0.1); // the enemies reach the tank
+  const start = { x: u.pos.x, y: u.pos.y };
+  assert.ok(C.enemies.every((e) => E.dist(u, e) > 8), 'the mage stands back');
+  u.res = 1e6; u.gcdUntil = 0;
+  assert.strictEqual(E.use(C, u, 'arcane_explosion'), null);
+  let hit = 0;
+  for (let i = 0; i < 120; i++) { E.tick(C, 0.1); for (const e of C.events) if (e.type === 'dmg' && e.src === u.uid && e.ab === 'arcane_explosion') hit++; C.events.length = 0; }
+  assert.ok(hit >= 2, `Arcane Explosion hit ${hit} enemies`);
+  assert.ok(Math.hypot(u.pos.x - start.x, u.pos.y - start.y) < 1, 'back where it stood');
+});
