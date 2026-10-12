@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Realm of Loner Database</title>
+<meta name="description" content="Every item, creature, quest, place and dungeon in Realm of Loner, and where to find them.">
+<style>/*FONTS*/</style>
+<style>
+/* the game's own look (src/style.css): bronze frames, gold names, classic quality colours; one dark world */
+:root {
+  color-scheme: dark;
+  --ink: #0e0b08; --panel: #17120c; --panel-2: #211910; --edge: #5c4526; --edge-hi: #a5824a;
+  --gold: #f0c75e; --text: #ebe0c9; --muted: #9f8f73;
+  --q0: #9d9d9d; --q1: #ffffff; --q2: #1eff00; --q3: #0070dd; --q4: #a335ee; --q5: #e6cc80;
+  --display: 'Marcellus SC', 'Palatino Linotype', Georgia, serif;
+  --body: 'Alegreya Sans', 'Trebuchet MS', system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html { background: var(--ink); }
+body { margin: 0; background: radial-gradient(120% 60% at 50% 0, #1d160d 0, var(--ink) 70%) no-repeat, var(--ink); color: var(--text); font: 16px/1.45 var(--body); min-height: 100vh; }
+a { color: inherit; text-decoration: none; }
+.wrap { max-width: 680px; margin: 0 auto; padding: 0 16px 48px; }
+.head h1.q0 { color: var(--q0); } .head h1.q1 { color: var(--q1); } .head h1.q2 { color: var(--q2); } .head h1.q3 { color: #3d9bff; } .head h1.q4 { color: #c27bff; } .head h1.q5 { color: var(--q5); }
+.q0 { color: var(--q0); } .q1 { color: var(--q1); } .q2 { color: var(--q2); } .q3 { color: #3d9bff; } .q4 { color: #c27bff; } .q5 { color: var(--q5); }
+
+/* header: the name, and the search that is the whole way in */
+.top { position: sticky; top: 0; z-index: 5; background: linear-gradient(#1c150d, #120e09); border-bottom: 1px solid var(--edge); }
+.top .wrap { padding-top: 10px; padding-bottom: 10px; display: grid; gap: 8px; }
+.brand { font: 400 20px/1.1 var(--display); color: var(--gold); letter-spacing: .02em; }
+.brand small { font: 500 14px var(--body); color: var(--muted); letter-spacing: 0; margin-left: 6px; }
+.search { width: 100%; font: 500 16px var(--body); color: var(--text); background: #0b0805; border: 1px solid var(--edge); border-radius: 6px; padding: 10px 12px; outline: none; }
+.search:focus { border-color: var(--edge-hi); box-shadow: 0 0 0 2px rgba(240, 199, 94, .18); }
+.search::placeholder { color: #7d6f57; }
+
+/* the head of a page: art, name in its colour, one line of what it is */
+.head { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; margin: 22px 0 16px; }
+.head h1 { margin: 0; font: 400 26px/1.15 var(--display); color: var(--gold); }
+.head .sub { color: var(--muted); margin-top: 2px; }
+.ic { width: 52px; height: 52px; border-radius: 6px; border: 1px solid var(--edge); background: #000; }
+.art { width: 132px; height: 132px; border-radius: 8px; border: 1px solid var(--edge); background: radial-gradient(circle at 50% 60%, #2a2014, #0b0805 75%); object-fit: contain; }
+.kind { color: var(--muted); font-size: 14px; }
+
+/* the tooltip, exactly as the game draws it: the one thing on an item page that looks like the game itself */
+.tooltip { background: rgba(8, 6, 20, .96); border: 1px solid #5a5a70; border-radius: 4px; padding: 12px 14px; display: grid; gap: 2px; font: 500 15px/1.35 var(--body); box-shadow: 0 6px 20px #000; max-width: 360px; margin: 0 0 22px; }
+.tooltip .nm { font-weight: 800; font-size: 17px; }
+.tooltip .st { color: #fff; } .tooltip .gr { color: #1eff00; } .tooltip .dim { color: #b0b0b0; } .tooltip .eff { color: #d39cff; }
+.tooltip .set { color: #ffd100; } .tooltip .look { color: #ff80ff; }
+.tooltip .two { display: flex; justify-content: space-between; gap: 12px; color: #fff; }
+
+/* label: value facts (docs/ui-text-style.md) */
+.facts { display: grid; gap: 0; margin: 0 0 22px; border-top: 1px solid #2c2216; }
+.facts div { display: grid; grid-template-columns: 7.5em 1fr; gap: 12px; padding: 7px 0; border-bottom: 1px solid #2c2216; }
+.facts dt { color: var(--muted); } .facts dd { margin: 0; }
+.say { font-style: italic; color: #d9cbab; border-left: 2px solid var(--edge); padding: 2px 0 2px 12px; margin: 0 0 22px; }
+
+/* sections: a heading and a table that links everywhere */
+h2 { font: 400 18px/1.2 var(--display); color: var(--gold); margin: 26px 0 8px; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-weight: 500; color: var(--muted); font-size: 14px; padding: 4px 8px 6px 0; border-bottom: 1px solid var(--edge); }
+td { padding: 8px 8px 8px 0; border-bottom: 1px solid #2c2216; vertical-align: top; }
+td.n, th.n { text-align: right; padding-right: 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
+td a, .row a { border-bottom: 1px solid transparent; }
+td a:hover, td a:focus-visible { border-bottom-color: currentColor; }
+a.ln { color: #f3d68a; text-decoration: underline dotted rgba(243, 214, 138, .45); text-underline-offset: 3px; } a.ln.q0 { color: var(--q0); } a.ln.q1 { color: var(--q1); } a.ln.q2 { color: var(--q2); } a.ln.q3 { color: #3d9bff; } a.ln.q4 { color: #c27bff; } a.ln.q5 { color: var(--q5); }
+
+/* lists and search results: one row per thing, its type or level on the right */
+.rows { display: grid; }
+.row { display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #2c2216; }
+.row img { width: 28px; height: 28px; border-radius: 4px; border: 1px solid #3a2c1a; }
+.row .dot { width: 28px; height: 28px; border-radius: 4px; border: 1px solid #3a2c1a; background: #120e09; }
+.row .r { color: var(--muted); font-size: 14px; text-align: right; }
+.browse a { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #2c2216; font: 400 19px var(--display); color: var(--text); }
+.browse a span { font: 500 15px var(--body); color: var(--muted); font-variant-numeric: tabular-nums; }
+.browse a:hover span, .browse a:focus-visible span { color: var(--gold); }
+.more { margin: 14px 0; width: 100%; padding: 11px; font: 600 15px var(--body); color: var(--gold); background: var(--panel); border: 1px solid var(--edge); border-radius: 6px; cursor: pointer; }
+.note { color: var(--muted); font-size: 14px; margin: 22px 0 0; }
+.back { display: inline-block; margin-top: 14px; color: var(--muted); font-size: 15px; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 3px; }
+@media (max-width: 420px) { .art { width: 96px; height: 96px; } .head h1 { font-size: 23px; } .facts div { grid-template-columns: 6.5em 1fr; } }
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="brand" href="#">Realm of Loner<small>Database</small></a>
+  <input class="search" id="q" type="search" placeholder="Search items, creatures, quests, places" autocomplete="off" spellcheck="false" aria-label="Search the database">
+</div></header>
+<main class="wrap" id="main"></main>
+<script>
+const DB = /*DATA*/null;
+const main = document.getElementById('main'), q = document.getElementById('q');
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const art = (p, cls) => p.ic ? `<img class="${cls || 'ic'}" src="icon/${esc(p.ic)}.svg" alt="" loading="lazy">` : p.mob ? `<img class="${cls || 'ic'}" src="mob/${esc(p.mob)}.svg" alt="" loading="lazy">` : '';
+const link = (c) => Array.isArray(c) ? c.map(link).join(', ') : c && typeof c === 'object' ? `<a class="ln${c.q != null ? ' q' + c.q : ''}" href="#${esc(c.l)}">${esc(c.t)}</a>` : esc(c == null ? '' : c);
+const SING = { item: 'Item', mob: 'Creature', quest: 'Quest', npc: 'Person', place: 'Place', zone: 'Zone', dungeon: 'Dungeon' };
+const fmt = (n) => n.toLocaleString('en');
+
+function row(key, kind) {
+  const p = DB.pages[key];
+  return `<a class="row" href="#${esc(key)}">${art(p) || '<span class="dot"></span>'}<span class="${p.q != null ? 'q' + p.q : ''}">${esc(p.n)}</span><span class="r">${esc(kind ? [SING[p.k], p.sub].filter(Boolean).join(', ') : p.sub || SING[p.k])}</span></a>`;
+}
+
+function home() {
+  document.title = 'Realm of Loner Database';
+  main.innerHTML = `<div class="browse" style="margin-top:14px">${Object.entries(DB.kinds).map(([k, n]) => `<a href="#list/${k}">${n}<span>${fmt(DB.lists[k].length)}</span></a>`).join('')}</div>
+    <p class="note">From the game's own data, version ${esc(DB.v)}. Quest rewards are made for your class when you finish, so they are listed by type.</p>`;
+}
+
+function list(kind, shown) {
+  const ids = DB.lists[kind]; if (!ids) return home();
+  shown = shown || 100;
+  document.title = DB.kinds[kind] + ' · Realm of Loner Database';
+  main.innerHTML = `<div class="head" style="grid-template-columns:1fr"><div><h1>${esc(DB.kinds[kind])}</h1><div class="sub">${fmt(ids.length)}, lowest level first</div></div></div>
+    <div class="rows">${ids.slice(0, shown).map((id) => row(kind + '/' + id)).join('')}</div>
+    ${shown < ids.length ? `<button class="more" id="more">Show ${fmt(Math.min(100, ids.length - shown))} more</button>` : ''}`;
+  const m = document.getElementById('more'); if (m) m.onclick = () => { const y = scrollY; list(kind, shown + 100); scrollTo(0, y); };
+}
+
+function page(key) {
+  const p = DB.pages[key]; if (!p) return home();
+  document.title = p.n + ' · Realm of Loner Database';
+  const big = p.k === 'mob' && p.mob;
+  let out = `<div class="head">${big ? art(p, 'art') : art(p) || ''}<div><div class="kind">${SING[p.k]}</div><h1 class="${p.q != null ? 'q' + p.q : ''}">${esc(p.n)}</h1>${p.sub ? `<div class="sub">${esc(p.sub)}</div>` : ''}</div></div>`;
+  if (p.tip) out += `<div class="tooltip">${p.tip.map(([c, a, b]) => c === 'two' ? `<div class="two"><span>${esc(a)}</span><span>${esc(b || '')}</span></div>` : `<div class="${esc(c)}">${esc(a)}</div>`).join('')}</div>`;
+  if (p.facts) out += `<dl class="facts">${p.facts.map(([l, v, x]) => `<div><dt>${esc(l)}</dt><dd>${link(v)}${x ? ', ' + link(x) : ''}</dd></div>`).join('')}</dl>`;
+  if (p.text) out += `<p class="say">${esc(p.text)}</p>`;
+  for (const s of p.sec || []) {
+    const num = (i) => s.head && /^(Level|Chance|Count|Needed)$/.test(s.head[i]);
+    out += `<h2>${esc(s.h)}</h2><table>${s.head && s.head.some(Boolean) ? `<tr>${s.head.map((h, i) => `<th${num(i) ? ' class="n"' : ''}>${esc(h)}</th>`).join('')}</tr>` : ''}${s.rows.map((r) => `<tr>${r.map((c, i) => `<td${num(i) ? ' class="n"' : ''}>${link(c)}</td>`).join('')}</tr>`).join('')}</table>`;
+  }
+  out += `<a class="back" href="#list/${p.k}">All ${esc(DB.kinds[p.k].toLowerCase())}</a>`;
+  main.innerHTML = out;
+}
+
+// search: names that start with the words rank first, then names that contain them; at most 60
+const ALL = Object.keys(DB.pages).map((k) => [k, DB.pages[k].n.toLowerCase()]);
+function search(s) {
+  const t = s.trim().toLowerCase();
+  if (!t) return route();
+  const words = t.split(/\s+/), hits = [];
+  for (const [k, n] of ALL) if (words.every((w) => n.includes(w))) hits.push([n.startsWith(t) ? 0 : n.split(/[\s'-]+/).some((x) => x.startsWith(words[0])) ? 1 : 2, n.length, k]);
+  hits.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  document.title = 'Search · Realm of Loner Database';
+  main.innerHTML = hits.length
+    ? `<div class="rows" style="margin-top:10px">${hits.slice(0, 60).map((h) => row(h[2], true)).join('')}</div>${hits.length > 60 ? `<p class="note">${fmt(hits.length)} found. Type more to narrow it down.</p>` : ''}`
+    : `<p class="note">Nothing called "${esc(s.trim())}". Try part of the name, like "wolf" or "mantle".</p>`;
+}
+
+function route() {
+  const h = decodeURIComponent(location.hash.slice(1));
+  if (!h) home(); else if (h.startsWith('list/')) list(h.slice(5)); else page(h);
+}
+let timer;
+q.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => search(q.value), 80); });
+q.addEventListener('keydown', (e) => { if (e.key === 'Escape') { q.value = ''; route(); } });
+addEventListener('hashchange', () => { q.value = ''; route(); scrollTo(0, 0); });
+route();
+</script>
+</body>
+</html>
