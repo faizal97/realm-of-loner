@@ -1,5 +1,6 @@
 ---
 class: druid
+by: official
 written: 10.11.0
 checked: 10.11.0
 ---

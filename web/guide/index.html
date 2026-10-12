@@ -204,7 +204,7 @@ function guide(key, p, qs) {
   const g = p.g, want = new URLSearchParams(qs || '').get('tab');
   const at = Math.max(0, g.tabs.findIndex((t) => slug(t.h) === want));
   document.title = p.n + ' · Realm of Loner Database';
-  main.innerHTML = `<div class="head">${art(p) || ''}<div><div class="kind">Guide</div><h1>${esc(p.n)}</h1></div></div>
+  main.innerHTML = `<div class="head">${art(p) || ''}<div><div class="kind">${g.by ? 'Guide by ' + esc(g.by) : 'Official guide'}</div><h1>${esc(p.n)}</h1></div></div>
     <div class="stamp"><span>Written for <b>${esc(g.w)}</b></span><span>Checked for <b>${esc(g.c)}</b></span></div>
     ${g.old ? `<p class="stale">Last checked for ${esc(g.c)}. The game is ${esc(DB.v.replace(/^(\d+\.\d+).*/, '$1'))} now, so some of this may be out of date.</p>` : ''}
     <div class="guide">${blocks(g.intro)}

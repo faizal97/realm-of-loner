@@ -34,9 +34,11 @@ test('guides: a broken link stops the build, an old guide fails --check', () => 
   const root = path.join(__dirname, '..'), os = require('os');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'guides-'));
   const run = (args) => { try { execFileSync('node', [path.join(root, 'tools/build_guide.js'), ...args], { cwd: root, stdio: 'pipe', env: Object.assign({}, process.env, { GUIDES_DIR: dir }) }); return ''; } catch (e) { return String(e.stderr); } };
-  fs.writeFileSync(path.join(dir, 'druid.md'), '---\nclass: druid\nwritten: 1.0.0\nchecked: 1.0.0\n---\nUse [[No Such Spell]].\n');
+  fs.writeFileSync(path.join(dir, 'druid.md'), '---\nclass: druid\nby: official\nwritten: 1.0.0\nchecked: 1.0.0\n---\nUse [[No Such Spell]].\n');
   assert.match(run(['--check']), /\[\[No Such Spell\]\] is not in the database/);
-  fs.writeFileSync(path.join(dir, 'druid.md'), '---\nclass: druid\nwritten: 1.0.0\nchecked: 1.0.0\n---\nUse [[Wrath]].\n');
+  fs.writeFileSync(path.join(dir, 'druid.md'), '---\nclass: druid\nby: official\nwritten: 1.0.0\nchecked: 1.0.0\n---\nUse [[Wrath]].\n');
   assert.match(run(['--check']), /druid\.md: checked for 1\.0/);
+  fs.writeFileSync(path.join(dir, 'druid.md'), '---\nclass: druid\nby: A Player\nwritten: 1.0.0\nchecked: 1.0.0\n---\nUse [[Wrath]].\n');
+  assert.strictEqual(run(['--check']), '', 'a player guide out of date warns on its page but does not stop a release');
   fs.rmSync(dir, { recursive: true, force: true });
 });

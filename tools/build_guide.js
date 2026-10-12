@@ -411,7 +411,8 @@ for (const f of fs.existsSync(gdir) ? fs.readdirSync(gdir).filter((x) => x.endsW
   if (!m) { guideErrors.push(`${f}: no frontmatter`); continue; }
   const meta = Object.fromEntries(m[1].split('\n').map((l) => l.split(/:\s*/)).map(([a, ...b]) => [a.trim(), b.join(':').trim()]));
   const cls = meta.class;
-  if (!D.CLASSES[cls] || !meta.written || !meta.checked) { guideErrors.push(`${f}: needs class (a class id), written and checked`); continue; }
+  if (!D.CLASSES[cls] || !meta.written || !meta.checked || !meta.by) { guideErrors.push(`${f}: needs class (a class id), by (official or a name), written and checked`); continue; }
+  const official = meta.by === 'official', id = f.replace(/\.md$/, '');
   const intro = [], tabs = []; let blocks = intro, para = [];
   const flush = () => { if (para.length) blocks.push({ t: 'p', c: inline(para.join(' '), f) }); para = []; };
   for (const line of m[2].split('\n')) {
@@ -427,10 +428,14 @@ for (const f of fs.existsSync(gdir) ? fs.readdirSync(gdir).filter((x) => x.endsW
   }
   flush();
   const old = olderMinor(meta.checked, VERSION);
-  if (old) stale.push(`${f}: checked for ${short(meta.checked)}, the game is ${short(VERSION)}`);
+  if (old && official) stale.push(`${f}: checked for ${short(meta.checked)}, the game is ${short(VERSION)}`);
   const name = D.CLASSES[cls].name;
-  P['guide/' + cls] = { k: 'guide', n: name + ' guide', ic: 'class_' + cls, sub: tabs.map((t) => t.h).join(', '), g: { w: short(meta.written), c: short(meta.checked), old, intro, tabs } };
-  const cp = P['class/' + cls]; if (cp) (cp.facts = cp.facts || []).unshift(['Guide', L('guide', cls)]);
+  // one file, one guide: guides/druid.md is the official Druid guide; a player's guide sits next to it (by: their name)
+  P['guide/' + id] = { k: 'guide', n: meta.title || name + ' guide', ic: 'class_' + cls, cls, sub: official ? 'Official' : 'By ' + meta.by, g: { by: official ? '' : meta.by, w: short(meta.written), c: short(meta.checked), old, intro, tabs } };
+}
+for (const cls of Object.keys(D.CLASSES)) {
+  const gs = Object.keys(P).filter((x) => P[x].k === 'guide' && P[x].cls === cls).sort((a, b) => !!P[a].g.by - !!P[b].g.by || P[a].n.localeCompare(P[b].n));
+  const cp = P['class/' + cls]; if (cp && gs.length) (cp.facts = cp.facts || []).unshift([gs.length > 1 ? 'Guides' : 'Guide', gs.map((x) => L('guide', x.split('/')[1]))]);
 }
 if (guideErrors.length) { console.error(guideErrors.join('\n')); process.exit(1); }
 if (process.argv.includes('--check')) {
@@ -442,7 +447,7 @@ if (process.argv.includes('--check')) {
 const lists = {};
 for (const kind of Object.keys(KIND)) {
   const ids = Object.keys(P).filter((x) => P[x].k === kind).map((x) => x.split('/')[1]);
-  const lv = (id) => kind === 'item' ? D.ITEMS[id].lvl || 0 : kind === 'dungeon' ? D.DUNGEONS[id].minLvl : kind === 'ability' ? D.ABILITIES[id].lvl || 0 : kind === 'act' ? D.ACTIVITIES[id].minLvl : kind === 'guide' ? 0 : lvlOf(kind, id);
+  const lv = (id) => kind === 'item' ? D.ITEMS[id].lvl || 0 : kind === 'dungeon' ? D.DUNGEONS[id].minLvl : kind === 'ability' ? D.ABILITIES[id].lvl || 0 : kind === 'act' ? D.ACTIVITIES[id].minLvl : kind === 'guide' ? (P['guide/' + id].g.by ? 1 : 0) : lvlOf(kind, id);
   const nm = (id) => P[kind + '/' + id].n.replace(/<name>,?/, '').trim(), grp = (id) => (kind === 'collect' ? P['collect/' + id].sub : '');
   lists[kind] = ids.sort((a, b) => grp(a).localeCompare(grp(b)) || lv(a) - lv(b) || nm(a).localeCompare(nm(b)));
 }
