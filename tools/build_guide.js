@@ -208,9 +208,10 @@ const talentText = (t, rank) => (t.desc || '').replace('{v}', num(((t.fx || [])[
 const talentsOn = {}; // ability → talents that change it
 for (const [cls, trees] of Object.entries(D.TALENTS)) for (const tr of trees) for (const t of tr.talents) for (const fx of t.fx || []) for (const a of fx.ab || []) if (!(talentsOn[a] || []).some((x) => x[0] === t)) push(talentsOn, a, [t, tr, cls]);
 
-for (const [id, c] of Object.entries(D.CLASSES)) P['class/' + id] = { k: 'class', n: c.name, cls: id, ic: 'class_' + id }; // its crest (src/art_classes.js)
+const SHOWN = (cls) => D.CLASSES[cls] && !D.CLASSES[cls].hidden; // a hidden class (Bard: only the Legend Widya plays one) gets no pages
+for (const [id, c] of Object.entries(D.CLASSES)) if (SHOWN(id)) P['class/' + id] = { k: 'class', n: c.name, cls: id, ic: 'class_' + id }; // its crest (src/art_classes.js)
 for (const [id, r] of Object.entries(D.RACES)) P['race/' + id] = { k: 'race', n: r.name, por: { cls: 'warrior', race: id, gender: 'm', skin: 0, hair: 0 } };
-for (const [id, ab] of Object.entries(D.ABILITIES)) if (ab.cls || ab.racial) P['ability/' + id] = { k: 'ability', n: ab.name, ic: ab.icon || id };
+for (const [id, ab] of Object.entries(D.ABILITIES)) if ((ab.cls && (ab.cls === 'all' || SHOWN(ab.cls))) || ab.racial) P['ability/' + id] = { k: 'ability', n: ab.name, ic: ab.icon || id };
 
 for (const [id, ab] of Object.entries(D.ABILITIES)) {
   const p = P['ability/' + id]; if (!p) continue;
@@ -228,7 +229,7 @@ for (const [id, ab] of Object.entries(D.ABILITIES)) {
 }
 
 for (const [id, c] of Object.entries(D.CLASSES)) {
-  const p = P['class/' + id];
+  const p = P['class/' + id]; if (!p) continue;
   p.sub = (c.roles || [c.role]).map((r) => ROLE[r] || cap(r)).join(', ');
   const at = (L) => Object.fromEntries(['str', 'agi', 'sta', 'int', 'spi'].map((s) => [s, Math.round(c.base[s] + c.gain[s] * (L - 1))]));
   const s60 = at(60);
