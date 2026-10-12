@@ -670,7 +670,7 @@
     u.stepIn = null; // anything else you use calls off a step in
     // step in (#245): a fighter who stands back (a caster) uses a close attack (an area attack around itself, or a weapon
     // strike) with no enemy in its reach: it walks in, uses it there, and walks back to where it stood
-    if ((!why && E.stepInNeeded(C, u, ab)) || (why === 'Out of range' && E.stepInAbility(u, ab))) {
+    if (backLine(C, u) && ((!why && E.stepInNeeded(C, u, ab)) || (why === 'Out of range' && E.stepInAbility(u, ab)))) { // only a fighter standing behind its tank; alone or in a duel you stay put
       const near = E.nearestFoe(C, u, ab.target === 'enemy' ? tgt : null);
       if (near) { u.stepIn = { ab: abId, tgt: near.uid, until: C.t + 5, from: u.returnTo || { x: u.pos.x, y: u.pos.y } }; u.returnTo = null; ev(C, { type: 'stepIn', src: u.uid, ab: abId }); return null; }
     }
@@ -1267,7 +1267,7 @@
     if (!u.legend) {
       const sk = b.skill || 0.5, kit = kitOf(u.cls), tk = C.units[u.target] && !C.units[u.target].dead && C.units[u.target].side !== u.side ? C.units[u.target] : focusTarget(C, u);
       const use = sk * sk; // a casual player (0.35) reaches for the rest of the kit 1 time in 8, a strong one (0.8) 2 in 3
-      if (u.hp / u.maxHp < 0.35) for (const id of kit.defensive) if (has(id) && Math.random() < sk && try_(id)) return;
+      if (u.hp / u.maxHp < 0.35) for (const id of kit.defensive) if (has(id) && !(((D.ABILITIES[id].buff || {}).frozen) && !alive(friends(C, u)).some((a) => a !== u && a.kind !== 'pet')) && Math.random() < sk && try_(id)) return; // Ice Block only when someone can help: alone it only delays
       // an opener (issue #2), under a player's rule (E.use: within 3 sec of first reaching melee, a target it has not hit);
       // a damage-dealer waits until the tank has hit the target, and a stun opener is not wasted on a boss
       if (u.role !== 'healer' && tk && kit.openers.length) {
