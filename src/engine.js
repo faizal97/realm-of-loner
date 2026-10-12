@@ -149,6 +149,12 @@
     return CASTERS[u.cls] ? DIST.spell - 2 : DIST.melee - 1;
   }
   E.reachOf = reachOf;
+  // step in (#245): which abilities a ranged fighter walks in for, and when
+  E.stepInAbility = (u, ab) => !!(u && u.side === 'ally' && u.pos && !u.form && u.kind !== 'pet' && reachOf(u) > DIST.melee && ab && ab.dmg && !ab.fear &&
+    ((ab.target === 'aoe' && !aoeAtTarget(ab)) || (ab.dmg.weapon && ab.target === 'enemy')));
+  const closeReach = (ab) => (ab.dmg && ab.dmg.weapon && ab.target === 'enemy' ? DIST.melee : ab.radius || DIST.radius);
+  E.stepInNeeded = (C, u, ab) => E.stepInAbility(u, ab) && ab.target === 'aoe' && !alive(foes(C, u)).some((e) => !e.pos || E.dist(u, e) <= closeReach(ab));
+  E.nearestFoe = (C, u, pref) => (pref && !pref.dead && pref.pos ? pref : alive(foes(C, u)).filter((e) => e.pos).sort((a, b) => E.dist(u, a) - E.dist(u, b))[0] || null);
   // where a fighter stands when a fight begins: in contact (stage 1), or `apart` metres from the other side
   // stage 4: in a group with a tank, its casters, hunters and healers start behind the line (the tank holds the front);
   // alone, in a duel (which starts apart) or with no tank, everyone starts in contact as before
@@ -190,6 +196,19 @@
     }
     if (rooted || stunned(C, u)) return;
     if (u.cast) return; // a fighter who chose to cast stands still for it (the run to close in or to kite waits)
+    if (u.stepIn) { // step in (#245): walk to the enemies, then use it there
+      const S = u.stepIn, ab = D.ABILITIES[S.ab], near = E.nearestFoe(C, u, ab.target === 'enemy' ? C.units[S.tgt] : null);
+      if (!near || C.t > S.until) { u.stepIn = null; u.returnTo = S.from; return; }
+      const reach = closeReach(ab) - 1;
+      if (E.dist(u, near) > reach) { stepToward(u, near, Math.min(speed, E.dist(u, near) - reach + 0.01)); return; }
+      u.stepIn = null; const why = E.use(C, u, S.ab, ab.target === 'enemy' ? near.uid : null); u.returnTo = S.from;
+      if (why) ev(C, { type: 'stepFail', src: u.uid, ab: S.ab, why });
+      return;
+    }
+    if (u.returnTo) { // ...and back to where it stood
+      const dx = u.returnTo.x - u.pos.x, dy = u.returnTo.y - u.pos.y, h = Math.hypot(dx, dy);
+      if (h <= 0.3) u.returnTo = null; else { stepToward(u, { pos: u.returnTo }, Math.min(speed, h)); return; }
+    }
     if (u.kiteUntil > C.t) { const f = C.units[u.target]; if (f && f.pos && !f.dead) { stepAway(u, f, speed); return; } }
     const t = C.units[u.target]; if (!t || t.dead || t.side === u.side || !t.pos) return;
     const d = E.dist(u, t), want = reachOf(u);
@@ -353,20 +372,23 @@
       if (p.icd && C.t - (u.procAt[pk] != null ? u.procAt[pk] : -99) < p.icd) continue; // icd: at most one light per so many seconds
       u.procAt[pk] = C.t;
       const had = p.aura && auraOf(u, p.aura);
-      if (p.aura) addAura(C, u, { id: p.aura, until: C.t + p.dur, proc: p });
-      if (p.reset) for (const l of p.lights) u.cds[l] = 0;
-      if (!had) ev(C, { type: 'proc', src: u.uid, key: p.aura || p.on[0], ab: p.lights.find((l) => knows(u, l)) });
+      const lit = p.first ? [p.lights.find((l) => knows(u, l))] : p.lights;
+      if (p.aura) addAura(C, u, { id: p.aura, until: C.t + p.dur, proc: p, lit });
+      if (p.reset) for (const l of lit) u.cds[l] = 0;
+      if (!had) ev(C, { type: 'proc', src: u.uid, key: p.aura || p.on[0], ab: lit.find((l) => knows(u, l)) });
     }
   }
   E.proc = proc;
-  const litAura = (u, abId) => (u.auras || []).find((a) => a.proc && a.proc.lights.includes(abId));
+  const litAura = (u, abId) => (u.auras || []).find((a) => a.proc && (a.lit || a.proc.lights).includes(abId));
   E.lit = (u, abId) => !!litAura(u, abId);
   function stunned(C, u) { return u.stunUntil > C.t; }
+  E.BOSS_SLOW = 0.25; // a slow on a boss works at a quarter of its strength (#245)
   function slowPct(u) {
     let p = 0;
     for (const a of u.auras) if (a.slow) p = Math.max(p, a.slow);
-    return p;
+    return u.boss ? p * E.BOSS_SLOW : p; // a boss shrugs off most of a slow (#245), as it does a stun
   }
+  E.slowPct = slowPct;
   // how fast a fighter runs: 7 m/s, cut by its strongest snare, raised by its strongest speed buff (Sprint)
   function moveSpeed(u) {
     let up = 0; for (const a of u.auras) if (a.speed) up = Math.max(up, a.speed);
@@ -570,11 +592,13 @@
     if (sh) dealDamage(C, tgt, src, D.EFFECTS.spiteful_hide.dmg(sh.lvl, sh.f), { school: 'nature', effect: 'spiteful_hide', fx: 'effect' });
     proc(C, src, o.ranged ? (o.ab ? 'shot' : 'autoshot') : 'melee', o.ab);
     if (res === 'crit') proc(C, src, 'crit', o.ab);
-    const seal = !flat(src) && !o.ranged && src.auras.find((a) => a.seal);
+    const seal = !flat(src) && (!o.ranged || o.wand) && src.auras.find((a) => a.seal); // a Shaman's imbue rides on the weapon's shot from range too
     if (seal && !tgt.dead) dealDamage(C, src, tgt, seal.seal * rnd(0.9, 1.1) + src.st.sp * 0.1, { school: seal.sealSchool || 'holy', ab: seal.id === 'seal' ? 'seal_righteousness' : 'rockbiter_weapon' });
-    const th = !o.ranged && tgt.auras.find((a) => a.thorns && a.thorns.charges > 0);
-    if (th && !src.dead) {
-      dealDamage(C, tgt, src, th.thorns.dmg, { school: 'nature', ab: 'lightning_shield' });
+    // every aura that strikes back does (Thorns and Thorned Aura add up), each in its own school and under its own name
+    for (const th of o.ranged ? [] : tgt.auras.filter((a) => a.thorns && a.thorns.charges > 0)) {
+      if (src.dead) break;
+      const TA = D.ABILITIES[th.id];
+      dealDamage(C, tgt, src, th.thorns.dmg, { school: (TA && TA.buff && TA.buff.thorns.school) || 'nature', ab: TA ? th.id : null });
       th.thorns.charges--; if (th.thorns.charges <= 0) tgt.auras = tgt.auras.filter((a) => a !== th);
     }
     // frost armor chills attackers
@@ -583,7 +607,7 @@
   }
 
   // ------------------------------------------------------------- abilities
-  function abCost(ab, u) { if (ab.shapeshift && u.form) return 0; if (ab.id) { const la = litAura(u, ab.id); if (la && la.proc.free) return 0; } const base = (ab.cost || 0) + (ab.costPerLvl || 0) * ((u.level || E.levelOf(u)) - 1); const off = ab.id ? Math.min(90, abPct(tmOf(u).abilCost, ab.id)) : 0; const lm = (ab.heal || ab.hot) && fxOf(u, 'lavish_mend') ? 1 + D.EFFECTS.lavish_mend.mana : 1; return Math.round(base * (1 - off / 100) * lm); } /* Lavish Mend: a healing spell costs more mana (#40) */
+  function abCost(ab, u) { if (ab.shapeshift && u.form) return 0; if (ab.id) { const la = litAura(u, ab.id); if (la && la.proc.free) return 0; } const base = (ab.cost || 0) + (ab.costPerLvl || 0) * ((u.level || E.levelOf(u)) - 1); const off = ab.id ? Math.min(90, abPct(tmOf(u).abilCost, ab.id)) : 0; const lm = (ab.heal || ab.hot) && fxOf(u, 'lavish_mend') ? 1 + D.EFFECTS.lavish_mend.mana : 1; const sc = ab.stackCost && ab.id ? auraOf(u, ab.id + '_stack') : null; return Math.round(base * (1 - off / 100) * lm * (sc ? 1 + ab.stackCost.pct * sc.stacks / 100 : 1)); } /* stackCost: each recent cast makes the next dearer (Arcane Blast, #245) */ /* Lavish Mend: a healing spell costs more mana (#40) */
   E.abCost = abCost;
 
   function spellRoll(src, tgt, C) {
@@ -611,6 +635,7 @@
     const ab = D.ABILITIES[abId];
     if (!ab) return 'Unknown';
     if (u.dead) return 'You are dead';
+    { const fz = u.auras.find((a) => a.frozen); if (fz) return abId === fz.id ? null : `In ${D.ABILITIES[fz.id].name}`; } // frozen (Ice Block, #245): only breaking out
     if (stunned(C, u) && !ab.freeOf) return 'Stunned';
     if (u.cast) return E.castingText(u.cast.ab);
     if (ab.gcd !== false && u.gcdUntil > C.t) return E.GCD_WHY;
@@ -619,11 +644,11 @@
     if (abCost(ab, u) > u.res + 0.001) return u.resType === 'rage' ? 'Not enough rage' : u.resType === 'energy' ? 'Not enough energy' : 'Not enough mana';
     if (ab.finisher && (u.cp <= 0 || (ab.target === 'enemy' && u.cpTarget !== (tgt && tgt.uid)))) return 'No combo points';
     if (ab.form && u.form !== ab.form) return 'Requires Bear Form';
-    if (u.form && !ab.form && !ab.shapeshift) return 'Not while in Bear Form';
+    if (u.form && !ab.form && !ab.shapeshift && !ab.anyForm) return 'Not while in Bear Form'; // anyForm: a self-buff a bear may use (#233)
     if (ab.needSeal && !auraOf(u, 'seal')) return 'No seal active';
     if (ab.lifetap && u.hp <= ab.lifetap.base + ab.lifetap.perLvl * u.level + 1) return 'Not enough health';
     if (ab.opener && (C.t - (u.closedAt != null ? u.closedAt : C.t) > 3 || C.t > 3 && u.closedAt == null && !C.opts.apart || (tgt && tgt.hitBy && tgt.hitBy[u.uid]))) return 'Already in combat'; // an opener: within 3 sec of first reaching melee (a fight that starts apart gives you the run in)
-    if (ab.target === 'enemy' && (!tgt || tgt.dead || tgt.side === u.side)) return 'No target';
+    if (ab.target === 'enemy' && (!tgt || tgt.dead || (tgt.side === u.side && !ab.either))) return 'No target'; // either (Holy Shock, #245): an ally too
     if (ab.target === 'ally' && (!tgt || tgt.dead || tgt.side !== u.side)) return 'Invalid target';
     if (abId === 'pw_shield' && tgt && auraOf(tgt, 'weakened_soul')) return 'Weakened Soul';
     // distance (v10.9): the target must be within the ability's range (a targeted area attack: its centre)
@@ -632,12 +657,23 @@
     return null;
   };
 
+  // a heal (not one on yourself only, like Vampiric Embrace) ends a form that ends on healing (Shadowform, #245)
+  E.isHeal = (ab) => !!(ab && (ab.heal || (ab.hot && ab.target !== 'self')));
+  E.dropOnHeal = (auras) => auras.filter((a) => !((D.ABILITIES[a.id] || {}).buff || {}).endsOnHeal);
   E.use = function (C, u, abId, tgtUid) {
     const ab = D.ABILITIES[abId];
+    { const fz = u.auras.find((a) => a.frozen); if (fz && fz.id === abId) { u.auras = u.auras.filter((a) => a !== fz); ev(C, { type: 'ability', src: u.uid, ab: abId }); return null; } } // using it again breaks out
     let tgt = tgtUid != null ? C.units[tgtUid] : null;
     if (ab.target === 'self' || ab.target === 'party' || ab.target === 'aoe') tgt = u;
     if (ab.target === 'ally' && !tgt) tgt = u;
     const why = E.canUse(C, u, abId, ab.target === 'self' || ab.target === 'party' || ab.target === 'aoe' ? u : tgt);
+    u.stepIn = null; // anything else you use calls off a step in
+    // step in (#245): a fighter who stands back (a caster) uses a close attack (an area attack around itself, or a weapon
+    // strike) with no enemy in its reach: it walks in, uses it there, and walks back to where it stood
+    if (backLine(C, u) && ((!why && E.stepInNeeded(C, u, ab)) || (why === 'Out of range' && E.stepInAbility(u, ab)))) { // only a fighter standing behind its tank; alone or in a duel you stay put
+      const near = E.nearestFoe(C, u, ab.target === 'enemy' ? tgt : null);
+      if (near) { u.stepIn = { ab: abId, tgt: near.uid, until: C.t + 5, from: u.returnTo || { x: u.pos.x, y: u.pos.y } }; u.returnTo = null; ev(C, { type: 'stepIn', src: u.uid, ab: abId }); return null; }
+    }
     if (why) return why;
     if (ab.gcd !== false) u.gcdUntil = C.t + (ab.gcdLen || 1.5);
     if (ab.cast && !((litAura(u, abId) || {}).proc || {}).instant) {
@@ -659,6 +695,8 @@
     const L = u.level;
     u.res -= abCost(ab, u);
     { const la = litAura(u, abId); if (la) u.auras = u.auras.filter((a) => a !== la); } // a reaction's light is spent
+    if (E.isHeal(ab) && !(ab.either && tgt && tgt.side !== u.side)) u.auras = E.dropOnHeal(u.auras);
+    if (ab.stackCost) { const sk = ab.stackCost, old = auraOf(u, abId + '_stack'), n = Math.min(sk.max, ((old && old.stacks) || 0) + 1); addAura(C, u, { id: abId + '_stack', until: C.t + sk.window, stacks: n, name: `${ab.name}: +${sk.pct * n}% mana`, icon: abId, debuff: true }); }
     if (ab.cd) u.cds[abId] = C.t + Math.max(1, ab.cd - (tmOf(u).abilCd[abId] || 0));
     if (u.resType === 'mana' && abCost(ab, u) > 0) u.lastCastT = C.t;
     ev(C, { type: 'ability', src: u.uid, ab: abId, tgt: tgt && tgt.uid });
@@ -674,7 +712,8 @@
 
     const centre = ab.target === 'aoe' && aoeAtTarget(ab) ? (C.units[u.target] && !C.units[u.target].dead ? C.units[u.target] : u) : u;
     const targets = ab.target === 'aoe' ? alive(foes(C, u)).filter((e) => !e.pos || !centre.pos || E.dist(centre, e) <= (ab.radius || DIST.radius)) : tgt ? [tgt] : []; // distance: an area attack has a radius
-    if (ab.dmg) {
+    const healSide = ab.either && tgt && tgt.side === u.side; // either (#245): on an ally it heals, on an enemy it hurts
+    if (ab.dmg && !healSide) {
       for (const t of targets) {
         if (ab.dmg.weapon) {
           swing(C, u, t, { bonus: rnd(ab.dmg.bonus[0], ab.dmg.bonus[1]) + (ab.dmg.perLvl || 0) * L, ab: abId, threat: ab.threat });
@@ -707,7 +746,7 @@
       if (cp0 < 5 && u.cp >= 5) proc(C, u, 'cp5', abId);
     }
     if (ab.dot && tgt && !tgt.dead) {
-      const per = (ab.dot.dmg + ab.dot.perLvl * L + (ab.dot.coef || 0) * u.st.sp) * (1 + (tmOf(u).dot[abId] || 0) / 100);
+      const per = (ab.dot.dmg + ab.dot.perLvl * L + (ab.dot.coef || 0) * u.st.sp) * (1 + (tmOf(u).dot[abId] || 0) / 100) * (ab.finisher ? (u.cp || 0) / 5 : 1); // a finisher's bleed (Rupture) grows with its combo points
       addAura(C, tgt, { id: ab.dot.id, until: C.t + ab.dot.ticks * ab.dot.every, every: ab.dot.every, next: C.t + ab.dot.every, dot: per, school: ab.dot.school, src: u.uid, ab: abId });
     }
     // a "party" heal or heal over time (the bard's songs, v10.2) reaches every living party member
@@ -716,21 +755,28 @@
       const per = (ab.hot.heal + ab.hot.perLvl * L + (ab.hot.coef || 0) * u.st.sp) * (1 + (tmOf(u).hot[abId] || 0) / 100);
       for (const w of healWho) addAura(C, w, { id: ab.hot.id, until: C.t + ab.hot.ticks * ab.hot.every, every: ab.hot.every, next: C.t + ab.hot.every, hot: per, src: u.uid, ab: abId });
     }
-    if (ab.heal) {
+    if (ab.heal && (!ab.either || healSide)) {
       for (const w of healWho) {
         const crit = Math.random() * 100 < u.st.spellCrit;
         const amt = scaled(ab.heal.base, ab.heal.perLvl, L) + (ab.heal.coef || 0) * u.st.sp;
         heal(C, u, w, crit ? amt * 1.5 : amt, { crit, ab: abId });
+        // a heal that jumps (Chain Heal, #245): then the most hurt ally near the last one, for less each time
+        let from = w;
+        for (const f of ab.heal.jumps || []) {
+          const nx = alive(friends(C, u)).filter((a) => a !== w && a !== from && !a.chained && a.hp < a.maxHp && (!a.pos || !from.pos || E.dist(from, a) <= (ab.heal.jumpRange || 12))).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+          if (!nx) break;
+          nx.chained = true; heal(C, u, nx, (crit ? amt * 1.5 : amt) * f, { crit, ab: abId }); from = nx;
+        }
+        for (const a of friends(C, u)) delete a.chained;
       }
     }
     if (ab.shield && tgt) {
       const amt = Math.round((ab.shield.base + ab.shield.perLvl * L + ab.shield.coef * u.st.sp) * (1 + (tmOf(u).shield[abId] || 0) / 100));
-      // every absorb lives in one 'pw_shield' aura (the damage code reads that id); it shows the name and icon of what cast it
-      const own = abId !== 'pw_shield' ? { name: ab.name, icon: abId } : { name: null, icon: null };
-      addAura(C, tgt, Object.assign({ id: 'pw_shield', until: C.t + ab.shield.dur, absorb: amt }, own));
+      // each shield is its own aura (the damage code reads every aura with an absorb), so one never replaces another
+      addAura(C, tgt, { id: abId, until: C.t + ab.shield.dur, absorb: amt });
       if (ab.weakened) addAura(C, tgt, { id: 'weakened_soul', until: C.t + ab.weakened });
-      // shield threat counts like a heal
-      for (const e of alive(foes(C, u))) e.threat[u.uid] = (e.threat[u.uid] || 0) + (amt * 0.5) / Math.max(1, alive(foes(C, u)).length);
+      // shield threat counts like a heal; a shield with threat (Holy Shield) makes that much more
+      for (const e of alive(foes(C, u))) e.threat[u.uid] = (e.threat[u.uid] || 0) + (amt * 0.5 * (ab.threat || 1)) / Math.max(1, alive(foes(C, u)).length);
     }
     if (ab.buff) {
       const b = ab.buff;
@@ -744,7 +790,10 @@
       if (b.seal) { extra.seal = (b.seal.base + b.seal.perLvl * L) * (u.st.wSpeed / 2.5) * bp; extra.sealSchool = b.seal.school || 'holy'; }
       if (b.thorns) extra.thorns = { dmg: Math.round((b.thorns.base + b.thorns.perLvl * L) * bp), charges: b.thorns.charges };
       if (b.immune) extra.immune = true;
+      if (b.frozen) { extra.frozen = true; u.cast = null; }
       if (b.speed) extra.speed = b.speed; // distance: run faster (Sprint)
+      if (b.group) for (const w of who) w.auras = w.auras.filter((a) => a.id === b.id || ((D.ABILITIES[a.id] || {}).buff || {}).group !== b.group); // one of a group at a time (aspects, demon armors)
+      if (b.castRegen) extra.castRegen = true; // mana keeps refilling while you cast (Innervate)
       for (const w of who) addAura(C, w, Object.assign({ id: b.id, until: C.t + dur, stats: Object.keys(stats).length ? stats : null, persistent: dur >= 60 }, extra));
       if (ab.threat) for (const e of alive(foes(C, u))) e.threat[u.uid] = (e.threat[u.uid] || 0) + ab.threat;
     }
@@ -1112,6 +1161,7 @@
     return false;
   }
   function botThink(C, u) {
+    if (u.stepIn) return; // walking in to use a close attack (#245)
     if (u.dead || u.cast) return;
     if (stunned(C, u)) { const rac = u.race && D.RACIALS[u.race] && D.RACIALS[u.race].active; if (rac && D.ABILITIES[rac].freeOf && Math.random() < 0.3) E.use(C, u, rac); return; }
     const b = u.bot || {};
@@ -1129,7 +1179,7 @@
     }
     const has = (id) => D.CLASSES[u.cls].abilities.includes(id) && D.ABILITIES[id].lvl <= u.level;
     // a lit ability (a reaction, v10.4) first: it is free, instant or ready only for a few seconds; better players see it more
-    if (Math.random() < 0.45 + 0.55 * (b.skill || 0.5)) for (const a of u.auras) if (a.proc) for (const l of a.proc.lights) {
+    if (Math.random() < 0.45 + 0.55 * (b.skill || 0.5)) for (const a of u.auras) if (a.proc) for (const l of (a.lit || a.proc.lights)) {
       if (!knows(u, l)) continue;
       const A = D.ABILITIES[l];
       if (A.target === 'ally') { const al = alive(friends(C, u)).sort((x, y) => x.hp / x.maxHp - y.hp / y.maxHp)[0]; if (al && al.hp / al.maxHp < 0.8 && try_(l, al)) return; continue; }
@@ -1163,7 +1213,7 @@
         if (hurt >= 2 && has('song_of_rest') && !auraOf(tank, 'song_of_rest') && try_('song_of_rest')) return;
         if (low && low.hp / low.maxHp < 0.4 && has('crescendo') && low.hp / low.maxHp > 0.2 && try_('crescendo', low)) return;
         if (low && low.hp / low.maxHp < thr && try_('soothing_chord', low)) return;
-        if (tank && tank.hp / tank.maxHp < 0.9 && has('counterpoint') && !auraOf(tank, 'pw_shield') && try_('counterpoint', tank)) return;
+        if (tank && tank.hp / tank.maxHp < 0.9 && has('counterpoint') && !auraOf(tank, 'counterpoint') && try_('counterpoint', tank)) return;
         if (tank && tank.hp / tank.maxHp < 0.85 && has('verse_of_mending') && !auraOf(tank, 'verse_of_mending') && try_('verse_of_mending', tank)) return;
         for (const s of ['marching_song', 'hearthsong', 'anthem_of_stone']) if (has(s) && !auraOf(u, s) && try_(s)) return;
         if (en.length >= 3 && has('lullaby') && Math.random() < 0.3 * (b.skill || 0.5) && try_('lullaby')) return;
@@ -1171,6 +1221,7 @@
         return;
       }
       if (low && low.hp / low.maxHp < thr && has('lesser_heal') && try_('lesser_heal', low)) return;
+      if (low && low.hp / low.maxHp < thr && has('holy_shock') && try_('holy_shock', low)) return; // instant, on its cooldown (#245)
       if (low && low.hp / low.maxHp < thr && has('holy_light') && try_('holy_light', low)) return;
       if (low && low.hp / low.maxHp < thr && has('healing_touch') && try_('healing_touch', low)) return;
       if (low && low.hp / low.maxHp < thr && has('healing_wave') && try_('healing_wave', low)) return;
@@ -1217,7 +1268,7 @@
     if (!u.legend) {
       const sk = b.skill || 0.5, kit = kitOf(u.cls), tk = C.units[u.target] && !C.units[u.target].dead && C.units[u.target].side !== u.side ? C.units[u.target] : focusTarget(C, u);
       const use = sk * sk; // a casual player (0.35) reaches for the rest of the kit 1 time in 8, a strong one (0.8) 2 in 3
-      if (u.hp / u.maxHp < 0.35) for (const id of kit.defensive) if (has(id) && Math.random() < sk && try_(id)) return;
+      if (u.hp / u.maxHp < 0.35) for (const id of kit.defensive) if (has(id) && !(((D.ABILITIES[id].buff || {}).frozen) && !alive(friends(C, u)).some((a) => a !== u && a.kind !== 'pet')) && Math.random() < sk && try_(id)) return; // Ice Block only when someone can help: alone it only delays
       // an opener (issue #2), under a player's rule (E.use: within 3 sec of first reaching melee, a target it has not hit);
       // a damage-dealer waits until the tank has hit the target, and a stun opener is not wasted on a boss
       if (u.role !== 'healer' && tk && kit.openers.length) {
@@ -1242,8 +1293,15 @@
       if (!tgt || tgt.dead) { tgt = skull || en[0]; u.target = tgt.uid; }
       if (u.cls === 'druid') {
         if (!u.form && has('bear_form') && try_('bear_form')) return;
-        if (u.form === 'bear') {
+        if (u.form === 'bear') { // the whole bear kit (#233; bear abilities aren't in the class list, so knows()): defensives, then the loose one, then threat on the pack
+          const hp = u.hp / u.maxHp, sk = b.skill || 0.5;
+          if (hp < 0.6 && knows(u, 'barkskin') && try_('barkskin')) return;
+          if (hp < 0.4 && knows(u, 'frenzied_regeneration') && try_('frenzied_regeneration')) return;
           if (loose && try_('growl', loose)) return;
+          if (loose && knows(u, 'feral_charge') && loose.pos && u.pos && E.dist(u, loose) > DIST.melee + 1 && try_('feral_charge', loose)) return;
+          const caster = en.find((e) => e.cast && !e.boss && (!e.pos || !u.pos || E.dist(u, e) <= DIST.melee + 1));
+          if ((caster || (loose && !loose.boss)) && knows(u, 'bash') && Math.random() < sk && try_('bash', caster || loose)) return;
+          if (en.length >= 2 && u.res >= 20 && knows(u, 'swipe') && try_('swipe', tgt)) return;
           if (u.res >= 20) try_('maul', tgt);
         } else try_('wrath', tgt);
         return;
@@ -1253,6 +1311,7 @@
         if (!auraOf(u, 'seal') && try_('seal_righteousness')) return;
         if (has('judgement') && try_('judgement', tgt)) return;
         if (u.hp / u.maxHp < 0.25 && has('divine_protection') && try_('divine_protection')) return;
+        if (loose && has('hand_of_challenge') && Math.random() < 0.4 + 0.6 * (b.skill || 0.5) && try_('hand_of_challenge', loose)) return; // as a Warrior's Taunt (#245)
         if (loose && has('hammer_justice') && try_('hammer_justice', loose)) return;
         return;
       }
@@ -1361,7 +1420,7 @@
       if (u.race === 'troll' && u.side === 'ally' && u.hp < u.maxHp) u.hp = Math.min(u.maxHp, u.hp + u.maxHp * 0.002 * dt);
       // resources
       if (u.resType === 'energy') u.res = Math.min(100, u.res + 10 * dt);
-      if (u.resType === 'mana' && C.t - u.lastCastT >= 5) u.res = Math.min(u.maxRes, u.res + ((13 + u.st.spi / 4) / 2) * dt);
+      if (u.resType === 'mana' && (C.t - u.lastCastT >= 5 || u.auras.some((x) => x.castRegen))) u.res = Math.min(u.maxRes, u.res + ((13 + u.st.spi / 4) / 2) * dt);
       // casting
       if (u.cast) {
         if (stunned(C, u)) { u.cast = null; continue; }
@@ -1370,12 +1429,16 @@
         if (cast.channel) {
           const due = Math.floor((C.t - cast.start) / (cast.channel / 3));
           if (due > cast.ticks) {
-            if (cast.ticks === 0) { u.res -= abCost(ab, u); u.lastCastT = C.t; }
+            if (cast.ticks === 0) { // the first missile pays, and spends a reaction's light (Arcane Surge) like any other spell
+              u.res -= abCost(ab, u); u.lastCastT = C.t;
+              const la = litAura(u, cast.ab); if (la) u.auras = u.auras.filter((a) => a !== la);
+              if (ab.cd) u.cds[cast.ab] = C.t + Math.max(1, ab.cd - (tmOf(u).abilCd[cast.ab] || 0));
+            }
             cast.ticks++;
             const r = spellRoll(u, tgt, C);
             const base = scaled(ab.dmg.base, ab.dmg.perLvl, u.level) + ab.dmg.coef * u.st.sp;
             if (r === 'miss') ev(C, { type: 'avoid', src: u.uid, tgt: tgt.uid, what: 'resist', ab: cast.ab });
-            else dealDamage(C, u, tgt, r === 'crit' ? base * 1.5 : base, { school: ab.dmg.school, crit: r === 'crit', ab: cast.ab });
+            else { dealDamage(C, u, tgt, r === 'crit' ? base * 1.5 : base, { school: ab.dmg.school, crit: r === 'crit', ab: cast.ab }); proc(C, u, 'hit', cast.ab); if (r === 'crit') proc(C, u, 'crit', cast.ab); }
           }
           if (C.t >= cast.end || cast.ticks >= 3) { u.cast = null; ev(C, { type: 'castStop', src: u.uid, done: true }); }
           continue;
@@ -1391,6 +1454,7 @@
         continue;
       }
       if (stunned(C, u)) { if (u.fleeUntil > C.t) moveTick(C, u, dt); if (u.kind === 'bot') botThink(C, u); continue; }
+      if (u.auras.some((a) => a.frozen)) continue; // in Ice Block (#245): no moving, casting or auto attack
       // AI
       if (u.kind === 'mob') { pickMobTarget(C, u); specials(C, u, dt); }
       else if (u.kind === 'bot') botThink(C, u);

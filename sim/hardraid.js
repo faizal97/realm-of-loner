@@ -28,7 +28,7 @@ function run(hard, cls) {
     if (G.fight && G.pUnit && G.pUnit.kind === 'player') { G.pUnit.kind = 'bot'; G.pUnit.bot = { skill: 0.75, react: 0.45 }; G.pUnit.role = G.role(); }
     for (const r of (S.run.rolls || [])) if (!r.done && !r.player) { try { G.roll(S.run.rolls.indexOf(r), 'pass'); } catch (e) {} }
     if (process.env.NOLEAVE) for (const m of S.group.members) m.gone = false;
-    if (S.run && S.run.wipes > 15) break;
+    if (S.run && S.run.wipes > (+process.env.MAXWIPES || 15)) break; // MAXWIPES=60 proves a run is clearable (the game has no limit)
     G.update(0.1); t += 100;
   }
   return { done: S.run && S.run.phase === 'done', wipes: S.run ? S.run.wipes : 99, secs: G.runClock(), skill: sk.reduce((a, b) => a + b, 0) / sk.length, hard: S.run && S.run.hard };

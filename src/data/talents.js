@@ -42,7 +42,7 @@
         t('death_wish', 3, 1, 'Death Wish', 'bloodrage', 'Your physical damage is increased by {v}% and you attack 5% faster.', f('school', 6, { school: 'physical' }), f('haste', 5)),
       ] },
       { id: 'protection', name: 'Protection', icon: 'taunt', talents: [
-        t('toughness', 1, 5, 'Toughness', 'retaliation', 'Armor from items increased by {v}%.', f('pct', 2, { stat: 'armor' })),
+        t('toughness', 1, 5, 'Toughness', 'retaliation', 'Your armor is increased by {v}%.', f('pct', 2, { stat: 'armor' })),
         t('iron_will', 1, 5, 'Iron Will', 'battle_shout', 'Stamina increased by {v}%.', f('pct', 2, { stat: 'sta' })),
         t('imp_taunt', 2, 2, 'Improved Taunt', 'taunt', 'Taunt cooldown reduced by {v} sec.', f('abilCd', 1, { ab: ['taunt'] })),
         t('defiance', 2, 3, 'Defiance', 'taunt', 'You generate {v}% more threat.', f('threat', 5)),
@@ -75,7 +75,7 @@
     ],
     priest: [
       { id: 'discipline', name: 'Discipline', icon: 'pw_shield', talents: [
-        t('imp_fortitude', 1, 5, 'Improved Word of Fortitude', 'pw_fortitude', 'Word of Fortitude gives {v}% more Stamina.', f('buff', 6, { ab: ['pw_fortitude'] })),
+        t('imp_fortitude', 1, 5, 'Improved Word of Fortitude', 'pw_fortitude', 'Word of Fortitude and Prayer of Fortitude give {v}% more Stamina.', f('buff', 6, { ab: ['pw_fortitude', 'prayer_of_fortitude'] })),
         t('mental_agility', 1, 5, 'Mental Agility', 'inner_fire', 'Your spells cost {v}% less mana.', f('abilCost', 2, { ab: ['*'] })),
         t('imp_pw_shield', 2, 3, 'Improved Word of Warding', 'pw_shield', 'Word of Warding absorbs {v}% more.', f('shield', 5, { ab: ['pw_shield'] })),
         t('imp_inner_fire', 2, 3, 'Improved Inner Fire', 'inner_fire', 'Inner Fire gives {v}% more.', f('buff', 10, { ab: ['inner_fire'] })),
@@ -103,7 +103,7 @@
         t('murder', 2, 2, 'Murder', 'garrote', 'Your physical damage is increased by {v}%.', f('school', 2, { school: 'physical' })),
         t('lethality', 2, 3, 'Lethality', 'sinister_strike', 'Sinister Strike and Backstab deal {v}% more damage.', f('abilDmg', 5, { ab: ['sinister_strike', 'backstab'] })),
         t('quick_finish', 2, 3, 'Quick Finish', 'kidney_shot', 'Eviscerate and Rupture cost {v}% less energy.', f('abilCost', 5, { ab: ['eviscerate', 'rupture'] })), // #191: every class can spend its 51 points
-        t('relentless_strikes', 3, 1, 'Relentless Strikes', 'rupture', 'Eviscerate and Rupture deal {v}% more damage.', f('abilDmg', 20, { ab: ['eviscerate', 'rupture'] }), f('dot', 20, { ab: ['rupture'] })),
+        t('relentless_strikes', 3, 1, 'Relentless Strikes', 'rupture', 'Eviscerate and Rupture deal {v}% more damage.', f('abilDmg', 20, { ab: ['eviscerate', 'rupture'] })),
       ] },
       { id: 'combat', name: 'Combat', icon: 'sinister_strike', talents: [
         t('imp_sinister_strike', 1, 2, 'Improved Sinister Strike', 'sinister_strike', 'Sinister Strike costs {v}% less energy.', f('abilCost', 5, { ab: ['sinister_strike'] })),
@@ -114,7 +114,7 @@
         t('blade_flurry', 3, 1, 'Blade Flurry', 'slice_and_dice', 'You attack {v}% faster.', f('haste', 10)),
       ] },
       { id: 'subtlety', name: 'Subtlety', icon: 'garrote', talents: [
-        t('opportunity', 1, 5, 'Opportunity', 'backstab', 'Backstab and Garrote deal {v}% more damage.', f('abilDmg', 4, { ab: ['backstab', 'garrote'] }), f('dot', 4, { ab: ['garrote'] })),
+        t('opportunity', 1, 5, 'Opportunity', 'backstab', 'Backstab and Garrote deal {v}% more damage.', f('abilDmg', 4, { ab: ['backstab', 'garrote'] })),
         t('elusiveness', 1, 2, 'Elusiveness', 'evasion', 'Evasion cooldown reduced by {v} sec.', f('abilCd', 30, { ab: ['evasion'] })),
         t('serrated_blades', 2, 3, 'Serrated Blades', 'rupture', 'Rupture and Garrote deal {v}% more damage.', f('dot', 10, { ab: ['rupture', 'garrote'] })),
         t('initiative', 2, 3, 'Initiative', 'kidney_shot', '+{v}% critical strike chance.', f('crit', 1)),
@@ -132,15 +132,15 @@
       ] },
       { id: 'protection', name: 'Protection', icon: 'devotion_aura', talents: [
         t('imp_devotion', 1, 5, 'Improved Steadfast Aura', 'devotion_aura', 'Steadfast Aura gives {v}% more armor.', f('buff', 5, { ab: ['devotion_aura'] })),
-        t('toughness', 1, 5, 'Toughness', 'divine_protection', 'Armor from items increased by {v}%.', f('pct', 2, { stat: 'armor' })),
+        t('toughness', 1, 5, 'Toughness', 'divine_protection', 'Your armor is increased by {v}%.', f('pct', 2, { stat: 'armor' })),
         t('guardians_favor', 2, 2, "Guardian's Favor", 'hammer_justice', 'Hammer of Order and Divine Protection cooldowns reduced by {v} sec.', f('abilCd', 10, { ab: ['hammer_justice', 'divine_protection'] })),
         t('redoubt', 2, 3, 'Redoubt', 'devotion_aura', 'You take {v}% less damage.', f('taken', 2)),
         t('blessing_sanctuary', 3, 1, 'Blessing of Sanctuary', 'retribution_aura', 'You generate {v}% more threat and take 3% less damage.', f('threat', 20), f('taken', 3)),
       ] },
       { id: 'retribution', name: 'Retribution', icon: 'seal_righteousness', talents: [
-        t('benediction', 1, 5, 'Benediction', 'judgement', 'Verdict and seals cost {v}% less mana.', f('abilCost', 3, { ab: ['judgement', 'seal_righteousness'] })),
+        t('benediction', 1, 5, 'Benediction', 'judgement', 'Verdict and your Oaths cost {v}% less mana.', f('abilCost', 3, { ab: ['judgement', 'seal_righteousness', 'seal_command'] })),
         t('imp_judgement', 1, 2, 'Improved Verdict', 'judgement', 'Verdict cooldown reduced by {v} sec.', f('abilCd', 1, { ab: ['judgement'] })),
-        t('imp_seal', 2, 5, 'Improved Oath of Righteousness', 'seal_righteousness', 'Oath of Righteousness deals {v}% more damage.', f('buff', 3, { ab: ['seal_righteousness'] })),
+        t('imp_seal', 2, 5, 'Improved Oaths', 'seal_righteousness', 'Your Oaths deal {v}% more damage.', f('buff', 3, { ab: ['seal_righteousness', 'seal_command'] })), // every Oath (#245),
         t('conviction', 2, 5, 'Conviction', 'seal_righteousness', '+{v}% critical strike chance.', f('crit', 1)),
         t('vengeance', 3, 1, 'Vengeance', 'retribution_aura', 'Your Holy damage is increased by {v}% and physical damage by 4%.', f('school', 8, { school: 'holy' }), f('school', 4, { school: 'physical' })),
       ] },
@@ -171,7 +171,7 @@
     hunter: [
       { id: 'beast_mastery', name: 'Beast Mastery', icon: 'aspect_monkey', talents: [
         t('endurance_training', 1, 5, 'Endurance Training', 'aspect_monkey', 'Your pet has {v}% more health and damage.', f('pet', 3)),
-        t('thick_hide', 1, 3, 'Thick Hide', 'aspect_monkey', 'Armor from items increased by {v}%.', f('pct', 3, { stat: 'armor' })),
+        t('thick_hide', 1, 3, 'Thick Hide', 'aspect_monkey', 'Your armor is increased by {v}%.', f('pct', 3, { stat: 'armor' })),
         t('unleashed_fury', 2, 5, 'Unleashed Fury', 'hunters_mark', 'Your pet has {v}% more health and damage.', f('pet', 4)),
         t('ferocity', 2, 5, 'Ferocity', 'raptor_strike', '+{v}% critical strike chance.', f('crit', 1)),
         t('bestial_wrath', 3, 1, 'Bestial Wrath', 'rapid_fire', 'Your pet has {v}% more health and damage.', f('pet', 15)),
@@ -201,7 +201,7 @@
       ] },
       { id: 'feral', name: 'Feral', icon: 'bear_form', talents: [
         t('ferocity', 1, 5, 'Ferocity', 'maul', 'Maul and Swipe cost {v}% less rage.', f('abilCost', 5, { ab: ['maul', 'swipe'] })),
-        t('thick_hide', 1, 5, 'Thick Hide', 'bear_form', 'Armor from items increased by {v}%.', f('pct', 2, { stat: 'armor' })),
+        t('thick_hide', 1, 5, 'Thick Hide', 'bear_form', 'Your armor is increased by {v}%.', f('pct', 2, { stat: 'armor' })),
         t('feral_instinct', 2, 5, 'Feral Instinct', 'growl', 'You generate {v}% more threat.', f('threat', 3)),
         t('sharpened_claws', 2, 3, 'Sharpened Claws', 'maul', '+{v}% critical strike chance.', f('crit', 2)),
         t('heart_wild', 3, 1, 'Heart of the Wild', 'swipe', 'Stamina increased by {v}% and physical damage by 3%.', f('pct', 5, { stat: 'sta' }), f('school', 3, { school: 'physical' })),
@@ -227,12 +227,12 @@
         t('shield_spec', 1, 5, 'Shield Specialization', 'lightning_shield', '+{v}% chance to dodge.', f('dodge', 1)),
         t('thundering_strikes', 2, 5, 'Thundering Strikes', 'rockbiter_weapon', '+{v}% critical strike chance.', f('crit', 1)),
         t('imp_lightning_shield', 2, 3, 'Improved Lightning Shield', 'lightning_shield', 'Lightning Shield deals {v}% more damage.', f('buff', 8, { ab: ['lightning_shield'] })),
-        t('flurry', 3, 1, 'Flurry', 'strength_earth', 'You attack {v}% faster.', f('haste', 8)),
+        t('flurry', 3, 1, 'Flurry', 'strength_earth', 'You attack and cast {v}% faster.', f('haste', 8)),
       ] },
       { id: 'restoration', name: 'Restoration', icon: 'healing_wave', talents: [
         t('tidal_focus', 1, 5, 'Tidal Focus', 'healing_wave', 'Healing Wave costs {v}% less mana.', f('abilCost', 2, { ab: ['healing_wave'] })),
         t('imp_healing_wave', 1, 5, 'Improved Healing Wave', 'healing_wave', 'Healing Wave casts {v} sec faster.', f('abilCast', 0.1, { ab: ['healing_wave'] })),
-        t('totemic_focus', 2, 5, 'Totemic Focus', 'stoneskin_totem', 'Totems cost {v}% less mana.', f('abilCost', 5, { ab: ['stoneskin_totem', 'searing_totem', 'strength_earth'] })),
+        t('totemic_focus', 2, 5, 'Totemic Focus', 'stoneskin_totem', 'Stoneskin, Searing and Strength of Earth Totems cost {v}% less mana.', f('abilCost', 5, { ab: ['stoneskin_totem', 'searing_totem', 'strength_earth'] })),
         t('purification', 2, 5, 'Purification', 'healing_wave', 'Healing done increased by {v}%.', f('heal', 2)),
         t('healing_way', 3, 1, 'Healing Way', 'strength_earth', 'Healing Wave heals {v}% more and +2% spell critical strike chance.', f('abilHeal', 8, { ab: ['healing_wave'] }), f('spellCrit', 2)),
       ] },

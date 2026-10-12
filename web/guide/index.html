@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Realm of Loner Database</title>
+<meta name="description" content="Every item, creature, quest, place and dungeon in Realm of Loner, and where to find them.">
+<style>/*FONTS*/</style>
+<style>
+/* the game's own look (src/style.css): bronze frames, gold names, classic quality colours; one dark world */
+:root {
+  color-scheme: dark;
+  --ink: #0e0b08; --panel: #17120c; --panel-2: #211910; --edge: #5c4526; --edge-hi: #a5824a;
+  --gold: #f0c75e; --text: #ebe0c9; --muted: #9f8f73;
+  --q0: #9d9d9d; --q1: #ffffff; --q2: #1eff00; --q3: #0070dd; --q4: #a335ee; --q5: #e6cc80;
+  --display: 'Marcellus SC', 'Palatino Linotype', Georgia, serif;
+  --body: 'Alegreya Sans', 'Trebuchet MS', system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html { background: var(--ink); }
+body { margin: 0; background: radial-gradient(120% 60% at 50% 0, #1d160d 0, var(--ink) 70%) no-repeat, var(--ink); color: var(--text); font: 16px/1.45 var(--body); min-height: 100vh; }
+a { color: inherit; text-decoration: none; }
+.wrap { max-width: 680px; margin: 0 auto; padding: 0 16px 48px; }
+.head h1.q0 { color: var(--q0); } .head h1.q1 { color: var(--q1); } .head h1.q2 { color: var(--q2); } .head h1.q3 { color: #3d9bff; } .head h1.q4 { color: #c27bff; } .head h1.q5 { color: var(--q5); }
+.q0 { color: var(--q0); } .q1 { color: var(--q1); } .q2 { color: var(--q2); } .q3 { color: #3d9bff; } .q4 { color: #c27bff; } .q5 { color: var(--q5); }
+
+/* header: the name, and the search that is the whole way in */
+.top { position: sticky; top: 0; z-index: 5; background: linear-gradient(#1c150d, #120e09); border-bottom: 1px solid var(--edge); }
+.top .wrap { padding-top: 10px; padding-bottom: 10px; display: grid; gap: 8px; }
+.bar { display: flex; align-items: center; gap: 10px; min-height: 34px; }
+.backb { display: inline-flex; align-items: center; gap: 4px; font: 600 15px var(--body); color: var(--gold); background: var(--panel); border: 1px solid var(--edge); border-radius: 6px; padding: 6px 10px 6px 7px; cursor: pointer; }
+.backb[hidden] { display: none; }
+.brand { font: 400 20px/1.1 var(--display); color: var(--gold); letter-spacing: .02em; }
+.brand small { font: 500 14px var(--body); color: var(--muted); letter-spacing: 0; margin-left: 6px; }
+.search { width: 100%; font: 500 16px var(--body); color: var(--text); background: #0b0805; border: 1px solid var(--edge); border-radius: 6px; padding: 10px 12px; outline: none; }
+.search:focus { border-color: var(--edge-hi); box-shadow: 0 0 0 2px rgba(240, 199, 94, .18); }
+.search::placeholder { color: #7d6f57; }
+
+/* the head of a page: art, name in its colour, one line of what it is */
+.head { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; margin: 22px 0 16px; }
+.head h1 { margin: 0; font: 400 26px/1.15 var(--display); color: var(--gold); }
+.head .sub { color: var(--muted); margin-top: 2px; }
+.ic { width: 52px; height: 52px; border-radius: 6px; border: 1px solid var(--edge); background: #000; }
+.art { width: 132px; height: 132px; border-radius: 8px; border: 1px solid var(--edge); background: radial-gradient(circle at 50% 60%, #2a2014, #0b0805 75%); object-fit: contain; }
+.kind { color: var(--muted); font-size: 14px; }
+
+/* the tooltip, exactly as the game draws it: the one thing on an item page that looks like the game itself */
+.tooltip { background: rgba(8, 6, 20, .96); border: 1px solid #5a5a70; border-radius: 4px; padding: 12px 14px; display: grid; gap: 2px; font: 500 15px/1.35 var(--body); box-shadow: 0 6px 20px #000; max-width: 360px; margin: 0 0 22px; }
+.tooltip .nm { font-weight: 800; font-size: 17px; }
+.tooltip .st { color: #fff; } .tooltip .gr { color: #1eff00; } .tooltip .dim { color: #b0b0b0; } .tooltip .eff { color: #d39cff; }
+.tooltip .set { color: #ffd100; } .tooltip .look { color: #ff80ff; }
+.tooltip .two { display: flex; justify-content: space-between; gap: 12px; color: #fff; }
+
+/* label: value facts (docs/ui-text-style.md) */
+.facts { display: grid; gap: 0; margin: 0 0 22px; border-top: 1px solid #2c2216; }
+.facts div { display: grid; grid-template-columns: 7.5em 1fr; gap: 12px; padding: 7px 0; border-bottom: 1px solid #2c2216; }
+.facts dt { color: var(--muted); } .facts dd { margin: 0; }
+.say { font-style: italic; color: #d9cbab; border-left: 2px solid var(--edge); padding: 2px 0 2px 12px; margin: 0 0 22px; }
+
+/* sections: a heading and a table that links everywhere */
+h2 { font: 400 18px/1.2 var(--display); color: var(--gold); margin: 26px 0 8px; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-weight: 500; color: var(--muted); font-size: 14px; padding: 4px 8px 6px 0; border-bottom: 1px solid var(--edge); }
+td { padding: 8px 8px 8px 0; border-bottom: 1px solid #2c2216; vertical-align: top; }
+table.kv td:first-child { color: var(--muted); white-space: nowrap; width: 1%; padding-right: 14px; }
+td.n, th.n { text-align: right; padding-right: 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.li { width: 20px; height: 20px; border-radius: 3px; border: 1px solid #3a2c1a; vertical-align: -5px; margin-right: 6px; }
+td a, .row a { border-bottom: 1px solid transparent; }
+td a:hover, td a:focus-visible { border-bottom-color: currentColor; }
+a.ln { color: #f3d68a; text-decoration: underline dotted rgba(243, 214, 138, .45); text-underline-offset: 3px; } a.ln.q0 { color: var(--q0); } a.ln.q1 { color: var(--q1); } a.ln.q2 { color: var(--q2); } a.ln.q3 { color: #3d9bff; } a.ln.q4 { color: #c27bff; } a.ln.q5 { color: var(--q5); }
+
+/* lists and search results: one row per thing, its type or level on the right */
+.rows { display: grid; }
+.row { display: grid; grid-template-columns: 24px 1fr auto; gap: 10px; align-items: center; padding: 6px 0; line-height: 1.25; border-bottom: 1px solid #2c2216; }
+.row img.scn { object-fit: cover; }
+.banner { width: 100%; aspect-ratio: 16 / 7; object-fit: cover; border-radius: 8px; border: 1px solid var(--edge); display: block; margin: 18px 0 -6px; background: #0b0805; }
+.row img { width: 24px; height: 24px; border-radius: 4px; border: 1px solid #3a2c1a; }
+.row .dot { width: 24px; height: 24px; } /* no picture: an empty space, not an empty box */
+.row .r { color: var(--muted); font-size: 14px; text-align: right; }
+.browse a { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #2c2216; font: 400 19px var(--display); color: var(--text); }
+.browse a span { font: 500 15px var(--body); color: var(--muted); font-variant-numeric: tabular-nums; }
+.browse a:hover span, .browse a:focus-visible span { color: var(--gold); }
+.lhead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 20px 0 10px; }
+.lhead h1 { margin: 0; font: 400 26px/1.15 var(--display); color: var(--gold); }
+.count { color: var(--muted); font-variant-numeric: tabular-nums; }
+.filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 10px; align-items: center; }
+.filters select { width: 100%; min-width: 0; font: 500 15px var(--body); color: var(--muted); background: var(--panel); border: 1px solid #3a2c1a; border-radius: 6px; padding: 9px 8px; }
+.filters select.on { color: var(--text); border-color: var(--edge-hi); }
+.filters .clear { color: var(--gold); padding: 9px 4px; justify-self: start; }
+.more { margin: 14px 0; width: 100%; padding: 11px; font: 600 15px var(--body); color: var(--gold); background: var(--panel); border: 1px solid var(--edge); border-radius: 6px; cursor: pointer; }
+.note { color: var(--muted); font-size: 14px; margin: 22px 0 0; }
+.back { display: inline-block; margin-top: 14px; color: var(--muted); font-size: 15px; }
+/* a guide: hand-written prose that links into the database; the roles are tabs */
+.stamp { display: flex; flex-wrap: wrap; gap: 4px 18px; color: var(--muted); font-size: 14px; margin: -6px 0 16px; }
+.stamp b { color: var(--text); font-weight: 600; }
+.stale { background: #2a1a0c; border: 1px solid #8a5a22; border-radius: 6px; padding: 10px 12px; margin: 0 0 16px; color: #f3d6a0; }
+.guide p, .guide li { font-size: 17px; line-height: 1.55; }
+.guide p { margin: 0 0 14px; }
+.guide ul, .guide ol { margin: 0 0 16px; padding-left: 22px; } .guide li { margin: 0 0 6px; } .guide li::marker { color: var(--edge-hi); }
+.guide h3 { font: 400 18px/1.2 var(--display); color: var(--gold); margin: 24px 0 8px; }
+.guide strong { color: #fff4dc; font-weight: 700; }
+.tabs { display: flex; gap: 6px; margin: 22px 0 4px; border-bottom: 1px solid var(--edge); position: sticky; top: var(--toph, 104px); z-index: 4; background: var(--ink); padding-top: 6px; }
+.tabs button { flex: 1; font: 400 17px var(--display); color: var(--muted); background: var(--panel); border: 1px solid #3a2c1a; border-bottom: 0; border-radius: 6px 6px 0 0; padding: 9px 6px; cursor: pointer; }
+.tabs button[aria-selected="true"] { color: var(--gold); background: var(--panel-2); border-color: var(--edge-hi); }
+/* the card a guide link shows: the game's own tooltip (hover with a mouse, the first tap on a phone) */
+.pop { position: absolute; z-index: 9; background: #0a0818; width: min(320px, calc(100vw - 32px)); margin: 0; pointer-events: auto; }
+.pop[hidden] { display: none; }
+.pop .ph { display: grid; grid-template-columns: 36px 1fr; gap: 10px; align-items: center; margin-bottom: 4px; }
+.pop .ph img { width: 36px; height: 36px; border-radius: 4px; border: 1px solid #5a5a70; object-fit: cover; }
+.pop .open { display: block; margin-top: 8px; padding: 8px; text-align: center; color: var(--gold); border: 1px solid var(--edge); border-radius: 4px; background: var(--panel); }
+@media (hover: hover) { .pop .open { display: none; } }
+/* writing a guide: the form, then the guide as it will look; side by side where there is room */
+.lead { color: var(--muted); margin: 0 0 16px; }
+.wgrid { display: grid; gap: 18px; }
+.wform { display: grid; gap: 10px; }
+.wform label { display: grid; gap: 4px; color: var(--muted); font-size: 14px; }
+.wform input, .wform select, .wform textarea, .linker input, .rva input { font: 500 16px/1.45 var(--body); color: var(--text); background: #0b0805; border: 1px solid var(--edge); border-radius: 6px; padding: 9px 10px; width: 100%; min-width: 0; }
+.wform textarea { resize: vertical; min-height: 280px; }
+.wform input:focus, .wform select:focus, .wform textarea:focus { outline: none; border-color: var(--edge-hi); box-shadow: 0 0 0 2px rgba(240, 199, 94, .18); }
+.tools { display: flex; flex-wrap: wrap; gap: 6px; }
+.tools button, .rva button, .linkb { font: 600 14px var(--body); color: var(--gold); background: var(--panel); border: 1px solid var(--edge); border-radius: 6px; padding: 7px 10px; cursor: pointer; }
+.linker { border: 1px solid var(--edge); border-radius: 6px; padding: 8px; background: var(--panel); }
+.linker .rows { margin-top: 6px; } .linker .row { cursor: pointer; }
+.wprev { border: 1px dashed var(--edge); border-radius: 8px; padding: 4px 14px 14px; }
+.wprev .head { margin-top: 8px; }
+.wsend { margin-top: 18px; }
+.probs { margin: 0 0 10px; padding-left: 20px; color: #f3b38a; } .probs li { margin: 2px 0; }
+.more:disabled { opacity: .45; cursor: default; }
+.wmsg { margin: 8px 0 0; color: var(--gold); }
+.muted { color: var(--muted); }
+.bad { color: #ff8a7a; text-decoration: underline wavy rgba(255, 138, 122, .7); text-underline-offset: 3px; }
+.rvi { border-bottom: 1px solid #2c2216; padding: 10px 0; } .rvi summary { cursor: pointer; }
+.rvg { border: 1px dashed var(--edge); border-radius: 8px; padding: 0 12px 4px; margin: 10px 0; }
+.rva { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; } .rva input { flex: 1 1 200px; width: auto; }
+@media (min-width: 1000px) { .wgrid { grid-template-columns: 1fr 1fr; } main.wide { max-width: 1240px; } }
+.wprev .tabs, .rvg .tabs { position: static; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 3px; }
+@media (max-width: 420px) { .art { width: 96px; height: 96px; } .head h1 { font-size: 23px; } .facts div { grid-template-columns: 6.5em 1fr; } }
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <div class="bar"><button class="backb" id="back" type="button" aria-label="Back" hidden><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M10.5 2.5 5 8l5.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Back</button><a class="brand" href="#">Realm of Loner<small>Database</small></a></div>
+  <input class="search" id="q" type="search" placeholder="Search items, creatures, quests, places" autocomplete="off" spellcheck="false" aria-label="Search the database">
+</div></header>
+<main class="wrap" id="main"></main>
+<script>/*FORMAT*/</script>
+<script>
+const DB = /*DATA*/null;
+const main = document.getElementById('main'), q = document.getElementById('q');
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const art = (p, cls) => p.scn && cls !== 'ic' && cls !== 'art' ? `<img class="${cls || 'ic'} scn" src="scene/${esc(p.scn)}.svg" alt="" loading="lazy">` : p.ic ? `<img class="${cls || 'ic'}" src="icon/${esc(p.ic)}.svg" alt="" loading="lazy">` : p.mob ? `<img class="${cls || 'ic'}" src="mob/${esc(p.mob)}.svg" alt="" loading="lazy">` : '';
+const link = (c) => Array.isArray(c) ? c.map(link).join(', ') : c && typeof c === 'object' ? `<a class="ln${c.q != null ? ' q' + c.q : ''}" href="#${esc(c.l)}">${c.i ? `<img class="li" src="icon/${esc(c.i)}.svg" alt="" loading="lazy" onerror="this.remove()">` : ''}${esc(c.t)}</a>` : esc(c == null ? '' : c);
+const SING = { item: 'Item', mob: 'Creature', quest: 'Quest', npc: 'Person', place: 'Place', zone: 'Zone', dungeon: 'Dungeon', act: 'Group finder', class: 'Class', race: 'Race', ability: 'Ability', talent: 'Talent', prof: 'Profession', collect: 'Collection', guide: 'Guide' };
+const fmt = (n) => n.toLocaleString('en');
+
+function row(key, kind) {
+  const p = DB.pages[key];
+  return `<a class="row" href="#${esc(key)}">${art(p) || '<span class="dot"></span>'}<span class="${p.q != null ? 'q' + p.q : ''}">${esc(p.n)}</span><span class="r">${esc(kind ? [SING[p.k], p.sub].filter(Boolean).join(', ') : p.sub || SING[p.k])}</span></a>`;
+}
+
+function home() {
+  document.title = 'Realm of Loner Database';
+  const GROUPS = [['Guides', ['guide']], ['Gear and loot', ['item', 'collect']], ['The world', ['zone', 'place', 'dungeon', 'act']], ['Who lives there', ['mob', 'npc', 'quest']], ['Your character', ['class', 'race', 'ability', 'talent', 'prof']]];
+  main.innerHTML = GROUPS.filter(([, ks]) => ks.some((k) => DB.lists[k] && DB.lists[k].length)).map(([g, ks]) => `<h2>${g}</h2><div class="browse">${ks.filter((k) => DB.kinds[k]).map((k) => `<a href="#list/${k}">${DB.kinds[k]}<span>${fmt(DB.lists[k].length)}</span></a>`).join('')}${ks.includes('guide') ? '<a href="#write">Write a guide<span>Send yours</span></a>' : ''}</div>`).join('') + `
+    <p class="note">From the game's own data, version ${esc(DB.v)}. Quest rewards are made for your class when you finish, so they are listed by type.</p>`;
+}
+
+// a list narrows by filters instead of scrolling: they live in the link (#list/item?stat=sp&slot=hands), so an answer is shareable
+const FILTERS_OF = { item: ['slot', 'stat', 'quality', 'level'], mob: ['zone', 'rank', 'level'], quest: ['zone', 'rank', 'level'], place: ['zone', 'rank', 'level'], npc: ['zone', 'level'], zone: ['level'], dungeon: ['rank'], ability: ['class', 'level'], talent: ['class'], act: ['rank', 'level'], collect: ['rank'] };
+const ANY = { class: 'Any class', slot: 'Any slot', stat: 'Any stat', quality: 'Any quality', zone: 'Any zone or dungeon', rank: 'Any kind', level: 'Any level' };
+const BANDS = { '1-10': 'Level 1–10', '11-20': 'Level 11–20', '21-30': 'Level 21–30', '31-40': 'Level 31–40', '41-50': 'Level 41–50', '51-60': 'Level 51–60' };
+const PAGE = 60;
+const keep = (f, name, v) => {
+  if (name === 'slot') return f.s === v;
+  if (name === 'stat') return (f.st || []).includes(v);
+  if (name === 'quality') return String(f.q) === v;
+  if (name === 'zone') return (f.z || []).includes(v);
+  if (name === 'rank') return f.r === v;
+  if (name === 'class') return f.c === v;
+  if (name === 'level') { const [a, b] = v.split('-').map(Number); return f.lv >= a && f.lv <= b; }
+  return true;
+};
+function list(kind, query, shown) {
+  const all = DB.lists[kind]; if (!all) return home();
+  const sel = Object.fromEntries(new URLSearchParams(query || ''));
+  const names = FILTERS_OF[kind] || [];
+  const ids = all.filter((id) => { const f = DB.pages[kind + '/' + id].f || {}; return names.every((n) => !sel[n] || keep(f, n, sel[n])); });
+  shown = shown || PAGE;
+  // only the choices this list has, so no filter leads to an empty page
+  // (counted with the other filters applied, so two choices together never give an empty page)
+  const opts = (n) => {
+    const rest = all.filter((id) => { const f = DB.pages[kind + '/' + id].f || {}; return names.every((o) => o === n || !sel[o] || keep(f, o, sel[o])); });
+    const src = n === 'level' ? BANDS : n === 'slot' ? DB.filters.slot : n === 'stat' ? DB.filters.stat : n === 'quality' ? DB.filters.quality : n === 'zone' ? DB.filters.zone : n === 'class' ? DB.filters.class : DB.filters.rank;
+    return Object.entries(src).map(([v, t]) => [v, t, rest.filter((id) => keep(DB.pages[kind + '/' + id].f || {}, n, v)).length]).filter((o) => o[2] || sel[n] === o[0]);
+  };
+  const word = DB.kinds[kind].toLowerCase(), any = names.some((n) => sel[n]);
+  document.title = DB.kinds[kind] + ' · Realm of Loner Database';
+  main.innerHTML = `<div class="lhead"><h1>${esc(DB.kinds[kind])}</h1><span class="count">${fmt(ids.length)}${any ? ' of ' + fmt(all.length) : ''}</span></div>
+    ${names.length ? `<form class="filters" id="fl">${names.map((n) => `<select name="${n}" aria-label="${esc(ANY[n])}"${sel[n] ? ' class="on"' : ''}><option value="">${esc(ANY[n])}</option>${opts(n).map(([v, t, c]) => `<option value="${esc(v)}"${sel[n] === v ? ' selected' : ''}>${esc(t)} (${fmt(c)})</option>`).join('')}</select>`).join('')}${any ? `<a class="clear" href="#list/${kind}">Clear</a>` : ''}</form>` : ''}
+    ${ids.length ? `<div class="rows">${ids.slice(0, shown).map((id) => row(kind + '/' + id)).join('')}</div>` : `<p class="note">No ${esc(word)} match. Clear a filter to see more.</p>`}
+    ${shown < ids.length ? `<button class="more" id="more">Show ${fmt(Math.min(PAGE, ids.length - shown))} more</button>` : ''}`;
+  const fl = document.getElementById('fl');
+  if (fl) fl.onchange = () => { const qs = new URLSearchParams([...new FormData(fl)].filter(([, v]) => v)).toString(); history.replaceState(null, '', `#list/${kind}${qs ? '?' + qs : ''}`); list(kind, qs); };
+  const m = document.getElementById('more'); if (m) m.onclick = () => { const y = scrollY; list(kind, query, shown + PAGE); scrollTo(0, y); };
+}
+
+function page(key, qs) {
+  const p = DB.pages[key]; if (!p) return home();
+  if (p.g) return guide(key, p, qs);
+  document.title = p.n + ' · Realm of Loner Database';
+  const big = p.k === 'mob' && p.mob;
+  let out = (p.scn ? `<img class="banner" src="scene/${esc(p.scn)}.svg" alt="">` : '') + `<div class="head"${p.scn ? ' style="grid-template-columns:1fr"' : ''}>${big ? art(p, 'art') : p.scn ? '' : art(p) || ''}<div><div class="kind">${SING[p.k]}</div><h1 class="${p.q != null ? 'q' + p.q : ''}">${esc(p.n)}</h1>${p.sub ? `<div class="sub">${esc(p.sub)}</div>` : ''}</div></div>`;
+  if (p.tip) out += `<div class="tooltip">${p.tip.map(([c, a, b]) => c === 'two' ? `<div class="two"><span>${esc(a)}</span><span>${esc(b || '')}</span></div>` : `<div class="${esc(c)}">${esc(a)}</div>`).join('')}</div>`;
+  if (p.facts) out += `<dl class="facts">${p.facts.map(([l, v, x]) => `<div><dt>${esc(l)}</dt><dd>${link(v)}${x ? ', ' + link(x) : ''}</dd></div>`).join('')}</dl>`;
+  if (p.text) out += `<p class="say">${esc(p.text)}</p>`;
+  for (const s of p.sec || []) {
+    const num = (i) => i > 0 && s.head && /^(Level|Chance|Count|Needed)$/.test(s.head[i]);
+    out += `<h2>${esc(s.h)}</h2><table${s.head ? '' : ' class="kv"'}>${s.head && s.head.some(Boolean) ? `<tr>${s.head.map((h, i) => `<th${num(i) ? ' class="n"' : ''}>${esc(h)}</th>`).join('')}</tr>` : ''}${s.rows.map((r) => `<tr>${r.map((c, i) => `<td${num(i) ? ' class="n"' : ''}>${link(c)}</td>`).join('')}</tr>`).join('')}</table>`;
+  }
+  out += `<a class="back" href="#list/${p.k}">All ${esc(DB.kinds[p.k].toLowerCase())}</a>`;
+  main.innerHTML = out;
+}
+
+// a guide: the intro, then one tab per role (the tab is in the link: #guide/druid?tab=tank)
+const inl = (c) => c.map((x) => typeof x === 'string' ? esc(x) : x.b != null ? `<strong>${esc(x.b)}</strong>` : x.bad != null ? `<span class="bad">${esc(x.bad)}</span>` : link(x)).join('');
+const blocks = (bs) => bs.map((b) => b.t === 'p' ? `<p>${inl(b.c)}</p>` : b.t === 'h' ? `<h3>${esc(b.c)}</h3>` : `<${b.t}>${b.c.map((i) => `<li>${inl(i)}</li>`).join('')}</${b.t}>`).join('');
+const slug = (h) => h.toLowerCase().replace(/[^a-z]+/g, '-');
+const guideBody = (g, at) => `<div class="guide">${blocks(g.intro)}${g.tabs.length ? `<div class="tabs" role="tablist">${g.tabs.map((t, i) => `<button type="button" role="tab" aria-selected="${i === at}" data-i="${i}">${esc(t.h)}</button>`).join('')}</div><div role="tabpanel">${blocks(g.tabs[at].b)}</div>` : ''}</div>`;
+function guide(key, p, qs) {
+  const g = p.g, want = new URLSearchParams(qs || '').get('tab');
+  const at = Math.max(0, g.tabs.findIndex((t) => slug(t.h) === want));
+  document.title = p.n + ' · Realm of Loner Database';
+  main.innerHTML = `<div class="head">${art(p) || ''}<div><div class="kind">${g.by ? 'Guide by ' + esc(g.by) : 'Official guide'}</div><h1>${esc(p.n)}</h1></div></div>
+    <div class="stamp"><span>Written for <b>${esc(g.w)}</b></span><span>Checked for <b>${esc(g.c)}</b></span></div>
+    ${g.old ? `<p class="stale">Last checked for ${esc(g.c)}. The game is ${esc(DB.v.replace(/^(\d+\.\d+).*/, '$1'))} now, so some of this may be out of date.</p>` : ''}
+    ${guideBody(g, at)}
+    <a class="back" href="#list/guide">All guides</a>`;
+  document.documentElement.style.setProperty('--toph', document.querySelector('.top').offsetHeight + 'px');
+  main.querySelectorAll('.tabs button').forEach((b) => b.onclick = () => {
+    history.replaceState(null, '', `#${key}?tab=${slug(g.tabs[b.dataset.i].h)}`);
+    const y = scrollY; guide(key, p, 'tab=' + slug(g.tabs[b.dataset.i].h)); scrollTo(0, Math.min(y, main.querySelector('.tabs').offsetTop - 8));
+  });
+}
+
+// a guide link shows its card: on hover with a mouse; on a phone the first tap shows it (with Open), the second opens
+const pop = document.createElement('div'); pop.className = 'pop tooltip'; pop.hidden = true; document.body.appendChild(pop);
+const fine = matchMedia('(hover: hover)').matches;
+let popFor = null;
+function card(a) {
+  const key = a.getAttribute('href').slice(1), p = DB.pages[key]; if (!p) return;
+  const pic = p.mob ? `mob/${p.mob}.svg` : p.ic ? `icon/${p.ic}.svg` : p.scn ? `scene/${p.scn}.svg` : '';
+  const lines = p.tip ? p.tip.slice(1).map(([c, x, y]) => c === 'two' ? `<div class="two"><span>${esc(x)}</span><span>${esc(y || '')}</span></div>` : `<div class="${esc(c)}">${esc(x)}</div>`).join('')
+    : (p.facts || []).slice(0, 4).map(([l, v]) => `<div class="dim">${esc(l)}: ${esc(Array.isArray(v) ? v.map((c) => c.t || c).join(', ') : v && v.t ? v.t : v)}</div>`).join('');
+  pop.innerHTML = `<div class="ph">${pic ? `<img src="${esc(pic)}" alt="">` : '<span></span>'}<div><div class="nm ${p.q != null ? 'q' + p.q : ''}">${esc(p.n)}</div><div class="dim">${esc([SING[p.k], p.sub].filter(Boolean).join(', '))}</div></div></div>${lines}<a class="open" href="#${esc(key)}">Open ${esc(SING[p.k].toLowerCase())}</a>`;
+  pop.hidden = false; popFor = a;
+  const r = a.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+  const below = r.bottom + 8 + h < innerHeight || r.top - 8 - h < 0;
+  pop.style.left = Math.max(16, Math.min(scrollX + r.left, scrollX + innerWidth - w - 16)) + 'px';
+  pop.style.top = (below ? scrollY + r.bottom + 8 : scrollY + r.top - 8 - h) + 'px';
+}
+const hidePop = () => { pop.hidden = true; popFor = null; };
+main.addEventListener('mouseover', (e) => { const a = fine && e.target.closest('.guide a.ln'); if (a && a !== popFor) card(a); });
+main.addEventListener('mouseout', (e) => { const a = fine && e.target.closest('.guide a.ln'); if (a && !a.contains(e.relatedTarget)) hidePop(); });
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('.guide a.ln');
+  if (a && !fine && a !== popFor) { e.preventDefault(); e.stopImmediatePropagation(); card(a); return; }
+  if (!e.target.closest('.pop')) hidePop();
+}, true);
+addEventListener('hashchange', hidePop);
+
+// search: names that start with the words rank first, then names that contain them; at most 60
+const ALL = Object.keys(DB.pages).map((k) => [k, DB.pages[k].n.toLowerCase()]);
+function search(s) {
+  const t = s.trim().toLowerCase();
+  if (!t) return route();
+  const words = t.split(/\s+/), hits = [];
+  for (const [k, n] of ALL) if (words.every((w) => n.includes(w))) hits.push([n.startsWith(t) ? 0 : n.split(/[\s'-]+/).some((x) => x.startsWith(words[0])) ? 1 : 2, n.length, k]);
+  hits.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  document.title = 'Search · Realm of Loner Database';
+  main.innerHTML = hits.length
+    ? `<div class="rows" style="margin-top:10px">${hits.slice(0, 60).map((h) => row(h[2], true)).join('')}</div>${hits.length > 60 ? `<p class="note">${fmt(hits.length)} found. Type more to narrow it down.</p>` : ''}`
+    : `<p class="note">Nothing called "${esc(s.trim())}". Try part of the name, like "wolf" or "mantle".</p>`;
+}
+
+// ---------------------------------------------------------------- players' guides: write, send, review
+// (docs/plans/2026-10-12-player-guides-design.md). Sending needs Google sign-in, the same sign-in as the game's Friends:
+// the same Firebase app name, so a player signed in to Friends in this browser is signed in here too.
+const FB = (() => {
+  const CFG = { apiKey: 'AIzaSyAZ-0zSk2uUlM4HumQXzqiFKjkhcunXhI4', authDomain: 'compelling-cat-510114-p4.firebaseapp.com', projectId: 'compelling-cat-510114-p4', appId: '1:862031054528:web:9586a7431e9ef94e854f25' };
+  const SDK = 'https://www.gstatic.com/firebasejs/12.19.0/', CLIENT = '862031054528-shfi3s50vefl7nd0g6clotqaehqampvt.apps.googleusercontent.com';
+  // test only, as in the game: localStorage 'azsolo.friends.emu' = a made-up account, against the local emulators
+  const EMU = (() => { try { return /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? localStorage.getItem('azsolo.friends.emu') : null; } catch (e) { return null; } })();
+  let fb = null, loading = null, gis = null, pending = null;
+  const load = () => loading || (loading = (async () => {
+    const [app, auth, fs] = await Promise.all(['app', 'auth', 'firestore'].map((m) => import(SDK + `firebase-${m}.js`)));
+    const a = app.initializeApp(CFG, 'friends');
+    const A = auth.initializeAuth(a, { persistence: [auth.browserLocalPersistence, auth.inMemoryPersistence] });
+    const F = fs.getFirestore(a);
+    if (EMU) { auth.connectAuthEmulator(A, 'http://127.0.0.1:8785', { disableWarnings: true }); fs.connectFirestoreEmulator(F, '127.0.0.1', 8781); }
+    await A.authStateReady();
+    return (fb = { auth, fs, A, F });
+  })().catch((e) => { loading = null; throw e; }));
+  const loadGis = () => new Promise((res, rej) => {
+    if (window.google && google.accounts && google.accounts.oauth2) return res();
+    const sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.onload = res; sc.onerror = () => rej(new Error('Could not reach Google. Check the connection.'));
+    document.head.appendChild(sc);
+  }).then(() => { gis = gis || google.accounts.oauth2.initTokenClient({ client_id: CLIENT, scope: 'openid',
+    callback: (r) => { const p = pending; pending = null; if (p) (r.access_token ? p.res(r.access_token) : p.rej(new Error('Google did not sign you in.'))); },
+    error_callback: (e) => { const p = pending; pending = null; if (p) p.rej(new Error(e && e.type === 'popup_failed_to_open' ? 'The browser blocked the sign-in window. Allow pop-ups and try again.' : 'Sign-in was cancelled.')); } }); });
+  const doc = (id) => fb.fs.doc(fb.F, 'guides_in', id);
+  return {
+    prepare() { const p = load(); if (!EMU) loadGis().catch(() => {}); return p; },
+    uid: () => fb && fb.A.currentUser ? fb.A.currentUser.uid : null,
+    // from a tap: Google's window may only open straight from it
+    async signIn() {
+      if (EMU) { await load(); return fb.auth.signInWithCredential(fb.A, fb.auth.GoogleAuthProvider.credential(JSON.stringify({ sub: EMU, email_verified: false }))); }
+      if (!gis) throw new Error('Google sign-in is still loading. Try again in a moment.');
+      const tok = await new Promise((res, rej) => { pending = { res, rej }; gis.requestAccessToken({ prompt: '' }); });
+      await load(); return fb.auth.signInWithCredential(fb.A, fb.auth.GoogleAuthProvider.credential(null, tok));
+    },
+    signOut: () => fb && fb.auth.signOut(fb.A),
+    async mine() { const s = await fb.fs.getDoc(doc(FB.uid())); return s.exists() ? s.data() : null; },
+    send: (g) => fb.fs.setDoc(doc(FB.uid()), Object.assign({}, g, { at: fb.fs.serverTimestamp(), status: 'new', note: '' })),
+    async all() { const q = await fb.fs.getDocs(fb.fs.collection(fb.F, 'guides_in')); return q.docs.map((d) => Object.assign({ id: d.id }, d.data())); },
+    remove: () => fb.fs.deleteDoc(doc(FB.uid())),
+    mark: (id, status, note) => fb.fs.updateDoc(doc(id), { status, note: note || '' }),
+  };
+})();
+
+const resolveRef = GF.resolver(DB.pages, (key) => { const p = DB.pages[key]; return Object.assign({ l: key, t: p.n }, p.q != null ? { q: p.q } : {}, p.ic ? { i: p.ic } : {}); });
+const LIMITS = { title: [3, 60], by: [2, 32], text: [50, 20000] };
+// what stops a guide from being sent, in the words a writer needs
+function problems(d, parsed) {
+  const out = [];
+  if (!DB.pages['class/' + d.cls]) out.push('Choose a class.');
+  for (const [k, w] of [['title', 'Title'], ['by', 'Your name'], ['text', 'The guide']]) {
+    const n = (d[k] || '').trim().length, [a, b] = LIMITS[k];
+    if (n < a) out.push(`${w}: at least ${fmt(a)} characters.`); else if (n > b) out.push(`${w}: at most ${fmt(b)} characters (now ${fmt(n)}).`);
+  }
+  if (/^official$/i.test((d.by || '').trim())) out.push('Your name: choose another (Official marks the game\'s own guides).');
+  for (const e of parsed.errors) out.push(`Link ${e}.`);
+  return out;
+}
+const STATUS = { new: 'Waiting for review', approved: 'Approved. It goes on the site with the next update.', declined: 'Not accepted', published: 'On the site' };
+const DRAFT = 'azsolo.guide.draft';
+const draftGet = () => { try { return JSON.parse(localStorage.getItem(DRAFT)) || {}; } catch (e) { return {}; } };
+const draftSet = (d) => { try { localStorage.setItem(DRAFT, JSON.stringify(d)); } catch (e) { /* private window: the draft lives only in the page */ } };
+const classOpts = (sel) => DB.lists.class.map((c) => `<option value="${esc(c)}"${c === sel ? ' selected' : ''}>${esc(DB.pages['class/' + c].n)}</option>`).join('');
+
+function write() {
+  document.title = 'Write a guide · Realm of Loner Database';
+  const d = Object.assign({ cls: '', title: '', by: '', text: '' }, draftGet());
+  main.innerHTML = `<div class="lhead"><h1>Write a guide</h1></div>
+    <p class="lead">Write it here and see it the way players will. Send it for review; once it's approved, it goes on the site with the next update.</p>
+    <div class="wgrid">
+      <form class="wform" id="wf" autocomplete="off">
+        <label>Class<select name="cls"><option value="">Choose…</option>${classOpts(d.cls)}</select></label>
+        <label>Title<input name="title" maxlength="60" value="${esc(d.title)}" placeholder="Bear tanking from 10 to 60"></label>
+        <label>Your name<input name="by" maxlength="32" value="${esc(d.by)}" placeholder="Shown as Guide by …"></label>
+        <div class="tools" role="toolbar" aria-label="Format">
+          <button type="button" data-ins="tab">Role tab</button><button type="button" data-ins="h">Heading</button><button type="button" data-ins="li">List</button><button type="button" data-ins="b">Bold</button><button type="button" data-ins="link">Link a game thing</button>
+        </div>
+        <div class="linker" id="lk" hidden><input id="lkq" type="search" placeholder="Search abilities, items, creatures…" aria-label="Find a page to link"><div class="rows" id="lkr"></div></div>
+        <textarea name="text" id="wt" rows="16" spellcheck="true" placeholder="Start with a short intro. Then a role tab:&#10;&#10;## Healer&#10;### How to play it&#10;- Keep [[Rejuvenation]] on the tank.">${esc(d.text)}</textarea>
+        <p class="note">## starts a role tab, ### a heading, - a list, **bold**. [[Name]] links a page.</p>
+      </form>
+      <section class="wprev" aria-label="Preview"><div class="kind">Preview</div><div id="pv"></div></section>
+    </div>
+    <div class="wsend"><ul class="probs" id="pr"></ul><div id="st" class="wst"></div><button class="more" id="send" type="button">Send for review</button><p class="note" id="who"></p></div>`;
+  const wf = document.getElementById('wf'), wt = document.getElementById('wt'), pv = document.getElementById('pv'), pr = document.getElementById('pr'), send = document.getElementById('send');
+  let at = 0, probs = [], mine = null;
+  const read = () => ({ cls: wf.cls.value, title: wf.title.value.trim(), by: wf.by.value.trim(), text: wt.value });
+  const draw = () => {
+    const v = read(); draftSet(v);
+    const g = GF.parse(v.text, resolveRef); if (at >= g.tabs.length) at = 0;
+    const cls = DB.pages['class/' + v.cls];
+    pv.innerHTML = `<div class="head">${cls ? art(cls) : ''}<div><div class="kind">Guide by ${esc(v.by || '…')}</div><h1>${esc(v.title || 'Your title')}</h1></div></div>${guideBody(g, at)}`;
+    pv.querySelectorAll('.tabs button').forEach((b) => b.onclick = () => { at = +b.dataset.i; draw(); });
+    probs = problems(v, g);
+    pr.innerHTML = probs.map((x) => `<li>${esc(x)}</li>`).join('');
+    sendState();
+  };
+  const sendState = () => {
+    const locked = mine && mine.status === 'approved';
+    send.disabled = !!probs.length || locked;
+    send.textContent = FB.uid() ? (mine && mine.status !== 'published' ? 'Send this instead' : 'Send for review') : 'Sign in with Google and send';
+    document.getElementById('who').textContent = locked ? 'Your guide is approved and being added. You can send another once it is on the site.' : mine && mine.status !== 'published' ? 'Sending replaces the guide you sent before.' : '';
+  };
+  const showMine = () => {
+    const st = document.getElementById('st');
+    st.innerHTML = mine ? `<dl class="facts"><div><dt>Sent</dt><dd>${esc(mine.title)}</dd></div><div><dt>Status</dt><dd>${esc(STATUS[mine.status] || mine.status)}${mine.note ? `<br><span class="muted">${esc(mine.note)}</span>` : ''}</dd></div></dl><div class="tools">${mine.status === 'declined' ? '<button class="linkb" id="edit" type="button">Edit what you sent</button>' : ''}${mine.status !== 'approved' ? '<button class="linkb" id="del" type="button">Delete what you sent</button>' : ''}</div>` : '';
+    const e = document.getElementById('edit');
+    const dl = document.getElementById('del');
+    if (dl) dl.onclick = async () => { if (!confirm('Delete the guide you sent? Your draft here stays.')) return; try { await FB.remove(); mine = null; showMine(); toastIn(send, 'Deleted.'); } catch (err) { toastIn(send, err.message); } };
+    if (e) e.onclick = () => { wf.cls.value = mine.cls; wf.title.value = mine.title; wf.by.value = mine.by; wt.value = mine.text; draw(); wt.focus(); };
+    sendState();
+  };
+  wf.oninput = draw; wf.onchange = draw;
+  // the toolbar puts the marks in at the cursor, so nobody has to remember them
+  const put = (before, after, ph) => {
+    const a = wt.selectionStart, b = wt.selectionEnd, sel = wt.value.slice(a, b) || ph;
+    wt.setRangeText(before + sel + (after || ''), a, b, 'end'); wt.focus(); draw();
+  };
+  const line = (mark, ph) => { const a = wt.selectionStart, nl = a > 0 && wt.value[a - 1] !== '\n' ? '\n' : ''; put(nl + mark, '', ph); };
+  const lk = document.getElementById('lk'), lkq = document.getElementById('lkq'), lkr = document.getElementById('lkr');
+  wf.querySelector('.tools').onclick = (e) => {
+    const k = e.target.dataset && e.target.dataset.ins; if (!k) return;
+    if (k === 'tab') line('## ', 'Healer'); else if (k === 'h') line('### ', 'How to play it'); else if (k === 'li') line('- ', 'One tip');
+    else if (k === 'b') put('**', '**', 'important');
+    else { lk.hidden = !lk.hidden; if (!lk.hidden) lkq.focus(); }
+  };
+  let caret = wt.value.length; // where a link goes: the cursor, remembered as it moves (a tap on the toolbar takes the focus)
+  for (const ev of ['input', 'keyup', 'click', 'select', 'blur']) wt.addEventListener(ev, () => { caret = wt.selectionStart; });
+  lkq.oninput = () => {
+    const t = lkq.value.trim().toLowerCase();
+    const hits = t.length < 2 ? [] : ALL.filter(([, n]) => n.includes(t)).sort((a, b) => !b[1].startsWith(t) - !a[1].startsWith(t) || a[1].length - b[1].length).slice(0, 8);
+    lkr.innerHTML = hits.map(([k]) => row(k, true).replace('<a class="row" href=', '<a class="row" data-k=')).join('');
+  };
+  lkr.onclick = (e) => {
+    const a = e.target.closest('[data-k]'); if (!a) return; e.preventDefault();
+    const key = a.dataset.k.replace(/^#/, ''), n = DB.pages[key].n, byName = resolveRef(n);
+    const ins = byName && byName.l === key ? `[[${n}]]` : `[[${key}|${n}]]`; // the plain name when it finds only this page
+    wt.setRangeText(ins, caret, caret, 'end'); caret += ins.length; lk.hidden = true; lkq.value = ''; lkr.innerHTML = ''; draw();
+  };
+  send.onclick = async () => {
+    send.disabled = true; const was = send.textContent; send.textContent = 'Sending…';
+    try {
+      if (!FB.uid()) { await FB.signIn(); mine = await FB.mine(); showMine(); if (mine && mine.status === 'approved') return; }
+      const v = read(); await FB.send({ cls: v.cls, title: v.title, by: v.by, text: v.text });
+      mine = await FB.mine(); showMine(); toastIn(send, 'Sent. Its status shows here.');
+    } catch (e) { send.textContent = was; toastIn(send, e.message || 'Could not send. Try again.'); sendState(); }
+  };
+  draw();
+  FB.prepare().then(async () => { if (FB.uid()) { mine = await FB.mine().catch(() => null); showMine(); } else sendState(); }).catch(() => toastIn(send, 'Could not reach the guide service. You can still write and preview.'));
+}
+const toastIn = (el, msg) => { let t = el.parentNode.querySelector('.wmsg'); if (!t) { t = document.createElement('p'); t.className = 'wmsg'; el.after(t); } t.textContent = msg; };
+
+// the reviewer's page: every guide sent, drawn as it will look, with Approve and Decline
+async function review() {
+  document.title = 'Review guides · Realm of Loner Database';
+  main.innerHTML = `<div class="lhead"><h1>Review guides</h1></div><div id="rv"><p class="note">Loading…</p></div>`;
+  const rv = document.getElementById('rv');
+  try { await FB.prepare(); } catch (e) { rv.innerHTML = '<p class="note">Could not reach the guide service.</p>'; return; }
+  if (!FB.uid()) { rv.innerHTML = '<button class="more" id="si" type="button">Sign in with Google</button>'; document.getElementById('si').onclick = () => FB.signIn().then(review, (e) => alert(e.message)); return; }
+  let all;
+  try { all = await FB.all(); } catch (e) { rv.innerHTML = `<p class="note">This page is for the reviewer. Your account id: <b>${esc(FB.uid())}</b></p>`; return; }
+  const order = { new: 0, approved: 1, declined: 2, published: 3 };
+  all.sort((a, b) => order[a.status] - order[b.status] || (b.at && a.at ? b.at.seconds - a.at.seconds : 0));
+  if (!all.length) { rv.innerHTML = '<p class="note">Nothing sent yet.</p>'; return; }
+  rv.innerHTML = all.map((x, i) => {
+    const g = GF.parse(x.text, resolveRef), cls = DB.pages['class/' + x.cls];
+    return `<details class="rvi"${x.status === 'new' && i === 0 ? ' open' : ''}><summary><b>${esc(x.title)}</b> <span class="muted">${esc(cls ? cls.n : x.cls)}, by ${esc(x.by)}, ${esc(STATUS[x.status] || x.status)}</span></summary>
+      ${g.errors.length ? `<ul class="probs">${g.errors.map((e) => `<li>Link ${esc(e)}.</li>`).join('')}</ul>` : ''}
+      <div class="rvg">${guideBody(g, 0)}</div>
+      <div class="rva" data-id="${esc(x.id)}">${x.status === 'approved' ? '<button type="button" data-s="published">Mark on the site</button>' : x.status === 'published' ? '' : `<button type="button" data-s="approved">Approve</button><input placeholder="Reason, if you decline" maxlength="300" value="${esc(x.note || '')}"><button type="button" data-s="declined">Decline</button>`}</div></details>`;
+  }).join('');
+  rv.onclick = async (e) => {
+    const b = e.target.closest('button[data-s]'); if (!b) return;
+    const box = b.parentNode, note = box.querySelector('input');
+    if (b.dataset.s === 'declined' && !(note && note.value.trim())) { note.focus(); note.placeholder = 'Say why, so they can fix it'; return; }
+    b.disabled = true;
+    try { await FB.mark(box.dataset.id, b.dataset.s, b.dataset.s === 'declined' ? note.value.trim() : ''); review(); } catch (err) { b.disabled = false; alert(err.message); }
+  };
+  rv.querySelectorAll('.rvg .tabs button').forEach((b) => b.onclick = () => { const det = b.closest('.rvi'), x = all[[...rv.children].indexOf(det)]; det.querySelector('.rvg').innerHTML = guideBody(GF.parse(x.text, resolveRef), +b.dataset.i); });
+}
+
+// Back: the browser's own history while you have moved around in here; from a page opened directly, up to its list
+let depth = 0;
+const backB = document.getElementById('back');
+backB.onclick = () => {
+  if (q.value) { q.value = ''; return route(); }
+  if (depth > 0) return history.back();
+  const h = decodeURIComponent(location.hash.slice(1)), kind = h.split('/')[0];
+  location.hash = h.startsWith('list/') || !DB.lists[kind] ? '' : 'list/' + kind;
+};
+function route() {
+  backB.hidden = !location.hash.slice(1) && !q.value;
+  const h = decodeURIComponent(location.hash.slice(1));
+  main.className = 'wrap' + (h === 'write' || h === 'review' ? ' wide' : '');
+  if (!h) home(); else if (h === 'write') write(); else if (h === 'review') review(); else if (h.startsWith('list/')) { const [k, qs] = h.slice(5).split('?'); list(k, qs); } else { const [k, qs] = h.split('?'); page(k, qs); }
+}
+let timer;
+q.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => { search(q.value); backB.hidden = !q.value && !location.hash.slice(1); }, 80); });
+q.addEventListener('keydown', (e) => { if (e.key === 'Escape') { q.value = ''; route(); } });
+// a tap on a link moves forward; any other hash change (the phone's back, our Back) moves back
+let tapped = false;
+document.addEventListener('click', (e) => { if (e.target.closest('a[href^="#"]')) tapped = true; });
+addEventListener('hashchange', () => { depth = tapped ? depth + 1 : Math.max(0, depth - 1); tapped = false; q.value = ''; route(); scrollTo(0, 0); });
+route();
+</script>
+</body>
+</html>

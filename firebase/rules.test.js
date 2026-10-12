@@ -2,7 +2,7 @@
 // Every case says what a player may or may not do; a rule change that opens a hole makes one of them fail.
 const fs = require('fs');
 const { initializeTestEnvironment, assertSucceeds, assertFails } = require('@firebase/rules-unit-testing');
-const { doc, getDoc, setDoc, deleteDoc, collection, getDocs, writeBatch } = require('firebase/firestore');
+const { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, writeBatch, query, where, serverTimestamp } = require('firebase/firestore');
 const { ref, get, set } = require('firebase/database');
 
 let pass = 0, fail = 0;
@@ -13,7 +13,7 @@ async function check(name, p) {
 (async () => {
   const env = await initializeTestEnvironment({
     projectId: 'demo-friends',
-    firestore: { rules: fs.readFileSync(__dirname + '/firestore.rules', 'utf8'), host: '127.0.0.1', port: 8781 },
+    firestore: { rules: fs.readFileSync(__dirname + '/firestore.rules', 'utf8').replace(/'WtPFWkJjJXQ6uQ5qoV1WdtlPEEI3'/g, "'rev'"), host: '127.0.0.1', port: 8781 },
     database: { rules: fs.readFileSync(__dirname + '/database.rules.json', 'utf8'), host: '127.0.0.1', port: 8782 },
   });
   const fsOf = (uid) => (uid ? env.authenticatedContext(uid) : env.unauthenticatedContext()).firestore();
@@ -64,6 +64,35 @@ async function check(name, p) {
   await check('ben removes amy (her side)', assertSucceeds(deleteDoc(doc(ben, 'friends/amy/list/ben'))));
   await check('then ben no longer reads amy\'s profile', assertFails(getDoc(doc(ben, 'profiles/amy'))));
   await check('cat cannot delete someone else\'s friendship', assertFails(deleteDoc(doc(cat, 'friends/ben/list/amy'))));
+
+  console.log('player guides');
+  const rev = fsOf('rev');
+  const sub = (o) => Object.assign({ cls: 'druid', title: 'Bear tanking', by: 'Amy', text: 'x'.repeat(60), at: serverTimestamp(), status: 'new', note: '' }, o || {});
+  await check('amy sends a guide', assertSucceeds(setDoc(doc(amy, 'guides_in/amy'), sub())));
+  await check('amy reads hers', assertSucceeds(getDoc(doc(amy, 'guides_in/amy'))));
+  await check('ben cannot read amy\'s guide while it waits', assertFails(getDoc(doc(ben, 'guides_in/amy'))));
+  await check('signed out: cannot send', assertFails(setDoc(doc(nobody, 'guides_in/amy'), sub())));
+  await check('ben cannot send as amy', assertFails(setDoc(doc(ben, 'guides_in/amy'), sub())));
+  await check('a guide cannot arrive approved', assertFails(setDoc(doc(ben, 'guides_in/ben'), sub({ status: 'approved' }))));
+  await check('a guide over 20,000 characters is refused', assertFails(setDoc(doc(ben, 'guides_in/ben'), sub({ text: 'x'.repeat(20001) }))));
+  await check('an extra field is refused', assertFails(setDoc(doc(ben, 'guides_in/ben'), Object.assign({ email: 'x' }, sub()))));
+  await check('nobody sends as the official guide', assertFails(setDoc(doc(ben, 'guides_in/ben'), sub({ by: 'Official' }))));
+  await check('a made-up time is refused', assertFails(setDoc(doc(ben, 'guides_in/ben'), sub({ at: 5 }))));
+  await check('ben cannot list the waiting guides', assertFails(getDocs(collection(ben, 'guides_in'))));
+  await check('the reviewer lists them', assertSucceeds(getDocs(collection(rev, 'guides_in'))));
+  await check('amy cannot approve her own', assertFails(updateDoc(doc(amy, 'guides_in/amy'), { status: 'approved' })));
+  await check('the reviewer cannot change the text', assertFails(updateDoc(doc(rev, 'guides_in/amy'), { text: 'y'.repeat(60) })));
+  await check('the reviewer declines it with a reason', assertSucceeds(updateDoc(doc(rev, 'guides_in/amy'), { status: 'declined', note: 'Wrath numbers are off.' })));
+  await check('amy sends a new version', assertSucceeds(setDoc(doc(amy, 'guides_in/amy'), sub({ title: 'Bear tanking, fixed' }))));
+  await check('the reviewer approves it', assertSucceeds(updateDoc(doc(rev, 'guides_in/amy'), { status: 'approved' })));
+  await check('now anyone reads it', assertSucceeds(getDoc(doc(nobody, 'guides_in/amy'))));
+  await check('anyone lists the approved ones', assertSucceeds(getDocs(query(collection(nobody, 'guides_in'), where('status', '==', 'approved')))));
+  await check('amy cannot replace it while it is approved', assertFails(setDoc(doc(amy, 'guides_in/amy'), sub())));
+  await check('amy cannot delete it while it is approved', assertFails(deleteDoc(doc(amy, 'guides_in/amy'))));
+  await check('the reviewer marks it published', assertSucceeds(updateDoc(doc(rev, 'guides_in/amy'), { status: 'published' })));
+  await check('then amy may send another', assertSucceeds(setDoc(doc(amy, 'guides_in/amy'), sub({ title: 'Healing' }))));
+  await check('ben cannot delete amy\'s', assertFails(deleteDoc(doc(ben, 'guides_in/amy'))));
+  await check('amy deletes hers', assertSucceeds(deleteDoc(doc(amy, 'guides_in/amy'))));
 
   console.log('status (Realtime Database)');
   const dA = dbOf('amy'), dB = dbOf('ben'), dC = dbOf('cat');

@@ -6,6 +6,29 @@ service cloud.firestore {
     function only(keys) { return request.resource.data.keys().hasOnly(keys); }
     function friendOf(owner) { return exists(/databases/$(db)/documents/friends/$(owner)/list/$(me())); }
 
+    // Player guides (docs/plans/2026-10-12-player-guides-design.md): one open submission per account, read by its
+    // author and the reviewer, public once approved. The id below is the reviewer's account (the review page shows yours).
+    function reviewer() { return me() == 'WtPFWkJjJXQ6uQ5qoV1WdtlPEEI3'; }
+    function guide() {
+      let g = request.resource.data;
+      return g.keys().hasOnly(['cls', 'title', 'by', 'text', 'at', 'status', 'note']) && g.keys().hasAll(['cls', 'title', 'by', 'text', 'at', 'status', 'note'])
+        && g.cls is string && g.cls.matches('^[a-z]{3,16}$')
+        && g.title is string && g.title.size() >= 3 && g.title.size() <= 60
+        && g.by is string && g.by.size() >= 2 && g.by.size() <= 32 && g.by.lower() != 'official'
+        && g.text is string && g.text.size() >= 50 && g.text.size() <= 20000
+        && g.at == request.time && g.status == 'new' && g.note == '';
+    }
+    match /guides_in/{uid} {
+      allow get: if me() == uid || reviewer() || resource.data.status == 'approved';
+      allow list: if reviewer() || resource.data.status == 'approved';
+      // the author sends and replaces it, except while it is approved and waiting to be added
+      allow create: if me() == uid && guide();
+      allow update: if (me() == uid && resource.data.status != 'approved' && guide())
+        || (reviewer() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'note'])
+          && request.resource.data.status in ['new', 'approved', 'declined', 'published']
+          && request.resource.data.note is string && request.resource.data.note.size() <= 300);
+      allow delete: if (me() == uid && resource.data.status != 'approved') || reviewer();
+    }
     // a friend code points to one player; anyone signed in may look one up, nobody may list them
     match /codes/{code} {
       allow get: if me() != '';

@@ -651,7 +651,12 @@
   G.knownAbilities = function () {
     const P = G.S.player;
     const C = D.CLASSES[P.cls];
-    if (G.fight && G.pUnit && G.pUnit.form && C.forms) return C.forms[G.pUnit.form].filter((a) => D.ABILITIES[a].lvl <= P.level);
+    // in a form: that form's abilities, the shift itself and the few that work in any form (#233)
+    const f = G.fight && G.pUnit && G.pUnit.form;
+    if (f) {
+      const all = [...new Set(C.abilities.concat(Object.keys(D.ABILITIES).filter((a) => D.ABILITIES[a].cls === P.cls)))]; // Maul, Growl, Swipe live only in the form
+      return all.filter((a) => { const A = D.ABILITIES[a]; return A.lvl <= P.level && (A.form === f || A.shapeshift || A.anyForm); });
+    }
     return C.abilities.filter((a) => D.ABILITIES[a].lvl <= P.level);
   };
 
@@ -1506,7 +1511,7 @@
     if (!C || !G.pUnit) return 'Not in combat';
     const ab = D.ABILITIES[abId];
     let tgt = G.pUnit.target;
-    if (ab.target === 'ally') tgt = C.allyTarget != null && C.units[C.allyTarget] && !C.units[C.allyTarget].dead ? C.allyTarget : G.pUnit.uid;
+    if (ab.target === 'ally' || (ab.either && G.role() === 'healer')) tgt = C.allyTarget != null && C.units[C.allyTarget] && !C.units[C.allyTarget].dead ? C.allyTarget : G.pUnit.uid;
     const why = E.use(C, G.pUnit, abId, tgt);
     if (why && why !== E.GCD_WHY) emit('error', why); // the global cooldown says nothing (#173)
     return why;
@@ -1572,7 +1577,7 @@
   // Buffs out of combat (Battle Shout, Fortitude, Frost Armor) just apply.
   // a buff shorter than a minute does nothing out of a fight (only buffs of 60 s or more are kept between fights), unless
   // the ability also heals: it is refused there and dimmed on the bar (#165)
-  G.fightBuff = (abId) => { const ab = D.ABILITIES[abId]; return !!(ab && ab.buff && ab.buff.dur < 60 && !ab.heal && !ab.hot); };
+  G.fightBuff = (abId) => { const ab = D.ABILITIES[abId]; return !!(ab && ((ab.buff && ab.buff.dur < 60) || ab.shield) && !ab.heal && !ab.hot); }; // a shield only lasts inside a fight too
   G.castOutOfCombat = function (abId) {
     const P = G.S.player, ab = D.ABILITIES[abId];
     if (G.fight) return G.useAbility(abId);
@@ -1592,14 +1597,15 @@
     const cost = E.abCost(ab, P);
     if (cost > v.res) return v.resType === 'rage' ? 'Not enough rage' : 'Not enough mana';
     P.res -= cost;
+    if (E.isHeal(ab)) P.auras = E.dropOnHeal(P.auras || []); // a heal ends Shadowform (#245)
     if (ab.buff) {
       const stats = {};
       const bp = 1 + (E.talentMods(P).buff[abId] || 0) / 100;
       for (const k in (ab.buff.stats || {})) stats[k] = Math.round((ab.buff.stats[k] + ((ab.buff.perLvl && ab.buff.perLvl[k]) || 0) * P.level) * bp * 10) / 10;
-      P.auras = (P.auras || []).filter((a) => a.id !== ab.buff.id);
+      P.auras = (P.auras || []).filter((a) => a.id !== ab.buff.id && !(ab.buff.group && ((D.ABILITIES[a.id] || {}).buff || {}).group === ab.buff.group)); // one of a group at a time
       const extra = {};
       if (ab.buff.seal) { const w = (P.equip.weapon && P.equip.weapon.speed) || 2; extra.seal = (ab.buff.seal.base + ab.buff.seal.perLvl * P.level) * (w / 2.5); extra.sealSchool = ab.buff.seal.school || 'holy'; }
-      if (ab.buff.thorns) extra.thorns = { dmg: Math.round(ab.buff.thorns.base + ab.buff.thorns.perLvl * P.level), charges: ab.buff.thorns.charges };
+      if (ab.buff.thorns) extra.thorns = { dmg: Math.round((ab.buff.thorns.base + ab.buff.thorns.perLvl * P.level) * bp), charges: ab.buff.thorns.charges }; // with its talent, as in a fight
       if (ab.buff.dur >= 60) P.auras.push(Object.assign({ id: ab.buff.id, stats, until: now() + ab.buff.dur * 1000 }, extra));
       if (stats.sta) P.hp += stats.sta * 10;
     }
@@ -3263,7 +3269,7 @@
   const OTHER_REALMS = ['Mistral', 'Hearthwick', 'Thornbury', 'Copperbell', 'Saltwind', 'Longwinter']; // our own realm names (v10)
   function recruit(role, lvl, used, usedCls, guild, exact) { // exact: only players at this level (Trials: the cap)
     const S = G.S, date = new Date();
-    const want = role === 'tank' ? ['warrior', 'warrior', 'paladin'].concat(lvl >= 10 ? ['druid'] : []) : role === 'healer' ? ['priest', 'priest', 'paladin', 'druid', 'shaman'] : ['mage', 'rogue', 'rogue', 'mage', 'warrior', 'warlock', 'warlock', 'hunter', 'hunter', 'druid', 'shaman'];
+    const want = role === 'tank' ? ['warrior', 'warrior', 'paladin'].concat(lvl >= 10 ? ['druid'] : []) : role === 'healer' ? ['priest', 'priest', 'paladin', 'druid', 'shaman'] : ['mage', 'rogue', 'rogue', 'mage', 'warrior', 'warlock', 'warlock', 'hunter', 'hunter', 'druid', 'shaman', 'priest'];
     const myF = (D.RACES[S.player.race] || {}).faction || 'alliance';
     let pool = S.bots.filter((b) => B.isOnline(b, date) && B.factionOf(b) === myF && want.includes(b.cls) && (exact ? b.level === lvl : b.level >= lvl - 1 && b.level <= lvl + 3) && !used.has(b.id));
     // prefer classes the group does not have yet

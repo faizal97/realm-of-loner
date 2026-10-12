@@ -102,7 +102,7 @@
   const AURA_NAME = { momentum: 'Momentum', weakened_soul: 'Weakened Soul', chilled: 'Chilled', stun: 'Stunned', fireball_burn: 'Burning', seal: 'Seal' };
   const DEBUFF_IDS = new Set(['weakened_soul', 'hunters_mark', 'chilled', 'stun']);
   function auraInfo(a, u) {
-    if (a.proc) return { id: a.id, icon: a.proc.lights[0], name: a.proc.name, debuff: false }; // a reaction's light (v10.4)
+    if (a.proc) return { id: a.id, icon: (a.lit || a.proc.lights)[0], name: a.proc.name, debuff: false }; // a reaction's light (v10.4)
     let base = a.id.replace(/_slow$/, '');
     if (a.id === 'rockbiter' && a.sealSchool === 'fire') base = 'flametongue_weapon';
     const ab = D.ABILITIES[AURA_ALIAS[base] || base];
@@ -220,6 +220,8 @@
       h('button', { class: 'btn wide', style: { marginTop: '8px' }, onclick: closeDialog }, 'Close')], true);
   }
   const img = (src, cls) => h('img', { src, class: cls, alt: '', draggable: 'false' });
+  // a class's crest (art_classes.js) pinned to the corner of a picture of that character, like a seal on a letter
+  const sealed = (pic, cls) => (D.CLASSES[cls] ? h('span', { class: 'seal-at' }, pic, img(art('icon', 'class_' + cls), 'seal')) : pic);
 
   // ------------------------------------------------------------ formatting
   // money as coins, like the original: "12 (gold) 4 (silver) 30 (copper)"; the words stay for screen readers.
@@ -1908,7 +1910,7 @@
         btn.classList.toggle('unlit', (!lit && !!(D.ABILITIES[id] || {}).needAura) || (!C && G.fightBuff(id)) || !!G.barBlock(id)); // on the road or dead the bar dims as #165's buffs do, cooldowns still sweeping (#167); usable only while lit (Overpower): grey until then (v10.8); a short buff out of a fight (#165)
         // distance (v10.9): too far from its target, the button greys and says how close it needs to be
         let far = 0;
-        if (u2 && D.ABILITIES[id] && id !== 'attack') { const A = D.ABILITIES[id], tid = A.target === 'ally' ? (C.allyTarget != null && C.units[C.allyTarget] && !C.units[C.allyTarget].dead ? C.allyTarget : u2.uid) : u2.target; far = E.outOfRange(C, u2, id, C.units[tid]); }
+        if (u2 && D.ABILITIES[id] && id !== 'attack') { const A = D.ABILITIES[id], tid = A.target === 'ally' || (A.either && G.role() === 'healer') ? (C.allyTarget != null && C.units[C.allyTarget] && !C.units[C.allyTarget].dead ? C.allyTarget : u2.uid) : u2.target; far = E.outOfRange(C, u2, id, C.units[tid]); }
         btn.classList.toggle('far', !!far);
         let rg = btn.querySelector(':scope > .rng'); if (far && !rg) { rg = h('span', { class: 'rng tnum' }); btn.append(rg); }
         if (rg) { if (far) rg.textContent = far + ' m'; else rg.remove(); }
@@ -3295,7 +3297,7 @@
         tabs.append(h('button', { class: ui.heroTab === k ? 'on' : '', onclick: () => { ui.heroTab = k; ui.sheetFn(); ui.sheetBody.scrollTop = 0; } }, label, dot ? h('span', { class: 'tab-dot' }) : null));
       b.append(h('div', { class: 'sheet-stick' }, tabs));
       if (ui.heroTab === 'char') {
-        b.append(h('div', { class: 'hero-top' }, img(art('hero', looks(P))),
+        b.append(h('div', { class: 'hero-top' }, sealed(img(art('hero', looks(P))), P.cls),
           h('div', { class: 'stats' },
             ...[['Health', v.maxHp], [D.CLASSES[P.cls].resource === 'mana' ? 'Mana' : D.CLASSES[P.cls].resource === 'rage' ? 'Rage' : 'Energy', Math.round(v.maxRes)], ['Strength', st.str], ['Agility', st.agi], ['Stamina', st.sta], ['Intellect', st.int], ['Spirit', st.spi], ['Armor', st.armor], ['Attack Power', Math.round(st.apTotal)], ['Spell Power', st.sp], ['Crit', st.crit.toFixed(1) + '%'], ['Dodge', st.dodgeTotal.toFixed(1) + '%']]
               .map(([k, val]) => h('div', null, h('span', null, k), h('b', { class: 'tnum' }, val))))));
@@ -4878,10 +4880,12 @@
   }
 
   // ============================================================ character creation
+  // the roles a class can queue as, read from its data (#245: Warrior and Priest gained Damage, and a hand-written list missed it)
+  const roleLine = (c) => { const r = D.CLASSES[c].roles || [D.CLASSES[c].role]; return r.length >= 3 ? 'Any role' : r.length === 1 ? { tank: 'Tank', healer: 'Healer', dps: 'Damage' }[r[0]] : r.map((x) => ({ tank: 'Tank', healer: 'Heal', dps: 'Dmg' })[x]).join(' / '); };
   const CLASS_BLURB = {
-    warrior: 'Tank. Wears mail, holds the enemy\'s attention in groups. Rage builds as you hit and get hit.',
+    warrior: 'Tank or damage. Wears mail, holds the enemy\'s attention or hits hard. Rage builds as you hit and get hit.',
     mage: 'Damage. Fire and frost from range. Fragile, and thirsty for mana.',
-    priest: 'Healer. Keeps the group alive, and can smite when nobody needs healing.',
+    priest: 'Healer or damage. Keeps the group alive, or turns to Shadow and hurts from range.',
     rogue: 'Damage. Fast strikes build combo points; finishers spend them.',
     paladin: 'Healer or tank. Holy knight in mail: seals and Verdict in melee, Holy Light to heal.',
     warlock: 'Damage. Curses and shadow from range, with a demon at your side. Trades health for mana.',
@@ -5063,7 +5067,7 @@
       const rows = h('div', { class: 'list' });
       for (const c of list) {
         rows.append(h('button', { class: 'row' + (c.id === sel ? ' sel-char' : ''), onclick: () => { if (c.id === sel) enter(c.id); else { sel = c.id; draw(); } } },
-          h('div', { class: 'ic' }, img(art('portrait', { cls: c.cls, race: c.race || 'human', skin: c.skin || 0, hair: c.hair || 0, gender: c.gender || 'm' }))),
+          h('div', { class: 'ic sealed' }, img(art('portrait', { cls: c.cls, race: c.race || 'human', skin: c.skin || 0, hair: c.hair || 0, gender: c.gender || 'm' })), D.CLASSES[c.cls] ? img(art('icon', 'class_' + c.cls), 'seal') : null),
           h('div', { class: 't' }, h('b', { class: 'cls-' + c.cls }, c.name), h('small', null, `Level ${c.level} ${D.RACES[c.race] ? D.RACES[c.race].name + ' ' : ''}${D.CLASSES[c.cls] ? D.CLASSES[c.cls].name : c.cls} · ${D.PLACES[c.place] ? D.PLACES[c.place].name : ''}`)),
           h('div', { class: 'r' }, c.id === sel ? 'Play' : '')));
       }
@@ -5129,7 +5133,7 @@
       const races = h('div', { class: 'races' });
       for (const r in D.RACES) if (D.RACES[r].faction === st.faction) races.append(h('button', { class: 'chip' + (st.race === r ? ' gold' : ''), onclick: () => { st.race = r; draw(); } }, D.RACES[r].name, h('small', null, D.RACES[r].startZone)));
       const classes = h('div', { class: 'classes' });
-      for (const c of D.RACES[st.race].classes) classes.append(h('button', { class: st.cls === c ? 'on' : '', onclick: () => { st.cls = c; draw(); } }, img(art('portrait', { cls: c, race: st.race, skin: st.skin, hair: st.hair, gender: st.gender })), h('span', { class: 'cls-' + c }, D.CLASSES[c].name), h('small', null, c === 'paladin' ? 'Heal / Tank' : c === 'druid' ? 'Any role' : c === 'shaman' ? 'Dmg / Heal' : D.CLASSES[c].role === 'dps' ? 'Damage' : D.CLASSES[c].role === 'tank' ? 'Tank' : 'Healer')));
+      for (const c of D.RACES[st.race].classes) classes.append(h('button', { class: st.cls === c ? 'on' : '', onclick: () => { st.cls = c; draw(); } }, sealed(img(art('portrait', { cls: c, race: st.race, skin: st.skin, hair: st.hair, gender: st.gender })), c), h('span', { class: 'cls-' + c }, D.CLASSES[c].name), h('small', null, roleLine(c))));
       const cyc = (k, n, label) => h('button', { class: 'chip', onclick: () => { st[k] = (st[k] + 1) % n; draw(); } }, label, h('small', null, String(st[k] + 1)));
       root.append(
         ...titleMark(), h('div', { class: 'sub' }, `Realm: ${D.REALM}`),
