@@ -138,3 +138,12 @@ test('Warrior and Priest can queue as Damage (#245)', () => {
     G.setRole('dps'); assert.strictEqual(G.role(), 'dps', cls);
   }
 });
+
+test('a Paladin tank has a taunt: Hand of Challenge (#245)', () => {
+  const { C, u, e } = fight(30, 'paladin');
+  assert.ok(G.knownAbilities().includes('hand_of_challenge'), 'on the bar at 30');
+  e.threat = { 999: 5000 }; e.target = 999;
+  assert.strictEqual(use(C, u, 'hand_of_challenge', e), null);
+  assert.strictEqual(e.target, u.uid, 'it attacks the paladin');
+  assert.ok(e.threat[u.uid] > 5000, 'top threat');
+});

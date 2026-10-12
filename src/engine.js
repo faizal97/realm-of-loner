@@ -1256,6 +1256,7 @@
         if (!auraOf(u, 'seal') && try_('seal_righteousness')) return;
         if (has('judgement') && try_('judgement', tgt)) return;
         if (u.hp / u.maxHp < 0.25 && has('divine_protection') && try_('divine_protection')) return;
+        if (loose && has('hand_of_challenge') && Math.random() < 0.4 + 0.6 * (b.skill || 0.5) && try_('hand_of_challenge', loose)) return; // as a Warrior's Taunt (#245)
         if (loose && has('hammer_justice') && try_('hammer_justice', loose)) return;
         return;
       }
