@@ -36,3 +36,13 @@ test('a level 20 bear only gets what it has learned', () => {
   bearFight(20);
   assert.deepStrictEqual(G.knownAbilities().slice().sort(), ['bear_form', 'growl', 'maul', 'swipe']);
 });
+
+test('a bot bear tank uses Swipe on a pack, and Barkskin and Frenzied Regeneration when hurt', () => {
+  const { P } = character(60, 'druid', 'human');
+  const u = E.charUnit(P, 'ally', 'bot', 1); u.bot = { skill: 1, react: 0.2 }; u.role = 'tank';
+  const key = Object.keys(D.MOBS).find((k) => { const M = D.MOBS[k]; return !M.boss && !M.elite && M.lvl && M.lvl[0] <= 60 && M.lvl[1] >= 60; });
+  const C = E.fight([u], [0, 1, 2].map(() => E.mobUnit(key, 60, { hp: 20, dmg: 1.5 })), {});
+  const used = {};
+  for (let i = 0; i < 1500 && !C.over; i++) { E.tick(C, 0.1); for (const e of C.events) if (e.type === 'ability' && e.src === u.uid) used[e.ab] = (used[e.ab] || 0) + 1; C.events.length = 0; }
+  for (const id of ['bear_form', 'swipe', 'barkskin', 'frenzied_regeneration']) assert.ok(used[id], `${id} used (${JSON.stringify(used)})`);
+});

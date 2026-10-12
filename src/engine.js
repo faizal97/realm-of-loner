@@ -1242,8 +1242,15 @@
       if (!tgt || tgt.dead) { tgt = skull || en[0]; u.target = tgt.uid; }
       if (u.cls === 'druid') {
         if (!u.form && has('bear_form') && try_('bear_form')) return;
-        if (u.form === 'bear') {
+        if (u.form === 'bear') { // the whole bear kit (#233; bear abilities aren't in the class list, so knows()): defensives, then the loose one, then threat on the pack
+          const hp = u.hp / u.maxHp, sk = b.skill || 0.5;
+          if (hp < 0.6 && knows(u, 'barkskin') && try_('barkskin')) return;
+          if (hp < 0.4 && knows(u, 'frenzied_regeneration') && try_('frenzied_regeneration')) return;
           if (loose && try_('growl', loose)) return;
+          if (loose && knows(u, 'feral_charge') && loose.pos && u.pos && E.dist(u, loose) > DIST.melee + 1 && try_('feral_charge', loose)) return;
+          const caster = en.find((e) => e.cast && !e.boss && (!e.pos || !u.pos || E.dist(u, e) <= DIST.melee + 1));
+          if ((caster || (loose && !loose.boss)) && knows(u, 'bash') && Math.random() < sk && try_('bash', caster || loose)) return;
+          if (en.length >= 2 && u.res >= 20 && knows(u, 'swipe') && try_('swipe', tgt)) return;
           if (u.res >= 20) try_('maul', tgt);
         } else try_('wrath', tgt);
         return;
