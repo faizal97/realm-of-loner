@@ -635,6 +635,7 @@
     const ab = D.ABILITIES[abId];
     if (!ab) return 'Unknown';
     if (u.dead) return 'You are dead';
+    { const fz = u.auras.find((a) => a.frozen); if (fz) return abId === fz.id ? null : `In ${D.ABILITIES[fz.id].name}`; } // frozen (Ice Block, #245): only breaking out
     if (stunned(C, u) && !ab.freeOf) return 'Stunned';
     if (u.cast) return E.castingText(u.cast.ab);
     if (ab.gcd !== false && u.gcdUntil > C.t) return E.GCD_WHY;
@@ -658,6 +659,7 @@
 
   E.use = function (C, u, abId, tgtUid) {
     const ab = D.ABILITIES[abId];
+    { const fz = u.auras.find((a) => a.frozen); if (fz && fz.id === abId) { u.auras = u.auras.filter((a) => a !== fz); ev(C, { type: 'ability', src: u.uid, ab: abId }); return null; } } // using it again breaks out
     let tgt = tgtUid != null ? C.units[tgtUid] : null;
     if (ab.target === 'self' || ab.target === 'party' || ab.target === 'aoe') tgt = u;
     if (ab.target === 'ally' && !tgt) tgt = u;
@@ -784,6 +786,7 @@
       if (b.seal) { extra.seal = (b.seal.base + b.seal.perLvl * L) * (u.st.wSpeed / 2.5) * bp; extra.sealSchool = b.seal.school || 'holy'; }
       if (b.thorns) extra.thorns = { dmg: Math.round((b.thorns.base + b.thorns.perLvl * L) * bp), charges: b.thorns.charges };
       if (b.immune) extra.immune = true;
+      if (b.frozen) { extra.frozen = true; u.cast = null; }
       if (b.speed) extra.speed = b.speed; // distance: run faster (Sprint)
       if (b.group) for (const w of who) w.auras = w.auras.filter((a) => a.id === b.id || ((D.ABILITIES[a.id] || {}).buff || {}).group !== b.group); // one of a group at a time (aspects, demon armors)
       for (const w of who) addAura(C, w, Object.assign({ id: b.id, until: C.t + dur, stats: Object.keys(stats).length ? stats : null, persistent: dur >= 60 }, extra));
@@ -1439,6 +1442,7 @@
         continue;
       }
       if (stunned(C, u)) { if (u.fleeUntil > C.t) moveTick(C, u, dt); if (u.kind === 'bot') botThink(C, u); continue; }
+      if (u.auras.some((a) => a.frozen)) continue; // in Ice Block (#245): no moving, casting or auto attack
       // AI
       if (u.kind === 'mob') { pickMobTarget(C, u); specials(C, u, dt); }
       else if (u.kind === 'bot') botThink(C, u);

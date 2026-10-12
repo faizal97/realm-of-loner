@@ -222,3 +222,19 @@ test('the Retribution Oath talents cover every Oath, Oath of Command too (#245)'
   assert.ok(Math.abs(b.v / a.v - 1.15) < 0.001, `Improved Oaths: ${a.v} → ${b.v}`);
   assert.ok(b.cost < a.cost, `Benediction: ${a.cost} → ${b.cost}`);
 });
+
+test('in Ice Block you cannot cast or attack, and using it again breaks out (#245)', () => {
+  const { C, u, e } = fight(60, 'mage');
+  u.cds.ice_block = 0; assert.strictEqual(E.use(C, u, 'ice_block'), null);
+  assert.ok(u.auras.some((a) => a.id === 'ice_block' && a.immune), 'immune');
+  assert.strictEqual(use(C, u, 'fire_blast', e), 'In Ice Block');
+  const hp0 = e.hp; u.auto = true; u.target = e.uid;
+  for (let i = 0; i < 30; i++) E.tick(C, 0.1);
+  assert.strictEqual(e.hp, hp0, 'no wand shots inside');
+  assert.strictEqual(E.use(C, u, 'ice_block'), null, 'break out');
+  assert.ok(!u.auras.some((a) => a.id === 'ice_block'), 'out');
+  assert.strictEqual(use(C, u, 'fire_blast', e), null, 'casting again');
+  // left alone it ends after 8 sec
+  u.cds.ice_block = 0; E.use(C, u, 'ice_block'); for (let i = 0; i < 85; i++) E.tick(C, 0.1);
+  assert.ok(!u.auras.some((a) => a.id === 'ice_block'), 'ends by itself');
+});
