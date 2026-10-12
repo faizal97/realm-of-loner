@@ -9,7 +9,7 @@ A Druid heals, tanks or deals damage, and chooses which each time it joins a gro
 ### At a glance
 - Good at: any role with the same gear; only the stats you look for change.
 - Good at: heals over time that stack on one target.
-- Watch out for: no spells in [[Bear Form]], so a bear can't heal itself or cast [[Barkskin]].
+- Watch out for: no spells in [[Bear Form]] apart from [[Barkskin]] and [[Frenzied Regeneration]].
 - Watch out for: mana only refills once 5 sec have passed since your last spell.
 
 ### Leveling
@@ -54,7 +54,7 @@ Restoration first: all 19 points fit. **Gift of Nature** and **Nature's Swiftnes
 
 ## Tank
 ### Quick start
-- In a fight: [[Barkskin]], then [[Bear Form]].
+- In a fight: [[Bear Form]], then [[Barkskin]] when the hits come.
 - [[Maul]] your target, [[Swipe]] when there is more than one enemy.
 - [[Growl]] anything that turns to a teammate.
 
@@ -67,13 +67,13 @@ Restoration first: all 19 points fit. **Gift of Nature** and **Nature's Swiftnes
 
 ### How to play it
 - [[Bear Form]] costs 55 mana and only works in a fight. Rage starts at 0 each time.
-- No spells in [[Bear Form]]: cast [[Barkskin]] before you shift, so its armor is multiplied for its 15 sec.
+- [[Barkskin]] and [[Frenzied Regeneration]] work in [[Bear Form]]. Your other spells don't.
 - [[Maul]] and [[Swipe]] both add extra threat. Swipe hits every enemy near you.
 - [[Growl]] has a 10 sec cooldown and no global cooldown.
 
 ### When it goes wrong
 - [[Bash]] (level 32) stuns your target for 4 sec; [[Feral Charge]] (level 44) closes the distance and stuns for 3. Stuns don't work on bosses.
-- [[Frenzied Regeneration]] (level 38) heals you over 10 sec, but only out of [[Bear Form]]. Leaving is free; coming back costs 55 mana and all your rage.
+- [[Frenzied Regeneration]] (level 38) heals you over 10 sec, in [[Bear Form]] or out of it. 3 min cooldown.
 
 ### Talents
 Feral first: all 19 points fit. **Thick Hide** raises your armor, **Feral Instinct** your threat, and **Ferocity** makes [[Maul]] and [[Swipe]] cheaper. **Heart of the Wild** adds 5% Stamina and 3% physical damage.
