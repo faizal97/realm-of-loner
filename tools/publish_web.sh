@@ -28,7 +28,12 @@ put_music() { rm -rf "$1/music"; if [ -d "$ROOT/dist/music" ] && [ -n "$(ls -A "
 ver_of() { [ -f "$1" ] && grep -o 'AZ_VERSION *= *"[^"]*"' "$1" | head -1 | sed 's/.*"\(.*\)"/\1/' || echo ""; }
 mkdir -p "$TMP/site/beta"
 # the database (#231): rebuilt from this checkout's game data and replaced as a whole
-put_guide() { node "$ROOT/tools/build_guide.js" >/dev/null && rm -rf "$TMP/site/guide" && cp -R "$ROOT/dist/guide" "$TMP/site/guide"; }
+# A hand-written guide checked for an older minor version than the latest release stops the publish (guides/*.md).
+put_guide() {
+  node "$ROOT/tools/build_guide.js" --check || { echo "Re-check those guides against the game, raise their checked: version, then publish again." >&2; exit 1; }
+  node "$ROOT/tools/build_guide.js" >/dev/null || exit 1
+  rm -rf "$TMP/site/guide" && cp -R "$ROOT/dist/guide" "$TMP/site/guide"
+}
 if [ "$PAGES" = 1 ]; then
   WHERE="web pages"
 elif [ "$GUIDE" = 1 ]; then

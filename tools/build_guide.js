@@ -25,7 +25,7 @@ const money = (c) => { const g = Math.floor(c / 10000), s = Math.floor(c / 100) 
 const cap = (s) => s[0].toUpperCase() + s.slice(1);
 const statName = { str: 'Strength', agi: 'Agility', sta: 'Stamina', int: 'Intellect', spi: 'Spirit' };
 const WTYPE = { sword: 'Sword', axe: 'Axe', mace: 'Mace', dagger: 'Dagger', staff: 'Staff', bow: 'Bow', gun: 'Gun', crossbow: 'Crossbow', wand: 'Wand' };
-const KIND = { item: 'Items', mob: 'Creatures', quest: 'Quests', npc: 'People', place: 'Places', zone: 'Zones', dungeon: 'Dungeons', act: 'Group finder', class: 'Classes', race: 'Races', ability: 'Abilities', prof: 'Professions', collect: 'Collections' };
+const KIND = { item: 'Items', mob: 'Creatures', quest: 'Quests', npc: 'People', place: 'Places', zone: 'Zones', dungeon: 'Dungeons', act: 'Group finder', class: 'Classes', race: 'Races', ability: 'Abilities', guide: 'Guides', prof: 'Professions', collect: 'Collections' };
 const push = (m, key, v) => (m[key] = m[key] || []).push(v);
 // a creature family as players read it: the renamed word where there is one (tools/rename_v10.json: Murloc → its new name)
 const RENAME = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/rename_v10.json'), 'utf8'));
@@ -377,11 +377,72 @@ const FILTERS = {
   rank: { 'reward track': 'Reward tracks', mount: 'Mounts', title: 'Titles', companion: 'Companions', heirloom: 'Heirlooms', worldboss: 'World boss', bg: 'Battleground', festival: 'Festival', boss: 'Boss', elite: 'Elite', named: 'Named', normal: 'Normal', dungeon: 'Dungeon', group: 'Group', solo: 'Solo', town: 'Town', wild: 'Wilds', raid: 'Raid' },
 };
 
+// ---------------------------------------------------------------- guides (hand-written, guides/<class>.md)
+// The database is generated; a guide is written by hand, so it says which version it was written for and last checked
+// against. A guide checked for an older minor version than the game shows a warning, and `--check` fails on it (the
+// publish gate in tools/publish_web.sh). Format: frontmatter (class, written, checked), an intro, then one `## Role` per
+// tab with `### ` headings, paragraphs, `- ` and `1. ` lists and **bold**. [[Name]] or [[kind/id]] or [[kind/id|text]]
+// links to the database; a link that finds nothing, or more than one page, stops the build.
+// the version players have: the latest release tag (never a beta), so a guide is judged against the live game
+let VERSION = '';
+try { VERSION = require('child_process').execFileSync('git', ['describe', '--tags', '--abbrev=0', '--match', 'v*', '--exclude', '*-*'], { cwd: ROOT, encoding: 'utf8' }).trim().replace(/^v/, ''); } catch (e) { /* no tags: fall back to the app's own number */ }
+if (!VERSION) VERSION = (fs.readFileSync(path.join(ROOT, 'app/pubspec.yaml'), 'utf8').match(/^version:\s*([^+\s-]+)/m) || [])[1] || '';
+const minorOf = (v) => (String(v).match(/^(\d+)\.(\d+)/) || [, 0, 0]).slice(1, 3).map(Number);
+const olderMinor = (a, b) => { const [a1, a2] = minorOf(a), [b1, b2] = minorOf(b); return a1 < b1 || (a1 === b1 && a2 < b2); };
+const short = (v) => minorOf(v).join('.');
+const byName = {};
+for (const key of Object.keys(P)) push(byName, P[key].n.toLowerCase(), key);
+const guideErrors = [], stale = [];
+function inline(s, file) {
+  return s.split(/(\[\[[^\]]+\]\]|\*\*[^*]+\*\*)/).filter(Boolean).map((t) => {
+    if (t.startsWith('**')) return { b: t.slice(2, -2) };
+    if (!t.startsWith('[[')) return t;
+    const [ref, text] = t.slice(2, -2).split('|').map((x) => x.trim());
+    let key = P[ref] ? ref : null;
+    if (!key) { const hits = byName[ref.toLowerCase()] || []; if (hits.length === 1) key = hits[0]; else guideErrors.push(`${file}: [[${ref}]] ${hits.length ? 'could be ' + hits.join(', ') : 'is not in the database'}`); }
+    if (!key) return text || ref;
+    const [kind, id] = key.split('/'), c = L(kind, id);
+    return text ? Object.assign(c, { t: text }) : c;
+  });
+}
+const gdir = process.env.GUIDES_DIR || path.join(ROOT, 'guides'); // GUIDES_DIR: the test's own broken guides
+for (const f of fs.existsSync(gdir) ? fs.readdirSync(gdir).filter((x) => x.endsWith('.md')).sort() : []) {
+  const src = fs.readFileSync(path.join(gdir, f), 'utf8'), m = src.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+  if (!m) { guideErrors.push(`${f}: no frontmatter`); continue; }
+  const meta = Object.fromEntries(m[1].split('\n').map((l) => l.split(/:\s*/)).map(([a, ...b]) => [a.trim(), b.join(':').trim()]));
+  const cls = meta.class;
+  if (!D.CLASSES[cls] || !meta.written || !meta.checked) { guideErrors.push(`${f}: needs class (a class id), written and checked`); continue; }
+  const intro = [], tabs = []; let blocks = intro, para = [];
+  const flush = () => { if (para.length) blocks.push({ t: 'p', c: inline(para.join(' '), f) }); para = []; };
+  for (const line of m[2].split('\n')) {
+    const l = line.trim();
+    if (!l) { flush(); continue; }
+    let x;
+    if ((x = l.match(/^## (.+)/))) { flush(); tabs.push({ h: x[1], b: (blocks = []) }); }
+    else if ((x = l.match(/^### (.+)/))) { flush(); blocks.push({ t: 'h', c: x[1] }); }
+    else if ((x = l.match(/^(- |\d+\. )(.+)/))) {
+      flush(); const t = x[1] === '- ' ? 'ul' : 'ol', last = blocks[blocks.length - 1];
+      (last && last.t === t ? last.c : (blocks.push({ t, c: [] }), blocks[blocks.length - 1].c)).push(inline(x[2], f));
+    } else para.push(l);
+  }
+  flush();
+  const old = olderMinor(meta.checked, VERSION);
+  if (old) stale.push(`${f}: checked for ${short(meta.checked)}, the game is ${short(VERSION)}`);
+  const name = D.CLASSES[cls].name;
+  P['guide/' + cls] = { k: 'guide', n: name + ' guide', ic: 'class_' + cls, sub: tabs.map((t) => t.h).join(', '), g: { w: short(meta.written), c: short(meta.checked), old, intro, tabs } };
+  const cp = P['class/' + cls]; if (cp) (cp.facts = cp.facts || []).unshift(['Guide', L('guide', cls)]);
+}
+if (guideErrors.length) { console.error(guideErrors.join('\n')); process.exit(1); }
+if (process.argv.includes('--check')) {
+  if (stale.length) { console.error('Guides to re-check before this release:\n' + stale.join('\n')); process.exit(1); }
+  console.log(`guides: ${Object.keys(P).filter((x) => x.startsWith('guide/')).length} checked for ${short(VERSION)}`); process.exit(0);
+}
+
 // ---------------------------------------------------------------- lists and search
 const lists = {};
 for (const kind of Object.keys(KIND)) {
   const ids = Object.keys(P).filter((x) => P[x].k === kind).map((x) => x.split('/')[1]);
-  const lv = (id) => kind === 'item' ? D.ITEMS[id].lvl || 0 : kind === 'dungeon' ? D.DUNGEONS[id].minLvl : kind === 'ability' ? D.ABILITIES[id].lvl || 0 : kind === 'act' ? D.ACTIVITIES[id].minLvl : lvlOf(kind, id);
+  const lv = (id) => kind === 'item' ? D.ITEMS[id].lvl || 0 : kind === 'dungeon' ? D.DUNGEONS[id].minLvl : kind === 'ability' ? D.ABILITIES[id].lvl || 0 : kind === 'act' ? D.ACTIVITIES[id].minLvl : kind === 'guide' ? 0 : lvlOf(kind, id);
   const nm = (id) => P[kind + '/' + id].n.replace(/<name>,?/, '').trim(), grp = (id) => (kind === 'collect' ? P['collect/' + id].sub : '');
   lists[kind] = ids.sort((a, b) => grp(a).localeCompare(grp(b)) || lv(a) - lv(b) || nm(a).localeCompare(nm(b)));
 }
@@ -408,7 +469,6 @@ for (const [id] of Object.entries(D.PLACES)) P['place/' + id].scn = sceneFor(id)
 for (const id of Object.keys(D.REGIONS)) { const pls = Object.keys(D.PLACES).filter((pl) => D.PLACES[pl].region === id); const town = pls.find((pl) => D.PLACES[pl].safe) || pls[0]; if (town) P['zone/' + id].scn = sceneFor(town); }
 for (const p of Object.values(P)) if (p.scn) { if (!scenes.has(p.scn)) { let s = null; try { s = ART.scene(p.scn); } catch (e) { s = null; } if (s) { fs.writeFileSync(path.join(OUT, 'scene', p.scn + '.svg'), svg(s)); scenes.add(p.scn); } else { delete p.scn; continue; } } }
 for (const p of Object.values(P)) if (p.ic && !fs.existsSync(path.join(OUT, 'icon', p.ic + '.svg'))) { let s = null; try { s = ART.icon(p.ic); } catch (e) { s = null; } if (s) { fs.writeFileSync(path.join(OUT, 'icon', p.ic + '.svg'), svg(s)); icons++; } else delete p.ic; }
-const VERSION = (fs.readFileSync(path.join(ROOT, 'app/pubspec.yaml'), 'utf8').match(/^version:\s*([^+\s]+)/m) || [])[1] || '';
 const data = JSON.stringify({ v: VERSION, kinds: KIND, lists, filters: FILTERS, pages: P }).replace(/</g, '\\u003c');
 const tpl = fs.readFileSync(path.join(ROOT, 'web/guide/index.html'), 'utf8');
 const html = tpl.replace('/*FONTS*/', fs.readFileSync(path.join(ROOT, 'fonts/fonts.local.css'), 'utf8')).replace('/*DATA*/null', data);

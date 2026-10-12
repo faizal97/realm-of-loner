@@ -90,6 +90,25 @@ a.ln { color: #f3d68a; text-decoration: underline dotted rgba(243, 214, 138, .45
 .more { margin: 14px 0; width: 100%; padding: 11px; font: 600 15px var(--body); color: var(--gold); background: var(--panel); border: 1px solid var(--edge); border-radius: 6px; cursor: pointer; }
 .note { color: var(--muted); font-size: 14px; margin: 22px 0 0; }
 .back { display: inline-block; margin-top: 14px; color: var(--muted); font-size: 15px; }
+/* a guide: hand-written prose that links into the database; the roles are tabs */
+.stamp { display: flex; flex-wrap: wrap; gap: 4px 18px; color: var(--muted); font-size: 14px; margin: -6px 0 16px; }
+.stamp b { color: var(--text); font-weight: 600; }
+.stale { background: #2a1a0c; border: 1px solid #8a5a22; border-radius: 6px; padding: 10px 12px; margin: 0 0 16px; color: #f3d6a0; }
+.guide p, .guide li { font-size: 17px; line-height: 1.55; }
+.guide p { margin: 0 0 14px; }
+.guide ul, .guide ol { margin: 0 0 16px; padding-left: 22px; } .guide li { margin: 0 0 6px; } .guide li::marker { color: var(--edge-hi); }
+.guide h3 { font: 400 18px/1.2 var(--display); color: var(--gold); margin: 24px 0 8px; }
+.guide strong { color: #fff4dc; font-weight: 700; }
+.tabs { display: flex; gap: 6px; margin: 22px 0 4px; border-bottom: 1px solid var(--edge); position: sticky; top: var(--toph, 104px); z-index: 4; background: var(--ink); padding-top: 6px; }
+.tabs button { flex: 1; font: 400 17px var(--display); color: var(--muted); background: var(--panel); border: 1px solid #3a2c1a; border-bottom: 0; border-radius: 6px 6px 0 0; padding: 9px 6px; cursor: pointer; }
+.tabs button[aria-selected="true"] { color: var(--gold); background: var(--panel-2); border-color: var(--edge-hi); }
+/* the card a guide link shows: the game's own tooltip (hover with a mouse, the first tap on a phone) */
+.pop { position: absolute; z-index: 9; background: #0a0818; width: min(320px, calc(100vw - 32px)); margin: 0; pointer-events: auto; }
+.pop[hidden] { display: none; }
+.pop .ph { display: grid; grid-template-columns: 36px 1fr; gap: 10px; align-items: center; margin-bottom: 4px; }
+.pop .ph img { width: 36px; height: 36px; border-radius: 4px; border: 1px solid #5a5a70; object-fit: cover; }
+.pop .open { display: block; margin-top: 8px; padding: 8px; text-align: center; color: var(--gold); border: 1px solid var(--edge); border-radius: 4px; background: var(--panel); }
+@media (hover: hover) { .pop .open { display: none; } }
 a:focus-visible, button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 3px; }
 @media (max-width: 420px) { .art { width: 96px; height: 96px; } .head h1 { font-size: 23px; } .facts div { grid-template-columns: 6.5em 1fr; } }
 </style>
@@ -106,7 +125,7 @@ const main = document.getElementById('main'), q = document.getElementById('q');
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const art = (p, cls) => p.scn && cls !== 'ic' && cls !== 'art' ? `<img class="${cls || 'ic'} scn" src="scene/${esc(p.scn)}.svg" alt="" loading="lazy">` : p.ic ? `<img class="${cls || 'ic'}" src="icon/${esc(p.ic)}.svg" alt="" loading="lazy">` : p.mob ? `<img class="${cls || 'ic'}" src="mob/${esc(p.mob)}.svg" alt="" loading="lazy">` : '';
 const link = (c) => Array.isArray(c) ? c.map(link).join(', ') : c && typeof c === 'object' ? `<a class="ln${c.q != null ? ' q' + c.q : ''}" href="#${esc(c.l)}">${c.i ? `<img class="li" src="icon/${esc(c.i)}.svg" alt="" loading="lazy" onerror="this.remove()">` : ''}${esc(c.t)}</a>` : esc(c == null ? '' : c);
-const SING = { item: 'Item', mob: 'Creature', quest: 'Quest', npc: 'Person', place: 'Place', zone: 'Zone', dungeon: 'Dungeon', act: 'Group finder', class: 'Class', race: 'Race', ability: 'Ability', prof: 'Profession', collect: 'Collection' };
+const SING = { item: 'Item', mob: 'Creature', quest: 'Quest', npc: 'Person', place: 'Place', zone: 'Zone', dungeon: 'Dungeon', act: 'Group finder', class: 'Class', race: 'Race', ability: 'Ability', prof: 'Profession', collect: 'Collection', guide: 'Guide' };
 const fmt = (n) => n.toLocaleString('en');
 
 function row(key, kind) {
@@ -116,8 +135,8 @@ function row(key, kind) {
 
 function home() {
   document.title = 'Realm of Loner Database';
-  const GROUPS = [['Gear and loot', ['item', 'collect']], ['The world', ['zone', 'place', 'dungeon', 'act']], ['Who lives there', ['mob', 'npc', 'quest']], ['Your character', ['class', 'race', 'ability', 'prof']]];
-  main.innerHTML = GROUPS.map(([g, ks]) => `<h2>${g}</h2><div class="browse">${ks.filter((k) => DB.kinds[k]).map((k) => `<a href="#list/${k}">${DB.kinds[k]}<span>${fmt(DB.lists[k].length)}</span></a>`).join('')}</div>`).join('') + `
+  const GROUPS = [['Guides', ['guide']], ['Gear and loot', ['item', 'collect']], ['The world', ['zone', 'place', 'dungeon', 'act']], ['Who lives there', ['mob', 'npc', 'quest']], ['Your character', ['class', 'race', 'ability', 'prof']]];
+  main.innerHTML = GROUPS.filter(([, ks]) => ks.some((k) => DB.lists[k] && DB.lists[k].length)).map(([g, ks]) => `<h2>${g}</h2><div class="browse">${ks.filter((k) => DB.kinds[k]).map((k) => `<a href="#list/${k}">${DB.kinds[k]}<span>${fmt(DB.lists[k].length)}</span></a>`).join('')}</div>`).join('') + `
     <p class="note">From the game's own data, version ${esc(DB.v)}. Quest rewards are made for your class when you finish, so they are listed by type.</p>`;
 }
 
@@ -160,8 +179,9 @@ function list(kind, query, shown) {
   const m = document.getElementById('more'); if (m) m.onclick = () => { const y = scrollY; list(kind, query, shown + PAGE); scrollTo(0, y); };
 }
 
-function page(key) {
+function page(key, qs) {
   const p = DB.pages[key]; if (!p) return home();
+  if (p.g) return guide(key, p, qs);
   document.title = p.n + ' · Realm of Loner Database';
   const big = p.k === 'mob' && p.mob;
   let out = (p.scn ? `<img class="banner" src="scene/${esc(p.scn)}.svg" alt="">` : '') + `<div class="head"${p.scn ? ' style="grid-template-columns:1fr"' : ''}>${big ? art(p, 'art') : p.scn ? '' : art(p) || ''}<div><div class="kind">${SING[p.k]}</div><h1 class="${p.q != null ? 'q' + p.q : ''}">${esc(p.n)}</h1>${p.sub ? `<div class="sub">${esc(p.sub)}</div>` : ''}</div></div>`;
@@ -175,6 +195,53 @@ function page(key) {
   out += `<a class="back" href="#list/${p.k}">All ${esc(DB.kinds[p.k].toLowerCase())}</a>`;
   main.innerHTML = out;
 }
+
+// a guide: the intro, then one tab per role (the tab is in the link: #guide/druid?tab=tank)
+const inl = (c) => c.map((x) => typeof x === 'string' ? esc(x) : x.b != null ? `<strong>${esc(x.b)}</strong>` : link(x)).join('');
+const blocks = (bs) => bs.map((b) => b.t === 'p' ? `<p>${inl(b.c)}</p>` : b.t === 'h' ? `<h3>${esc(b.c)}</h3>` : `<${b.t}>${b.c.map((i) => `<li>${inl(i)}</li>`).join('')}</${b.t}>`).join('');
+const slug = (h) => h.toLowerCase().replace(/[^a-z]+/g, '-');
+function guide(key, p, qs) {
+  const g = p.g, want = new URLSearchParams(qs || '').get('tab');
+  const at = Math.max(0, g.tabs.findIndex((t) => slug(t.h) === want));
+  document.title = p.n + ' · Realm of Loner Database';
+  main.innerHTML = `<div class="head">${art(p) || ''}<div><div class="kind">Guide</div><h1>${esc(p.n)}</h1></div></div>
+    <div class="stamp"><span>Written for <b>${esc(g.w)}</b></span><span>Checked for <b>${esc(g.c)}</b></span></div>
+    ${g.old ? `<p class="stale">Last checked for ${esc(g.c)}. The game is ${esc(DB.v.replace(/^(\d+\.\d+).*/, '$1'))} now, so some of this may be out of date.</p>` : ''}
+    <div class="guide">${blocks(g.intro)}
+    ${g.tabs.length ? `<div class="tabs" role="tablist">${g.tabs.map((t, i) => `<button type="button" role="tab" aria-selected="${i === at}" data-i="${i}">${esc(t.h)}</button>`).join('')}</div><div id="panel" role="tabpanel">${blocks(g.tabs[at].b)}</div>` : ''}</div>
+    <a class="back" href="#list/guide">All guides</a>`;
+  document.documentElement.style.setProperty('--toph', document.querySelector('.top').offsetHeight + 'px');
+  main.querySelectorAll('.tabs button').forEach((b) => b.onclick = () => {
+    history.replaceState(null, '', `#${key}?tab=${slug(g.tabs[b.dataset.i].h)}`);
+    const y = scrollY; guide(key, p, 'tab=' + slug(g.tabs[b.dataset.i].h)); scrollTo(0, Math.min(y, main.querySelector('.tabs').offsetTop - 8));
+  });
+}
+
+// a guide link shows its card: on hover with a mouse; on a phone the first tap shows it (with Open), the second opens
+const pop = document.createElement('div'); pop.className = 'pop tooltip'; pop.hidden = true; document.body.appendChild(pop);
+const fine = matchMedia('(hover: hover)').matches;
+let popFor = null;
+function card(a) {
+  const key = a.getAttribute('href').slice(1), p = DB.pages[key]; if (!p) return;
+  const pic = p.mob ? `mob/${p.mob}.svg` : p.ic ? `icon/${p.ic}.svg` : p.scn ? `scene/${p.scn}.svg` : '';
+  const lines = p.tip ? p.tip.slice(1).map(([c, x, y]) => c === 'two' ? `<div class="two"><span>${esc(x)}</span><span>${esc(y || '')}</span></div>` : `<div class="${esc(c)}">${esc(x)}</div>`).join('')
+    : (p.facts || []).slice(0, 4).map(([l, v]) => `<div class="dim">${esc(l)}: ${esc(Array.isArray(v) ? v.map((c) => c.t || c).join(', ') : v && v.t ? v.t : v)}</div>`).join('');
+  pop.innerHTML = `<div class="ph">${pic ? `<img src="${esc(pic)}" alt="">` : '<span></span>'}<div><div class="nm ${p.q != null ? 'q' + p.q : ''}">${esc(p.n)}</div><div class="dim">${esc([SING[p.k], p.sub].filter(Boolean).join(', '))}</div></div></div>${lines}<a class="open" href="#${esc(key)}">Open ${esc(SING[p.k].toLowerCase())}</a>`;
+  pop.hidden = false; popFor = a;
+  const r = a.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+  const below = r.bottom + 8 + h < innerHeight || r.top - 8 - h < 0;
+  pop.style.left = Math.max(16, Math.min(scrollX + r.left, scrollX + innerWidth - w - 16)) + 'px';
+  pop.style.top = (below ? scrollY + r.bottom + 8 : scrollY + r.top - 8 - h) + 'px';
+}
+const hidePop = () => { pop.hidden = true; popFor = null; };
+main.addEventListener('mouseover', (e) => { const a = fine && e.target.closest('.guide a.ln'); if (a && a !== popFor) card(a); });
+main.addEventListener('mouseout', (e) => { const a = fine && e.target.closest('.guide a.ln'); if (a && !a.contains(e.relatedTarget)) hidePop(); });
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('.guide a.ln');
+  if (a && !fine && a !== popFor) { e.preventDefault(); e.stopImmediatePropagation(); card(a); return; }
+  if (!e.target.closest('.pop')) hidePop();
+}, true);
+addEventListener('hashchange', hidePop);
 
 // search: names that start with the words rank first, then names that contain them; at most 60
 const ALL = Object.keys(DB.pages).map((k) => [k, DB.pages[k].n.toLowerCase()]);
@@ -202,7 +269,7 @@ backB.onclick = () => {
 function route() {
   backB.hidden = !location.hash.slice(1) && !q.value;
   const h = decodeURIComponent(location.hash.slice(1));
-  if (!h) home(); else if (h.startsWith('list/')) { const [k, qs] = h.slice(5).split('?'); list(k, qs); } else page(h);
+  if (!h) home(); else if (h.startsWith('list/')) { const [k, qs] = h.slice(5).split('?'); list(k, qs); } else { const [k, qs] = h.split('?'); page(k, qs); }
 }
 let timer;
 q.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => { search(q.value); backB.hidden = !q.value && !location.hash.slice(1); }, 80); });
