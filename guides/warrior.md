@@ -4,7 +4,7 @@ by: official
 written: 10.11.0
 checked: 10.11.0
 ---
-A Warrior fights up close with a weapon and takes the hits for the group. In the group finder a Warrior always joins as the tank. You wear mail (or leather and cloth), use a sword, axe or mace, and fight with rage.
+A Warrior fights up close with a weapon, and in a group either takes the hits as the tank or deals damage. You choose the role each time you join a group; your gear stays the same. You wear mail (or leather and cloth), use a sword, axe or mace, and fight with rage.
 
 ### At a glance
 - Good at: holding several enemies. [[Thunder Clap]] hits all within 8 m with 2.5 times the threat.
@@ -73,3 +73,33 @@ As the tank, your damage makes 1.9 times the threat.
 
 ### Talents
 Protection first: it holds your threat and survival, and all 16 points fit by level 25. **Defiance** adds 15% threat, **Toughness** 10% armor, **Iron Will** 10% Stamina. The **Last Stand** talent (not the ability) cuts damage taken by 8% and turns on **Unyielding**. **Deflection** (Arms) adds 5% dodge for more Unyielding.
+
+## Damage
+### Quick start
+- [[Grievous Strike]] (level 36) whenever it is ready, [[Overpower]] whenever it glows.
+- [[Slam]] (level 34) when **Battle Fury** lights it: instant and free.
+- Let the tank hit first: as Damage your threat isn't raised, so an early burst pulls enemies onto you.
+
+### Stats
+- **Strength**: 2 attack power per point. It adds to every weapon hit, more on a slow weapon.
+- **Agility**: 1% crit and 1% dodge per 20. A crit hits for double.
+- Most of your attacks are your weapon plus a bonus, so a better weapon raises almost everything.
+
+### How to play it
+1. [[Grievous Strike]]: weapon plus 205 for 30 rage, 6 sec cooldown.
+2. [[Overpower]] when it glows: weapon plus 152 for 5 rage.
+3. [[Slam]]: weapon plus 141 for 15 rage, a 1.5 sec cast. Lit by Battle Fury it is instant and free.
+4. [[Heroic Strike]] with spare rage.
+
+- Two or more enemies: [[Whirlwind]] (level 28), [[Cleave]], and [[Bladestorm]] (level 56): weapon plus 284 on everything within 8 m, 90 sec cooldown.
+- **Blood Frenzy** (the **Death Wish** talent): your crits can make the next [[Heroic Strike]] cost no rage.
+- **Sweeping Blows** (the **Sweeping Strikes** talent): [[Cleave]] and [[Thunder Clap]] can make [[Whirlwind]] ready and free.
+- Boss cooldowns: [[Recklessness]] (level 48) and [[Berserker Rage]] (level 38) together; [[Bloodrage]] when you are short of rage.
+
+### When it goes wrong
+- An enemy turns on you: the tank needs a moment to take it back. You have no way to drop threat.
+- [[Intimidating Shout]] makes everything within 8 m cower for 4 sec, not bosses.
+- [[Shield Wall]] and [[Last Stand]] work in any role: 1,380 absorbed, or about 1,500 healed.
+
+### Talents
+Fury first: **Cruelty** (+5% crit), **Unbridled Wrath** (10% more physical damage), **Enrage** (9% faster attacks) and **Death Wish**. Then Arms: **Weapon Specialization** adds 6% physical damage and **Sweeping Strikes** helps against groups. At 60 every Warrior talent fits anyway.

@@ -4,7 +4,7 @@ by: official
 written: 10.11.0
 checked: 10.11.0
 ---
-A Priest is a healer: in the group finder you always join as the healer. On your own you fight with Holy and Shadow spells and heal yourself between hits. Priests wear cloth, use a mace or a staff, and cast with mana.
+A Priest heals or deals Shadow damage, and chooses the role each time it joins a group. On your own you fight with Holy and Shadow spells and heal yourself between hits. Priests wear cloth, use a mace or a staff, and cast with mana.
 
 ### At a glance
 - Good at: keeping one target alive with big, efficient heals and shields.
@@ -76,3 +76,34 @@ Save [[Surge of Power]] (level 44) for the hardest part of a fight: spell power 
 
 ### Talents
 Holy first, all 19 points: **Spiritual Healing** and **Inspiration** raise your healing, **Divine Fury** speeds up [[Heal]] and [[Lesser Heal]] by 0.5 sec. Then Discipline: **Mental Agility** makes every spell 10% cheaper.
+
+## Damage
+### Quick start
+- [[Shadowform]] (level 36) before the fight, then [[Word of Pain]] on your target.
+- [[Mind Blast]] when **Dark Thoughts** lights it; [[Mind Flay]] (level 26) to fill.
+- Too much threat: [[Fade]] clears it.
+
+### Stats
+- **Spell power** adds to every spell.
+- **Intellect**: 15 mana per point, and 1% spell crit per 60.
+- **Spirit** refills mana 5 sec after your last spell that cost mana.
+
+### How to play it
+1. [[Word of Pain]]: the most damage for its mana. Recast it only when it ends.
+2. [[Holy Fire]] (level 20): a 3 sec cast that also burns for 10 sec.
+3. [[Penance]] (level 56) when ready: instant.
+4. [[Mind Blast]] when it glows: ready and instant.
+5. [[Mind Flay]] to fill. With **Creeping Dark** lit it costs no mana.
+
+- [[Shadowform]]: 73 spell power and 150 armor for 30 min, on yourself.
+- [[Vampiric Embrace]] (level 52) heals you over 20 sec.
+- **Creeping Dark** needs the **Shadowform** talent.
+
+### When it goes wrong
+- [[Fade]] (level 24): enemies lose all threat on you. 30 sec cooldown.
+- [[Word of Warding]] on yourself when an enemy reaches you.
+- [[Psychic Scream]]: enemies within 8 m flee for 3 sec. Not bosses.
+- [[Desperate Prayer]] (level 38): an instant heal for no mana.
+
+### Talents
+Shadow first: **Shadow Focus**, **Darkness** and the **Shadowform** talent each raise your Shadow damage, 26% together, and the Shadowform talent also cuts damage taken by 5%. **Improved Word of Pain** adds 30% to Word of Pain. Then Discipline: **Mental Agility** makes every spell 10% cheaper.
