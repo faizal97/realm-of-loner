@@ -215,3 +215,10 @@ test('Holy Shock heals a teammate and hurts an enemy; a healer aims it at their 
   G.useAbility('holy_shock');
   assert.ok(C.events.some((x) => x.type === 'dmg' && x.ab === 'holy_shock'), 'a tank hurts with it');
 });
+
+test('the Retribution Oath talents cover every Oath, Oath of Command too (#245)', () => {
+  const seal = (talents) => { const { C, u } = fight(60, 'paladin', talents); use(C, u, 'seal_command'); return { v: u.auras.find((a) => a.id === 'seal').seal / (u.st.wSpeed / 2.5), cost: E.abCost(D.ABILITIES.seal_command, u) }; }; // per 2.5 sec of weapon speed
+  const a = seal({}), b = seal({ imp_seal: 5, benediction: 5 });
+  assert.ok(Math.abs(b.v / a.v - 1.15) < 0.001, `Improved Oaths: ${a.v} → ${b.v}`);
+  assert.ok(b.cost < a.cost, `Benediction: ${a.cost} → ${b.cost}`);
+});

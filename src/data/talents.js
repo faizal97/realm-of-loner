@@ -138,9 +138,9 @@
         t('blessing_sanctuary', 3, 1, 'Blessing of Sanctuary', 'retribution_aura', 'You generate {v}% more threat and take 3% less damage.', f('threat', 20), f('taken', 3)),
       ] },
       { id: 'retribution', name: 'Retribution', icon: 'seal_righteousness', talents: [
-        t('benediction', 1, 5, 'Benediction', 'judgement', 'Verdict and seals cost {v}% less mana.', f('abilCost', 3, { ab: ['judgement', 'seal_righteousness'] })),
+        t('benediction', 1, 5, 'Benediction', 'judgement', 'Verdict and your Oaths cost {v}% less mana.', f('abilCost', 3, { ab: ['judgement', 'seal_righteousness', 'seal_command'] })),
         t('imp_judgement', 1, 2, 'Improved Verdict', 'judgement', 'Verdict cooldown reduced by {v} sec.', f('abilCd', 1, { ab: ['judgement'] })),
-        t('imp_seal', 2, 5, 'Improved Oath of Righteousness', 'seal_righteousness', 'Oath of Righteousness deals {v}% more damage.', f('buff', 3, { ab: ['seal_righteousness'] })),
+        t('imp_seal', 2, 5, 'Improved Oaths', 'seal_righteousness', 'Your Oaths deal {v}% more damage.', f('buff', 3, { ab: ['seal_righteousness', 'seal_command'] })), // every Oath (#245),
         t('conviction', 2, 5, 'Conviction', 'seal_righteousness', '+{v}% critical strike chance.', f('crit', 1)),
         t('vengeance', 3, 1, 'Vengeance', 'retribution_aura', 'Your Holy damage is increased by {v}% and physical damage by 4%.', f('school', 8, { school: 'holy' }), f('school', 4, { school: 'physical' })),
       ] },
