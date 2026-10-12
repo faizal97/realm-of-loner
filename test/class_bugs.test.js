@@ -189,3 +189,10 @@ test('Chain Heal jumps to the 2 most hurt allies nearby for half and a quarter (
   const raw = healed.map((e) => e.amount + e.over); // before overhealing
   assert.ok(Math.abs(raw[1] / raw[0] - 0.5) < 0.05 && Math.abs(raw[2] / raw[0] - 0.25) < 0.05, raw.join(' '));
 });
+
+test('a slow on a boss works at a quarter of its strength (#245)', () => {
+  const { e } = fight(60, 'warrior');
+  e.auras.push({ id: 'hamstring_slow', until: 1e9, slow: 50 });
+  e.boss = false; assert.strictEqual(E.slowPct(e), 50);
+  e.boss = true; assert.strictEqual(E.slowPct(e), 12.5);
+});

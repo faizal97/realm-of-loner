@@ -382,11 +382,13 @@
   const litAura = (u, abId) => (u.auras || []).find((a) => a.proc && (a.lit || a.proc.lights).includes(abId));
   E.lit = (u, abId) => !!litAura(u, abId);
   function stunned(C, u) { return u.stunUntil > C.t; }
+  E.BOSS_SLOW = 0.25; // a slow on a boss works at a quarter of its strength (#245)
   function slowPct(u) {
     let p = 0;
     for (const a of u.auras) if (a.slow) p = Math.max(p, a.slow);
-    return p;
+    return u.boss ? p * E.BOSS_SLOW : p; // a boss shrugs off most of a slow (#245), as it does a stun
   }
+  E.slowPct = slowPct;
   // how fast a fighter runs: 7 m/s, cut by its strongest snare, raised by its strongest speed buff (Sprint)
   function moveSpeed(u) {
     let up = 0; for (const a of u.auras) if (a.speed) up = Math.max(up, a.speed);
