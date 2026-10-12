@@ -31,7 +31,7 @@ The full list of changes is in the patch notes: <link to the GitHub release or t
 
 ## What's next                           1–2 lines: a direction, never a date or a promise.
 
-One ask, then sign off as Faizal.
+One ask, then sign off as Starlight Heaven.
 ```
 
 - **Length:** a major update reads in about 3–4 minutes on a phone (roughly 400–900 words) with 3–6 images. A General
@@ -43,7 +43,7 @@ One ask, then sign off as Faizal.
 
 ## Voice
 
-- **Faizal, first person, plain and specific**, with some personality: a solo developer telling players what changed in
+- **First person as Starlight Heaven (the itch.io name), plain and specific**, with some personality: a solo developer telling players what changed in
   their world. "I", not "we".
 - **Why** only for big or debated changes (a nerf, something taken away): one or two sentences, not a design essay.
 - One honest line when something went wrong ("Rupture was doing full damage at one combo point; that's fixed and its
@@ -57,8 +57,8 @@ One ask, then sign off as Faizal.
 
 ## The ask
 
-One per post, the same few: come to the Discord, tell me how a named feature feels, or try something specific. Never a
-list of asks.
+Every devlog ends with a short **Join the Discord** section with the invite link (https://discord.gg/6xaVaXukeT) and
+what is there (patch notes and test builds first, a place to say how something feels). Never a list of asks.
 
 ## Posting (itch.io)
 
