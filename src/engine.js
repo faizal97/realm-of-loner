@@ -635,6 +635,7 @@
     const ab = D.ABILITIES[abId];
     if (!ab) return 'Unknown';
     if (u.dead) return 'You are dead';
+    { const fz = u.auras.find((a) => a.frozen); if (fz) return abId === fz.id ? null : `In ${D.ABILITIES[fz.id].name}`; } // frozen (Ice Block, #245): only breaking out
     if (stunned(C, u) && !ab.freeOf) return 'Stunned';
     if (u.cast) return E.castingText(u.cast.ab);
     if (ab.gcd !== false && u.gcdUntil > C.t) return E.GCD_WHY;
@@ -647,7 +648,7 @@
     if (ab.needSeal && !auraOf(u, 'seal')) return 'No seal active';
     if (ab.lifetap && u.hp <= ab.lifetap.base + ab.lifetap.perLvl * u.level + 1) return 'Not enough health';
     if (ab.opener && (C.t - (u.closedAt != null ? u.closedAt : C.t) > 3 || C.t > 3 && u.closedAt == null && !C.opts.apart || (tgt && tgt.hitBy && tgt.hitBy[u.uid]))) return 'Already in combat'; // an opener: within 3 sec of first reaching melee (a fight that starts apart gives you the run in)
-    if (ab.target === 'enemy' && (!tgt || tgt.dead || tgt.side === u.side)) return 'No target';
+    if (ab.target === 'enemy' && (!tgt || tgt.dead || (tgt.side === u.side && !ab.either))) return 'No target'; // either (Holy Shock, #245): an ally too
     if (ab.target === 'ally' && (!tgt || tgt.dead || tgt.side !== u.side)) return 'Invalid target';
     if (abId === 'pw_shield' && tgt && auraOf(tgt, 'weakened_soul')) return 'Weakened Soul';
     // distance (v10.9): the target must be within the ability's range (a targeted area attack: its centre)
@@ -656,8 +657,12 @@
     return null;
   };
 
+  // a heal (not one on yourself only, like Vampiric Embrace) ends a form that ends on healing (Shadowform, #245)
+  E.isHeal = (ab) => !!(ab && (ab.heal || (ab.hot && ab.target !== 'self')));
+  E.dropOnHeal = (auras) => auras.filter((a) => !((D.ABILITIES[a.id] || {}).buff || {}).endsOnHeal);
   E.use = function (C, u, abId, tgtUid) {
     const ab = D.ABILITIES[abId];
+    { const fz = u.auras.find((a) => a.frozen); if (fz && fz.id === abId) { u.auras = u.auras.filter((a) => a !== fz); ev(C, { type: 'ability', src: u.uid, ab: abId }); return null; } } // using it again breaks out
     let tgt = tgtUid != null ? C.units[tgtUid] : null;
     if (ab.target === 'self' || ab.target === 'party' || ab.target === 'aoe') tgt = u;
     if (ab.target === 'ally' && !tgt) tgt = u;
@@ -690,6 +695,7 @@
     const L = u.level;
     u.res -= abCost(ab, u);
     { const la = litAura(u, abId); if (la) u.auras = u.auras.filter((a) => a !== la); } // a reaction's light is spent
+    if (E.isHeal(ab) && !(ab.either && tgt && tgt.side !== u.side)) u.auras = E.dropOnHeal(u.auras);
     if (ab.stackCost) { const sk = ab.stackCost, old = auraOf(u, abId + '_stack'), n = Math.min(sk.max, ((old && old.stacks) || 0) + 1); addAura(C, u, { id: abId + '_stack', until: C.t + sk.window, stacks: n, name: `${ab.name}: +${sk.pct * n}% mana`, icon: abId, debuff: true }); }
     if (ab.cd) u.cds[abId] = C.t + Math.max(1, ab.cd - (tmOf(u).abilCd[abId] || 0));
     if (u.resType === 'mana' && abCost(ab, u) > 0) u.lastCastT = C.t;
@@ -706,7 +712,8 @@
 
     const centre = ab.target === 'aoe' && aoeAtTarget(ab) ? (C.units[u.target] && !C.units[u.target].dead ? C.units[u.target] : u) : u;
     const targets = ab.target === 'aoe' ? alive(foes(C, u)).filter((e) => !e.pos || !centre.pos || E.dist(centre, e) <= (ab.radius || DIST.radius)) : tgt ? [tgt] : []; // distance: an area attack has a radius
-    if (ab.dmg) {
+    const healSide = ab.either && tgt && tgt.side === u.side; // either (#245): on an ally it heals, on an enemy it hurts
+    if (ab.dmg && !healSide) {
       for (const t of targets) {
         if (ab.dmg.weapon) {
           swing(C, u, t, { bonus: rnd(ab.dmg.bonus[0], ab.dmg.bonus[1]) + (ab.dmg.perLvl || 0) * L, ab: abId, threat: ab.threat });
@@ -748,7 +755,7 @@
       const per = (ab.hot.heal + ab.hot.perLvl * L + (ab.hot.coef || 0) * u.st.sp) * (1 + (tmOf(u).hot[abId] || 0) / 100);
       for (const w of healWho) addAura(C, w, { id: ab.hot.id, until: C.t + ab.hot.ticks * ab.hot.every, every: ab.hot.every, next: C.t + ab.hot.every, hot: per, src: u.uid, ab: abId });
     }
-    if (ab.heal) {
+    if (ab.heal && (!ab.either || healSide)) {
       for (const w of healWho) {
         const crit = Math.random() * 100 < u.st.spellCrit;
         const amt = scaled(ab.heal.base, ab.heal.perLvl, L) + (ab.heal.coef || 0) * u.st.sp;
@@ -783,6 +790,7 @@
       if (b.seal) { extra.seal = (b.seal.base + b.seal.perLvl * L) * (u.st.wSpeed / 2.5) * bp; extra.sealSchool = b.seal.school || 'holy'; }
       if (b.thorns) extra.thorns = { dmg: Math.round((b.thorns.base + b.thorns.perLvl * L) * bp), charges: b.thorns.charges };
       if (b.immune) extra.immune = true;
+      if (b.frozen) { extra.frozen = true; u.cast = null; }
       if (b.speed) extra.speed = b.speed; // distance: run faster (Sprint)
       if (b.group) for (const w of who) w.auras = w.auras.filter((a) => a.id === b.id || ((D.ABILITIES[a.id] || {}).buff || {}).group !== b.group); // one of a group at a time (aspects, demon armors)
       for (const w of who) addAura(C, w, Object.assign({ id: b.id, until: C.t + dur, stats: Object.keys(stats).length ? stats : null, persistent: dur >= 60 }, extra));
@@ -1212,6 +1220,7 @@
         return;
       }
       if (low && low.hp / low.maxHp < thr && has('lesser_heal') && try_('lesser_heal', low)) return;
+      if (low && low.hp / low.maxHp < thr && has('holy_shock') && try_('holy_shock', low)) return; // instant, on its cooldown (#245)
       if (low && low.hp / low.maxHp < thr && has('holy_light') && try_('holy_light', low)) return;
       if (low && low.hp / low.maxHp < thr && has('healing_touch') && try_('healing_touch', low)) return;
       if (low && low.hp / low.maxHp < thr && has('healing_wave') && try_('healing_wave', low)) return;
@@ -1437,6 +1446,7 @@
         continue;
       }
       if (stunned(C, u)) { if (u.fleeUntil > C.t) moveTick(C, u, dt); if (u.kind === 'bot') botThink(C, u); continue; }
+      if (u.auras.some((a) => a.frozen)) continue; // in Ice Block (#245): no moving, casting or auto attack
       // AI
       if (u.kind === 'mob') { pickMobTarget(C, u); specials(C, u, dt); }
       else if (u.kind === 'bot') botThink(C, u);

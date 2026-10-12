@@ -1506,7 +1506,7 @@
     if (!C || !G.pUnit) return 'Not in combat';
     const ab = D.ABILITIES[abId];
     let tgt = G.pUnit.target;
-    if (ab.target === 'ally') tgt = C.allyTarget != null && C.units[C.allyTarget] && !C.units[C.allyTarget].dead ? C.allyTarget : G.pUnit.uid;
+    if (ab.target === 'ally' || (ab.either && G.role() === 'healer')) tgt = C.allyTarget != null && C.units[C.allyTarget] && !C.units[C.allyTarget].dead ? C.allyTarget : G.pUnit.uid;
     const why = E.use(C, G.pUnit, abId, tgt);
     if (why && why !== E.GCD_WHY) emit('error', why); // the global cooldown says nothing (#173)
     return why;
@@ -1592,6 +1592,7 @@
     const cost = E.abCost(ab, P);
     if (cost > v.res) return v.resType === 'rage' ? 'Not enough rage' : 'Not enough mana';
     P.res -= cost;
+    if (E.isHeal(ab)) P.auras = E.dropOnHeal(P.auras || []); // a heal ends Shadowform (#245)
     if (ab.buff) {
       const stats = {};
       const bp = 1 + (E.talentMods(P).buff[abId] || 0) / 100;

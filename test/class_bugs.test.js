@@ -196,3 +196,60 @@ test('a slow on a boss works at a quarter of its strength (#245)', () => {
   e.boss = false; assert.strictEqual(E.slowPct(e), 50);
   e.boss = true; assert.strictEqual(E.slowPct(e), 12.5);
 });
+
+test('Holy Shock heals a teammate and hurts an enemy; a healer aims it at their heal target (#245)', () => {
+  const { C, u, e } = fight(60, 'paladin');
+  u.hp = u.maxHp * 0.3; const hp0 = e.hp;
+  assert.strictEqual(use(C, u, 'holy_shock', u), null);
+  assert.ok(C.events.some((x) => x.type === 'heal' && x.ab === 'holy_shock' && x.tgt === u.uid), 'healed the ally');
+  assert.strictEqual(e.hp, hp0, 'no damage when cast on an ally');
+  C.events.length = 0;
+  assert.strictEqual(use(C, u, 'holy_shock', e), null);
+  assert.ok(e.hp < hp0, 'hurt the enemy');
+  assert.ok(!C.events.some((x) => x.type === 'heal' && x.ab === 'holy_shock'), 'no heal when cast on an enemy');
+  // the player's tap: a healer's goes to the heal target (here yourself), anyone else's to the enemy
+  G.S.player.role = 'healer'; C.events.length = 0; u.cds.holy_shock = 0; u.gcdUntil = 0; u.target = e.uid;
+  G.useAbility('holy_shock');
+  assert.ok(C.events.some((x) => x.type === 'heal' && x.ab === 'holy_shock'), 'a healer heals with it');
+  G.S.player.role = 'tank'; C.events.length = 0; u.cds.holy_shock = 0; u.gcdUntil = 0;
+  G.useAbility('holy_shock');
+  assert.ok(C.events.some((x) => x.type === 'dmg' && x.ab === 'holy_shock'), 'a tank hurts with it');
+});
+
+test('the Retribution Oath talents cover every Oath, Oath of Command too (#245)', () => {
+  const seal = (talents) => { const { C, u } = fight(60, 'paladin', talents); use(C, u, 'seal_command'); return { v: u.auras.find((a) => a.id === 'seal').seal / (u.st.wSpeed / 2.5), cost: E.abCost(D.ABILITIES.seal_command, u) }; }; // per 2.5 sec of weapon speed
+  const a = seal({}), b = seal({ imp_seal: 5, benediction: 5 });
+  assert.ok(Math.abs(b.v / a.v - 1.15) < 0.001, `Improved Oaths: ${a.v} → ${b.v}`);
+  assert.ok(b.cost < a.cost, `Benediction: ${a.cost} → ${b.cost}`);
+});
+
+test('in Ice Block you cannot cast or attack, and using it again breaks out (#245)', () => {
+  const { C, u, e } = fight(60, 'mage');
+  u.cds.ice_block = 0; assert.strictEqual(E.use(C, u, 'ice_block'), null);
+  assert.ok(u.auras.some((a) => a.id === 'ice_block' && a.immune), 'immune');
+  assert.strictEqual(use(C, u, 'fire_blast', e), 'In Ice Block');
+  const hp0 = e.hp; u.auto = true; u.target = e.uid;
+  for (let i = 0; i < 30; i++) E.tick(C, 0.1);
+  assert.strictEqual(e.hp, hp0, 'no wand shots inside');
+  assert.strictEqual(E.use(C, u, 'ice_block'), null, 'break out');
+  assert.ok(!u.auras.some((a) => a.id === 'ice_block'), 'out');
+  assert.strictEqual(use(C, u, 'fire_blast', e), null, 'casting again');
+  // left alone it ends after 8 sec
+  u.cds.ice_block = 0; E.use(C, u, 'ice_block'); for (let i = 0; i < 85; i++) E.tick(C, 0.1);
+  assert.ok(!u.auras.some((a) => a.id === 'ice_block'), 'ends by itself');
+});
+
+test('casting a heal ends Shadowform; Vampiric Embrace and shields do not (#245)', () => {
+  const { C, u } = fight(60, 'priest');
+  const sf = () => u.auras.some((a) => a.id === 'shadowform');
+  assert.strictEqual(use(C, u, 'shadowform'), null); assert.ok(sf(), 'in Shadowform');
+  assert.strictEqual(use(C, u, 'vampiric_embrace'), null); assert.ok(sf(), 'Vampiric Embrace keeps it');
+  u.auras = u.auras.filter((a) => a.id !== 'weakened_soul');
+  assert.strictEqual(use(C, u, 'pw_shield', u), null); assert.ok(sf(), 'a shield keeps it');
+  use(C, u, 'flash_heal', u); for (let i = 0; i < 20 && u.cast; i++) E.tick(C, 0.1);
+  assert.ok(!sf(), 'a heal ends it');
+  // out of combat too
+  G.fight = null; const P = G.S.player; P.auras = [{ id: 'shadowform', stats: { sp: 73 }, until: Date.now() + 1e6 }]; P.res = 1e5;
+  assert.strictEqual(G.castOutOfCombat('renew'), null);
+  assert.ok(!P.auras.some((a) => a.id === 'shadowform'), 'Renew out of combat ends it');
+});
