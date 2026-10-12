@@ -6,6 +6,7 @@
 #        tools/publish_web.sh --pages  only the other pages in web/ (about, privacy); the game pages stay as they are
 #        tools/publish_web.sh --guide  only the database (guide/, from tools/build_guide.js); the game pages stay as they are
 # A normal release also rebuilds the database, so it always matches the live game. A beta never touches it.
+# The database is always built from the latest release tag's game data (--guide too).
 # (run from the repo root, after build.py)
 set -euo pipefail
 BETA=0; [ "${1:-}" = "--beta" ] && BETA=1
@@ -29,9 +30,14 @@ ver_of() { [ -f "$1" ] && grep -o 'AZ_VERSION *= *"[^"]*"' "$1" | head -1 | sed 
 mkdir -p "$TMP/site/beta"
 # the database (#231): rebuilt from this checkout's game data and replaced as a whole
 # A hand-written guide checked for an older minor version than the latest release stops the publish (guides/*.md).
+# Its game data comes from the latest release tag (src/ at that tag), so --guide between releases never shows unreleased
+# work; a normal release runs right after its tag, so that is this checkout's data anyway.
 put_guide() {
-  node "$ROOT/tools/build_guide.js" --check || { echo "Re-check those guides against the game, raise their checked: version, then publish again." >&2; exit 1; }
-  node "$ROOT/tools/build_guide.js" >/dev/null || exit 1
+  local TAG; TAG="$(git -C "$ROOT" describe --tags --abbrev=0 --match 'v*' --exclude '*-*')"
+  mkdir -p "$TMP/rel" && git -C "$ROOT" archive "$TAG" src | tar -x -C "$TMP/rel"
+  echo "database from $TAG's game data"
+  DATA_ROOT="$TMP/rel" node "$ROOT/tools/build_guide.js" --check || { echo "Re-check those guides against the game, raise their checked: version, then publish again." >&2; exit 1; }
+  DATA_ROOT="$TMP/rel" node "$ROOT/tools/build_guide.js" >/dev/null || exit 1
   rm -rf "$TMP/site/guide" && cp -R "$ROOT/dist/guide" "$TMP/site/guide"
 }
 if [ "$PAGES" = 1 ]; then

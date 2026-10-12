@@ -4,15 +4,18 @@
 // Published next to the game by tools/publish_web.sh, at …/realm-of-loner/guide/.
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.join(__dirname, '..');
+// DATA_ROOT: whose game data to build from (tools/publish_web.sh passes the latest release's src/, so the database shows
+// what players have, not unreleased work); the guides, the page and the tools are always this checkout's
+const DATA = process.env.DATA_ROOT || ROOT;
 globalThis.localStorage = { getItem() { return null; }, setItem() {}, removeItem() {} };
-require(path.join(ROOT, 'src/data.js')); require(path.join(ROOT, 'src/engine.js')); require(path.join(ROOT, 'src/bots.js')); require(path.join(ROOT, 'src/game.js'));
+require(path.join(DATA, 'src/data.js')); require(path.join(DATA, 'src/engine.js')); require(path.join(DATA, 'src/bots.js')); require(path.join(DATA, 'src/game.js'));
 const { D, E, G } = globalThis;
 const OUT = path.join(ROOT, 'dist/guide');
 
 // the art, as validate.js loads it
 const w = {}; vm.createContext(w); w.window = w;
-for (const f of fs.readdirSync(path.join(ROOT, 'src')).filter((f) => /^art.*\.js$/.test(f) && f !== 'art_story.js').sort((a, b) => (a === 'art.js' ? -1 : b === 'art.js' ? 1 : 0)))
-  vm.runInContext(fs.readFileSync(path.join(ROOT, 'src', f), 'utf8'), w);
+for (const f of fs.readdirSync(path.join(DATA, 'src')).filter((f) => /^art.*\.js$/.test(f) && f !== 'art_story.js').sort((a, b) => (a === 'art.js' ? -1 : b === 'art.js' ? 1 : 0)))
+  vm.runInContext(fs.readFileSync(path.join(DATA, 'src', f), 'utf8'), w);
 const ART = w.ART;
 
 // ---------------------------------------------------------------- helpers
