@@ -619,7 +619,7 @@
     if (abCost(ab, u) > u.res + 0.001) return u.resType === 'rage' ? 'Not enough rage' : u.resType === 'energy' ? 'Not enough energy' : 'Not enough mana';
     if (ab.finisher && (u.cp <= 0 || (ab.target === 'enemy' && u.cpTarget !== (tgt && tgt.uid)))) return 'No combo points';
     if (ab.form && u.form !== ab.form) return 'Requires Bear Form';
-    if (u.form && !ab.form && !ab.shapeshift) return 'Not while in Bear Form';
+    if (u.form && !ab.form && !ab.shapeshift && !ab.anyForm) return 'Not while in Bear Form'; // anyForm: a self-buff a bear may use (#233)
     if (ab.needSeal && !auraOf(u, 'seal')) return 'No seal active';
     if (ab.lifetap && u.hp <= ab.lifetap.base + ab.lifetap.perLvl * u.level + 1) return 'Not enough health';
     if (ab.opener && (C.t - (u.closedAt != null ? u.closedAt : C.t) > 3 || C.t > 3 && u.closedAt == null && !C.opts.apart || (tgt && tgt.hitBy && tgt.hitBy[u.uid]))) return 'Already in combat'; // an opener: within 3 sec of first reaching melee (a fight that starts apart gives you the run in)
