@@ -36,7 +36,7 @@ To stay alive:
 - [[Word of Fortitude]]: Stamina for 30 min. Cast in a fight, it reaches your group within 40 m; outside a fight only you get it.
 - [[Prayer of Fortitude]] (level 48): more Stamina (86 against 51) for 1 hour. The one you cast last replaces the other.
 - [[Inner Fire]] (level 14): 750 armor and some attack power for 10 min, on yourself.
-- [[Shadowform]] (level 36): 73 spell power and 150 armor for 30 min, on yourself.
+- [[Shadowform]] (level 36): 73 spell power and 150 armor for 30 min, on yourself. Casting a heal ends it; [[Vampiric Embrace]] and shields don't.
 
 ### Talents
 Your first point comes at level 10, and you have 51 at level 60. The trees hold 17 (Discipline), 19 (Holy) and 16 (Shadow) points, 52 in all, so at 60 you can take everything but one point. The order only matters while you level. The first reset is free; after that it costs 1g, then 5g, then 10g.

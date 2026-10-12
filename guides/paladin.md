@@ -35,7 +35,7 @@ A Paladin fights in melee with holy spells on top, and in a group fills two role
 ### Talents
 You get your first point at level 10 and 51 by level 60. Holy and Retribution hold 18 points each, Protection 16, so you can fill two trees and all but one point of the third. A tree's second row opens at 5 points in it, the third at 10. The first reset is free; then 1g, 5g, 10g.
 
-Retribution suits leveling. **Vengeance** raises your Holy and physical damage and turns on **Vengeful Strike**: your crits can make [[Zealot Strike]] ready ([[Exorcism]] before level 48). **Benediction** and **Improved Oath of Righteousness** help [[Oath of Righteousness]] only, not [[Oath of Command]].
+Retribution suits leveling. **Vengeance** raises your Holy and physical damage and turns on **Vengeful Strike**: your crits can make [[Zealot Strike]] ready ([[Exorcism]] before level 48). **Benediction** and **Improved Oaths** cover every Oath, [[Oath of Command]] (level 34) too.
 
 ## Healer
 ### Quick start
@@ -53,7 +53,8 @@ Retribution suits leveling. **Vengeance** raises your Holy and physical damage a
 - Each hit you take while casting pushes the cast back, twice at most.
 - Heal the damage that is there, not what might come: mana is your limit.
 - [[Radiant Wrath]] adds 100 spell power for 20 sec. Use it for the hardest part of a fight.
-- **Radiance** (with **Divine Favor**): [[Holy Light]] can make [[Holy Shock]] ready and free. Holy Shock deals damage; it doesn't heal.
+- [[Holy Shock]] (level 32) heals your heal target at once: 520 to 540 for 267 mana, 20 sec cooldown. When you aren't the healer, it hits your enemy instead.
+- **Radiance** (with **Divine Favor**): [[Holy Light]] can make [[Holy Shock]] ready and free.
 
 ### When it goes wrong
 - [[Lay on Hands]]: 2,200 healing on anyone, 10 min cooldown.

@@ -51,7 +51,7 @@ You get your first point at level 10 and 51 by level 60. The Mage trees hold 51 
 - Your shields stack: [[Mana Shield]], [[Fire Ward]] and [[Ice Barrier]] (level 44, the biggest) each absorb on their own. They only work in a fight.
 - [[Frost Nova]] holds enemies within 8 m for 4 sec, then [[Step Back]].
 - [[Dragon's Breath]] (level 54) stuns enemies within 8 m for 2 sec.
-- [[Ice Block]] (level 32): immune to damage for 8 sec. You can keep casting.
+- [[Ice Block]] (level 32): immune to damage for 8 sec, but you can't cast, move or attack. Use it again to break out early.
 - [[Mirror Image]] (level 58): drops all your threat.
 
 ### Talents
