@@ -173,3 +173,19 @@ test('each recent Arcane Blast makes the next cost 50% more, up to 3 times, for 
   for (let k = 0; k < 70; k++) E.tick(C, 0.1);
   assert.strictEqual(E.abCost(D.ABILITIES.arcane_blast, u), base, 'back to normal after 6 sec');
 });
+
+test('Chain Heal jumps to the 2 most hurt allies nearby for half and a quarter (#245)', () => {
+  const { P } = character(60, 'shaman', 'human'); P.talents = {};
+  const mk = (cls, i) => { const b = require('./world').B.makeBot(9100 + i, new Set(), { level: 60 }); b.cls = cls; const u = E.charUnit(G.botChar(b), 'ally', 'bot', i); u.bot = { skill: 0.5, react: 1 }; return u; };
+  const u = E.charUnit(P, 'ally', 'player', 1), a = mk('warrior', 1), b = mk('rogue', 2), c = mk('mage', 3);
+  const key = Object.keys(D.MOBS).find((k) => { const M = D.MOBS[k]; return !M.boss && M.lvl && M.lvl[0] <= 60 && M.lvl[1] >= 60; });
+  const C = E.fight([u, a, b, c], [E.mobUnit(key, 60, { hp: 50, dmg: 0 })], { apart: 0 });
+  for (const x of [u, a, b, c]) { x.pos = { x: 0, y: 0, z: 0 }; x.hp = x.maxHp * 0.3; }
+  b.hp = b.maxHp * 0.2; u.res = 1e6; u.st.spellCrit = 0;
+  use(C, u, 'chain_heal', a); for (let i = 0; i < 30 && u.cast; i++) E.tick(C, 0.1);
+  const healed = C.events.filter((e) => e.type === 'heal' && e.ab === 'chain_heal');
+  assert.strictEqual(healed.length, 3, 'three heals');
+  assert.strictEqual(healed[1].tgt, b.uid, 'the most hurt one second');
+  const raw = healed.map((e) => e.amount + e.over); // before overhealing
+  assert.ok(Math.abs(raw[1] / raw[0] - 0.5) < 0.05 && Math.abs(raw[2] / raw[0] - 0.25) < 0.05, raw.join(' '));
+});

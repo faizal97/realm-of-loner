@@ -751,6 +751,14 @@
         const crit = Math.random() * 100 < u.st.spellCrit;
         const amt = scaled(ab.heal.base, ab.heal.perLvl, L) + (ab.heal.coef || 0) * u.st.sp;
         heal(C, u, w, crit ? amt * 1.5 : amt, { crit, ab: abId });
+        // a heal that jumps (Chain Heal, #245): then the most hurt ally near the last one, for less each time
+        let from = w;
+        for (const f of ab.heal.jumps || []) {
+          const nx = alive(friends(C, u)).filter((a) => a !== w && a !== from && !a.chained && a.hp < a.maxHp && (!a.pos || !from.pos || E.dist(from, a) <= (ab.heal.jumpRange || 12))).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+          if (!nx) break;
+          nx.chained = true; heal(C, u, nx, (crit ? amt * 1.5 : amt) * f, { crit, ab: abId }); from = nx;
+        }
+        for (const a of friends(C, u)) delete a.chained;
       }
     }
     if (ab.shield && tgt) {
