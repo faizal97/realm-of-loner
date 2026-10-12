@@ -17,7 +17,7 @@ const ART = w.ART;
 
 // ---------------------------------------------------------------- helpers
 const P = {}; // every page: 'kind/id' → { k, n, q, ic, mob, sub, tip, sec: [{ h, rows }] }
-const L = (kind, id) => { const p = P[kind + '/' + id]; return p ? { l: kind + '/' + id, t: p.n, q: p.q } : null; }; // a link cell
+const L = (kind, id) => { const p = P[kind + '/' + id]; return p ? Object.assign({ l: kind + '/' + id, t: p.n }, p.q != null ? { q: p.q } : {}, p.ic ? { i: p.ic } : {}) : null; }; // a link cell, with its icon
 const range = (a) => (Array.isArray(a) ? (a[0] === a[1] ? String(a[0]) : `${a[0]}–${a[1]}`) : String(a));
 const pct = (x) => { const v = x * 100; return (v >= 10 || v === Math.round(v) ? Math.round(v) : v.toFixed(1)) + '%'; };
 const k = (n) => (n >= 10000 ? (n / 1000).toFixed(1) + 'k' : String(Math.round(n)));
@@ -113,8 +113,7 @@ for (const [id, it] of Object.entries(D.ITEMS)) {
   sec(p, 'Needed for', (collectedFor[id] || []).sort(byLvl('quest')).map((q) => [L('quest', q), String(D.QUESTS[q].lvl)]), ['Quest', 'Level']);
   sec(p, 'Made with', (madeBy[id] || []).map((r) => { const R = D.RECIPES[r]; return [D.PROFESSIONS[R.prof].name + ' ' + R.sk[0], Object.entries(R.mats || {}).map(([m, n]) => (n > 1 ? n + '× ' : '') + ((D.ITEMS[m] || {}).name || m)).join(', ')]; }), ['Skill', 'Materials']);
   sec(p, 'Used to make', (usedIn[id] || []).map((r) => { const R = D.RECIPES[r]; return [L('item', R.makes), D.PROFESSIONS[R.prof].name + ' ' + R.sk[0], String(R.mats[id])]; }), ['Item', 'Skill', 'Needed']);
-  if (it.source && !(lootOf[id] || []).length && !(dropsOf[id] || []).length) sec(p, 'Source', [[it.source]]);
-  if (it.cost) sec(p, 'Price', [[typeof it.cost === 'number' ? money(it.cost) : JSON.stringify(it.cost)]]);
+  if (it.source && !(lootOf[id] || []).length && !(dropsOf[id] || []).length && !/^(Honor rank|Trials:)/.test(it.source)) sec(p, 'Source', [[it.source]]);
 }
 
 for (const [id, m] of Object.entries(D.MOBS)) {
@@ -303,6 +302,50 @@ for (const [id, a] of Object.entries(D.ACTIVITIES)) {
   if (a.boss && P['mob/' + a.boss]) sec(P['mob/' + a.boss], 'Group finder', [[L('act', id), `${a.size} players`]]);
 }
 
+// ---------------------------------------------------------------- vendors: what each one sells, at what price
+G.newGame({ name: 'Guide', cls: 'warrior' });
+const soldBy = {}, gearVendors = [];
+for (const [pid, pl] of Object.entries(D.PLACES)) for (const npc of [pl.vendor, pl.gearVendor]) {
+  if (!npc || !P['npc/' + npc]) continue;
+  if (npc === pl.gearVendor) { if (!gearVendors.includes(npc)) gearVendors.push(npc); continue; }
+  G.S.player.place = pid;
+  for (const it of G.vendorStock(npc)) if (D.ITEMS[it.id] && !(soldBy[it.id] || []).some((x) => x[0] === npc)) push(soldBy, it.id, [npc, pid, it.cost || it.sell * 4]);
+}
+for (const [id, list] of Object.entries(soldBy)) sec(P['item/' + id], 'Sold by', list.map(([n, pl, c]) => [L('npc', n), L('place', pl), money(c)]), ['Vendor', 'Where', 'Price']);
+for (const npc of Object.keys(D.NPCS)) {
+  const items = Object.entries(soldBy).filter(([, l]) => l.some((x) => x[0] === npc)).map(([i, l]) => [L('item', i), money(l.find((x) => x[0] === npc)[2])]);
+  sec(P['npc/' + npc], 'Sells', items, ['Item', 'Price']);
+  if (gearVendors.includes(npc)) sec(P['npc/' + npc], 'Sells', [['Weapons', `One of each type (${Object.keys(D.WEAPON_BASES).map((w) => WTYPE[w] || cap(w)).join(', ')}), Common quality, made at your level. Price: 5× the sell price.`]]);
+}
+
+// ---------------------------------------------------------------- Honor ranks and Trialsworn rewards
+const fmtTitle = (t) => (t || '').replace('%s', '<name>').trim();
+P['collect/honor'] = { k: 'collect', n: 'Honor ranks', sub: 'Reward track', text: 'Honor comes from battlegrounds and War Mode. Each rank gives a title, and some give a look for your faction.' };
+P['collect/trialsworn'] = { k: 'collect', n: 'Trialsworn rewards', sub: 'Reward track', text: 'Rewards for beating Trials in time. The higher the Trial, the brighter the look; each month adds its own colours.' };
+const honorItems = (n) => Object.keys(D.ITEMS).filter((i) => D.ITEMS[i].source === 'Honor rank ' + n);
+sec(P['collect/honor'], 'Ranks', D.HONOR_RANKS.map((r, i) => [String(i + 1), r.at.toLocaleString('en'), fmtTitle(r.alliance) + ' / ' + fmtTitle(r.horde), honorItems(i + 1).map((it) => L('item', it))]), ['Rank', 'Honor', 'Title (Alliance / Horde)', 'Looks']);
+sec(P['collect/trialsworn'], 'By Trial', Object.entries(D.TRIALSWORN).filter(([, t]) => t.lvl).map(([, t]) => [`Trial ${t.lvl}`, (t.looks || []).filter((x) => P['item/' + x]).map((x) => L('item', x)).concat(t.mount && P['collect/mount_' + t.mount] ? [L('collect', 'mount_' + t.mount)] : [])]), ['Beat in time', 'Rewards']);
+const monthly = Object.keys(D.ITEMS).filter((i) => D.ITEMS[i].month != null && /^Trials/.test(D.ITEMS[i].source || ''));
+sec(P['collect/trialsworn'], 'Each month', monthly.map((i) => [L('item', i), D.ITEMS[i].source.replace(/^Trials: /, '')]), ['Look', 'How']);
+for (const [id, it] of Object.entries(D.ITEMS)) {
+  const hm = /^Honor rank (\d+)/.exec(it.source || ''), tm = /^Trials: (.+)/.exec(it.source || '');
+  if (hm) { const r = D.HONOR_RANKS[hm[1] - 1]; sec(P['item/' + id], 'Reward', [['Track', L('collect', 'honor')], ['Rank', `${hm[1]} (${r.at.toLocaleString('en')} Honor)`], ['Faction', cap(it.faction || 'both')]]); }
+  if (tm) sec(P['item/' + id], 'Reward', [['Track', L('collect', 'trialsworn')], ['How', cap(tm[1])]]);
+}
+
+// ---------------------------------------------------------------- drops by rule (src/game.js loot): cloth, meat, rare recipes, starting gear
+const bandsOf = (fn, from) => { const m = {}; for (let lv = from; lv <= 60; lv++) push(m, fn(lv), lv); return m; };
+const cloth = { wool_cloth: ['14–27', '20% (level 14–17), 30% (18–27)'], silk_cloth: ['28–50', '40% (from 46, half the time Duskweave instead)'], duskweave_cloth: ['46–60', '40% (46–50 half the time, all of it from 51)'] };
+for (const [it, [lv, ch]] of Object.entries(cloth)) if (P['item/' + it]) sec(P['item/' + it], 'Drops from humanoids', [['Level', lv], ['Chance', ch]]);
+for (const [it, lvs] of Object.entries(bandsOf(D.beastMeat, 3))) if (P['item/' + it]) sec(P['item/' + it], 'Drops from beasts', [['Level', `${lvs[0]}–${lvs[lvs.length - 1]}`], ['Chance', '35%, while you know Cooking']]);
+const rareLv = (id) => { const r = D.RECIPES[D.ITEMS[id].teaches], it = D.ITEMS[r.makes]; return it.slot === 'bag' ? Math.round(r.sk[0] / 5) : it.lvl || 1; };
+for (const id of D.RARE_RECIPES || []) if (P['item/' + id]) { const lv = rareLv(id); sec(P['item/' + id], 'Rare drop', [['From', 'Named creatures (20%) and the end of a dungeon (10%)'], ['Level', `${Math.max(1, lv - 8)}–${Math.min(60, lv + 8)}`]]); }
+for (const [cid, C] of Object.entries(D.CLASSES)) for (const it of [C.startWeapon, C.startChest, C.startRanged]) if (it && P['item/' + it]) { const p = P['item/' + it], s = (p.sec || []).find((x) => x.h === 'Starting gear'); if (s) s.rows.push([L('class', cid)]); else sec(p, 'Starting gear', [[L('class', cid)]]); }
+if (P['item/hearthstone']) sec(P['item/hearthstone'], 'Starting gear', [['Every character starts with one.']]);
+// a plain source line only where nothing above says it better
+for (const [id, it] of Object.entries(D.ITEMS)) { const p = P['item/' + id]; if (p.sec && p.sec.some((x) => x.h === 'Source') && p.sec.some((x) => /^(Made with|Sold by|Rare drop)$/.test(x.h))) p.sec = p.sec.filter((x) => x.h !== 'Source'); }
+for (const [aid, a] of Object.entries(D.ACTIVITIES)) for (const [id, it] of Object.entries(D.ITEMS)) if (it.source === 'Quest: ' + a.name) { const p = P['item/' + id]; p.sec = (p.sec || []).filter((x) => x.h !== 'Source'); sec(p, 'Reward', [['From', P['act/' + aid] ? L('act', aid) : a.name]]); }
+
 // ---------------------------------------------------------------- filters (#231): what each list can be narrowed by
 // lv: level · z: zone and dungeon pages it belongs to · s: slot group · st: stats it gives · r: rank · q: quality
 const uniq = (a) => a.filter((v, i) => v && a.indexOf(v) === i);
@@ -324,7 +367,7 @@ const FILTERS = {
   quality: Object.fromEntries(D.QUALITY.map((q, i) => [i, q.name])),
   zone: Object.fromEntries(Object.keys(D.REGIONS).sort((a, b) => P['zone/' + a].f.lv - P['zone/' + b].f.lv).map((z) => ['zone/' + z, D.REGIONS[z].name]).concat(Object.keys(D.DUNGEONS).sort((a, b) => D.DUNGEONS[a].minLvl - D.DUNGEONS[b].minLvl).map((d) => ['dungeon/' + d, D.DUNGEONS[d].name]))),
   class: Object.fromEntries(Object.entries(D.CLASSES).map(([c, C]) => [c, C.name]).concat([['racial', 'Racial']])),
-  rank: { mount: 'Mounts', title: 'Titles', companion: 'Companions', heirloom: 'Heirlooms', worldboss: 'World boss', bg: 'Battleground', festival: 'Festival', boss: 'Boss', elite: 'Elite', named: 'Named', normal: 'Normal', dungeon: 'Dungeon', group: 'Group', solo: 'Solo', town: 'Town', wild: 'Wilds', raid: 'Raid' },
+  rank: { 'reward track': 'Reward tracks', mount: 'Mounts', title: 'Titles', companion: 'Companions', heirloom: 'Heirlooms', worldboss: 'World boss', bg: 'Battleground', festival: 'Festival', boss: 'Boss', elite: 'Elite', named: 'Named', normal: 'Normal', dungeon: 'Dungeon', group: 'Group', solo: 'Solo', town: 'Town', wild: 'Wilds', raid: 'Raid' },
 };
 
 // ---------------------------------------------------------------- lists and search

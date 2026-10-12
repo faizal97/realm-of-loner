@@ -61,6 +61,7 @@ th { text-align: left; font-weight: 500; color: var(--muted); font-size: 14px; p
 td { padding: 8px 8px 8px 0; border-bottom: 1px solid #2c2216; vertical-align: top; }
 table.kv td:first-child { color: var(--muted); white-space: nowrap; width: 1%; padding-right: 14px; }
 td.n, th.n { text-align: right; padding-right: 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.li { width: 20px; height: 20px; border-radius: 3px; border: 1px solid #3a2c1a; vertical-align: -5px; margin-right: 6px; }
 td a, .row a { border-bottom: 1px solid transparent; }
 td a:hover, td a:focus-visible { border-bottom-color: currentColor; }
 a.ln { color: #f3d68a; text-decoration: underline dotted rgba(243, 214, 138, .45); text-underline-offset: 3px; } a.ln.q0 { color: var(--q0); } a.ln.q1 { color: var(--q1); } a.ln.q2 { color: var(--q2); } a.ln.q3 { color: #3d9bff; } a.ln.q4 { color: #c27bff; } a.ln.q5 { color: var(--q5); }
@@ -99,7 +100,7 @@ const DB = /*DATA*/null;
 const main = document.getElementById('main'), q = document.getElementById('q');
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const art = (p, cls) => p.ic ? `<img class="${cls || 'ic'}" src="icon/${esc(p.ic)}.svg" alt="" loading="lazy">` : p.mob ? `<img class="${cls || 'ic'}" src="mob/${esc(p.mob)}.svg" alt="" loading="lazy">` : '';
-const link = (c) => Array.isArray(c) ? c.map(link).join(', ') : c && typeof c === 'object' ? `<a class="ln${c.q != null ? ' q' + c.q : ''}" href="#${esc(c.l)}">${esc(c.t)}</a>` : esc(c == null ? '' : c);
+const link = (c) => Array.isArray(c) ? c.map(link).join(', ') : c && typeof c === 'object' ? `<a class="ln${c.q != null ? ' q' + c.q : ''}" href="#${esc(c.l)}">${c.i ? `<img class="li" src="icon/${esc(c.i)}.svg" alt="" loading="lazy" onerror="this.remove()">` : ''}${esc(c.t)}</a>` : esc(c == null ? '' : c);
 const SING = { item: 'Item', mob: 'Creature', quest: 'Quest', npc: 'Person', place: 'Place', zone: 'Zone', dungeon: 'Dungeon', act: 'Group finder', class: 'Class', race: 'Race', ability: 'Ability', prof: 'Profession', collect: 'Collection' };
 const fmt = (n) => n.toLocaleString('en');
 
