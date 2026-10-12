@@ -19,7 +19,7 @@ A Warlock deals damage, mostly with curses and burns that keep hurting while you
 - [[Siphon Life]] (level 32) is one more spell over time; [[Conflagrate]] (level 34) an instant hit.
 
 ### Before every fight
-- [[Demon Skin]] raises your armor for 30 min. From level 18, [[Demon Armor]] gives more armor and adds Stamina.
+- [[Demon Skin]] raises your armor for 30 min. From level 18, [[Demon Armor]] gives more armor, adds Stamina and replaces Demon Skin.
 - Have a demon out. Summoning takes 6 sec, works only out of a fight and costs 25% of your max mana (Imp) or 40% (Voidwalker).
 - You have one demon at a time. It attacks your target, comes into dungeons and heals between fights. If it dies, summon it again.
 - The **Imp** throws Firebolt every 2.2 sec but has little health. The **Voidwalker** has much more health and armor.

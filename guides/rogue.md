@@ -40,7 +40,7 @@ Combo points belong to one enemy: switching starts again from 0.
 
 1. [[Eviscerate]] at 5 combo points.
 2. [[Slice and Dice]]: 20% faster attacks, 9 sec plus 3 per point.
-3. [[Rupture]] on an enemy that will live 10 sec: it bleeds for the whole time. Don't recast it early.
+3. [[Rupture]] at 5 combo points on an enemy that will live 10 sec: each point adds a fifth of the bleed. Don't recast it early.
 4. Build with [[Ghostly Strike]] (level 38) when ready, else [[Hemorrhage]] (level 48): less energy than [[Sinister Strike]], more damage.
 
 Open with [[Ambush]] or [[Cheap Shot]] (level 26): within 3 sec of reaching melee, one per enemy.

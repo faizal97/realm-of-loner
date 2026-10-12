@@ -24,7 +24,7 @@ A Hunter fights from range with a bow and a tamed beast at its side. It fills on
 
 ### Before every fight
 - [[Spirit of the Hawk]] (level 20): attack power, 80 at level 60, for 30 min.
-- [[Spirit of the Monkey]] (level 4): 8% more dodge for 30 min. It doesn't replace [[Spirit of the Hawk]]; you can have both.
+- [[Spirit of the Monkey]] (level 4): 8% more dodge for 30 min. One Spirit at a time: the one you cast last replaces the other.
 - [[Keen Eye Aura]] (level 34): attack power for your whole party, 90 at level 60. It costs no mana.
 - Check your pet is alive: it joins every fight, dungeons included.
 

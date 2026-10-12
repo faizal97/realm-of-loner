@@ -20,7 +20,7 @@ A Shaman fights with spells and totems from range and can heal or deal damage; y
 
 ### Before every fight
 - [[Lightning Shield]] (level 8): three charges hit enemies who strike you in melee. Lasts 10 min or until used.
-- From level 36, a weapon imbue adds damage to each [[Storm Blade]] hit, for 5 min. One imbue at a time.
+- A weapon imbue, [[Earthen Weapon]] first, adds damage to every hit with your weapon, your shot from range included, for 5 min. One imbue at a time.
 - In a group fight, drop [[Stoneskin Totem]] (armor) and [[Strength of Earth Totem]] (Strength) for the party, 2 min each.
 
 ### Talents

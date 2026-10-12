@@ -28,7 +28,7 @@ A Paladin fights in melee with holy spells on top, and in a group fills two role
 
 ### Before every fight
 - [[Steadfast Aura]] on your party: armor for 30 min, free.
-- [[Thorned Aura]] (level 18): enemies that hit your party in melee take damage, for 30 min or 60 hits. Free, and it runs with [[Steadfast Aura]].
+- [[Thorned Aura]] (level 18): enemies that hit your party in melee take Holy damage, for 30 min or 60 hits. Free, and it runs with [[Steadfast Aura]].
 - [[Blessing of Might]] (level 12): attack power for 5 min.
 - [[Blessing of Wisdom]] (level 24): Spirit for 10 min.
 - [[Blessing of Kings]] (level 36): all stats for 10 min. All three blessings stack.
@@ -81,8 +81,8 @@ Holy first: all 18 points fit. **Healing Light** makes [[Holy Light]] heal 20% m
 - As a tank, all your damage makes 90% more threat. Enemies attack whoever has the most.
 - [[Consecration]] (8 sec cooldown) and [[Holy Wrath]] make double threat.
 - [[Hammer of the Righteous]] (level 54) and [[Verdict]] make 50% more threat. Recast your Oath after [[Verdict]].
-- [[Holy Shield]] absorbs 1,340 damage. It doesn't use the global cooldown.
-- [[Holy Shield]] and a priest's [[Word of Warding]] share one shield: the one cast last replaces the other.
+- [[Holy Shield]] absorbs 1,340 damage, and what it absorbs makes threat too. It doesn't use the global cooldown.
+- [[Holy Shield]] and a priest's [[Word of Warding]] stack: each absorbs on its own.
 - **Bulwark** (with **Blessing of Sanctuary**): when you dodge, [[Holy Shield]] ([[Consecration]] before level 52) can be ready and free.
 
 ### When it goes wrong

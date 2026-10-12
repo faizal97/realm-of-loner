@@ -48,7 +48,7 @@ You get your first point at level 10 and 51 by level 60. The Mage trees hold 51 
 - [[Frost Storm]] (level 26) hits around your target. [[Cone of Cold]] and [[Blast Wave]] only hit within 8 m of you.
 
 ### When it goes wrong
-- One shield at a time: a new [[Mana Shield]], [[Fire Ward]] or [[Ice Barrier]] (level 44, the biggest) replaces the old.
+- Your shields stack: [[Mana Shield]], [[Fire Ward]] and [[Ice Barrier]] (level 44, the biggest) each absorb on their own. They only work in a fight.
 - [[Frost Nova]] holds enemies within 8 m for 4 sec, then [[Step Back]].
 - [[Dragon's Breath]] (level 54) stuns enemies within 8 m for 2 sec.
 - [[Ice Block]] (level 32): immune to damage for 8 sec. You can keep casting.
@@ -57,5 +57,5 @@ You get your first point at level 10 and 51 by level 60. The Mage trees hold 51 
 ### Talents
 Fire first while you level: [[Fireball]] is your main spell until 56, and **Fire Power** and **Improved Fireball** raise it. Then Arcane for [[Arcane Blast]], then Frost. At 60 every Mage talent fits.
 - The **Combustion** talent: **Wildfire**, [[Fire Blast]] can make [[ability/scorch|Scorch]] instant and free.
-- The **Arcane Power** talent: **Arcane Surge**, a crit with another spell makes your next [[Arcane Missiles]] cost no mana.
+- The **Arcane Power** talent: **Arcane Surge**, any crit, your missiles' too, makes your next [[Arcane Missiles]] cost no mana.
 - The **Ice Barrier** talent: **Frostbite**, [[Frostbolt]] can make [[Cone of Cold]] ready and free.

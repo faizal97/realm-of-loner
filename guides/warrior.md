@@ -25,7 +25,7 @@ Alone, in this order:
 5. [[Heroic Strike]] with spare rage.
 
 - **Overpower** lights for 5 sec when your weapon swing is dodged or misses, or when you dodge. At most once every 8 sec.
-- **Battle Fury** (level 34): [[Heroic Strike]] can make your next [[Slam]] instant and free. Tap it while it glows.
+- **Battle Fury** (level 34): [[Heroic Strike]] and [[Cleave]] can make your next [[Slam]] instant and free. Tap it while it glows.
 - Two or more enemies: [[Thunder Clap]], [[Cleave]], [[Whirlwind]] (level 28) and [[Bladestorm]] (level 56) hit everything within 8 m.
 - [[Bloodrage]] (level 16) gives 20 rage. [[Berserker Rage]] (level 38) gives 15 rage and 20% faster attacks for 10 sec.
 - [[Recklessness]] (level 48): +240 attack power and 15% faster attacks for 15 sec. Save it for a hard fight.
