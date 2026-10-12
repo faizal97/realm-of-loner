@@ -125,8 +125,15 @@ for (const [id, m] of Object.entries(D.MOBS)) {
   p.sub = [`Level ${range(m.lvl)}`, m.boss ? 'Boss' : m.elite ? 'Elite' : '', family(m.family)].filter(Boolean).join(', ');
   const facts = [['Health', k(u.maxHp)], ['Hits for', `${k(u.dmg[0])}–${k(u.dmg[1])}`]];
   if (m.ranged) facts.push(['Attacks', 'From range']);
-  if (m.specialText) facts.push(['Ability', m.specialText]);
+  // what it does, as the group finder's briefing and boss card show it (E.specialRows): each ability, when, and what it does;
+  // on a Hard raid boss also its Hard mechanic, and on a world boss its extra one
+  const rowsOf = (x) => E.specialRows(x).map((r) => [r.hard ? `${r.name} (Hard)` : r.name, r.when, r.what]);
+  const does = rowsOf(u);
+  const hx = DG && DG.hard && DG.hard.extra && DG.hard.extra[id], wb = Object.values(D.ACTIVITIES).find((a) => a.extra && a.extra[id]);
+  if (hx || wb) { const u2 = E.mobUnit(id, m.lvl[1], hx ? DG.hard.bossMult || mult : mult); u2.special = null; u2.hardX = (hx || wb.extra[id]).map((e) => Object.assign({}, e)); does.push(...rowsOf(u2)); }
+  if (m.specialText && !does.length) facts.push(['Ability', m.specialText]);
   p.facts = facts;
+  sec(p, 'What it does', does, ['Ability', 'When', 'What']);
   sec(p, 'Found in', (placesOfMob[id] || []).map(where), ['Place', 'Level', 'Zone']);
   sec(p, 'Fought in', (dungeonsOfMob[id] || []).map((d) => [L('dungeon', d), 'From level ' + D.DUNGEONS[d].minLvl]), ['Dungeon', 'Level']);
   sec(p, 'Loot', (m.loot || []).map((i) => [L('item', i), itemKind(D.ITEMS[i])]), ['Item', 'Type']);
