@@ -13,7 +13,7 @@ async function check(name, p) {
 (async () => {
   const env = await initializeTestEnvironment({
     projectId: 'demo-friends',
-    firestore: { rules: fs.readFileSync(__dirname + '/firestore.rules', 'utf8').replace(/REVIEWER_UID/g, 'rev'), host: '127.0.0.1', port: 8781 },
+    firestore: { rules: fs.readFileSync(__dirname + '/firestore.rules', 'utf8').replace(/'WtPFWkJjJXQ6uQ5qoV1WdtlPEEI3'/g, "'rev'"), host: '127.0.0.1', port: 8781 },
     database: { rules: fs.readFileSync(__dirname + '/database.rules.json', 'utf8'), host: '127.0.0.1', port: 8782 },
   });
   const fsOf = (uid) => (uid ? env.authenticatedContext(uid) : env.unauthenticatedContext()).firestore();

@@ -7,8 +7,8 @@ service cloud.firestore {
     function friendOf(owner) { return exists(/databases/$(db)/documents/friends/$(owner)/list/$(me())); }
 
     // Player guides (docs/plans/2026-10-12-player-guides-design.md): one open submission per account, read by its
-    // author and the reviewer, public once approved. REVIEWER_UID is the reviewer's account id (the review page shows it).
-    function reviewer() { return me() == 'REVIEWER_UID'; }
+    // author and the reviewer, public once approved. The id below is the reviewer's account (the review page shows yours).
+    function reviewer() { return me() == 'WtPFWkJjJXQ6uQ5qoV1WdtlPEEI3'; }
     function guide() {
       let g = request.resource.data;
       return g.keys().hasOnly(['cls', 'title', 'by', 'text', 'at', 'status', 'note']) && g.keys().hasAll(['cls', 'title', 'by', 'text', 'at', 'status', 'note'])
