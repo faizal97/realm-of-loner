@@ -1572,7 +1572,7 @@
   // Buffs out of combat (Battle Shout, Fortitude, Frost Armor) just apply.
   // a buff shorter than a minute does nothing out of a fight (only buffs of 60 s or more are kept between fights), unless
   // the ability also heals: it is refused there and dimmed on the bar (#165)
-  G.fightBuff = (abId) => { const ab = D.ABILITIES[abId]; return !!(ab && ab.buff && ab.buff.dur < 60 && !ab.heal && !ab.hot); };
+  G.fightBuff = (abId) => { const ab = D.ABILITIES[abId]; return !!(ab && ((ab.buff && ab.buff.dur < 60) || ab.shield) && !ab.heal && !ab.hot); }; // a shield only lasts inside a fight too
   G.castOutOfCombat = function (abId) {
     const P = G.S.player, ab = D.ABILITIES[abId];
     if (G.fight) return G.useAbility(abId);
@@ -1596,10 +1596,10 @@
       const stats = {};
       const bp = 1 + (E.talentMods(P).buff[abId] || 0) / 100;
       for (const k in (ab.buff.stats || {})) stats[k] = Math.round((ab.buff.stats[k] + ((ab.buff.perLvl && ab.buff.perLvl[k]) || 0) * P.level) * bp * 10) / 10;
-      P.auras = (P.auras || []).filter((a) => a.id !== ab.buff.id);
+      P.auras = (P.auras || []).filter((a) => a.id !== ab.buff.id && !(ab.buff.group && ((D.ABILITIES[a.id] || {}).buff || {}).group === ab.buff.group)); // one of a group at a time
       const extra = {};
       if (ab.buff.seal) { const w = (P.equip.weapon && P.equip.weapon.speed) || 2; extra.seal = (ab.buff.seal.base + ab.buff.seal.perLvl * P.level) * (w / 2.5); extra.sealSchool = ab.buff.seal.school || 'holy'; }
-      if (ab.buff.thorns) extra.thorns = { dmg: Math.round(ab.buff.thorns.base + ab.buff.thorns.perLvl * P.level), charges: ab.buff.thorns.charges };
+      if (ab.buff.thorns) extra.thorns = { dmg: Math.round((ab.buff.thorns.base + ab.buff.thorns.perLvl * P.level) * bp), charges: ab.buff.thorns.charges }; // with its talent, as in a fight
       if (ab.buff.dur >= 60) P.auras.push(Object.assign({ id: ab.buff.id, stats, until: now() + ab.buff.dur * 1000 }, extra));
       if (stats.sta) P.hp += stats.sta * 10;
     }

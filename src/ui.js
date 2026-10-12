@@ -102,7 +102,7 @@
   const AURA_NAME = { momentum: 'Momentum', weakened_soul: 'Weakened Soul', chilled: 'Chilled', stun: 'Stunned', fireball_burn: 'Burning', seal: 'Seal' };
   const DEBUFF_IDS = new Set(['weakened_soul', 'hunters_mark', 'chilled', 'stun']);
   function auraInfo(a, u) {
-    if (a.proc) return { id: a.id, icon: a.proc.lights[0], name: a.proc.name, debuff: false }; // a reaction's light (v10.4)
+    if (a.proc) return { id: a.id, icon: (a.lit || a.proc.lights)[0], name: a.proc.name, debuff: false }; // a reaction's light (v10.4)
     let base = a.id.replace(/_slow$/, '');
     if (a.id === 'rockbiter' && a.sealSchool === 'fire') base = 'flametongue_weapon';
     const ab = D.ABILITIES[AURA_ALIAS[base] || base];
