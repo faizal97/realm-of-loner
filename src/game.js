@@ -778,7 +778,7 @@
     t[key] = { by: G.S.player.name, at: now() }; G.saveAccount(a);
     const n = G.trophyCount(), T = D.TITLES.find((x) => x.id === 'biggame');
     loot(`Trophy: ${D.MOBS[key].name}, ${n} of ${list.length} (Hero → Journey → Trophies).`);
-    if (n === G.TROPHY_TITLE && T) loot(`${n} trophies: the title "${G.titleName(T, G.S.player.name)}" is yours (Hero → Journey → Titles).`);
+    if (n === G.TROPHY_TITLE && T) loot(`${n} trophies: new title "${G.titleName(T, G.S.player.name)}".`);
     return true;
   };
   // chat "rare spotted" posts (v9.6): the named creature really is up
@@ -1736,7 +1736,7 @@
     const hours = sells ? Math.min(23.5, 0.3 * Math.pow(Math.max(0.3, ratio), 3) * rnd(0.6, 1.6)) : null;
     P.money -= dep; P.bags.splice(idx, 1);
     S.ah.mine.push({ item: b.item, n: b.n, price, deposit: dep, postedAt: t, sellAt: hours != null ? t + hours * 3600000 : null, expires: t + AH_LIFE });
-    sys(`You posted ${b.item.name} for ${G.moneyText(price)} (deposit ${G.moneyText(dep)}, back if it sells).`);
+    sys(`Auction posted: ${b.item.name}, ${G.moneyText(price)} (deposit ${G.moneyText(dep)}, refunded on sale).`);
     emit('change');
   };
   G.ahCancel = function (i) {
@@ -1751,13 +1751,13 @@
       if (a.sellAt && t >= a.sellAt) {
         const got = Math.round(a.price * (1 - AH_CUT)), dep = a.deposit || 0;
         P.money += got + dep; S.ah.mine = S.ah.mine.filter((x) => x !== a);
-        const buyer = pick(S.bots); loot(`Your auction of ${B.link(a.item.name, a.item.q)} sold to ${buyer.name} for ${G.moneyText(got)} (after the 5% cut)${dep ? `, and your deposit of ${G.moneyText(dep)} is back` : ''}.`);
+        const buyer = pick(S.bots); loot(`Auction sold: ${B.link(a.item.name, a.item.q)} to ${buyer.name}, ${G.moneyText(got)} after the 5% cut${dep ? ` (+${G.moneyText(dep)} deposit)` : ''}.`);
         emit('lootGain', { money: got });
       } else if (t >= a.expires) {
         S.ah.mine = S.ah.mine.filter((x) => x !== a);
         const lost = a.deposit ? ` The deposit of ${G.moneyText(a.deposit)} is lost.` : '';
         if (!G.bagsFull()) { P.bags.push({ item: a.item, n: a.n || 1 }); sys(`Your auction of ${a.item.name} expired. It is back in your bags.${lost}`); }
-        else { P.bank = P.bank || []; P.bank.push({ item: a.item, n: a.n || 1 }); sys(`Your auction of ${a.item.name} expired. Your bags were full, so it went to your bank.${lost}`); }
+        else { P.bank = P.bank || []; P.bank.push({ item: a.item, n: a.n || 1 }); sys(`Auction expired: ${a.item.name}. Bags full: sent to your bank.${lost}`); }
       }
     }
   }
@@ -1791,7 +1791,7 @@
   };
   G.trainProf = function (id) {
     const P = G.S.player, profs = G.profs(), R = G.nextRank(id);
-    if (!R) return toast(`You are already ${D.PROF_RANKS[D.PROF_RANKS.length - 1].name.startsWith('A') ? 'an' : 'a'} ${D.PROF_RANKS[D.PROF_RANKS.length - 1].name} in ${D.PROFESSIONS[id].name}, the highest rank.`);
+    if (!R) return toast(`${D.PROFESSIONS[id].name}: already at the highest rank.`);
     if (!profs[id] && !D.isSecondary(id) && G.primaryCount() >= D.PROF_MAX) return toast(`You can learn ${D.PROF_MAX} professions. Unlearn one first.`); // Cooking and Fishing use no slot
     if (P.level < R.lvl) return toast(`Requires level ${R.lvl}.`);
     if (profs[id] && profs[id].skill < R.skill) return toast(`Requires ${R.skill} skill in ${D.PROFESSIONS[id].name}.`);
@@ -1822,13 +1822,13 @@
     if (Math.random() >= SKILL_CHANCE[color]) return;
     p.skill++;
     sys(`Your skill in ${D.PROFESSIONS[id].name} has increased to ${p.skill}.`);
-    if (p.skill === p.max && G.nextRank(id)) sys(`You have reached ${p.max} in ${D.PROFESSIONS[id].name}. Visit a profession trainer to go further.`);
+    if (p.skill === p.max && G.nextRank(id)) sys(`${D.PROFESSIONS[id].name} ${p.max}/${p.max}. Train at a profession trainer to go further.`);
     if (p.skill >= 300) G.profReward(id);
   }
   // 300 in a skill (v10.9): its keepsake joins the wardrobe's Back row for every character, and its title opens
   G.profReward = function (id) {
     const R = (D.PROF_REWARDS || {})[id]; if (!R || !G.collectLook(D.ITEMS[R.keepsake])) return false;
-    loot(`Artisan ${D.PROFESSIONS[id].name}: the ${B.link(R.name, 4)} joins your wardrobe (Back), and the title "${G.titleName(D.TITLES.find((t) => t.id === 'prof_' + id), G.S.player.name)}" is yours.`);
+    loot(`Artisan ${D.PROFESSIONS[id].name}: new look ${B.link(R.name, 4)} and title "${G.titleName(D.TITLES.find((t) => t.id === 'prof_' + id), G.S.player.name)}".`);
     emit('change'); return true;
   };
   G.nodeSk = (N) => [N.skill, N.skill + D.GATHER_BANDS[0], N.skill + D.GATHER_BANDS[1], N.skill + D.GATHER_BANDS[2]];
@@ -2423,7 +2423,7 @@
   G.honorLooks = function (quiet) {
     if (!G.S) return; const f = G.myFaction(), r = G.myRank();
     D.HONOR_RANKS.forEach((x, i) => { if (!x.look || r < i + 1) return; const it = D.ITEMS[`honor_${f}_${x.look}`];
-      if (it && G.collectLook(it) && !quiet) loot(`Honor rank ${i + 1}, ${G.rankName(i + 1, f)}: the ${B.link(it.name, it.q)} joins your wardrobe (Back).`); });
+      if (it && G.collectLook(it) && !quiet) loot(`Honor rank ${i + 1}, ${G.rankName(i + 1, f)}: new look ${B.link(it.name, it.q)}.`); });
   };
   // a bot's lifetime Honor, from its id and level (#57, the game designer's bar): at level 60 about half the bots have no
   // rank, and ranks 5-8 each hold about half the bots of the rank below (rank 5 against rank 4 too), about 1 in 100 at
@@ -2641,7 +2641,7 @@
     const slots = [{ you: true }].concat(fighters).sort(() => Math.random() - 0.5);
     P.brawl = Object.assign(P.brawl || {}, { last: G.brawlWindow().id });
     S.brawl = { id: P.brawl.last, round: 1, slots, phase: 'choose', results: [], wins: 0, reward: { money: 0, xp: 0, marks: 0 }, chest: null };
-    sys('The Bloodsand Brawl begins: 8 fighters, three rounds. Win all three and the chest is yours.');
+    sys('The Bloodsand Brawl begins: 8 fighters, 3 rounds. Win all 3 for the chest.');
     emit('change'); G.save();
     return true;
   };
@@ -2683,7 +2683,7 @@
       if (xp) { G.gainXp(xp); br.reward.xp += xp; }
       if (marks) { G.addMarks(marks, 'the Bloodsand Brawl'); br.reward.marks += marks; }
       sys(`You win round ${r}! +${G.moneyText(money)}${xp ? `, +${xp} XP` : ''}${marks ? `, +${marks} Marks` : ''}.`);
-    } else sys(`${foe} wins round ${r}. You are out, with ${br.wins} round${br.wins === 1 ? '' : 's'} won.`);
+    } else sys(`${foe} wins round ${r}. You are out (${br.wins} round${br.wins === 1 ? '' : 's'} won).`);
     // the winners go on: the bracket keeps its order
     const winners = brawlPairs(br).map(([a, b], i) => (a.you || b.you ? (won ? (a.you ? a : b) : (a.you ? b : a)) : pend[i].winner));
     if (!won || r >= BRAWL.rounds) { br.pending = null; return brawlFinish(won && r >= BRAWL.rounds); }
@@ -2701,7 +2701,7 @@
         const C = D.CLASSES[P.cls], L = P.level, slots = ['weapon', pick(['chest', 'legs', 'hands', 'feet', 'waist', 'wrist']), pick(['back', 'finger'])];
         br.chest = slots.map((sl) => G.genGear(sl, L, 3, sl === 'weapon' ? { wtype: C.weapons[0] } : { atype: C.armorType }));
       }
-      sys(`You are the Bloodsand Champion!${br.chest ? ' Open the chest.' : ' The chest pays once a day; it is empty for you until tomorrow.'}`);
+      sys(`You are the Bloodsand Champion!${br.chest ? ' Open the chest.' : ' Chest already looted today.'}`);
     }
     emit('bgEnd', { result: champion ? 'win' : 'loss' }); emit('change'); G.save();
   }
@@ -2775,7 +2775,7 @@
     const mine = BG_ROLES.slice(); const i = mine.indexOf(G.role()); mine.splice(i >= 0 ? i : 2, 1);
     S.bg = { act, key, round: 1, score: { us: 0, them: 0 }, owner: {}, phase: 'choose', team: bgSide(myF, L, mine, used), foes: bgSide(theirF, L, BG_ROLES, used), log: [], started: now() };
     S.bg.plan = bgPlan(S.bg); S.bg.scout = bgScout(S.bg);
-    sys(`${C.name} begins: 5 against 5. Hold the banners: first to ${C.win} points, or the most after ${C.rounds} rounds.`);
+    sys(`${C.name} begins: 5v5. First to ${C.win} points, or most after ${C.rounds} rounds.`);
     emit('instanceEnter', { act, bg: key }); emit('change'); G.save();
   }
   // your team splits like theirs (v10.7): your group (you and two) and the pair (two more) each go to a banner. Where both
@@ -3095,7 +3095,7 @@
     if ((a.looks || []).includes(it.look.join(':'))) return toast('You have that cloak already.');
     if (a.marks < G.MONTH_CLOAK_COST) return toast(`You need ${G.MONTH_CLOAK_COST} Mentor Marks.`);
     a.marks -= G.MONTH_CLOAK_COST; const tw = a.trialsworn = a.trialsworn || {}; (tw.bought = tw.bought || []).push(it.month); G.saveAccount(a);
-    G.collectLook(it); loot(`You bought the ${B.link(it.name, 4)} for ${G.MONTH_CLOAK_COST} Mentor Marks. It joins your wardrobe.`); G.yearMountCheck(); emit('change');
+    G.collectLook(it); loot(`Bought ${B.link(it.name, 4)} (${G.MONTH_CLOAK_COST} Mentor Marks). Added to your wardrobe.`); G.yearMountCheck(); emit('change');
   };
   // the yearly mount: every cloak of that year's 12 months in the wardrobe (earned or bought) gives it to every character
   G.yearCloaks = (yr) => { const [a, b] = D.TRIALSWORN[yr].year; return Object.keys(D.ITEMS).filter((i) => D.ITEMS[i].lookOnly && D.ITEMS[i].month != null && D.ITEMS[i].month >= a && D.ITEMS[i].month <= b); };
@@ -3105,7 +3105,7 @@
       if (!R.year || got[k]) continue;
       const ids = G.yearCloaks(k); if (!ids.length || !ids.every((i) => have.has(D.ITEMS[i].look.join(':')))) continue;
       got[k] = true; G.saveAccount(a); G.giveTrialswornMount(R.mount);
-      loot(`Trialsworn: all twelve cloaks of the year! The ${D.MOUNTS[R.mount].name} is yours, on every character.`);
+      loot(`Trialsworn: all 12 cloaks! New mount: ${D.MOUNTS[R.mount].name} (all characters).`);
     }
   };
   G.giveTrialswornMount = function (k) {
@@ -3232,7 +3232,7 @@
     G.raidWeek().featured = true;
     G.addMarks(G.FEATURED_MARKS, 'the featured raid');
     const left = G.raidLooksLeft(act);
-    if (left.length && G.collectLook(D.ITEMS[left[0]])) loot(`Featured raid: a new look for your wardrobe, ${B.link(D.ITEMS[left[0]].name, D.ITEMS[left[0]].q)}.`);
+    if (left.length && G.collectLook(D.ITEMS[left[0]])) loot(`Featured raid: new look ${B.link(D.ITEMS[left[0]].name, D.ITEMS[left[0]].q)}.`);
   }
   G.hardExtra = function (act, boss) { const Dg = D.DUNGEONS[D.ACTIVITIES[act].dungeon], x = Dg && Dg.hard && Dg.hard.extra && Dg.hard.extra[boss]; return x ? x.map((e) => Object.assign({}, e)) : null; };
   G.hardCopy = function (id) {
@@ -3556,7 +3556,7 @@
         if (wbA) { if (wbFirst) { const w = G.raidWeek(); (w.wb = w.wb || {})[R.act] = true; G.addMarks(G.WB_MARKS, 'this week\'s world boss'); } else sys(`${M.name}'s loot is taken this week: it drops again on Monday.`); }
         if (wbA) G.takeTrophy(D.ACTIVITIES[R.act].boss); // first kill by any character (#44)
         const drops = wbA && !wbFirst ? [] : table.slice(0, 2).map(bonus ? G.hardCopy : G.copyItem);
-        if (R.hard) { if (bonus) { G.raidWeek().got[R.act + ':' + pull.mobs[0]] = true; sys(`Hard bonus: ${M.name} drops loot ${G.HARD_STEPS} upgrade steps up (once a week).`); } else sys(`${M.name}'s Hard bonus is taken this week: Normal loot until Monday.`); }
+        if (R.hard) { if (bonus) { G.raidWeek().got[R.act + ':' + pull.mobs[0]] = true; sys(`Hard bonus: ${M.name}'s loot is ${G.HARD_STEPS} upgrade steps higher (weekly).`); } else sys(`${M.name}: Hard bonus already taken this week. Resets Monday.`); }
         for (const it of drops) addRoll(it);
         const rr = G.rareRecipeDrop(G.syncLevel(R.act)); if (rr) addRoll(rr);
         if (!(wbA && !wbFirst) && (!D.ACTIVITIES[R.act].dungeon || Math.random() < 0.25)) addRoll(G.genGear(pick(D.GEAR_SLOTS), G.syncLevel(R.act), !D.ACTIVITIES[R.act].dungeon ? 2 : 3));
