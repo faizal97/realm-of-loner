@@ -2,7 +2,7 @@
 class: druid
 by: official
 written: 10.11.0
-checked: 10.11.0
+checked: 10.13.0
 ---
 A Druid heals, tanks or deals damage, and chooses which each time it joins a group. You heal and cast in your own form and tank in [[Bear Form]] (level 10). Druids wear leather, use a staff, mace or dagger, and run on mana.
 

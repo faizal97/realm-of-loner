@@ -2,7 +2,7 @@
 class: hunter
 by: official
 written: 10.11.0
-checked: 10.11.0
+checked: 10.13.0
 ---
 A Hunter fights from range with a bow and a tamed beast at its side. It fills one role: damage. Hunters wear leather, use an axe, sword or dagger in melee, and run on mana.
 

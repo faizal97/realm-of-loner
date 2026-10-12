@@ -2,7 +2,7 @@
 class: shaman
 by: official
 written: 10.11.0
-checked: 10.11.0
+checked: 10.13.0
 ---
 A Shaman fights with spells and totems from range and can heal or deal damage; you choose the role each time you join a group. Shamans wear leather and use a mace, axe, staff or dagger. Your resource is mana.
 

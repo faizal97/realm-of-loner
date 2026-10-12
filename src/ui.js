@@ -3368,6 +3368,9 @@
         { const ts = tipState(); b.append(...foldSec('set.tips', 'Tips', ts.off ? 'Off' : 'On', [h('div', { class: 'btn-row' },
           h('button', { class: 'btn alt', onclick: () => { ts.off = !ts.off; saveTips(ts); ui.sheetFn(); } }, 'Tips: ' + (ts.off ? 'Off' : 'On')),
           h('button', { class: 'btn alt', onclick: () => { saveTips({ seen: [], off: false }); toast('Tips will show again as you play.', true); ui.sheetFn(); } }, 'Show tips again'))])); }
+        if (window.UPD) { const P = G.S.player, tab = { tank: 'tank', healer: 'healer', dps: 'damage' }[G.role()] || ''; b.append(...foldSec('set.guide', 'Guides', 'Class guide · database', [h('div', { class: 'btn-row' },
+          h('button', { class: 'btn alt', onclick: () => UPD.open(UPD.GUIDE + '#guide/' + P.cls + (tab ? '?tab=' + tab : '')) }, D.CLASSES[P.cls].name + ' guide'), h('button', { class: 'btn alt', onclick: () => UPD.open(UPD.GUIDE) }, 'Database')),
+          h('p', { class: 'ai-note', style: { margin: 0 } }, 'Opens in your browser: how to play your class, and every item, creature and quest.')], false)); }
         if (window.UPD) b.append(...foldSec('set.community', 'Community', 'Discord · report a bug', [h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', onclick: () => UPD.open(UPD.DISCORD) }, 'Join the Discord'), window.REPORT ? h('button', { class: 'btn alt', onclick: () => reportDialog() }, 'Report a bug') : null),
           h('p', { class: 'ai-note', style: { margin: 0 } }, 'Talk about the game, report bugs and suggest ideas.')]));
         if (window.UPD) b.append(...foldSec('set.support', 'Support the game', 'Ko-fi · SociaBuzz', [h('div', { class: 'btn-row' },

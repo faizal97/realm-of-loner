@@ -2,7 +2,7 @@
 class: warrior
 by: official
 written: 10.11.0
-checked: 10.11.0
+checked: 10.13.0
 ---
 A Warrior fights up close with a weapon, and in a group either takes the hits as the tank or deals damage. You choose the role each time you join a group; your gear stays the same. You wear mail (or leather and cloth), use a sword, axe or mace, and fight with rage.
 
