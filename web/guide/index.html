@@ -59,6 +59,7 @@ h2 { font: 400 18px/1.2 var(--display); color: var(--gold); margin: 26px 0 8px; 
 table { width: 100%; border-collapse: collapse; }
 th { text-align: left; font-weight: 500; color: var(--muted); font-size: 14px; padding: 4px 8px 6px 0; border-bottom: 1px solid var(--edge); }
 td { padding: 8px 8px 8px 0; border-bottom: 1px solid #2c2216; vertical-align: top; }
+table.kv td:first-child { color: var(--muted); white-space: nowrap; width: 1%; padding-right: 14px; }
 td.n, th.n { text-align: right; padding-right: 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
 td a, .row a { border-bottom: 1px solid transparent; }
 td a:hover, td a:focus-visible { border-bottom-color: currentColor; }
@@ -99,7 +100,7 @@ const main = document.getElementById('main'), q = document.getElementById('q');
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const art = (p, cls) => p.ic ? `<img class="${cls || 'ic'}" src="icon/${esc(p.ic)}.svg" alt="" loading="lazy">` : p.mob ? `<img class="${cls || 'ic'}" src="mob/${esc(p.mob)}.svg" alt="" loading="lazy">` : '';
 const link = (c) => Array.isArray(c) ? c.map(link).join(', ') : c && typeof c === 'object' ? `<a class="ln${c.q != null ? ' q' + c.q : ''}" href="#${esc(c.l)}">${esc(c.t)}</a>` : esc(c == null ? '' : c);
-const SING = { item: 'Item', mob: 'Creature', quest: 'Quest', npc: 'Person', place: 'Place', zone: 'Zone', dungeon: 'Dungeon' };
+const SING = { item: 'Item', mob: 'Creature', quest: 'Quest', npc: 'Person', place: 'Place', zone: 'Zone', dungeon: 'Dungeon', act: 'Group finder', class: 'Class', race: 'Race', ability: 'Ability', prof: 'Profession', collect: 'Collection' };
 const fmt = (n) => n.toLocaleString('en');
 
 function row(key, kind) {
@@ -109,13 +110,14 @@ function row(key, kind) {
 
 function home() {
   document.title = 'Realm of Loner Database';
-  main.innerHTML = `<div class="browse" style="margin-top:14px">${Object.entries(DB.kinds).map(([k, n]) => `<a href="#list/${k}">${n}<span>${fmt(DB.lists[k].length)}</span></a>`).join('')}</div>
+  const GROUPS = [['Gear and loot', ['item', 'collect']], ['The world', ['zone', 'place', 'dungeon', 'act']], ['Who lives there', ['mob', 'npc', 'quest']], ['Your character', ['class', 'race', 'ability', 'prof']]];
+  main.innerHTML = GROUPS.map(([g, ks]) => `<h2>${g}</h2><div class="browse">${ks.filter((k) => DB.kinds[k]).map((k) => `<a href="#list/${k}">${DB.kinds[k]}<span>${fmt(DB.lists[k].length)}</span></a>`).join('')}</div>`).join('') + `
     <p class="note">From the game's own data, version ${esc(DB.v)}. Quest rewards are made for your class when you finish, so they are listed by type.</p>`;
 }
 
 // a list narrows by filters instead of scrolling: they live in the link (#list/item?stat=sp&slot=hands), so an answer is shareable
-const FILTERS_OF = { item: ['slot', 'stat', 'quality', 'level'], mob: ['zone', 'rank', 'level'], quest: ['zone', 'rank', 'level'], place: ['zone', 'rank', 'level'], npc: ['zone', 'level'], zone: ['level'], dungeon: ['rank'] };
-const ANY = { slot: 'Any slot', stat: 'Any stat', quality: 'Any quality', zone: 'Any zone or dungeon', rank: 'Any kind', level: 'Any level' };
+const FILTERS_OF = { item: ['slot', 'stat', 'quality', 'level'], mob: ['zone', 'rank', 'level'], quest: ['zone', 'rank', 'level'], place: ['zone', 'rank', 'level'], npc: ['zone', 'level'], zone: ['level'], dungeon: ['rank'], ability: ['class', 'level'], act: ['rank', 'level'], collect: ['rank'] };
+const ANY = { class: 'Any class', slot: 'Any slot', stat: 'Any stat', quality: 'Any quality', zone: 'Any zone or dungeon', rank: 'Any kind', level: 'Any level' };
 const BANDS = { '1-10': 'Level 1–10', '11-20': 'Level 11–20', '21-30': 'Level 21–30', '31-40': 'Level 31–40', '41-50': 'Level 41–50', '51-60': 'Level 51–60' };
 const PAGE = 60;
 const keep = (f, name, v) => {
@@ -124,6 +126,7 @@ const keep = (f, name, v) => {
   if (name === 'quality') return String(f.q) === v;
   if (name === 'zone') return (f.z || []).includes(v);
   if (name === 'rank') return f.r === v;
+  if (name === 'class') return f.c === v;
   if (name === 'level') { const [a, b] = v.split('-').map(Number); return f.lv >= a && f.lv <= b; }
   return true;
 };
@@ -137,7 +140,7 @@ function list(kind, query, shown) {
   // (counted with the other filters applied, so two choices together never give an empty page)
   const opts = (n) => {
     const rest = all.filter((id) => { const f = DB.pages[kind + '/' + id].f || {}; return names.every((o) => o === n || !sel[o] || keep(f, o, sel[o])); });
-    const src = n === 'level' ? BANDS : n === 'slot' ? DB.filters.slot : n === 'stat' ? DB.filters.stat : n === 'quality' ? DB.filters.quality : n === 'zone' ? DB.filters.zone : DB.filters.rank;
+    const src = n === 'level' ? BANDS : n === 'slot' ? DB.filters.slot : n === 'stat' ? DB.filters.stat : n === 'quality' ? DB.filters.quality : n === 'zone' ? DB.filters.zone : n === 'class' ? DB.filters.class : DB.filters.rank;
     return Object.entries(src).map(([v, t]) => [v, t, rest.filter((id) => keep(DB.pages[kind + '/' + id].f || {}, n, v)).length]).filter((o) => o[2] || sel[n] === o[0]);
   };
   const word = DB.kinds[kind].toLowerCase(), any = names.some((n) => sel[n]);
@@ -160,8 +163,8 @@ function page(key) {
   if (p.facts) out += `<dl class="facts">${p.facts.map(([l, v, x]) => `<div><dt>${esc(l)}</dt><dd>${link(v)}${x ? ', ' + link(x) : ''}</dd></div>`).join('')}</dl>`;
   if (p.text) out += `<p class="say">${esc(p.text)}</p>`;
   for (const s of p.sec || []) {
-    const num = (i) => s.head && /^(Level|Chance|Count|Needed)$/.test(s.head[i]);
-    out += `<h2>${esc(s.h)}</h2><table>${s.head && s.head.some(Boolean) ? `<tr>${s.head.map((h, i) => `<th${num(i) ? ' class="n"' : ''}>${esc(h)}</th>`).join('')}</tr>` : ''}${s.rows.map((r) => `<tr>${r.map((c, i) => `<td${num(i) ? ' class="n"' : ''}>${link(c)}</td>`).join('')}</tr>`).join('')}</table>`;
+    const num = (i) => i > 0 && s.head && /^(Level|Chance|Count|Needed)$/.test(s.head[i]);
+    out += `<h2>${esc(s.h)}</h2><table${s.head ? '' : ' class="kv"'}>${s.head && s.head.some(Boolean) ? `<tr>${s.head.map((h, i) => `<th${num(i) ? ' class="n"' : ''}>${esc(h)}</th>`).join('')}</tr>` : ''}${s.rows.map((r) => `<tr>${r.map((c, i) => `<td${num(i) ? ' class="n"' : ''}>${link(c)}</td>`).join('')}</tr>`).join('')}</table>`;
   }
   out += `<a class="back" href="#list/${p.k}">All ${esc(DB.kinds[p.k].toLowerCase())}</a>`;
   main.innerHTML = out;

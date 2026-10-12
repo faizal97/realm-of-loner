@@ -25,7 +25,7 @@ const money = (c) => { const g = Math.floor(c / 10000), s = Math.floor(c / 100) 
 const cap = (s) => s[0].toUpperCase() + s.slice(1);
 const statName = { str: 'Strength', agi: 'Agility', sta: 'Stamina', int: 'Intellect', spi: 'Spirit' };
 const WTYPE = { sword: 'Sword', axe: 'Axe', mace: 'Mace', dagger: 'Dagger', staff: 'Staff', bow: 'Bow', gun: 'Gun', crossbow: 'Crossbow', wand: 'Wand' };
-const KIND = { item: 'Items', mob: 'Creatures', quest: 'Quests', npc: 'People', place: 'Places', zone: 'Zones', dungeon: 'Dungeons' };
+const KIND = { item: 'Items', mob: 'Creatures', quest: 'Quests', npc: 'People', place: 'Places', zone: 'Zones', dungeon: 'Dungeons', act: 'Group finder', class: 'Classes', race: 'Races', ability: 'Abilities', prof: 'Professions', collect: 'Collections' };
 const push = (m, key, v) => (m[key] = m[key] || []).push(v);
 
 // what an item is, in one line ("Leather Hands", "Quest Item", "Trade Goods")
@@ -184,6 +184,125 @@ for (const [id, d] of Object.entries(D.DUNGEONS)) {
   sec(p, 'Boss loot', loot, ['Item', 'Type', 'Boss']);
 }
 
+// ---------------------------------------------------------------- classes, races, abilities, talents
+const RES = { mana: 'Mana', rage: 'Rage', energy: 'Energy' };
+const ROLE = { healer: 'Healer', tank: 'Tank', dps: 'Damage' };
+const num = (x) => (Math.round(x * 100) / 100).toString();
+const cdText = (cd) => `${cd >= 60 && cd % 60 === 0 ? cd / 60 + ' min' : cd + ' sec'} cooldown`;
+// an ability's text at a level with no gear (src/ui.js abilityText, spell power 0)
+function abilityAt(ab, L) {
+  const f = (x) => Math.round(x); let d = ab.desc || '';
+  if (ab.dmg) { const lo = ab.dmg.base ? ab.dmg.base[0] + (ab.dmg.perLvl || 0) * L : ab.dmg.bonus ? ab.dmg.bonus[0] + (ab.dmg.perLvl || 0) * L : 0, hi = ab.dmg.base ? ab.dmg.base[1] + (ab.dmg.perLvl || 0) * L : ab.dmg.bonus ? ab.dmg.bonus[1] + (ab.dmg.perLvl || 0) * L : 0; d = d.replace('{b}', f(lo) === f(hi) ? f(lo) : `${f(lo)} to ${f(hi)}`); }
+  if (ab.heal) { const hl = (i) => f(ab.heal.base[i] + (ab.heal.perLvl || 0) * L); d = d.replace('{h}', hl(0) === hl(1) ? hl(0) : `${hl(0)} to ${hl(1)}`); }
+  if (ab.dot) d = d.replace('{d}', f((ab.dot.dmg + ab.dot.perLvl * L) * ab.dot.ticks));
+  if (ab.hot) d = d.replace('{hh}', f((ab.hot.heal + ab.hot.perLvl * L) * ab.hot.ticks));
+  if (ab.shield) d = d.replace('{s}', f(ab.shield.base + ab.shield.perLvl * L));
+  if (ab.lifetap) d = d.split('{lt}').join(f(ab.lifetap.base + ab.lifetap.perLvl * L));
+  if (ab.buff && ab.buff.stats) for (const s in ab.buff.stats) d = d.replace('{' + s + '}', f(ab.buff.stats[s] + ((ab.buff.perLvl && ab.buff.perLvl[s]) || 0) * L));
+  return d;
+}
+const abCost = (ab, cls, L) => { const c = (ab.cost || 0) + (ab.costPerLvl || 0) * (L - 1); return c ? `${Math.round(c)} ${RES[D.CLASSES[cls] ? D.CLASSES[cls].resource : 'mana'] || ''}`.trim() : 'Free'; };
+const talentText = (t, rank) => (t.desc || '').replace('{v}', num(((t.fx || [])[0] || { v: 0 }).v * rank));
+const talentsOn = {}; // ability → talents that change it
+for (const [cls, trees] of Object.entries(D.TALENTS)) for (const tr of trees) for (const t of tr.talents) for (const fx of t.fx || []) for (const a of fx.ab || []) if (!(talentsOn[a] || []).some((x) => x[0] === t)) push(talentsOn, a, [t, tr, cls]);
+
+for (const [id, c] of Object.entries(D.CLASSES)) P['class/' + id] = { k: 'class', n: c.name, cls: id };
+for (const [id, r] of Object.entries(D.RACES)) P['race/' + id] = { k: 'race', n: r.name };
+for (const [id, ab] of Object.entries(D.ABILITIES)) if (ab.cls || ab.racial) P['ability/' + id] = { k: 'ability', n: ab.name, ic: ab.icon || id };
+
+for (const [id, ab] of Object.entries(D.ABILITIES)) {
+  const p = P['ability/' + id]; if (!p) continue;
+  const cls = ab.cls && D.CLASSES[ab.cls] ? ab.cls : null, lv = ab.lvl || 1;
+  p.sub = [cls ? D.CLASSES[cls].name : 'Racial', ab.lvl ? `Level ${ab.lvl}` : ''].filter(Boolean).join(', ');
+  p.tip = [['nm q1', ab.name], ['two', cls ? abCost(ab, cls, lv) : '', ab.cd ? cdText(ab.cd) : ''], ['dim', ab.cast ? (ab.channel ? 'Channeled' : `${ab.cast} sec cast`) : 'Instant'], ['set', abilityAt(ab, lv)]];
+  if (ab.form) p.tip.push(['dim', `${cap(ab.form)} Form only`]);
+  p.facts = [['Class', cls ? L('class', cls) : 'Racial'], ['Learned', ab.lvl ? `Level ${ab.lvl}` : 'From the start']];
+  if (cls && lv < 60 && /\{(b|h|d|hh|s|lt)\}|\{\w+\}/.test(ab.desc || '')) p.facts.push(['At level 60', abilityAt(ab, 60) + (cls ? ` (${abCost(ab, cls, 60)})` : '')]);
+  const rc = Object.entries(D.RACIALS || {}).filter(([, R]) => R.active === id).map(([r]) => L('race', r)).filter(Boolean);
+  if (rc.length) p.facts.push(['Race', rc]);
+  sec(p, 'Talents that change it', (talentsOn[id] || []).map(([t, tr]) => [t.name, tr.name, talentText(t, t.ranks)]), ['Talent', 'Tree', 'At full rank']);
+  const pr = ((D.PROCS || {})[cls] || []).filter((x) => x.lights.includes(id) || (x.from || []).includes(id));
+  sec(p, 'Reactions', pr.map((x) => [x.name, x.teach]));
+}
+
+for (const [id, c] of Object.entries(D.CLASSES)) {
+  const p = P['class/' + id];
+  p.sub = (c.roles || [c.role]).map((r) => ROLE[r] || cap(r)).join(', ');
+  const at = (L) => Object.fromEntries(['str', 'agi', 'sta', 'int', 'spi'].map((s) => [s, Math.round(c.base[s] + c.gain[s] * (L - 1))]));
+  const s60 = at(60);
+  p.facts = [['Roles', (c.roles || [c.role]).map((r) => ROLE[r] || cap(r)).join(', ')], ['Resource', RES[c.resource] || cap(c.resource)], ['Armor', cap(c.armorType)], ['Weapons', (c.weapons || []).map((w) => WTYPE[w] || cap(w)).join(', ')]];
+  sec(p, 'Stats with no gear', ['str', 'agi', 'sta', 'int', 'spi'].map((s) => [statName[s], String(at(1)[s]), String(s60[s])]), ['Stat', 'Level 1', 'Level 60']);
+  const abil = Object.entries(D.ABILITIES).filter(([, a]) => a.cls === id).sort((a, b) => (a[1].lvl || 0) - (b[1].lvl || 0));
+  sec(p, 'Abilities', abil.map(([a, A]) => [String(A.lvl || 1), L('ability', a), A.form ? cap(A.form) + ' Form' : A.cd ? cdText(A.cd) : '']), ['Level', 'Ability', '']);
+  for (const tr of D.TALENTS[id] || []) sec(p, `${tr.name} talents`, tr.talents.map((t) => [String(D.TALENT_TIER_POINTS[t.tier] || 0), t.name, `${t.ranks}`, talentText(t, t.ranks)]), ['Points in tree', 'Talent', 'Ranks', 'At full rank']);
+  sec(p, 'Races', Object.entries(D.RACES).filter(([, r]) => (r.classes || []).includes(id)).map(([r, R]) => [L('race', r), cap(R.faction)]), ['Race', 'Faction']);
+}
+
+for (const [id, r] of Object.entries(D.RACES)) {
+  const p = P['race/' + id], R = (D.RACIALS || {})[id] || {};
+  p.sub = cap(r.faction);
+  p.facts = [['Faction', cap(r.faction)], ['Starts in', D.PLACES[r.start] ? L('place', r.start) : r.startZone]];
+  if (R.active && P['ability/' + R.active]) p.facts.push(['Racial', L('ability', R.active)]);
+  sec(p, 'Racial traits', (R.text || []).map((t) => [t]));
+  sec(p, 'Classes', (r.classes || []).map((c) => [L('class', c)]));
+}
+
+// ---------------------------------------------------------------- professions, gathering, fishing, skinning
+for (const [id, pr] of Object.entries(D.PROFESSIONS)) P['prof/' + id] = { k: 'prof', n: pr.name, ic: pr.icon };
+const wild = Object.keys(D.PLACES).filter((pl) => { const x = D.PLACES[pl]; return !x.safe && !x.city && (x.mobs || []).length > 0; });
+const midL = (pl) => Math.round(((D.PLACES[pl].lvl || [1, 1])[0] + (D.PLACES[pl].lvl || [1, 1])[1]) / 2);
+const nodePlaces = {};
+for (const pl of wild) { const T = D.nodeTable(midL(pl)); for (const [n, wgt] of T.ore.concat(T.herb)) if (wgt > 0) push(nodePlaces, n, pl); }
+const gatheredFrom = {}, fishedIn = {};
+for (const [n, N] of Object.entries(D.NODES)) { push(gatheredFrom, N.item, [n, 'main']); if (N.extra) push(gatheredFrom, N.extra[0], [n, N.extra[1]]); }
+for (const [tier, T] of Object.entries(D.FISH)) { for (const [f, sk] of T.common) push(fishedIn, f, [tier, sk, 'Common']); if (T.big) push(fishedIn, T.big[0], [tier, T.big[1], 'Big catch']); if (T.rare) push(fishedIn, T.rare[0], [tier, T.rare[1], 'Rare']); }
+const watersOf = (tier) => D.WATERS.filter((w) => D.waterTier(w) === Number(tier));
+for (const [id, it] of Object.entries(D.ITEMS)) {
+  const p = P['item/' + id];
+  for (const [n, ch] of gatheredFrom[id] || []) { const N = D.NODES[n]; sec(p, `Gathered: ${N.name}`, [['Skill', `${D.PROFESSIONS[N.prof].name} ${N.skill}`], ['Amount', ch === 'main' ? range(N.n) : pct(ch) + ' chance, extra']].concat([['Grows in', (nodePlaces[n] || []).slice(0, 12).map((pl) => L('place', pl)).concat((nodePlaces[n] || []).length > 12 ? [`and ${(nodePlaces[n] || []).length - 12} more`] : [])]])); }
+  for (const [tier, sk, kind] of fishedIn[id] || []) sec(p, 'Fished', [['Skill', `Fishing ${sk}`], ['Catch', kind], ['Waters', watersOf(tier).map((w) => L('place', w))]]);
+}
+// skinning: which leather each beast level gives
+const leatherLv = {};
+for (let lv = 1; lv <= 60; lv++) push(leatherLv, D.skinLeather(lv), lv);
+for (const [lth, lvs] of Object.entries(leatherLv)) if (P['item/' + lth]) sec(P['item/' + lth], 'Skinned', [['From', `Beasts of level ${lvs[0]}–${lvs[lvs.length - 1]}`], ['Skill', `Skinning ${D.skinSkill(lvs[0])}`]]);
+
+for (const [id, pr] of Object.entries(D.PROFESSIONS)) {
+  const p = P['prof/' + id];
+  p.sub = cap(pr.kind || '');
+  p.text = pr.desc;
+  const nodes = Object.entries(D.NODES).filter(([, N]) => N.prof === id).sort((a, b) => a[1].skill - b[1].skill);
+  sec(p, 'Gathering', nodes.map(([n, N]) => [String(N.skill), N.name, L('item', N.item)]), ['Skill', 'Node', 'Gives']);
+  const recs = Object.entries(D.RECIPES).filter(([, r]) => r.prof === id).sort((a, b) => a[1].sk[0] - b[1].sk[0]);
+  sec(p, 'Recipes', recs.map(([r, R]) => [String(R.sk[0]), L('item', R.makes), Object.entries(R.mats || {}).map(([m, n]) => (n > 1 ? n + '× ' : '') + ((D.ITEMS[m] || {}).name || m)).join(', ') + ((D.RARE_RECIPES || []).includes(r) ? ' (rare recipe)' : '')]), ['Skill', 'Makes', 'Materials']);
+  if (id === 'fishing') sec(p, 'Waters', Object.keys(D.FISH).map((t) => [`Fishing ${D.FISH[t].common[0][1]}`, watersOf(t).map((w) => L('place', w))]), ['From', 'Waters']);
+}
+
+// ---------------------------------------------------------------- collections and the group finder
+for (const [id, m] of Object.entries(D.MOUNTS)) P['collect/mount_' + id] = { k: 'collect', n: m.name, sub: 'Mount', facts: [['How', m.reward || m.how || '']] };
+for (const t of D.TITLES) P['collect/title_' + t.id] = { k: 'collect', n: t.name.replace('%s', '<name>').trim(), sub: 'Title', facts: [['How', t.how || '']] };
+for (const [id, c] of Object.entries(D.COMPANIONS)) P['collect/pet_' + id] = { k: 'collect', n: c.name, sub: 'Companion', text: c.desc, facts: [['How', c.how || '']] };
+for (const [id, h] of Object.entries(D.HEIRLOOMS)) P['collect/heirloom_' + id] = { k: 'collect', n: h.name, ic: h.icon, sub: 'Heirloom', facts: [['Slot', D.SLOT_LABEL[h.slot] || h.slot], ['Stats', (h.stat || []).map((s) => statName[s] || s).join(', ')], ['Cost', String(h.cost)]] };
+// a festival's wares: what they cost, on the item, title and companion pages
+for (const [eid, ev] of Object.entries(D.EVENTS)) for (const w of ev.shop || []) {
+  const target = P['item/' + w.id] || P['collect/pet_' + w.id] || P['collect/title_' + w.id];
+  if (target) sec(target, 'Sold by', [[D.NPCS[ev.keeper] ? L('npc', ev.keeper) : ev.name, `${w.cost} ${ev.currency.name}`, `During ${ev.name}`]], ['Vendor', 'Price', 'When']);
+}
+for (const [id, a] of Object.entries(D.ACTIVITIES)) {
+  if (a.dungeon && P['dungeon/' + a.dungeon]) continue; // a dungeon has its own page
+  const p = P['act/' + id] = { k: 'act', n: a.name.replace(/^World boss: /, '') };
+  p.sub = [`Level ${a.minLvl === a.maxLvl ? a.minLvl : a.minLvl + '–' + a.maxLvl}`, `${a.size} players`, a.worldBoss ? 'World boss' : a.bg ? 'Battleground' : a.event ? 'Festival' : 'Group'].join(', ');
+  p.text = a.desc;
+  p.facts = [];
+  if (a.where && D.PLACES[a.where]) p.facts.push(['Where', L('place', a.where)]);
+  if (a.boss && P['mob/' + a.boss]) p.facts.push(['Boss', L('mob', a.boss)]);
+  if (a.needQuest && P['quest/' + a.needQuest]) p.facts.push(['Needs', L('quest', a.needQuest)]);
+  sec(p, 'The way through', (a.pulls || []).map((pull, i) => [String(i + 1), pull.boss ? L('mob', pull.mobs[0]) : pull.label, pull.boss ? 'Boss' : pull.mobs.filter((v, i, x) => x.indexOf(v) === i).map((m) => L('mob', m))]), ['', 'Pull', '']);
+  const loot = []; for (const pull of a.pulls || []) if (pull.boss) for (const m of pull.mobs) for (const i of D.MOBS[m].loot || []) loot.push([L('item', i), itemKind(D.ITEMS[i]), L('mob', m)]);
+  sec(p, 'Boss loot', loot, ['Item', 'Type', 'Boss']);
+  if (a.boss && P['mob/' + a.boss]) sec(P['mob/' + a.boss], 'Group finder', [[L('act', id), `${a.size} players`]]);
+}
+
 // ---------------------------------------------------------------- filters (#231): what each list can be narrowed by
 // lv: level · z: zone and dungeon pages it belongs to · s: slot group · st: stats it gives · r: rank · q: quality
 const uniq = (a) => a.filter((v, i) => v && a.indexOf(v) === i);
@@ -195,20 +314,24 @@ for (const [id, q] of Object.entries(D.QUESTS)) P['quest/' + id].f = { lv: q.lvl
 for (const [id, pl] of Object.entries(D.PLACES)) P['place/' + id].f = { lv: (pl.lvl || [0])[0], z: ['zone/' + pl.region], r: pl.safe ? 'town' : 'wild' };
 for (const id of Object.keys(D.NPCS)) P['npc/' + id].f = { lv: Math.min(...(placesOfNpc[id] || []).map((pl) => (D.PLACES[pl].lvl || [0])[0]).concat(99)) % 99, z: zonesOfPlaces(placesOfNpc[id]) };
 for (const [id, r] of Object.entries(D.REGIONS)) P['zone/' + id].f = { lv: Math.min(...Object.values(D.PLACES).filter((pl) => pl.region === id && pl.lvl).map((pl) => pl.lvl[0]).concat(99)) % 99 };
+for (const [id, ab] of Object.entries(D.ABILITIES)) if (P['ability/' + id]) P['ability/' + id].f = { lv: ab.lvl || 0, c: ab.cls || 'racial' };
+for (const k of Object.keys(P)) if (P[k].k === 'collect') P[k].f = { r: P[k].sub.toLowerCase() };
+for (const [id, a] of Object.entries(D.ACTIVITIES)) if (P['act/' + id]) P['act/' + id].f = { lv: a.minLvl, r: a.worldBoss ? 'worldboss' : a.bg ? 'bg' : a.event ? 'festival' : 'group' };
 for (const [id, d] of Object.entries(D.DUNGEONS)) P['dungeon/' + id].f = { lv: d.minLvl, r: d.size > 5 ? 'raid' : 'dungeon' };
 const FILTERS = {
   slot: Object.fromEntries(D.GEAR_SLOTS.map((s) => [s, D.SLOT_LABEL[s]]).concat([['use', 'Food, drink and potions'], ['mat', 'Trade goods'], ['quest', 'Quest items'], ['other', 'Other']])),
   stat: { sp: 'Spell power', int: 'Intellect', spi: 'Spirit', sta: 'Stamina', str: 'Strength', agi: 'Agility', fx: 'Has an effect' },
   quality: Object.fromEntries(D.QUALITY.map((q, i) => [i, q.name])),
   zone: Object.fromEntries(Object.keys(D.REGIONS).sort((a, b) => P['zone/' + a].f.lv - P['zone/' + b].f.lv).map((z) => ['zone/' + z, D.REGIONS[z].name]).concat(Object.keys(D.DUNGEONS).sort((a, b) => D.DUNGEONS[a].minLvl - D.DUNGEONS[b].minLvl).map((d) => ['dungeon/' + d, D.DUNGEONS[d].name]))),
-  rank: { boss: 'Boss', elite: 'Elite', named: 'Named', normal: 'Normal', dungeon: 'Dungeon', group: 'Group', solo: 'Solo', town: 'Town', wild: 'Wilds', raid: 'Raid' },
+  class: Object.fromEntries(Object.entries(D.CLASSES).map(([c, C]) => [c, C.name]).concat([['racial', 'Racial']])),
+  rank: { mount: 'Mounts', title: 'Titles', companion: 'Companions', heirloom: 'Heirlooms', worldboss: 'World boss', bg: 'Battleground', festival: 'Festival', boss: 'Boss', elite: 'Elite', named: 'Named', normal: 'Normal', dungeon: 'Dungeon', group: 'Group', solo: 'Solo', town: 'Town', wild: 'Wilds', raid: 'Raid' },
 };
 
 // ---------------------------------------------------------------- lists and search
 const lists = {};
 for (const kind of Object.keys(KIND)) {
   const ids = Object.keys(P).filter((x) => P[x].k === kind).map((x) => x.split('/')[1]);
-  const lv = (id) => kind === 'item' ? D.ITEMS[id].lvl || 0 : kind === 'dungeon' ? D.DUNGEONS[id].minLvl : lvlOf(kind, id);
+  const lv = (id) => kind === 'item' ? D.ITEMS[id].lvl || 0 : kind === 'dungeon' ? D.DUNGEONS[id].minLvl : kind === 'ability' ? D.ABILITIES[id].lvl || 0 : kind === 'act' ? D.ACTIVITIES[id].minLvl : lvlOf(kind, id);
   lists[kind] = ids.sort((a, b) => lv(a) - lv(b) || P[kind + '/' + a].n.localeCompare(P[kind + '/' + b].n));
 }
 
@@ -217,7 +340,7 @@ fs.rmSync(OUT, { recursive: true, force: true });
 fs.mkdirSync(path.join(OUT, 'icon'), { recursive: true }); fs.mkdirSync(path.join(OUT, 'mob'), { recursive: true });
 const svg = (s) => (s && !/xmlns=/.test(s) ? s.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"') : s);
 let icons = 0, mobs = 0;
-for (const ic of new Set(Object.values(D.ITEMS).map((i) => i.icon))) { const s = ART.icon(ic); if (s) { fs.writeFileSync(path.join(OUT, 'icon', ic + '.svg'), svg(s)); icons++; } }
+for (const ic of new Set(Object.values(P).map((p) => p.ic).filter(Boolean))) { let s = null; try { s = ART.icon(ic); } catch (e) { s = null; } if (s) { fs.writeFileSync(path.join(OUT, 'icon', ic + '.svg'), svg(s)); icons++; } else for (const p of Object.values(P)) if (p.ic === ic) delete p.ic; }
 for (const id of Object.keys(D.MOBS)) { let s = null; try { s = ART.mob(id); } catch (e) { s = null; } if (s) { fs.writeFileSync(path.join(OUT, 'mob', id + '.svg'), svg(s)); mobs++; } else delete P['mob/' + id].mob; }
 
 const VERSION = (fs.readFileSync(path.join(ROOT, 'app/pubspec.yaml'), 'utf8').match(/^version:\s*([^+\s]+)/m) || [])[1] || '';
