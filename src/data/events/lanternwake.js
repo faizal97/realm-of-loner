@@ -26,9 +26,9 @@
   // ---- rewards. Prices are days at the daily cap (cap × days), so the vendor costs about 10 of the 14 days
   const E = D.EVENTS.lanternwake, day = (n) => Math.round(E.cap * n);
   const look = (id, name, slot, o) => D.item(id, Object.assign({ name, slot, q: 4, lvl: 1, lookOnly: true, noSell: true, sell: 0, icon: id, look: [slot, id], source: 'Lanternwake vendor', event: 'lanternwake' }, o));
-  look('lw_robe', 'Lanternwake Robe', 'chest', { desc: 'Night-blue cloth stitched with candle-gold. A look for your wardrobe, with no stats.' });
-  look('lw_trousers', 'Lanternwake Trousers', 'legs', { desc: 'Worn for the long walk with the dead. A look for your wardrobe, with no stats.' });
-  look('lw_lantern', 'Wakelight Lantern', 'back', { desc: 'A lantern on a pole, carried on your back. It keeps burning. A look for your wardrobe, with no stats.' });
+  look('lw_robe', 'Lanternwake Robe', 'chest', { desc: '"Night-blue cloth stitched with candle-gold."' });
+  look('lw_trousers', 'Lanternwake Trousers', 'legs', { desc: '"Worn for the long walk with the dead."' });
+  look('lw_lantern', 'Wakelight Lantern', 'back', { desc: '"It keeps burning."' });
   E.set = ['lw_robe', 'lw_trousers', 'lw_lantern']; // the Hard recolour of each drops from the Wickless Knight on Hard
   // what the festival keeper sells: { id, kind, cost }. kind: look | companion | title | use (spent, can be bought again)
   E.shop = [
@@ -45,15 +45,15 @@
   ];
   // the candle sink: cheap, endless, no power. A costume shows you as a creature for an hour
   const use = (id, name, icon, desc, o) => D.item(id, Object.assign({ name, slot: 'event', q: 1, icon, noSell: true, sell: 0, stack: 20, desc, event: 'lanternwake' }, o));
-  use('lw_costume_ghost', 'Costume: Wandering Ghost', 'lw_costume', 'You look like a wandering ghost for an hour. Only a look.', { costume: 'lw_ghost' });
-  use('lw_costume_bones', 'Costume: Rattling Bones', 'lw_costume', 'You look like a skeleton for an hour. Only a look.', { costume: 'skeletal_executioner' });
-  use('lw_costume_local', 'Costume: Local Creature', 'lw_costume', 'You look like a creature from the zone you are in for an hour. Only a look.', { costume: 'local' });
-  use('lw_treat', 'Lanternwake Treat', 'lw_treat', 'Toss it to someone in town. They will thank you in chat.', { treat: true });
-  use('lw_town_lantern', 'Town Lantern', 'lw_candle', 'Hang it in a town. Every lantern hung there this festival makes the town glow brighter.', { townLantern: true });
+  use('lw_costume_ghost', 'Costume: Wandering Ghost', 'lw_costume', 'Use: look like a Wandering Ghost for 1 hour.', { costume: 'lw_ghost' });
+  use('lw_costume_bones', 'Costume: Rattling Bones', 'lw_costume', 'Use: look like a skeleton for 1 hour.', { costume: 'skeletal_executioner' });
+  use('lw_costume_local', 'Costume: Local Creature', 'lw_costume', 'Use: look like a creature from this zone for 1 hour.', { costume: 'local' });
+  use('lw_treat', 'Lanternwake Treat', 'lw_treat', 'Use: toss to someone in town.', { treat: true });
+  use('lw_town_lantern', 'Town Lantern', 'lw_candle', 'Use: hang in a town. More lanterns, brighter town.', { townLantern: true });
 
   // companion: a little light that follows you (the Hero screen's Companions)
   D.COMPANIONS = D.COMPANIONS || {};
-  D.COMPANIONS.flicker = { name: 'Flicker', desc: 'A wisp of lantern-light that follows you around.', how: 'Lanternwake vendor', event: 'lanternwake' };
+  D.COMPANIONS.flicker = { name: 'Flicker', desc: 'A wisp of lantern-light that follows you.', how: 'Lanternwake vendor', event: 'lanternwake' };
   // mount: drops from the Wickless Knight (daily loot, and always on the 10th daily kill)
   D.MOUNTS.wickless_steed = { name: 'Wickless Steed', reward: 'The Wickless Knight, Lanternwake' };
   // title: bought, so it is stored (need.event: the account's Lanternwake buys)

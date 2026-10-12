@@ -4082,8 +4082,8 @@
     const cap = LW().cap, got = Math.max(0, Math.min(n, cap - st.today));
     if (!got) return 0;
     st.today += got; st.candles += got;
-    if (!quiet) loot(`+${got} Wake Candle${got === 1 ? '' : 's'} (${why}). Today: ${st.today} of ${cap}.`);
-    if (st.today >= cap) sys(`You have all ${cap} Wake Candles for today: more after midnight. The Snuffed Road and the Wakekeeper stay open.`);
+    if (!quiet) loot(`+${got} Wake Candle${got === 1 ? '' : 's'} (${why}) · today ${st.today}/${cap}`);
+    if (st.today >= cap) sys(`Daily Wake Candle cap reached (${cap}/${cap}). Resets at midnight.`);
     emit('candles', { got, why });
     return got;
   };
@@ -4098,10 +4098,10 @@
   };
   G.lwLight = function () {
     const P = G.S.player, st = G.lw(), can = G.lwCanLight(P.place);
-    if (can !== 'ready') return toast(can === 'lit' ? 'You already lit the lantern here today.' : can === 'done' ? 'You lit every lantern for today.' : 'There is no lantern to light here.');
+    if (can !== 'ready') return toast(can === 'lit' ? 'Already lit today.' : can === 'done' ? 'All lanterns lit today.' : 'No lantern here.');
     if (G.fight) return toast('You are in combat.');
     st.lit.push(P.place);
-    sys(`You light a lantern at ${D.PLACES[P.place].name} (${st.lit.length} of ${LW().light} today).`);
+    sys(`Lantern lit: ${D.PLACES[P.place].name} (${st.lit.length}/${LW().light}).`);
     if (st.lit.length >= LW().light) G.lwEarn(LW().earn.light, 'Light the Way');
     emit('change'); G.save();
   };
@@ -4111,15 +4111,15 @@
   G.lwBuy = function (id) {
     const s = LW().shop.find((x) => x.id === id), st = G.lw();
     if (!s) return;
-    if (!st) return toast('Lanternwake is over: the Wakekeeper is gone until next year.');
-    if (s.kind !== 'use' && G.lwOwned(id)) return toast('You already have it.');
+    if (!st) return toast('Lanternwake is over.');
+    if (s.kind !== 'use' && G.lwOwned(id)) return toast('Already owned.');
     if (st.candles < s.cost) return toast(`Need ${s.cost} Wake Candles (you have ${st.candles}).`);
-    if (s.kind === 'use' && !G.addItem(G.copyItem(id), 1)) return toast('Bags full.');
+    if (s.kind === 'use' && !G.addItem(G.copyItem(id), 1)) return toast('Bags are full.');
     st.candles -= s.cost;
     if (s.kind !== 'use') { const a = G.lwAccount(); lwRec(a).owned.push(id); G.saveAccount(a); }
     if (s.kind === 'look') lwCollect(D.ITEMS[id]); // after the save above, which would otherwise write over it
     if (s.kind === 'companion') emit('collected', { companion: id });
-    loot(`You buy ${s.kind === 'look' || s.kind === 'use' ? B.link(D.ITEMS[id].name, D.ITEMS[id].q) : G.lwShopName(s)} for ${s.cost} Wake Candles.` + (s.kind === 'look' ? ' It is in your wardrobe (Hero → Character → Wardrobe).' : s.kind === 'title' ? ' Wear it from Hero → Journey → Titles.' : s.kind === 'companion' ? ' Call it from Hero → Journey → Companions.' : ''));
+    loot(`Bought ${s.kind === 'look' || s.kind === 'use' ? B.link(D.ITEMS[id].name, D.ITEMS[id].q) : G.lwShopName(s)} (${s.cost} Wake Candles).` + (s.kind === 'look' ? ' Added to your wardrobe.' : s.kind === 'title' ? ' Wear it: Hero → Journey → Titles.' : s.kind === 'companion' ? ' Summon it: Hero → Journey → Companions.' : ''));
     emit('bought'); emit('change'); G.save();
   };
   // companions (v10.13): a small friend that follows you, only a look. Owned by the account, chosen per character
@@ -4132,18 +4132,18 @@
       let mob = it.costume;
       if (mob === 'local') { const Pl = D.PLACES[P.place], pool = Object.values(D.PLACES).filter((x) => x.region === Pl.region).flatMap((x) => (x.mobs || []).map((m) => m[0])).filter((k) => D.MOBS[k] && !D.MOBS[k].boss); if (!pool.length) return toast('No creatures live in this zone to dress up as.'); mob = pick(pool); }
       P.costume = { mob, until: now() + 3600000 };
-      G.removeItem(it.id, 1); sys(`You look like ${/^[AEIOU]/.test(D.MOBS[mob].name) ? 'an' : 'a'} ${D.MOBS[mob].name} for an hour. Only a look.`);
+      G.removeItem(it.id, 1); sys(`You look like ${/^[AEIOU]/.test(D.MOBS[mob].name) ? 'an' : 'a'} ${D.MOBS[mob].name} for 1 hour.`);
     } else if (it.treat) {
       const near = (B.onlineIn(S, P.place, new Date(now())) || []).filter((x) => B.factionOf(x) === B.factionOf(P));
-      if (!D.PLACES[P.place].safe || !near.length) return toast('Toss treats in a town, where people are around.');
+      if (!D.PLACES[P.place].safe || !near.length) return toast('Toss treats in a town.');
       const bot = pick(near); G.removeItem(it.id, 1);
       sys(`You toss a Lanternwake Treat to ${bot.name}.`);
       S.pending.push({ at: now() + 1200 + Math.random() * 1500, bot: bot.id, ch: 'say', text: pick([`thanks for the treat ${P.name}!`, `ty for the treat!`, `oh a Lanternwake treat, thank you ${P.name}`, `ty ${P.name}, happy Lanternwake`]), fromName: bot.name });
     } else if (it.townLantern) {
-      if (!D.PLACES[P.place].safe) return toast('Hang town lanterns in a town.');
+      if (!D.PLACES[P.place].safe) return toast('Only in a town.');
       const a = G.lwAccount(), t = lwRec(a).town; G.removeItem(it.id, 1);
       const key = G.eventSeason('lanternwake') + ':' + P.place; t[key] = (t[key] || 0) + 1; G.saveAccount(a);
-      sys(`You hang a lantern in ${D.PLACES[P.place].name}. Lanterns hung here this festival: ${t[key]}.`);
+      sys(`Lantern hung: ${D.PLACES[P.place].name} (${t[key]} this festival).`);
     } else return;
     emit('change'); G.save();
   };
@@ -4157,25 +4157,25 @@
     const Ev = LW(), st = G.lw(), a = G.lwAccount(), r = lwRec(a), d = dayKey();
     if (!st) return;
     const season = G.eventSeason('lanternwake');
-    if (!r.keepsakes.includes(season) && !/^test/.test(season)) { r.keepsakes.push(season); G.saveAccount(a); loot(`A keepsake for your collection: Lanternwake ${season}.`); }
+    if (!r.keepsakes.includes(season) && !/^test/.test(season)) { r.keepsakes.push(season); G.saveAccount(a); loot(`Keepsake earned: Lanternwake ${season}.`); }
     if (R.hard) {
-      if (st.hardDay === d) return sys('The Wickless Knight\'s Hard loot is taken today: it drops again after midnight.');
+      if (st.hardDay === d) return sys('Hard loot already taken today.');
       st.hardDay = d;
       const left = G.lwHardLeft();
-      if (left.length) { const it = D.ITEMS[pick(left)]; lwCollect({ look: [it.look[0], it.look[1] + '_hard'] }); loot(`Hard: a new look for your wardrobe, ${B.link(it.name + ' (Hard)', it.q)}.`); }
-      else sys('You have every Hard Lanternwake look.');
+      if (left.length) { const it = D.ITEMS[pick(left)]; lwCollect({ look: [it.look[0], it.look[1] + '_hard'] }); loot(`New look: ${B.link(it.name + ' (Hard)', it.q)}.`); }
+      else sys('All Hard looks collected.');
       G.lwEarn(Ev.earn.daily, 'the Wickless Knight on Hard');
       return;
     }
-    if (st.lootDay === d) return sys('The Wickless Knight\'s loot is taken today: it drops again after midnight.');
+    if (st.lootDay === d) return sys('Daily loot already taken today.');
     st.lootDay = d;
     G.lwEarn(Ev.earn.daily, 'the Wickless Knight');
     if (r.steed) return;
     r.steedKills++;
     if (r.steedKills >= Ev.steedAt || Math.random() < Ev.steedChance) {
       r.steed = true; G.giveTrialswornMount('wickless_steed');
-      loot(`The Wickless Knight drops ${B.link('Wickless Steed', 4)}! It is in your mounts (Hero → Character).`);
-    } else sys(`No Wickless Steed this time (daily kill ${r.steedKills} of ${Ev.steedAt}: the ${Ev.steedAt}th always drops it).`);
+      loot(`New mount: ${B.link('Wickless Steed', 4)}!`);
+    } else sys(`No Wickless Steed (${r.steedKills}/${Ev.steedAt}).`);
     G.saveAccount(a);
   }
   G.lwBossLoot = lwBossLoot;

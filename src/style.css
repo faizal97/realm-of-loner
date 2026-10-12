@@ -999,3 +999,6 @@ svg.sym { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: 
 .fest-sky i { position: absolute; bottom: -40px; width: calc(14px * var(--s, 1)); height: calc(20px * var(--s, 1)); border-radius: 30% 30% 40% 40%; background: radial-gradient(circle at 50% 60%, #fff6d0, #ffc24a 45%, #c8601a); box-shadow: 0 0 calc(18px * var(--s, 1)) rgba(255, 194, 74, .6); opacity: .8; animation: fest-rise 26s linear infinite; }
 @keyframes fest-rise { 0% { transform: translate(0, 0); opacity: 0; } 8% { opacity: .85; } 50% { transform: translate(12px, -55vh); } 90% { opacity: .6; } 100% { transform: translate(-6px, -110vh); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .fest-sky i { animation: none; bottom: auto; top: calc(10% + var(--s) * 40%); opacity: .5; } }
+/* a fact row with a note behind a tap (docs/ui-text-style.md: explanations one tap away) */
+button.ev-fact { width: 100%; background: none; border: 0; border-bottom: 1px solid rgba(255,255,255,.06); color: inherit; cursor: pointer; }
+.ev-fact .hint { display: inline-grid; place-items: center; width: 14px; height: 14px; margin-left: 5px; border: 1px solid currentColor; border-radius: 50%; font: italic 700 10px/1 Georgia, serif; opacity: .6; vertical-align: 1px; }
