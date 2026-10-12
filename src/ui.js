@@ -220,6 +220,8 @@
       h('button', { class: 'btn wide', style: { marginTop: '8px' }, onclick: closeDialog }, 'Close')], true);
   }
   const img = (src, cls) => h('img', { src, class: cls, alt: '', draggable: 'false' });
+  // a class's crest (art_classes.js) pinned to the corner of a picture of that character, like a seal on a letter
+  const sealed = (pic, cls) => (D.CLASSES[cls] ? h('span', { class: 'seal-at' }, pic, img(art('icon', 'class_' + cls), 'seal')) : pic);
 
   // ------------------------------------------------------------ formatting
   // money as coins, like the original: "12 (gold) 4 (silver) 30 (copper)"; the words stay for screen readers.
@@ -3295,7 +3297,7 @@
         tabs.append(h('button', { class: ui.heroTab === k ? 'on' : '', onclick: () => { ui.heroTab = k; ui.sheetFn(); ui.sheetBody.scrollTop = 0; } }, label, dot ? h('span', { class: 'tab-dot' }) : null));
       b.append(h('div', { class: 'sheet-stick' }, tabs));
       if (ui.heroTab === 'char') {
-        b.append(h('div', { class: 'hero-top' }, img(art('hero', looks(P))),
+        b.append(h('div', { class: 'hero-top' }, sealed(img(art('hero', looks(P))), P.cls),
           h('div', { class: 'stats' },
             ...[['Health', v.maxHp], [D.CLASSES[P.cls].resource === 'mana' ? 'Mana' : D.CLASSES[P.cls].resource === 'rage' ? 'Rage' : 'Energy', Math.round(v.maxRes)], ['Strength', st.str], ['Agility', st.agi], ['Stamina', st.sta], ['Intellect', st.int], ['Spirit', st.spi], ['Armor', st.armor], ['Attack Power', Math.round(st.apTotal)], ['Spell Power', st.sp], ['Crit', st.crit.toFixed(1) + '%'], ['Dodge', st.dodgeTotal.toFixed(1) + '%']]
               .map(([k, val]) => h('div', null, h('span', null, k), h('b', { class: 'tnum' }, val))))));
@@ -5063,7 +5065,7 @@
       const rows = h('div', { class: 'list' });
       for (const c of list) {
         rows.append(h('button', { class: 'row' + (c.id === sel ? ' sel-char' : ''), onclick: () => { if (c.id === sel) enter(c.id); else { sel = c.id; draw(); } } },
-          h('div', { class: 'ic' }, img(art('portrait', { cls: c.cls, race: c.race || 'human', skin: c.skin || 0, hair: c.hair || 0, gender: c.gender || 'm' }))),
+          h('div', { class: 'ic sealed' }, img(art('portrait', { cls: c.cls, race: c.race || 'human', skin: c.skin || 0, hair: c.hair || 0, gender: c.gender || 'm' })), D.CLASSES[c.cls] ? img(art('icon', 'class_' + c.cls), 'seal') : null),
           h('div', { class: 't' }, h('b', { class: 'cls-' + c.cls }, c.name), h('small', null, `Level ${c.level} ${D.RACES[c.race] ? D.RACES[c.race].name + ' ' : ''}${D.CLASSES[c.cls] ? D.CLASSES[c.cls].name : c.cls} · ${D.PLACES[c.place] ? D.PLACES[c.place].name : ''}`)),
           h('div', { class: 'r' }, c.id === sel ? 'Play' : '')));
       }
@@ -5129,7 +5131,7 @@
       const races = h('div', { class: 'races' });
       for (const r in D.RACES) if (D.RACES[r].faction === st.faction) races.append(h('button', { class: 'chip' + (st.race === r ? ' gold' : ''), onclick: () => { st.race = r; draw(); } }, D.RACES[r].name, h('small', null, D.RACES[r].startZone)));
       const classes = h('div', { class: 'classes' });
-      for (const c of D.RACES[st.race].classes) classes.append(h('button', { class: st.cls === c ? 'on' : '', onclick: () => { st.cls = c; draw(); } }, img(art('portrait', { cls: c, race: st.race, skin: st.skin, hair: st.hair, gender: st.gender })), h('span', { class: 'cls-' + c }, D.CLASSES[c].name), h('small', null, c === 'paladin' ? 'Heal / Tank' : c === 'druid' ? 'Any role' : c === 'shaman' ? 'Dmg / Heal' : D.CLASSES[c].role === 'dps' ? 'Damage' : D.CLASSES[c].role === 'tank' ? 'Tank' : 'Healer')));
+      for (const c of D.RACES[st.race].classes) classes.append(h('button', { class: st.cls === c ? 'on' : '', onclick: () => { st.cls = c; draw(); } }, sealed(img(art('portrait', { cls: c, race: st.race, skin: st.skin, hair: st.hair, gender: st.gender })), c), h('span', { class: 'cls-' + c }, D.CLASSES[c].name), h('small', null, c === 'paladin' ? 'Heal / Tank' : c === 'druid' ? 'Any role' : c === 'shaman' ? 'Dmg / Heal' : D.CLASSES[c].role === 'dps' ? 'Damage' : D.CLASSES[c].role === 'tank' ? 'Tank' : 'Healer')));
       const cyc = (k, n, label) => h('button', { class: 'chip', onclick: () => { st[k] = (st[k] + 1) % n; draw(); } }, label, h('small', null, String(st[k] + 1)));
       root.append(
         ...titleMark(), h('div', { class: 'sub' }, `Realm: ${D.REALM}`),

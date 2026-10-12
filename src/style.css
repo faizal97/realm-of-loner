@@ -1002,3 +1002,12 @@ svg.sym { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: 
 /* a fact row with a note behind a tap (docs/ui-text-style.md: explanations one tap away) */
 button.ev-fact { width: 100%; background: none; border: 0; border-bottom: 1px solid rgba(255,255,255,.06); color: inherit; cursor: pointer; }
 .ev-fact .hint { display: inline-grid; place-items: center; width: 14px; height: 14px; margin-left: 5px; border: 1px solid currentColor; border-radius: 50%; font: italic 700 10px/1 Georgia, serif; opacity: .6; vertical-align: 1px; }
+
+/* class crests as a seal on a character's picture: class picker, character select, hero sheet */
+.seal-at { position: relative; display: inline-block; line-height: 0; }
+.seal-at img.seal, .row .ic.sealed img.seal { position: absolute; right: -4px; bottom: -4px; width: 40%; height: auto; filter: drop-shadow(0 1px 2px #000); }
+.classes button .seal-at img.seal { width: 20px; height: 20px; }
+.hero-top .seal-at img.seal { width: 34px; height: 34px; right: -6px; bottom: -2px; }
+.row .ic.sealed { overflow: visible; position: relative; }
+.row .ic.sealed img:first-child { border-radius: 3px; }
+.row .ic.sealed img.seal { width: 18px; height: 18px; right: -6px; bottom: -6px; object-fit: contain; }
