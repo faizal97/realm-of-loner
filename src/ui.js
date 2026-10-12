@@ -4880,10 +4880,12 @@
   }
 
   // ============================================================ character creation
+  // the roles a class can queue as, read from its data (#245: Warrior and Priest gained Damage, and a hand-written list missed it)
+  const roleLine = (c) => { const r = D.CLASSES[c].roles || [D.CLASSES[c].role]; return r.length >= 3 ? 'Any role' : r.length === 1 ? { tank: 'Tank', healer: 'Healer', dps: 'Damage' }[r[0]] : r.map((x) => ({ tank: 'Tank', healer: 'Heal', dps: 'Dmg' })[x]).join(' / '); };
   const CLASS_BLURB = {
-    warrior: 'Tank. Wears mail, holds the enemy\'s attention in groups. Rage builds as you hit and get hit.',
+    warrior: 'Tank or damage. Wears mail, holds the enemy\'s attention or hits hard. Rage builds as you hit and get hit.',
     mage: 'Damage. Fire and frost from range. Fragile, and thirsty for mana.',
-    priest: 'Healer. Keeps the group alive, and can smite when nobody needs healing.',
+    priest: 'Healer or damage. Keeps the group alive, or turns to Shadow and hurts from range.',
     rogue: 'Damage. Fast strikes build combo points; finishers spend them.',
     paladin: 'Healer or tank. Holy knight in mail: seals and Verdict in melee, Holy Light to heal.',
     warlock: 'Damage. Curses and shadow from range, with a demon at your side. Trades health for mana.',
@@ -5131,7 +5133,7 @@
       const races = h('div', { class: 'races' });
       for (const r in D.RACES) if (D.RACES[r].faction === st.faction) races.append(h('button', { class: 'chip' + (st.race === r ? ' gold' : ''), onclick: () => { st.race = r; draw(); } }, D.RACES[r].name, h('small', null, D.RACES[r].startZone)));
       const classes = h('div', { class: 'classes' });
-      for (const c of D.RACES[st.race].classes) classes.append(h('button', { class: st.cls === c ? 'on' : '', onclick: () => { st.cls = c; draw(); } }, sealed(img(art('portrait', { cls: c, race: st.race, skin: st.skin, hair: st.hair, gender: st.gender })), c), h('span', { class: 'cls-' + c }, D.CLASSES[c].name), h('small', null, c === 'paladin' ? 'Heal / Tank' : c === 'druid' ? 'Any role' : c === 'shaman' ? 'Dmg / Heal' : D.CLASSES[c].role === 'dps' ? 'Damage' : D.CLASSES[c].role === 'tank' ? 'Tank' : 'Healer')));
+      for (const c of D.RACES[st.race].classes) classes.append(h('button', { class: st.cls === c ? 'on' : '', onclick: () => { st.cls = c; draw(); } }, sealed(img(art('portrait', { cls: c, race: st.race, skin: st.skin, hair: st.hair, gender: st.gender })), c), h('span', { class: 'cls-' + c }, D.CLASSES[c].name), h('small', null, roleLine(c))));
       const cyc = (k, n, label) => h('button', { class: 'chip', onclick: () => { st[k] = (st[k] + 1) % n; draw(); } }, label, h('small', null, String(st[k] + 1)));
       root.append(
         ...titleMark(), h('div', { class: 'sub' }, `Realm: ${D.REALM}`),
