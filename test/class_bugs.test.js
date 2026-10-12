@@ -238,3 +238,18 @@ test('in Ice Block you cannot cast or attack, and using it again breaks out (#24
   u.cds.ice_block = 0; E.use(C, u, 'ice_block'); for (let i = 0; i < 85; i++) E.tick(C, 0.1);
   assert.ok(!u.auras.some((a) => a.id === 'ice_block'), 'ends by itself');
 });
+
+test('casting a heal ends Shadowform; Vampiric Embrace and shields do not (#245)', () => {
+  const { C, u } = fight(60, 'priest');
+  const sf = () => u.auras.some((a) => a.id === 'shadowform');
+  assert.strictEqual(use(C, u, 'shadowform'), null); assert.ok(sf(), 'in Shadowform');
+  assert.strictEqual(use(C, u, 'vampiric_embrace'), null); assert.ok(sf(), 'Vampiric Embrace keeps it');
+  u.auras = u.auras.filter((a) => a.id !== 'weakened_soul');
+  assert.strictEqual(use(C, u, 'pw_shield', u), null); assert.ok(sf(), 'a shield keeps it');
+  use(C, u, 'flash_heal', u); for (let i = 0; i < 20 && u.cast; i++) E.tick(C, 0.1);
+  assert.ok(!sf(), 'a heal ends it');
+  // out of combat too
+  G.fight = null; const P = G.S.player; P.auras = [{ id: 'shadowform', stats: { sp: 73 }, until: Date.now() + 1e6 }]; P.res = 1e5;
+  assert.strictEqual(G.castOutOfCombat('renew'), null);
+  assert.ok(!P.auras.some((a) => a.id === 'shadowform'), 'Renew out of combat ends it');
+});

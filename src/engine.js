@@ -657,6 +657,9 @@
     return null;
   };
 
+  // a heal (not one on yourself only, like Vampiric Embrace) ends a form that ends on healing (Shadowform, #245)
+  E.isHeal = (ab) => !!(ab && (ab.heal || (ab.hot && ab.target !== 'self')));
+  E.dropOnHeal = (auras) => auras.filter((a) => !((D.ABILITIES[a.id] || {}).buff || {}).endsOnHeal);
   E.use = function (C, u, abId, tgtUid) {
     const ab = D.ABILITIES[abId];
     { const fz = u.auras.find((a) => a.frozen); if (fz && fz.id === abId) { u.auras = u.auras.filter((a) => a !== fz); ev(C, { type: 'ability', src: u.uid, ab: abId }); return null; } } // using it again breaks out
@@ -692,6 +695,7 @@
     const L = u.level;
     u.res -= abCost(ab, u);
     { const la = litAura(u, abId); if (la) u.auras = u.auras.filter((a) => a !== la); } // a reaction's light is spent
+    if (E.isHeal(ab) && !(ab.either && tgt && tgt.side !== u.side)) u.auras = E.dropOnHeal(u.auras);
     if (ab.stackCost) { const sk = ab.stackCost, old = auraOf(u, abId + '_stack'), n = Math.min(sk.max, ((old && old.stacks) || 0) + 1); addAura(C, u, { id: abId + '_stack', until: C.t + sk.window, stacks: n, name: `${ab.name}: +${sk.pct * n}% mana`, icon: abId, debuff: true }); }
     if (ab.cd) u.cds[abId] = C.t + Math.max(1, ab.cd - (tmOf(u).abilCd[abId] || 0));
     if (u.resType === 'mana' && abCost(ab, u) > 0) u.lastCastT = C.t;
