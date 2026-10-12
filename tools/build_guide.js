@@ -1,6 +1,6 @@
 // Builds the Realm of Loner database (#231): every item, creature, quest, NPC, place, zone and dungeon, cross-linked,
 // generated from the game data so it is never out of date. Spoilers are fine here: it is a reference you look things up in.
-// Run: node tools/build_guide.js  → dist/guide/index.html (the site), dist/guide/icon/*.svg and dist/guide/mob/*.svg (art)
+// Run: node tools/build_guide.js  → dist/guide/index.html (the site), dist/guide/icon/, mob/ and scene/*.svg (art)
 // Published next to the game by tools/publish_web.sh, at …/realm-of-loner/guide/.
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.join(__dirname, '..');
@@ -99,7 +99,7 @@ for (const [id, q] of Object.entries(D.QUESTS)) P['quest/' + id] = { k: 'quest',
 for (const [id, n] of Object.entries(D.NPCS)) P['npc/' + id] = { k: 'npc', n: n.name };
 for (const [id, p] of Object.entries(D.PLACES)) P['place/' + id] = { k: 'place', n: p.name };
 for (const [id, r] of Object.entries(D.REGIONS)) P['zone/' + id] = { k: 'zone', n: r.name };
-for (const [id, d] of Object.entries(D.DUNGEONS)) P['dungeon/' + id] = { k: 'dungeon', n: d.name };
+for (const [id, d] of Object.entries(D.DUNGEONS)) P['dungeon/' + id] = { k: 'dungeon', n: d.name, mob: (d.pulls.filter((x) => x.boss).pop() || { mobs: [] }).mobs[0] }; // its last boss's picture
 
 const lvlOf = (kind, id) => kind === 'mob' ? D.MOBS[id].lvl[1] : kind === 'quest' ? D.QUESTS[id].lvl : kind === 'place' ? (D.PLACES[id].lvl || [0])[0] : 0;
 const byLvl = (kind) => (a, b) => lvlOf(kind, a) - lvlOf(kind, b);
@@ -292,7 +292,8 @@ for (const [eid, ev] of Object.entries(D.EVENTS)) for (const w of ev.shop || [])
 }
 for (const [id, a] of Object.entries(D.ACTIVITIES)) {
   if (a.dungeon && P['dungeon/' + a.dungeon]) continue; // a dungeon has its own page
-  const p = P['act/' + id] = { k: 'act', n: a.name.replace(/^World boss: /, '') };
+  const lastBoss = a.boss || ((a.pulls || []).filter((x) => x.boss).pop() || { mobs: [] }).mobs[0];
+  const p = P['act/' + id] = { k: 'act', n: a.name.replace(/^World boss: /, ''), mob: lastBoss || undefined }; // its boss's picture
   p.sub = [`Level ${a.minLvl === a.maxLvl ? a.minLvl : a.minLvl + '–' + a.maxLvl}`, `${a.size} players`, a.worldBoss ? 'World boss' : a.bg ? 'Battleground' : a.event ? 'Festival' : 'Group'].join(', ');
   p.text = a.desc;
   p.facts = [];
@@ -388,12 +389,25 @@ fs.mkdirSync(path.join(OUT, 'icon'), { recursive: true }); fs.mkdirSync(path.joi
 const svg = (s) => (s && !/xmlns=/.test(s) ? s.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"') : s);
 let icons = 0, mobs = 0;
 for (const ic of new Set(Object.values(P).map((p) => p.ic).filter(Boolean))) { let s = null; try { s = ART.icon(ic); } catch (e) { s = null; } if (s) { fs.writeFileSync(path.join(OUT, 'icon', ic + '.svg'), svg(s)); icons++; } else for (const p of Object.values(P)) if (p.ic === ic) delete p.ic; }
-for (const id of Object.keys(D.MOBS)) { let s = null; try { s = ART.mob(id); } catch (e) { s = null; } if (s) { fs.writeFileSync(path.join(OUT, 'mob', id + '.svg'), svg(s)); mobs++; } else delete P['mob/' + id].mob; }
+for (const id of Object.keys(D.MOBS)) { let s = null; try { s = ART.mob(id); } catch (e) { s = null; } if (s) { fs.writeFileSync(path.join(OUT, 'mob', id + '.svg'), svg(s)); mobs++; } else for (const p of Object.values(P)) if (p.mob === id) delete p.mob; }
 
 for (const p of Object.values(P)) if (p.por) { let s = null; try { s = ART.portrait(p.por); } catch (e) { s = null; } const key = 'portrait_' + (p.k === 'class' ? p.por.cls : p.por.race); if (s) { fs.writeFileSync(path.join(OUT, 'icon', key + '.svg'), svg(s)); p.ic = key; } delete p.por; }
+// every row has a picture, as the game draws it: quests the journal, people the mark the game gives them, titles
+// their Honor rank or the journal, places and zones their scene (a town's for a zone)
+for (const id of Object.keys(D.QUESTS)) P['quest/' + id].ic = 'journal';
+for (const [id, n] of Object.entries(D.NPCS)) P['npc/' + id].ic = n.legend ? 'legend_' + n.legend : Object.values(D.PLACES).some((pl) => pl.vendor === id || pl.gearVendor === id) ? 'coin' : 'hearthstone';
+for (const t of D.TITLES) { const r = t.need && t.need.honor ? D.HONOR_RANKS.findIndex((x) => x.at === t.need.honor) + 1 : 0; P['collect/title_' + t.id].ic = r > 0 ? 'honor_alliance_' + r : 'journal'; }
+for (const [id, a] of Object.entries(D.ACTIVITIES)) if (P['act/' + id] && !P['act/' + id].mob) P['act/' + id].ic = a.bg ? 'honor_banner_alliance' : 'journal';
+fs.mkdirSync(path.join(OUT, 'scene'), { recursive: true });
+const scenes = new Set();
+const sceneFor = (pl) => (D.PLACES[pl] || {}).scene || pl;
+for (const [id] of Object.entries(D.PLACES)) P['place/' + id].scn = sceneFor(id);
+for (const id of Object.keys(D.REGIONS)) { const pls = Object.keys(D.PLACES).filter((pl) => D.PLACES[pl].region === id); const town = pls.find((pl) => D.PLACES[pl].safe) || pls[0]; if (town) P['zone/' + id].scn = sceneFor(town); }
+for (const p of Object.values(P)) if (p.scn) { if (!scenes.has(p.scn)) { let s = null; try { s = ART.scene(p.scn); } catch (e) { s = null; } if (s) { fs.writeFileSync(path.join(OUT, 'scene', p.scn + '.svg'), svg(s)); scenes.add(p.scn); } else { delete p.scn; continue; } } }
+for (const p of Object.values(P)) if (p.ic && !fs.existsSync(path.join(OUT, 'icon', p.ic + '.svg'))) { let s = null; try { s = ART.icon(p.ic); } catch (e) { s = null; } if (s) { fs.writeFileSync(path.join(OUT, 'icon', p.ic + '.svg'), svg(s)); icons++; } else delete p.ic; }
 const VERSION = (fs.readFileSync(path.join(ROOT, 'app/pubspec.yaml'), 'utf8').match(/^version:\s*([^+\s]+)/m) || [])[1] || '';
 const data = JSON.stringify({ v: VERSION, kinds: KIND, lists, filters: FILTERS, pages: P }).replace(/</g, '\\u003c');
 const tpl = fs.readFileSync(path.join(ROOT, 'web/guide/index.html'), 'utf8');
 const html = tpl.replace('/*FONTS*/', fs.readFileSync(path.join(ROOT, 'fonts/fonts.local.css'), 'utf8')).replace('/*DATA*/null', data);
 fs.writeFileSync(path.join(OUT, 'index.html'), html);
-console.log(`guide: ${Object.keys(P).length} pages, ${icons} icons, ${mobs} creature pictures, ${(html.length / 1024).toFixed(0)} KB → dist/guide/`);
+console.log(`guide: ${Object.keys(P).length} pages, ${icons} icons, ${mobs} creature pictures, ${scenes.size} scenes, ${(html.length / 1024).toFixed(0)} KB → dist/guide/`);

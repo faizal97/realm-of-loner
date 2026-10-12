@@ -72,6 +72,8 @@ a.ln { color: #f3d68a; text-decoration: underline dotted rgba(243, 214, 138, .45
 /* lists and search results: one row per thing, its type or level on the right */
 .rows { display: grid; }
 .row { display: grid; grid-template-columns: 24px 1fr auto; gap: 10px; align-items: center; padding: 6px 0; line-height: 1.25; border-bottom: 1px solid #2c2216; }
+.row img.scn { object-fit: cover; }
+.banner { width: 100%; aspect-ratio: 16 / 7; object-fit: cover; border-radius: 8px; border: 1px solid var(--edge); display: block; margin: 18px 0 -6px; background: #0b0805; }
 .row img { width: 24px; height: 24px; border-radius: 4px; border: 1px solid #3a2c1a; }
 .row .dot { width: 24px; height: 24px; } /* no picture: an empty space, not an empty box */
 .row .r { color: var(--muted); font-size: 14px; text-align: right; }
@@ -102,7 +104,7 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--gold); outline-
 const DB = /*DATA*/null;
 const main = document.getElementById('main'), q = document.getElementById('q');
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
-const art = (p, cls) => p.ic ? `<img class="${cls || 'ic'}" src="icon/${esc(p.ic)}.svg" alt="" loading="lazy">` : p.mob ? `<img class="${cls || 'ic'}" src="mob/${esc(p.mob)}.svg" alt="" loading="lazy">` : '';
+const art = (p, cls) => p.scn && cls !== 'ic' && cls !== 'art' ? `<img class="${cls || 'ic'} scn" src="scene/${esc(p.scn)}.svg" alt="" loading="lazy">` : p.ic ? `<img class="${cls || 'ic'}" src="icon/${esc(p.ic)}.svg" alt="" loading="lazy">` : p.mob ? `<img class="${cls || 'ic'}" src="mob/${esc(p.mob)}.svg" alt="" loading="lazy">` : '';
 const link = (c) => Array.isArray(c) ? c.map(link).join(', ') : c && typeof c === 'object' ? `<a class="ln${c.q != null ? ' q' + c.q : ''}" href="#${esc(c.l)}">${c.i ? `<img class="li" src="icon/${esc(c.i)}.svg" alt="" loading="lazy" onerror="this.remove()">` : ''}${esc(c.t)}</a>` : esc(c == null ? '' : c);
 const SING = { item: 'Item', mob: 'Creature', quest: 'Quest', npc: 'Person', place: 'Place', zone: 'Zone', dungeon: 'Dungeon', act: 'Group finder', class: 'Class', race: 'Race', ability: 'Ability', prof: 'Profession', collect: 'Collection' };
 const fmt = (n) => n.toLocaleString('en');
@@ -162,7 +164,7 @@ function page(key) {
   const p = DB.pages[key]; if (!p) return home();
   document.title = p.n + ' · Realm of Loner Database';
   const big = p.k === 'mob' && p.mob;
-  let out = `<div class="head">${big ? art(p, 'art') : art(p) || ''}<div><div class="kind">${SING[p.k]}</div><h1 class="${p.q != null ? 'q' + p.q : ''}">${esc(p.n)}</h1>${p.sub ? `<div class="sub">${esc(p.sub)}</div>` : ''}</div></div>`;
+  let out = (p.scn ? `<img class="banner" src="scene/${esc(p.scn)}.svg" alt="">` : '') + `<div class="head"${p.scn ? ' style="grid-template-columns:1fr"' : ''}>${big ? art(p, 'art') : p.scn ? '' : art(p) || ''}<div><div class="kind">${SING[p.k]}</div><h1 class="${p.q != null ? 'q' + p.q : ''}">${esc(p.n)}</h1>${p.sub ? `<div class="sub">${esc(p.sub)}</div>` : ''}</div></div>`;
   if (p.tip) out += `<div class="tooltip">${p.tip.map(([c, a, b]) => c === 'two' ? `<div class="two"><span>${esc(a)}</span><span>${esc(b || '')}</span></div>` : `<div class="${esc(c)}">${esc(a)}</div>`).join('')}</div>`;
   if (p.facts) out += `<dl class="facts">${p.facts.map(([l, v, x]) => `<div><dt>${esc(l)}</dt><dd>${link(v)}${x ? ', ' + link(x) : ''}</dd></div>`).join('')}</dl>`;
   if (p.text) out += `<p class="say">${esc(p.text)}</p>`;
