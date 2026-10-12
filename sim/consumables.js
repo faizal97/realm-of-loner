@@ -10,7 +10,7 @@ globalThis.localStorage = { getItem() { return null; }, setItem() {}, removeItem
 require('../src/data.js'); require('../src/engine.js'); require('../src/bots.js'); require('../src/game.js');
 const { G, D, E } = globalThis;
 let t = Date.now(); Date.now = () => t;
-const N = +process.argv[2] || 40, SECS = 90;
+const N = +process.argv[2] || 80, SECS = 90; // 80: at 40 the Shaman (near the 1% floor) read 1.0% one build and 1.4% at 72
 let fails = 0; const ok = (c, msg) => { if (!c) { fails++; console.log('FAIL', msg); } };
 
 // every elixir and flask, every Well Fed meal: the best of any tier, so an older item cannot slip past the edge
