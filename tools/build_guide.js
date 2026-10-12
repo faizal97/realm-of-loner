@@ -350,6 +350,9 @@ if (P['item/hearthstone']) sec(P['item/hearthstone'], 'Starting gear', [['Every 
 for (const [id, it] of Object.entries(D.ITEMS)) { const p = P['item/' + id]; if (p.sec && p.sec.some((x) => x.h === 'Source') && p.sec.some((x) => /^(Made with|Sold by|Rare drop)$/.test(x.h))) p.sec = p.sec.filter((x) => x.h !== 'Source'); }
 for (const [aid, a] of Object.entries(D.ACTIVITIES)) for (const [id, it] of Object.entries(D.ITEMS)) if (it.source === 'Quest: ' + a.name) { const p = P['item/' + id]; p.sec = (p.sec || []).filter((x) => x.h !== 'Source'); sec(p, 'Reward', [['From', P['act/' + aid] ? L('act', aid) : a.name]]); }
 
+// an item nothing gives yet (Forgotten Pool Water, #232): say so instead of an empty page
+for (const id of Object.keys(D.ITEMS)) { const p = P['item/' + id]; if (!(p.sec || []).length) sec(p, 'Source', [['Not obtainable yet.']]); }
+
 // ---------------------------------------------------------------- filters (#231): what each list can be narrowed by
 // lv: level · z: zone and dungeon pages it belongs to · s: slot group · st: stats it gives · r: rank · q: quality
 const uniq = (a) => a.filter((v, i) => v && a.indexOf(v) === i);
