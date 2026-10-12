@@ -390,43 +390,19 @@ if (!VERSION) VERSION = (fs.readFileSync(path.join(ROOT, 'app/pubspec.yaml'), 'u
 const minorOf = (v) => (String(v).match(/^(\d+)\.(\d+)/) || [, 0, 0]).slice(1, 3).map(Number);
 const olderMinor = (a, b) => { const [a1, a2] = minorOf(a), [b1, b2] = minorOf(b); return a1 < b1 || (a1 === b1 && a2 < b2); };
 const short = (v) => minorOf(v).join('.');
-const byName = {};
-for (const key of Object.keys(P)) push(byName, P[key].n.toLowerCase(), key);
+const GF = require('./guide_format.js'); // the one parser, shared with the site's Write page
+const resolve = GF.resolver(P, (key) => { const [kind, ...id] = key.split('/'); return L(kind, id.join('/')); });
 const guideErrors = [], stale = [];
-function inline(s, file) {
-  return s.split(/(\[\[[^\]]+\]\]|\*\*[^*]+\*\*)/).filter(Boolean).map((t) => {
-    if (t.startsWith('**')) return { b: t.slice(2, -2) };
-    if (!t.startsWith('[[')) return t;
-    const [ref, text] = t.slice(2, -2).split('|').map((x) => x.trim());
-    let key = P[ref] ? ref : null;
-    if (!key) { const hits = byName[ref.toLowerCase()] || []; if (hits.length === 1) key = hits[0]; else guideErrors.push(`${file}: [[${ref}]] ${hits.length ? 'could be ' + hits.join(', ') : 'is not in the database'}`); }
-    if (!key) return text || ref;
-    const [kind, id] = key.split('/'), c = L(kind, id);
-    return text ? Object.assign(c, { t: text }) : c;
-  });
-}
 const gdir = process.env.GUIDES_DIR || path.join(ROOT, 'guides'); // GUIDES_DIR: the test's own broken guides
 for (const f of fs.existsSync(gdir) ? fs.readdirSync(gdir).filter((x) => x.endsWith('.md')).sort() : []) {
-  const src = fs.readFileSync(path.join(gdir, f), 'utf8'), m = src.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
-  if (!m) { guideErrors.push(`${f}: no frontmatter`); continue; }
-  const meta = Object.fromEntries(m[1].split('\n').map((l) => l.split(/:\s*/)).map(([a, ...b]) => [a.trim(), b.join(':').trim()]));
+  const file = GF.parseFile(fs.readFileSync(path.join(gdir, f), 'utf8'));
+  if (!file) { guideErrors.push(`${f}: no frontmatter`); continue; }
+  const meta = file.meta;
   const cls = meta.class;
   if (!D.CLASSES[cls] || !meta.written || !meta.checked || !meta.by) { guideErrors.push(`${f}: needs class (a class id), by (official or a name), written and checked`); continue; }
   const official = meta.by === 'official', id = f.replace(/\.md$/, '');
-  const intro = [], tabs = []; let blocks = intro, para = [];
-  const flush = () => { if (para.length) blocks.push({ t: 'p', c: inline(para.join(' '), f) }); para = []; };
-  for (const line of m[2].split('\n')) {
-    const l = line.trim();
-    if (!l) { flush(); continue; }
-    let x;
-    if ((x = l.match(/^## (.+)/))) { flush(); tabs.push({ h: x[1], b: (blocks = []) }); }
-    else if ((x = l.match(/^### (.+)/))) { flush(); blocks.push({ t: 'h', c: x[1] }); }
-    else if ((x = l.match(/^(- |\d+\. )(.+)/))) {
-      flush(); const t = x[1] === '- ' ? 'ul' : 'ol', last = blocks[blocks.length - 1];
-      (last && last.t === t ? last.c : (blocks.push({ t, c: [] }), blocks[blocks.length - 1].c)).push(inline(x[2], f));
-    } else para.push(l);
-  }
-  flush();
+  const { intro, tabs, errors } = GF.parse(file.body, resolve);
+  for (const e of errors) guideErrors.push(`${f}: ${e}`);
   const old = olderMinor(meta.checked, VERSION);
   if (old && official) stale.push(`${f}: checked for ${short(meta.checked)}, the game is ${short(VERSION)}`);
   const name = D.CLASSES[cls].name;
@@ -476,6 +452,6 @@ for (const p of Object.values(P)) if (p.scn) { if (!scenes.has(p.scn)) { let s =
 for (const p of Object.values(P)) if (p.ic && !fs.existsSync(path.join(OUT, 'icon', p.ic + '.svg'))) { let s = null; try { s = ART.icon(p.ic); } catch (e) { s = null; } if (s) { fs.writeFileSync(path.join(OUT, 'icon', p.ic + '.svg'), svg(s)); icons++; } else delete p.ic; }
 const data = JSON.stringify({ v: VERSION, kinds: KIND, lists, filters: FILTERS, pages: P }).replace(/</g, '\\u003c');
 const tpl = fs.readFileSync(path.join(ROOT, 'web/guide/index.html'), 'utf8');
-const html = tpl.replace('/*FONTS*/', fs.readFileSync(path.join(ROOT, 'fonts/fonts.local.css'), 'utf8')).replace('/*DATA*/null', data);
+const html = tpl.replace('/*FONTS*/', fs.readFileSync(path.join(ROOT, 'fonts/fonts.local.css'), 'utf8')).replace('/*DATA*/null', () => data).replace('/*FORMAT*/', () => fs.readFileSync(path.join(__dirname, 'guide_format.js'), 'utf8'));
 fs.writeFileSync(path.join(OUT, 'index.html'), html);
 console.log(`guide: ${Object.keys(P).length} pages, ${icons} icons, ${mobs} creature pictures, ${scenes.size} scenes, ${(html.length / 1024).toFixed(0)} KB → dist/guide/`);
