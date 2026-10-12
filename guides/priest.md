@@ -16,7 +16,7 @@ A Priest heals or deals Shadow damage, and chooses the role each time it joins a
 Alone, you deal the damage and heal yourself. Your damage, in order:
 1. [[Word of Pain]] (level 2) first: instant, and the most damage for its mana. Recast it only when it ends.
 2. [[Holy Fire]] (level 20), a 3 sec cast that also burns for 10 sec. [[Penance]] (level 56) when ready: instant.
-3. [[Smite]] or [[Mind Flay]] (level 26) to fill. Mind Flay also slows the enemy by 50% for 3 sec.
+3. [[Smite]] or [[Mind Flay]] (level 26) to fill. Mind Flay also slows the enemy by 50% for 3 sec (a quarter of that on a boss).
 
 [[Mind Blast]] (level 4) casts in 1.5 sec but does the least damage for its mana of your single-target spells.
 
@@ -30,7 +30,7 @@ To stay alive:
 - [[Psychic Scream]] (level 18): enemies within 8 m flee in fear for 3 sec. Not bosses.
 - [[Fade]] (level 24) clears your threat. Alone, the enemies on you also stand still for 2.5 sec.
 - [[Desperate Prayer]] (level 38) heals you at once for no mana, 3 min cooldown.
-- [[Vampiric Embrace]] (level 52) heals you over 20 sec for 80 mana, 20 sec cooldown.
+- [[Vampiric Embrace]] (level 52) heals you over 20 sec for 316 mana, 20 sec cooldown.
 
 ### Before every fight
 - [[Word of Fortitude]]: Stamina for 30 min. Cast in a fight, it reaches your group within 40 m; outside a fight only you get it.
@@ -46,7 +46,7 @@ The **Surge of Power** and **Shadowform** talents are passives. The [[Surge of P
 ## Healer
 ### Quick start
 - Keep [[Renew]] on the tank and use [[Heal]] as your main heal.
-- [[Greater Heal]] for heavy hits; [[Flash Heal]] only when someone is about to die.
+- [[Greater Heal]] for heavy hits; [[Flash Heal]] when a heal has to land fast.
 - Watch your mana: it only refills after 5 sec without spending any.
 
 ### Stats
@@ -60,7 +60,7 @@ Health per mana at level 60, no gear:
 - [[Greater Heal]] (level 34): about 2.1, 3 sec, your biggest heal.
 - [[Renew]]: about 1.9, instant, over 15 sec.
 - [[Lesser Heal]]: about 1.8, 2 sec.
-- [[Flash Heal]] (level 28): about 1.2, your fastest cast at 1.5 sec.
+- [[Flash Heal]] (level 28): about 1.7, your fastest cast at 1.5 sec.
 
 Tap a lit spell while it glows:
 - **Answered Prayer** (**Inspiration**): [[Flash Heal]] and [[Heal]] can make your next [[Greater Heal]] or Heal instant.

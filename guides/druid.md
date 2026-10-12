@@ -99,7 +99,7 @@ Spells that glow:
 - **Moonrise** (level 24): a [[Wrath]] can make your next [[Star Bolt]] instant.
 - **Night Sky** (with **Moonkin Form**): a [[Wrath]] or [[Star Bolt]] crit makes [[Falling Stars]] ready and free.
 
-Against groups: [[Hurricane]] (level 26, slows), [[Falling Stars]] (level 52) and [[Typhoon]] (level 56, stuns for 2 sec).
+Against groups: [[Hurricane]] (level 26, slows), [[Falling Stars]] (level 52) and [[Typhoon]] (level 56, stuns for 2 sec). Falling Stars and Typhoon hit within 8 m of you: with no enemy that close, you step in, cast and step back.
 
 ### When it goes wrong
 - [[Entangling Roots]] holds a melee enemy in place while you cast.

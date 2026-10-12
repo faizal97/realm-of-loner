@@ -51,7 +51,7 @@ You get your first point at level 10 and 51 by level 60. The trees hold 17, 15 a
 - **Soulfire Rush** (**Soul Link**): [[Shadow Bolt]] can make [[Soul Fire]] ready and instant.
 - **Ruinous Flame** (**Ruin**): a [[Shadow Bolt]] or [[Incinerate]] crit readies a free [[Shadowburn]].
 - Boss cooldowns: [[Demonic Sacrifice]] (level 54) and [[Metamorphosis]] (level 58), 30 sec of spell power.
-- Groups: [[Shadow Bolt Volley]] (level 48) and [[Shadowfury]] (level 44). Leave out [[Searing Pain]]: it draws threat.
+- Groups: [[Shadow Bolt Volley]] (level 48) and [[Shadowfury]] (level 44). Shadowfury hits within 8 m of you: with no enemy that close, you step in, cast and step back. Leave out [[Searing Pain]]: it draws threat.
 
 ### When it goes wrong
 - [[Shadow Ward]] absorbs 540 damage of any kind. Cast it in a fight.

@@ -29,7 +29,7 @@ Alone, in this order:
 - Two or more enemies: [[Thunder Clap]], [[Cleave]], [[Whirlwind]] (level 28) and [[Bladestorm]] (level 56) hit everything within 8 m.
 - [[Bloodrage]] (level 16) gives 20 rage. [[Berserker Rage]] (level 38) gives 15 rage and 20% faster attacks for 10 sec.
 - [[Recklessness]] (level 48): +240 attack power and 15% faster attacks for 15 sec. Save it for a hard fight.
-- In trouble, [[Hamstring]] (level 12) slows one enemy's attacks by 50% for 15 sec.
+- In trouble, [[Hamstring]] (level 12) slows one enemy's attacks by 50% for 15 sec (a quarter of that on a boss).
 - [[Intimidating Shout]] (level 24) makes everything within 8 m cower for 4 sec, not bosses.
 - [[Retaliation]] (level 18) hits back each melee attack for 15 sec, up to 12 times.
 

@@ -10,7 +10,6 @@ A Paladin fights in melee with holy spells on top, and in a group fills two role
 - Good at: emergencies. [[Divine Protection]] blocks all damage and [[Lay on Hands]] is a big free heal.
 - Good at: party buffs. Two free auras and three blessings that all stack.
 - Watch out for: mana. Almost everything costs it, your Oaths included.
-- Watch out for: no taunt. As a tank you hold enemies with damage only.
 
 ### Leveling
 - [[Oath of Righteousness]] adds Holy damage to every weapon hit for 30 sec. It only works in combat.
@@ -68,7 +67,7 @@ Holy first: all 18 points fit. **Healing Light** makes [[Holy Light]] heal 20% m
 ### Quick start
 - Open with [[Consecration]] when there is more than one enemy: double threat on all of them.
 - Keep [[Holy Shield]] (level 52) up: it absorbs damage for 10 sec on a 10 sec cooldown.
-- You have no taunt. If an enemy leaves you, stun it with [[Hammer of Order]] and hit it.
+- [[Hand of Challenge]] (level 12) anything that turns on a teammate.
 
 ### Stats
 - **Armor** cuts physical damage. [[Steadfast Aura]] adds 515.
@@ -79,6 +78,7 @@ Holy first: all 18 points fit. **Healing Light** makes [[Holy Light]] heal 20% m
 
 ### How to play it
 - As a tank, all your damage makes 90% more threat. Enemies attack whoever has the most.
+- [[Hand of Challenge]]: match the top threat on an enemy within 30 m; it attacks you for 3 sec. Free, 10 sec cooldown, no global cooldown.
 - [[Consecration]] (8 sec cooldown) and [[Holy Wrath]] make double threat.
 - [[Hammer of the Righteous]] (level 54) and [[Verdict]] make 50% more threat. Recast your Oath after [[Verdict]].
 - [[Holy Shield]] absorbs 1,340 damage, and what it absorbs makes threat too. It doesn't use the global cooldown.

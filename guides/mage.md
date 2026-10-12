@@ -7,17 +7,17 @@ checked: 10.11.0
 A Mage deals damage with Fire, Frost and Arcane spells from range, and has many ways to keep enemies off it. It fills one role: damage. Mages wear cloth, use a staff or a dagger, and run on mana.
 
 ### At a glance
-- Good at: high damage from range. [[Arcane Blast]] (level 56) does the most damage per second of any Mage spell.
+- Good at: high damage from range. From level 56, [[Arcane Blast]] then [[Fireball]] does about a quarter more damage over a minute than either spell alone.
 - Good at: holding enemies off with roots, slows, stuns and shields.
 - Watch out for: little health and cloth armor. Alone, the enemy starts right next to you.
-- Watch out for: mana. A full bar at level 60 lasts about 15 sec of nonstop [[Arcane Blast]].
+- Watch out for: mana. Each [[Arcane Blast]] within 6 sec of the last costs 50% more, up to 3 times: back to back, a full bar at level 60 lasts 4 casts.
 
 ### Leveling
 - [[Fireball]] is your main spell from level 1. [[Fire Blast]] (level 2) is instant; finish low enemies with it.
 - [[Frost Nova]] (level 12), then [[Step Back]]: a melee enemy is held 4 sec and can't reach you.
 - [[Mana Shield]] (level 18) soaks hits. [[ability/scorch|Scorch]] (level 24) casts faster than Fireball and costs less mana.
 - [[Inferno Blast]] (level 34) opens a fight: it does the most damage for its mana.
-- From level 56, [[Arcane Blast]] replaces Fireball.
+- From level 56, open with [[Arcane Blast]] and cast Fireball while its extra cost lasts.
 
 ### Before every fight
 - [[Frost Armor]]: +390 armor for 10 min, for 60 mana. Melee attackers (not bosses) attack and move 25% slower for 5 sec.
@@ -28,7 +28,7 @@ You get your first point at level 10 and 51 by level 60. The Mage trees hold 51 
 
 ## Damage
 ### Quick start
-- Cast [[Arcane Blast]] from level 56; before that, [[Fireball]].
+- Cast [[Fireball]]. From level 56, cast [[Arcane Blast]] whenever it is back at its base cost, and Fireball between.
 - Tap a spell while it glows: it is ready.
 - Keep a shield up and [[Frost Nova]] anything that reaches you.
 
@@ -39,13 +39,13 @@ You get your first point at level 10 and 51 by level 60. The Mage trees hold 51 
 
 ### How to play it
 1. A spell that glows.
-2. [[Arcane Blast]] (level 56): 580 damage, 2 sec cast.
+2. [[Arcane Blast]] (level 56) at its base cost of 396 mana: 580 damage, 2 sec cast. Each one makes the next cost 50% more for 6 sec, up to 3 times, so cast [[Fireball]] until that wears off.
 3. Before 56: [[Inferno Blast]] if the enemy will live 5 sec, then [[Fireball]].
 
 - **Ember Spark**: [[Fireball]] can make [[Fire Blast]] ready and free.
 - **Blaze Heart** (level 34): a crit with [[Fireball]], [[ability/scorch|Scorch]] or [[Fire Blast]] makes [[Inferno Blast]] instant and free.
 - [[Arcane Power]] (level 36) and [[Combustion]] (level 48) add spell power for 15 sec and stack.
-- [[Frost Storm]] (level 26) hits around your target. [[Cone of Cold]] and [[Blast Wave]] only hit within 8 m of you.
+- [[Frost Storm]] (level 26) hits around your target. [[Frost Nova]], [[Arcane Explosion]], [[Cone of Cold]], [[Blast Wave]] and [[Dragon's Breath]] only hit within 8 m of you: with no enemy that close, you step in, cast and step back.
 
 ### When it goes wrong
 - Your shields stack: [[Mana Shield]], [[Fire Ward]] and [[Ice Barrier]] (level 44, the biggest) each absorb on their own. They only work in a fight.

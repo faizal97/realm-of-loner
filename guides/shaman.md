@@ -8,13 +8,13 @@ A Shaman fights with spells and totems from range and can heal or deal damage; y
 
 ### At a glance
 - Good at: steady spell damage for little mana, thanks to [[Searing Totem]].
-- Good at: big single-target heals and party totems.
-- Watch out for: your close-range totems reach only 8 m around you, and in a group you stand back.
+- Good at: [[Chain Heal]], which heals up to 3 teammates at once, and party totems.
+- Watch out for: your close-range totems reach only 8 m around you. In a group you stand back, so you step in to drop them and then step back.
 
 ### Leveling
 - Your auto attack is a shot from range with your weapon's damage. You never need to stand in melee for it.
 - [[Searing Totem]] (level 10) and [[Flame Shock]] (level 12) burn the enemy while you cast [[Lightning Bolt]].
-- [[Frost Shock]] (level 16) slows an enemy's attacks and movement by 50% for 8 sec. Use it when a fight turns bad.
+- [[Frost Shock]] (level 16) slows an enemy's attacks and movement by 50% for 8 sec (a quarter of that on a boss). Use it when a fight turns bad.
 - Solo, most enemies fight you up close, so [[Fire Nova Totem]] (level 24) and [[Magma Totem]] (level 32) reach them.
 - Heal yourself with [[Healing Wave]] between fights. Spirit refills mana only 5 sec after your last spell.
 
@@ -28,7 +28,7 @@ You get your first point at level 10 and 51 by level 60. Elemental holds 18 poin
 
 ## Healer
 ### Quick start
-- [[Chain Heal]] (level 34) on whoever is hurt most: it heals the most for its mana.
+- [[Chain Heal]] (level 34) when more than one teammate is hurt; [[Healing Wave]] when only one is.
 - [[Lesser Healing Wave]] (level 20) when someone is about to die.
 - Watch for **Tidal Surge**: tap [[Chain Heal]] while it glows.
 
@@ -39,7 +39,7 @@ You get your first point at level 10 and 51 by level 60. Elemental holds 18 poin
 
 ### How to play it
 Numbers at level 60 with no gear and no talents:
-- [[Chain Heal]] heals about 1.9 health per mana. Despite its name it heals one target. A 2.5 sec cast.
+- [[Chain Heal]] heals about 1.6 health per mana on one target. It then jumps to the 2 most hurt allies within 12 m for half and a quarter: about 2.8 per mana in all. A 2.5 sec cast.
 - [[Healing Wave]] heals about 1.6 health per mana, also 2.5 sec.
 - [[Lesser Healing Wave]] heals about 1.4 health per mana in 1.5 sec.
 - **Tidal Surge** (with the **Healing Way** talent): [[Healing Wave]] and [[Lesser Healing Wave]] can make your next [[Chain Heal]] instant and free.

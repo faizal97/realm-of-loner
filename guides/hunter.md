@@ -17,7 +17,7 @@ A Hunter fights from range with a bow and a tamed beast at its side. It fills on
 - At level 10, tame a pet: a normal beast (not elite, not named) at or below your level. It takes 6 sec.
 - Every beast fights the same, at your level. Pick the one you like.
 - Your pet keeps its health between fights and heals quickly out of combat. If it dies, tap it to revive it out of combat: 6 sec and 30% of your mana.
-- [[Concussive Shot]] (level 8) slows an enemy by 50% for 4 sec.
+- [[Concussive Shot]] (level 8) slows an enemy by 50% for 4 sec. Slows work at a quarter of their strength on bosses.
 - [[Immolation Trap]] (level 18) and [[Spirit of the Hawk]] (level 20) raise your damage.
 - [[Feign Death]] (level 24) saves a pull that goes wrong.
 - [[Aimed Shot]] (level 28) is your big hit until [[Kill Command]] (level 52) and [[Twinfang Shot]] (level 56).
