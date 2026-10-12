@@ -66,13 +66,20 @@ a.ln { color: #f3d68a; text-decoration: underline dotted rgba(243, 214, 138, .45
 
 /* lists and search results: one row per thing, its type or level on the right */
 .rows { display: grid; }
-.row { display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #2c2216; }
-.row img { width: 28px; height: 28px; border-radius: 4px; border: 1px solid #3a2c1a; }
-.row .dot { width: 28px; height: 28px; border-radius: 4px; border: 1px solid #3a2c1a; background: #120e09; }
+.row { display: grid; grid-template-columns: 24px 1fr auto; gap: 10px; align-items: center; padding: 6px 0; line-height: 1.25; border-bottom: 1px solid #2c2216; }
+.row img { width: 24px; height: 24px; border-radius: 4px; border: 1px solid #3a2c1a; }
+.row .dot { width: 24px; height: 24px; border-radius: 4px; border: 1px solid #3a2c1a; background: #120e09; }
 .row .r { color: var(--muted); font-size: 14px; text-align: right; }
 .browse a { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #2c2216; font: 400 19px var(--display); color: var(--text); }
 .browse a span { font: 500 15px var(--body); color: var(--muted); font-variant-numeric: tabular-nums; }
 .browse a:hover span, .browse a:focus-visible span { color: var(--gold); }
+.lhead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 20px 0 10px; }
+.lhead h1 { margin: 0; font: 400 26px/1.15 var(--display); color: var(--gold); }
+.count { color: var(--muted); font-variant-numeric: tabular-nums; }
+.filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 10px; align-items: center; }
+.filters select { width: 100%; min-width: 0; font: 500 15px var(--body); color: var(--muted); background: var(--panel); border: 1px solid #3a2c1a; border-radius: 6px; padding: 9px 8px; }
+.filters select.on { color: var(--text); border-color: var(--edge-hi); }
+.filters .clear { color: var(--gold); padding: 9px 4px; justify-self: start; }
 .more { margin: 14px 0; width: 100%; padding: 11px; font: 600 15px var(--body); color: var(--gold); background: var(--panel); border: 1px solid var(--edge); border-radius: 6px; cursor: pointer; }
 .note { color: var(--muted); font-size: 14px; margin: 22px 0 0; }
 .back { display: inline-block; margin-top: 14px; color: var(--muted); font-size: 15px; }
@@ -106,14 +113,42 @@ function home() {
     <p class="note">From the game's own data, version ${esc(DB.v)}. Quest rewards are made for your class when you finish, so they are listed by type.</p>`;
 }
 
-function list(kind, shown) {
-  const ids = DB.lists[kind]; if (!ids) return home();
-  shown = shown || 100;
+// a list narrows by filters instead of scrolling: they live in the link (#list/item?stat=sp&slot=hands), so an answer is shareable
+const FILTERS_OF = { item: ['slot', 'stat', 'quality', 'level'], mob: ['zone', 'rank', 'level'], quest: ['zone', 'rank', 'level'], place: ['zone', 'rank', 'level'], npc: ['zone', 'level'], zone: ['level'], dungeon: ['rank'] };
+const ANY = { slot: 'Any slot', stat: 'Any stat', quality: 'Any quality', zone: 'Any zone or dungeon', rank: 'Any kind', level: 'Any level' };
+const BANDS = { '1-10': 'Level 1–10', '11-20': 'Level 11–20', '21-30': 'Level 21–30', '31-40': 'Level 31–40', '41-50': 'Level 41–50', '51-60': 'Level 51–60' };
+const PAGE = 60;
+const keep = (f, name, v) => {
+  if (name === 'slot') return f.s === v;
+  if (name === 'stat') return (f.st || []).includes(v);
+  if (name === 'quality') return String(f.q) === v;
+  if (name === 'zone') return (f.z || []).includes(v);
+  if (name === 'rank') return f.r === v;
+  if (name === 'level') { const [a, b] = v.split('-').map(Number); return f.lv >= a && f.lv <= b; }
+  return true;
+};
+function list(kind, query, shown) {
+  const all = DB.lists[kind]; if (!all) return home();
+  const sel = Object.fromEntries(new URLSearchParams(query || ''));
+  const names = FILTERS_OF[kind] || [];
+  const ids = all.filter((id) => { const f = DB.pages[kind + '/' + id].f || {}; return names.every((n) => !sel[n] || keep(f, n, sel[n])); });
+  shown = shown || PAGE;
+  // only the choices this list has, so no filter leads to an empty page
+  // (counted with the other filters applied, so two choices together never give an empty page)
+  const opts = (n) => {
+    const rest = all.filter((id) => { const f = DB.pages[kind + '/' + id].f || {}; return names.every((o) => o === n || !sel[o] || keep(f, o, sel[o])); });
+    const src = n === 'level' ? BANDS : n === 'slot' ? DB.filters.slot : n === 'stat' ? DB.filters.stat : n === 'quality' ? DB.filters.quality : n === 'zone' ? DB.filters.zone : DB.filters.rank;
+    return Object.entries(src).map(([v, t]) => [v, t, rest.filter((id) => keep(DB.pages[kind + '/' + id].f || {}, n, v)).length]).filter((o) => o[2] || sel[n] === o[0]);
+  };
+  const word = DB.kinds[kind].toLowerCase(), any = names.some((n) => sel[n]);
   document.title = DB.kinds[kind] + ' · Realm of Loner Database';
-  main.innerHTML = `<div class="head" style="grid-template-columns:1fr"><div><h1>${esc(DB.kinds[kind])}</h1><div class="sub">${fmt(ids.length)}, lowest level first</div></div></div>
-    <div class="rows">${ids.slice(0, shown).map((id) => row(kind + '/' + id)).join('')}</div>
-    ${shown < ids.length ? `<button class="more" id="more">Show ${fmt(Math.min(100, ids.length - shown))} more</button>` : ''}`;
-  const m = document.getElementById('more'); if (m) m.onclick = () => { const y = scrollY; list(kind, shown + 100); scrollTo(0, y); };
+  main.innerHTML = `<div class="lhead"><h1>${esc(DB.kinds[kind])}</h1><span class="count">${fmt(ids.length)}${any ? ' of ' + fmt(all.length) : ''}</span></div>
+    ${names.length ? `<form class="filters" id="fl">${names.map((n) => `<select name="${n}" aria-label="${esc(ANY[n])}"${sel[n] ? ' class="on"' : ''}><option value="">${esc(ANY[n])}</option>${opts(n).map(([v, t, c]) => `<option value="${esc(v)}"${sel[n] === v ? ' selected' : ''}>${esc(t)} (${fmt(c)})</option>`).join('')}</select>`).join('')}${any ? `<a class="clear" href="#list/${kind}">Clear</a>` : ''}</form>` : ''}
+    ${ids.length ? `<div class="rows">${ids.slice(0, shown).map((id) => row(kind + '/' + id)).join('')}</div>` : `<p class="note">No ${esc(word)} match. Clear a filter to see more.</p>`}
+    ${shown < ids.length ? `<button class="more" id="more">Show ${fmt(Math.min(PAGE, ids.length - shown))} more</button>` : ''}`;
+  const fl = document.getElementById('fl');
+  if (fl) fl.onchange = () => { const qs = new URLSearchParams([...new FormData(fl)].filter(([, v]) => v)).toString(); history.replaceState(null, '', `#list/${kind}${qs ? '?' + qs : ''}`); list(kind, qs); };
+  const m = document.getElementById('more'); if (m) m.onclick = () => { const y = scrollY; list(kind, query, shown + PAGE); scrollTo(0, y); };
 }
 
 function page(key) {
@@ -148,7 +183,7 @@ function search(s) {
 
 function route() {
   const h = decodeURIComponent(location.hash.slice(1));
-  if (!h) home(); else if (h.startsWith('list/')) list(h.slice(5)); else page(h);
+  if (!h) home(); else if (h.startsWith('list/')) { const [k, qs] = h.slice(5).split('?'); list(k, qs); } else page(h);
 }
 let timer;
 q.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => search(q.value), 80); });

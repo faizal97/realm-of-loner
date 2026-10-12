@@ -184,6 +184,26 @@ for (const [id, d] of Object.entries(D.DUNGEONS)) {
   sec(p, 'Boss loot', loot, ['Item', 'Type', 'Boss']);
 }
 
+// ---------------------------------------------------------------- filters (#231): what each list can be narrowed by
+// lv: level · z: zone and dungeon pages it belongs to · s: slot group · st: stats it gives · r: rank · q: quality
+const uniq = (a) => a.filter((v, i) => v && a.indexOf(v) === i);
+const zonesOfPlaces = (pls) => uniq((pls || []).map((pl) => 'zone/' + D.PLACES[pl].region));
+const slotGroup = (it) => D.GEAR_SLOTS.includes(it.slot) ? it.slot : it.slot === 'quest' ? 'quest' : it.slot === 'mat' ? 'mat' : (it.heal || it.mana || it.buff || it.restore || it.wdmg || it.flask || it.slot === 'food' || it.slot === 'drink' || it.slot === 'potion') ? 'use' : 'other';
+for (const [id, it] of Object.entries(D.ITEMS)) P['item/' + id].f = { lv: it.lvl || 0, s: slotGroup(it), st: uniq(Object.keys(it.stats || {}).concat(it.sp ? ['sp'] : [], it.effect ? ['fx'] : [])), q: it.q };
+for (const [id, m] of Object.entries(D.MOBS)) P['mob/' + id].f = { lv: m.lvl[1], z: zonesOfPlaces(placesOfMob[id]).concat((dungeonsOfMob[id] || []).map((d) => 'dungeon/' + d)), r: m.boss ? 'boss' : m.elite ? 'elite' : m.named ? 'named' : 'normal' };
+for (const [id, q] of Object.entries(D.QUESTS)) P['quest/' + id].f = { lv: q.lvl, z: zonesOfPlaces(placesOfNpc[q.giver]).concat(q.dungeon && D.DUNGEONS[q.dungeon] ? ['dungeon/' + q.dungeon] : []), r: q.dungeon ? 'dungeon' : q.group ? 'group' : 'solo' };
+for (const [id, pl] of Object.entries(D.PLACES)) P['place/' + id].f = { lv: (pl.lvl || [0])[0], z: ['zone/' + pl.region], r: pl.safe ? 'town' : 'wild' };
+for (const id of Object.keys(D.NPCS)) P['npc/' + id].f = { lv: Math.min(...(placesOfNpc[id] || []).map((pl) => (D.PLACES[pl].lvl || [0])[0]).concat(99)) % 99, z: zonesOfPlaces(placesOfNpc[id]) };
+for (const [id, r] of Object.entries(D.REGIONS)) P['zone/' + id].f = { lv: Math.min(...Object.values(D.PLACES).filter((pl) => pl.region === id && pl.lvl).map((pl) => pl.lvl[0]).concat(99)) % 99 };
+for (const [id, d] of Object.entries(D.DUNGEONS)) P['dungeon/' + id].f = { lv: d.minLvl, r: d.size > 5 ? 'raid' : 'dungeon' };
+const FILTERS = {
+  slot: Object.fromEntries(D.GEAR_SLOTS.map((s) => [s, D.SLOT_LABEL[s]]).concat([['use', 'Food, drink and potions'], ['mat', 'Trade goods'], ['quest', 'Quest items'], ['other', 'Other']])),
+  stat: { sp: 'Spell power', int: 'Intellect', spi: 'Spirit', sta: 'Stamina', str: 'Strength', agi: 'Agility', fx: 'Has an effect' },
+  quality: Object.fromEntries(D.QUALITY.map((q, i) => [i, q.name])),
+  zone: Object.fromEntries(Object.keys(D.REGIONS).sort((a, b) => P['zone/' + a].f.lv - P['zone/' + b].f.lv).map((z) => ['zone/' + z, D.REGIONS[z].name]).concat(Object.keys(D.DUNGEONS).sort((a, b) => D.DUNGEONS[a].minLvl - D.DUNGEONS[b].minLvl).map((d) => ['dungeon/' + d, D.DUNGEONS[d].name]))),
+  rank: { boss: 'Boss', elite: 'Elite', named: 'Named', normal: 'Normal', dungeon: 'Dungeon', group: 'Group', solo: 'Solo', town: 'Town', wild: 'Wilds', raid: 'Raid' },
+};
+
 // ---------------------------------------------------------------- lists and search
 const lists = {};
 for (const kind of Object.keys(KIND)) {
@@ -201,7 +221,7 @@ for (const ic of new Set(Object.values(D.ITEMS).map((i) => i.icon))) { const s =
 for (const id of Object.keys(D.MOBS)) { let s = null; try { s = ART.mob(id); } catch (e) { s = null; } if (s) { fs.writeFileSync(path.join(OUT, 'mob', id + '.svg'), svg(s)); mobs++; } else delete P['mob/' + id].mob; }
 
 const VERSION = (fs.readFileSync(path.join(ROOT, 'app/pubspec.yaml'), 'utf8').match(/^version:\s*([^+\s]+)/m) || [])[1] || '';
-const data = JSON.stringify({ v: VERSION, kinds: KIND, lists, pages: P }).replace(/</g, '\\u003c');
+const data = JSON.stringify({ v: VERSION, kinds: KIND, lists, filters: FILTERS, pages: P }).replace(/</g, '\\u003c');
 const tpl = fs.readFileSync(path.join(ROOT, 'web/guide/index.html'), 'utf8');
 const html = tpl.replace('/*FONTS*/', fs.readFileSync(path.join(ROOT, 'fonts/fonts.local.css'), 'utf8')).replace('/*DATA*/null', data);
 fs.writeFileSync(path.join(OUT, 'index.html'), html);
