@@ -1908,7 +1908,7 @@
         btn.classList.toggle('unlit', (!lit && !!(D.ABILITIES[id] || {}).needAura) || (!C && G.fightBuff(id)) || !!G.barBlock(id)); // on the road or dead the bar dims as #165's buffs do, cooldowns still sweeping (#167); usable only while lit (Overpower): grey until then (v10.8); a short buff out of a fight (#165)
         // distance (v10.9): too far from its target, the button greys and says how close it needs to be
         let far = 0;
-        if (u2 && D.ABILITIES[id] && id !== 'attack') { const A = D.ABILITIES[id], tid = A.target === 'ally' ? (C.allyTarget != null && C.units[C.allyTarget] && !C.units[C.allyTarget].dead ? C.allyTarget : u2.uid) : u2.target; far = E.outOfRange(C, u2, id, C.units[tid]); }
+        if (u2 && D.ABILITIES[id] && id !== 'attack') { const A = D.ABILITIES[id], tid = A.target === 'ally' || (A.either && G.role() === 'healer') ? (C.allyTarget != null && C.units[C.allyTarget] && !C.units[C.allyTarget].dead ? C.allyTarget : u2.uid) : u2.target; far = E.outOfRange(C, u2, id, C.units[tid]); }
         btn.classList.toggle('far', !!far);
         let rg = btn.querySelector(':scope > .rng'); if (far && !rg) { rg = h('span', { class: 'rng tnum' }); btn.append(rg); }
         if (rg) { if (far) rg.textContent = far + ' m'; else rg.remove(); }

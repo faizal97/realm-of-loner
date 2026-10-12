@@ -196,3 +196,22 @@ test('a slow on a boss works at a quarter of its strength (#245)', () => {
   e.boss = false; assert.strictEqual(E.slowPct(e), 50);
   e.boss = true; assert.strictEqual(E.slowPct(e), 12.5);
 });
+
+test('Holy Shock heals a teammate and hurts an enemy; a healer aims it at their heal target (#245)', () => {
+  const { C, u, e } = fight(60, 'paladin');
+  u.hp = u.maxHp * 0.3; const hp0 = e.hp;
+  assert.strictEqual(use(C, u, 'holy_shock', u), null);
+  assert.ok(C.events.some((x) => x.type === 'heal' && x.ab === 'holy_shock' && x.tgt === u.uid), 'healed the ally');
+  assert.strictEqual(e.hp, hp0, 'no damage when cast on an ally');
+  C.events.length = 0;
+  assert.strictEqual(use(C, u, 'holy_shock', e), null);
+  assert.ok(e.hp < hp0, 'hurt the enemy');
+  assert.ok(!C.events.some((x) => x.type === 'heal' && x.ab === 'holy_shock'), 'no heal when cast on an enemy');
+  // the player's tap: a healer's goes to the heal target (here yourself), anyone else's to the enemy
+  G.S.player.role = 'healer'; C.events.length = 0; u.cds.holy_shock = 0; u.gcdUntil = 0; u.target = e.uid;
+  G.useAbility('holy_shock');
+  assert.ok(C.events.some((x) => x.type === 'heal' && x.ab === 'holy_shock'), 'a healer heals with it');
+  G.S.player.role = 'tank'; C.events.length = 0; u.cds.holy_shock = 0; u.gcdUntil = 0;
+  G.useAbility('holy_shock');
+  assert.ok(C.events.some((x) => x.type === 'dmg' && x.ab === 'holy_shock'), 'a tank hurts with it');
+});

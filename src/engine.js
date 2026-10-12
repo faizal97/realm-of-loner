@@ -647,7 +647,7 @@
     if (ab.needSeal && !auraOf(u, 'seal')) return 'No seal active';
     if (ab.lifetap && u.hp <= ab.lifetap.base + ab.lifetap.perLvl * u.level + 1) return 'Not enough health';
     if (ab.opener && (C.t - (u.closedAt != null ? u.closedAt : C.t) > 3 || C.t > 3 && u.closedAt == null && !C.opts.apart || (tgt && tgt.hitBy && tgt.hitBy[u.uid]))) return 'Already in combat'; // an opener: within 3 sec of first reaching melee (a fight that starts apart gives you the run in)
-    if (ab.target === 'enemy' && (!tgt || tgt.dead || tgt.side === u.side)) return 'No target';
+    if (ab.target === 'enemy' && (!tgt || tgt.dead || (tgt.side === u.side && !ab.either))) return 'No target'; // either (Holy Shock, #245): an ally too
     if (ab.target === 'ally' && (!tgt || tgt.dead || tgt.side !== u.side)) return 'Invalid target';
     if (abId === 'pw_shield' && tgt && auraOf(tgt, 'weakened_soul')) return 'Weakened Soul';
     // distance (v10.9): the target must be within the ability's range (a targeted area attack: its centre)
@@ -706,7 +706,8 @@
 
     const centre = ab.target === 'aoe' && aoeAtTarget(ab) ? (C.units[u.target] && !C.units[u.target].dead ? C.units[u.target] : u) : u;
     const targets = ab.target === 'aoe' ? alive(foes(C, u)).filter((e) => !e.pos || !centre.pos || E.dist(centre, e) <= (ab.radius || DIST.radius)) : tgt ? [tgt] : []; // distance: an area attack has a radius
-    if (ab.dmg) {
+    const healSide = ab.either && tgt && tgt.side === u.side; // either (#245): on an ally it heals, on an enemy it hurts
+    if (ab.dmg && !healSide) {
       for (const t of targets) {
         if (ab.dmg.weapon) {
           swing(C, u, t, { bonus: rnd(ab.dmg.bonus[0], ab.dmg.bonus[1]) + (ab.dmg.perLvl || 0) * L, ab: abId, threat: ab.threat });
@@ -748,7 +749,7 @@
       const per = (ab.hot.heal + ab.hot.perLvl * L + (ab.hot.coef || 0) * u.st.sp) * (1 + (tmOf(u).hot[abId] || 0) / 100);
       for (const w of healWho) addAura(C, w, { id: ab.hot.id, until: C.t + ab.hot.ticks * ab.hot.every, every: ab.hot.every, next: C.t + ab.hot.every, hot: per, src: u.uid, ab: abId });
     }
-    if (ab.heal) {
+    if (ab.heal && (!ab.either || healSide)) {
       for (const w of healWho) {
         const crit = Math.random() * 100 < u.st.spellCrit;
         const amt = scaled(ab.heal.base, ab.heal.perLvl, L) + (ab.heal.coef || 0) * u.st.sp;
@@ -1212,6 +1213,7 @@
         return;
       }
       if (low && low.hp / low.maxHp < thr && has('lesser_heal') && try_('lesser_heal', low)) return;
+      if (low && low.hp / low.maxHp < thr && has('holy_shock') && try_('holy_shock', low)) return; // instant, on its cooldown (#245)
       if (low && low.hp / low.maxHp < thr && has('holy_light') && try_('holy_light', low)) return;
       if (low && low.hp / low.maxHp < thr && has('healing_touch') && try_('healing_touch', low)) return;
       if (low && low.hp / low.maxHp < thr && has('healing_wave') && try_('healing_wave', low)) return;
