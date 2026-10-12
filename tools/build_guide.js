@@ -208,8 +208,8 @@ const talentText = (t, rank) => (t.desc || '').replace('{v}', num(((t.fx || [])[
 const talentsOn = {}; // ability → talents that change it
 for (const [cls, trees] of Object.entries(D.TALENTS)) for (const tr of trees) for (const t of tr.talents) for (const fx of t.fx || []) for (const a of fx.ab || []) if (!(talentsOn[a] || []).some((x) => x[0] === t)) push(talentsOn, a, [t, tr, cls]);
 
-for (const [id, c] of Object.entries(D.CLASSES)) P['class/' + id] = { k: 'class', n: c.name, cls: id };
-for (const [id, r] of Object.entries(D.RACES)) P['race/' + id] = { k: 'race', n: r.name };
+for (const [id, c] of Object.entries(D.CLASSES)) P['class/' + id] = { k: 'class', n: c.name, cls: id, por: { cls: id, race: Object.keys(D.RACES).find((r) => D.RACES[r].faction === 'alliance') || 'human', gender: 'm', skin: 0, hair: 0 } };
+for (const [id, r] of Object.entries(D.RACES)) P['race/' + id] = { k: 'race', n: r.name, por: { cls: 'warrior', race: id, gender: 'm', skin: 0, hair: 0 } };
 for (const [id, ab] of Object.entries(D.ABILITIES)) if (ab.cls || ab.racial) P['ability/' + id] = { k: 'ability', n: ab.name, ic: ab.icon || id };
 
 for (const [id, ab] of Object.entries(D.ABILITIES)) {
@@ -281,9 +281,9 @@ for (const [id, pr] of Object.entries(D.PROFESSIONS)) {
 }
 
 // ---------------------------------------------------------------- collections and the group finder
-for (const [id, m] of Object.entries(D.MOUNTS)) P['collect/mount_' + id] = { k: 'collect', n: m.name, sub: 'Mount', facts: [['How', m.reward || m.how || '']] };
+for (const [id, m] of Object.entries(D.MOUNTS)) P['collect/mount_' + id] = { k: 'collect', n: m.name, ic: 'mount_' + id, sub: 'Mount', facts: [['How', m.reward || m.how || '']] };
 for (const t of D.TITLES) P['collect/title_' + t.id] = { k: 'collect', n: t.name.replace('%s', '<name>').trim(), sub: 'Title', facts: [['How', t.how || '']] };
-for (const [id, c] of Object.entries(D.COMPANIONS)) P['collect/pet_' + id] = { k: 'collect', n: c.name, sub: 'Companion', text: c.desc, facts: [['How', c.how || '']] };
+for (const [id, c] of Object.entries(D.COMPANIONS)) P['collect/pet_' + id] = { k: 'collect', n: c.name, ic: c.icon || (D.EVENTS[c.event] ? 'event_' + c.event : null), sub: 'Companion', text: c.desc, facts: [['How', c.how || '']] };
 for (const [id, h] of Object.entries(D.HEIRLOOMS)) P['collect/heirloom_' + id] = { k: 'collect', n: h.name, ic: h.icon, sub: 'Heirloom', facts: [['Slot', D.SLOT_LABEL[h.slot] || h.slot], ['Stats', (h.stat || []).map((s) => statName[s] || s).join(', ')], ['Cost', String(h.cost)]] };
 // a festival's wares: what they cost, on the item, title and companion pages
 for (const [eid, ev] of Object.entries(D.EVENTS)) for (const w of ev.shop || []) {
@@ -323,8 +323,8 @@ for (const npc of Object.keys(D.NPCS)) {
 
 // ---------------------------------------------------------------- Honor ranks and Trialsworn rewards
 const fmtTitle = (t) => (t || '').replace('%s', '<name>').trim();
-P['collect/honor'] = { k: 'collect', n: 'Honor ranks', sub: 'Reward track', text: 'Honor comes from battlegrounds and War Mode. Each rank gives a title, and some give a look for your faction.' };
-P['collect/trialsworn'] = { k: 'collect', n: 'Trialsworn rewards', sub: 'Reward track', text: 'Rewards for beating Trials in time. The higher the Trial, the brighter the look; each month adds its own colours.' };
+P['collect/honor'] = { k: 'collect', n: 'Honor ranks', ic: 'honor_alliance_3', sub: 'Reward track', text: 'Honor comes from battlegrounds and War Mode. Each rank gives a title, and some give a look for your faction.' };
+P['collect/trialsworn'] = { k: 'collect', n: 'Trialsworn rewards', ic: 'trialsworn_hourglass', sub: 'Reward track', text: 'Rewards for beating Trials in time. The higher the Trial, the brighter the look; each month adds its own colours.' };
 const honorItems = (n) => Object.keys(D.ITEMS).filter((i) => D.ITEMS[i].source === 'Honor rank ' + n);
 sec(P['collect/honor'], 'Ranks', D.HONOR_RANKS.map((r, i) => [String(i + 1), r.at.toLocaleString('en'), fmtTitle(r.alliance) + ' / ' + fmtTitle(r.horde), honorItems(i + 1).map((it) => L('item', it))]), ['Rank', 'Honor', 'Title (Accord / Krugar)', 'Looks']);
 sec(P['collect/trialsworn'], 'By Trial', Object.entries(D.TRIALSWORN).filter(([, t]) => t.lvl).map(([, t]) => [`Trial ${t.lvl}`, (t.looks || []).filter((x) => P['item/' + x]).map((x) => L('item', x)).concat(t.mount && P['collect/mount_' + t.mount] ? [L('collect', 'mount_' + t.mount)] : [])]), ['Beat in time', 'Rewards']);
@@ -378,7 +378,8 @@ const lists = {};
 for (const kind of Object.keys(KIND)) {
   const ids = Object.keys(P).filter((x) => P[x].k === kind).map((x) => x.split('/')[1]);
   const lv = (id) => kind === 'item' ? D.ITEMS[id].lvl || 0 : kind === 'dungeon' ? D.DUNGEONS[id].minLvl : kind === 'ability' ? D.ABILITIES[id].lvl || 0 : kind === 'act' ? D.ACTIVITIES[id].minLvl : lvlOf(kind, id);
-  lists[kind] = ids.sort((a, b) => lv(a) - lv(b) || P[kind + '/' + a].n.localeCompare(P[kind + '/' + b].n));
+  const nm = (id) => P[kind + '/' + id].n.replace(/<name>,?/, '').trim(), grp = (id) => (kind === 'collect' ? P['collect/' + id].sub : '');
+  lists[kind] = ids.sort((a, b) => grp(a).localeCompare(grp(b)) || lv(a) - lv(b) || nm(a).localeCompare(nm(b)));
 }
 
 // art as files next to the page, so the page itself stays small
@@ -389,6 +390,7 @@ let icons = 0, mobs = 0;
 for (const ic of new Set(Object.values(P).map((p) => p.ic).filter(Boolean))) { let s = null; try { s = ART.icon(ic); } catch (e) { s = null; } if (s) { fs.writeFileSync(path.join(OUT, 'icon', ic + '.svg'), svg(s)); icons++; } else for (const p of Object.values(P)) if (p.ic === ic) delete p.ic; }
 for (const id of Object.keys(D.MOBS)) { let s = null; try { s = ART.mob(id); } catch (e) { s = null; } if (s) { fs.writeFileSync(path.join(OUT, 'mob', id + '.svg'), svg(s)); mobs++; } else delete P['mob/' + id].mob; }
 
+for (const p of Object.values(P)) if (p.por) { let s = null; try { s = ART.portrait(p.por); } catch (e) { s = null; } const key = 'portrait_' + (p.k === 'class' ? p.por.cls : p.por.race); if (s) { fs.writeFileSync(path.join(OUT, 'icon', key + '.svg'), svg(s)); p.ic = key; } delete p.por; }
 const VERSION = (fs.readFileSync(path.join(ROOT, 'app/pubspec.yaml'), 'utf8').match(/^version:\s*([^+\s]+)/m) || [])[1] || '';
 const data = JSON.stringify({ v: VERSION, kinds: KIND, lists, filters: FILTERS, pages: P }).replace(/</g, '\\u003c');
 const tpl = fs.readFileSync(path.join(ROOT, 'web/guide/index.html'), 'utf8');
