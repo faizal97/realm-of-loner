@@ -235,7 +235,7 @@
     scatter_shot: { name: 'Scatter Shot', cls: 'hunter', lvl: 32, cost: 40, cd: 30, target: 'enemy', stun: 4, desc: 'A short-range shot that disorients the target for 4 sec. 30 sec cooldown.' },
     trueshot_aura: { name: 'Keen Eye Aura', cls: 'hunter', lvl: 34, cost: 0, cd: 0, target: 'party', buff: { id: 'trueshot_aura', dur: 1800, stats: { ap: 30 }, perLvl: { ap: 1 } }, desc: 'Raises the attack power of your party by {ap}.' },
     bash: { name: 'Bash', cls: 'druid', lvl: 32, cost: 10, cd: 60, target: 'enemy', form: 'bear', stun: 4, desc: 'Stuns the target for 4 sec. Bear Form only. 1 min cooldown.' },
-    innervate: { name: 'Innervate', cls: 'druid', lvl: 34, cost: 0, cd: 360, target: 'self', gcd: false, combatOnly: true, buff: { id: 'innervate', dur: 20, stats: { spi: 60 }, perLvl: { spi: 2 } }, desc: 'Nature floods you with energy: +{spi} Spirit for 20 sec. 6 min cooldown.' },
+    innervate: { name: 'Innervate', cls: 'druid', lvl: 34, cost: 0, cd: 360, target: 'self', gcd: false, combatOnly: true, buff: { id: 'innervate', dur: 20, castRegen: true, stats: { spi: 60 }, perLvl: { spi: 2 } }, desc: 'Nature floods you with energy: +{spi} Spirit for 20 sec, and your mana keeps refilling while you cast. 6 min cooldown.' },
     magma_totem: { name: 'Magma Totem', cls: 'shaman', lvl: 32, cost: 110, costPerLvl: 4, cd: 12, target: 'aoe', dmg: { base: [70, 80], perLvl: 2.4, coef: 0.2, school: 'fire' }, desc: 'A totem of lava burns all nearby enemies for {b} Fire damage. 12 sec cooldown.' },
     chain_heal: { name: 'Chain Heal', cls: 'shaman', lvl: 34, cost: 150, costPerLvl: 5, cd: 0, cast: 2.5, target: 'ally', heal: { base: [300, 340], perLvl: 9, coef: 0.9 }, desc: 'A wave of healing for {h}.' },
     // v5.1 (levels 36 and 38)

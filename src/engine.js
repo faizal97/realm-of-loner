@@ -745,6 +745,7 @@
       if (b.thorns) extra.thorns = { dmg: Math.round((b.thorns.base + b.thorns.perLvl * L) * bp), charges: b.thorns.charges };
       if (b.immune) extra.immune = true;
       if (b.speed) extra.speed = b.speed; // distance: run faster (Sprint)
+      if (b.castRegen) extra.castRegen = true; // mana keeps refilling while you cast (Innervate)
       for (const w of who) addAura(C, w, Object.assign({ id: b.id, until: C.t + dur, stats: Object.keys(stats).length ? stats : null, persistent: dur >= 60 }, extra));
       if (ab.threat) for (const e of alive(foes(C, u))) e.threat[u.uid] = (e.threat[u.uid] || 0) + ab.threat;
     }
@@ -1368,7 +1369,7 @@
       if (u.race === 'troll' && u.side === 'ally' && u.hp < u.maxHp) u.hp = Math.min(u.maxHp, u.hp + u.maxHp * 0.002 * dt);
       // resources
       if (u.resType === 'energy') u.res = Math.min(100, u.res + 10 * dt);
-      if (u.resType === 'mana' && C.t - u.lastCastT >= 5) u.res = Math.min(u.maxRes, u.res + ((13 + u.st.spi / 4) / 2) * dt);
+      if (u.resType === 'mana' && (C.t - u.lastCastT >= 5 || u.auras.some((x) => x.castRegen))) u.res = Math.min(u.maxRes, u.res + ((13 + u.st.spi / 4) / 2) * dt);
       // casting
       if (u.cast) {
         if (stunned(C, u)) { u.cast = null; continue; }

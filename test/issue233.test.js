@@ -46,3 +46,14 @@ test('a bot bear tank uses Swipe on a pack, and Barkskin and Frenzied Regenerati
   for (let i = 0; i < 1500 && !C.over; i++) { E.tick(C, 0.1); for (const e of C.events) if (e.type === 'ability' && e.src === u.uid) used[e.ab] = (used[e.ab] || 0) + 1; C.events.length = 0; }
   for (const id of ['bear_form', 'swipe', 'barkskin', 'frenzied_regeneration']) assert.ok(used[id], `${id} used (${JSON.stringify(used)})`);
 });
+
+test('Innervate refills mana while you keep casting', () => {
+  const { P } = character(60, 'druid', 'human');
+  const u = E.charUnit(P, 'ally', 'player', 1);
+  const key = Object.keys(D.MOBS).find((k) => { const M = D.MOBS[k]; return !M.boss && !M.elite && M.lvl && M.lvl[0] <= 60 && M.lvl[1] >= 60; });
+  const C = E.fight([u], [E.mobUnit(key, 60, { hp: 50, dmg: 0 })], {});
+  u.res = 100; u.gcdUntil = 0; E.use(C, u, 'innervate');
+  const r0 = u.res;
+  for (let i = 0; i < 200; i++) { u.lastCastT = C.t; E.tick(C, 0.1); } // casting the whole time
+  assert.ok(u.res - r0 > 500, `gained ${Math.round(u.res - r0)} mana while casting`);
+});
