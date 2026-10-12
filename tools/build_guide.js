@@ -27,6 +27,9 @@ const statName = { str: 'Strength', agi: 'Agility', sta: 'Stamina', int: 'Intell
 const WTYPE = { sword: 'Sword', axe: 'Axe', mace: 'Mace', dagger: 'Dagger', staff: 'Staff', bow: 'Bow', gun: 'Gun', crossbow: 'Crossbow', wand: 'Wand' };
 const KIND = { item: 'Items', mob: 'Creatures', quest: 'Quests', npc: 'People', place: 'Places', zone: 'Zones', dungeon: 'Dungeons', act: 'Group finder', class: 'Classes', race: 'Races', ability: 'Abilities', prof: 'Professions', collect: 'Collections' };
 const push = (m, key, v) => (m[key] = m[key] || []).push(v);
+// a creature family as players read it: the renamed word where there is one (tools/rename_v10.json: Murloc → its new name)
+const RENAME = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/rename_v10.json'), 'utf8'));
+const family = (f) => { const n = cap(f || ''), r = RENAME[n]; return r && r.status === 'rename' && r.new ? r.new : n; };
 
 // what an item is, in one line ("Leather Hands", "Quest Item", "Trade Goods")
 function itemKind(it) {
@@ -102,7 +105,7 @@ const lvlOf = (kind, id) => kind === 'mob' ? D.MOBS[id].lvl[1] : kind === 'quest
 const byLvl = (kind) => (a, b) => lvlOf(kind, a) - lvlOf(kind, b);
 const sec = (p, h, rows, head) => { if (rows.length) (p.sec = p.sec || []).push(head ? { h, head, rows } : { h, rows }); };
 const where = (placeId) => { const pl = D.PLACES[placeId]; return [L('place', placeId), pl.lvl ? range(pl.lvl) : '', L('zone', pl.region) || pl.zone || '']; };
-const factionOf = (f) => (f ? cap(f) : '');
+const factionOf = (f) => (f ? (D.FACTIONS[f] || {}).name || cap(f) : ''); // the game's names: Accord and Krugar
 
 for (const [id, it] of Object.entries(D.ITEMS)) {
   const p = P['item/' + id];
@@ -119,7 +122,7 @@ for (const [id, it] of Object.entries(D.ITEMS)) {
 for (const [id, m] of Object.entries(D.MOBS)) {
   const p = P['mob/' + id], dg = (dungeonsOfMob[id] || [])[0], DG = dg && D.DUNGEONS[dg];
   const mult = DG ? (m.boss ? DG.bossMult : DG.trashMult) : null, u = E.mobUnit(id, m.lvl[1], mult);
-  p.sub = [`Level ${range(m.lvl)}`, m.boss ? 'Boss' : m.elite ? 'Elite' : '', cap(m.family || '')].filter(Boolean).join(', ');
+  p.sub = [`Level ${range(m.lvl)}`, m.boss ? 'Boss' : m.elite ? 'Elite' : '', family(m.family)].filter(Boolean).join(', ');
   const facts = [['Health', k(u.maxHp)], ['Hits for', `${k(u.dmg[0])}–${k(u.dmg[1])}`]];
   if (m.ranged) facts.push(['Attacks', 'From range']);
   if (m.specialText) facts.push(['Ability', m.specialText]);
@@ -234,13 +237,13 @@ for (const [id, c] of Object.entries(D.CLASSES)) {
   const abil = Object.entries(D.ABILITIES).filter(([, a]) => a.cls === id).sort((a, b) => (a[1].lvl || 0) - (b[1].lvl || 0));
   sec(p, 'Abilities', abil.map(([a, A]) => [String(A.lvl || 1), L('ability', a), A.form ? cap(A.form) + ' Form' : A.cd ? cdText(A.cd) : '']), ['Level', 'Ability', '']);
   for (const tr of D.TALENTS[id] || []) sec(p, `${tr.name} talents`, tr.talents.map((t) => [String(D.TALENT_TIER_POINTS[t.tier] || 0), t.name, `${t.ranks}`, talentText(t, t.ranks)]), ['Points in tree', 'Talent', 'Ranks', 'At full rank']);
-  sec(p, 'Races', Object.entries(D.RACES).filter(([, r]) => (r.classes || []).includes(id)).map(([r, R]) => [L('race', r), cap(R.faction)]), ['Race', 'Faction']);
+  sec(p, 'Races', Object.entries(D.RACES).filter(([, r]) => (r.classes || []).includes(id)).map(([r, R]) => [L('race', r), factionOf(R.faction)]), ['Race', 'Faction']);
 }
 
 for (const [id, r] of Object.entries(D.RACES)) {
   const p = P['race/' + id], R = (D.RACIALS || {})[id] || {};
-  p.sub = cap(r.faction);
-  p.facts = [['Faction', cap(r.faction)], ['Starts in', D.PLACES[r.start] ? L('place', r.start) : r.startZone]];
+  p.sub = factionOf(r.faction);
+  p.facts = [['Faction', factionOf(r.faction)], ['Starts in', D.PLACES[r.start] ? L('place', r.start) : r.startZone]];
   if (R.active && P['ability/' + R.active]) p.facts.push(['Racial', L('ability', R.active)]);
   sec(p, 'Racial traits', (R.text || []).map((t) => [t]));
   sec(p, 'Classes', (r.classes || []).map((c) => [L('class', c)]));
@@ -323,13 +326,13 @@ const fmtTitle = (t) => (t || '').replace('%s', '<name>').trim();
 P['collect/honor'] = { k: 'collect', n: 'Honor ranks', sub: 'Reward track', text: 'Honor comes from battlegrounds and War Mode. Each rank gives a title, and some give a look for your faction.' };
 P['collect/trialsworn'] = { k: 'collect', n: 'Trialsworn rewards', sub: 'Reward track', text: 'Rewards for beating Trials in time. The higher the Trial, the brighter the look; each month adds its own colours.' };
 const honorItems = (n) => Object.keys(D.ITEMS).filter((i) => D.ITEMS[i].source === 'Honor rank ' + n);
-sec(P['collect/honor'], 'Ranks', D.HONOR_RANKS.map((r, i) => [String(i + 1), r.at.toLocaleString('en'), fmtTitle(r.alliance) + ' / ' + fmtTitle(r.horde), honorItems(i + 1).map((it) => L('item', it))]), ['Rank', 'Honor', 'Title (Alliance / Horde)', 'Looks']);
+sec(P['collect/honor'], 'Ranks', D.HONOR_RANKS.map((r, i) => [String(i + 1), r.at.toLocaleString('en'), fmtTitle(r.alliance) + ' / ' + fmtTitle(r.horde), honorItems(i + 1).map((it) => L('item', it))]), ['Rank', 'Honor', 'Title (Accord / Krugar)', 'Looks']);
 sec(P['collect/trialsworn'], 'By Trial', Object.entries(D.TRIALSWORN).filter(([, t]) => t.lvl).map(([, t]) => [`Trial ${t.lvl}`, (t.looks || []).filter((x) => P['item/' + x]).map((x) => L('item', x)).concat(t.mount && P['collect/mount_' + t.mount] ? [L('collect', 'mount_' + t.mount)] : [])]), ['Beat in time', 'Rewards']);
 const monthly = Object.keys(D.ITEMS).filter((i) => D.ITEMS[i].month != null && /^Trials/.test(D.ITEMS[i].source || ''));
 sec(P['collect/trialsworn'], 'Each month', monthly.map((i) => [L('item', i), D.ITEMS[i].source.replace(/^Trials: /, '')]), ['Look', 'How']);
 for (const [id, it] of Object.entries(D.ITEMS)) {
   const hm = /^Honor rank (\d+)/.exec(it.source || ''), tm = /^Trials: (.+)/.exec(it.source || '');
-  if (hm) { const r = D.HONOR_RANKS[hm[1] - 1]; sec(P['item/' + id], 'Reward', [['Track', L('collect', 'honor')], ['Rank', `${hm[1]} (${r.at.toLocaleString('en')} Honor)`], ['Faction', cap(it.faction || 'both')]]); }
+  if (hm) { const r = D.HONOR_RANKS[hm[1] - 1]; sec(P['item/' + id], 'Reward', [['Track', L('collect', 'honor')], ['Rank', `${hm[1]} (${r.at.toLocaleString('en')} Honor)`], ['Faction', it.faction ? factionOf(it.faction) : 'Both']]); }
   if (tm) sec(P['item/' + id], 'Reward', [['Track', L('collect', 'trialsworn')], ['How', cap(tm[1])]]);
 }
 

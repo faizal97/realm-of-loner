@@ -1,5 +1,5 @@
 // The database site (#231): tools/build_guide.js builds from the game data without errors, every page has a name,
-// and every link on a page points at a page that exists.
+// every link on a page points at a page that exists, and no old (renamed) name is anywhere in it.
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert');
@@ -22,4 +22,7 @@ test('the database builds and every link resolves', () => {
   }
   assert.deepStrictEqual(bad, []);
   for (const kind in DB.lists) for (const id of DB.lists[kind]) assert.ok(pages[kind + '/' + id], `${kind}/${id} listed`);
+  // the game's own names only (Accord and Krugar, never the old ones), as build.py checks the game page
+  const ip = execFileSync('node', [path.join(root, 'tools/ipcheck.js'), '--dist', path.join(root, 'dist/guide/index.html')], { cwd: root, encoding: 'utf8' });
+  assert.match(ip, /old names in the built page: 0/, ip);
 });
