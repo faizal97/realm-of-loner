@@ -59,9 +59,10 @@
 
   var CREST = {
     warrior: function (c, col) {
-      return dagger(c, 14, 52, 50, 14) + dagger(c, 50, 52, 14, 14) +
-        P('M20,17 L44,17 L44,32 C44,42 38,48 32,52 C26,48 20,42 20,32 Z', c.cel(col), 2.4) +
-        P('M32,19 L42,19 L42,32 C42,40 37,45 32,49 Z', lt(col, 0.25), 0) + bar('M32,22 L32,46', GOLD, 2.2) + bar('M24,30 L40,30', GOLD, 2.2);
+      // two long swords crossed behind a smaller shield: guards, grips and points all clear of it
+      return dagger(c, 11, 55, 53, 9) + dagger(c, 53, 55, 11, 9) +
+        P('M23,21 L41,21 L41,34 C41,42 37,47 32,50 C27,47 23,42 23,34 Z', c.cel(col), 2.4) +
+        P('M32,23 L39,23 L39,34 C39,40 36,44 32,47 Z', lt(col, 0.25), 0) + bar('M32,25 L32,45', GOLD, 2) + bar('M26,32 L38,32', GOLD, 2);
     },
     mage: function (c, col) {
       return P(star(32, 32, 8, 25, 10), c.cel(col), 2.2) + P(star(32, 32, 4, 17, 7, Math.PI / 4), lt(col, 0.4), 1.6) +
@@ -94,7 +95,8 @@
         P('M10,32 L5,27 L13,27 L16,32 L13,37 L5,37 Z', c.cel(col), 1.6);
     },
     druid: function (c, col) {
-      return P('M19,8 C9,16 8,34 17,46 C11,40 12,26 23,15 Z', c.cel('#e9e0c2'), 2.2) +
+      // a crescent: the moon's circle less a second, offset one (they cross at 23.7,13 and 41.4,39.6)
+      return P('M23.7,13 A19,19 0 1,0 41.4,39.6 A16,16 0 0,1 23.7,13 Z', c.lg([[0, '#fffbe8'], [0.5, '#efe3b8'], [1, '#b9a874']], 0, 0, 1, 1), 2.4) +
         P('M34,10 C48,16 54,34 44,52 C38,47 30,42 26,32 C22,22 26,14 34,10 Z', c.cel(col), 2.4) +
         S('M44,52 C38,40 34,26 34,10', dk(col, 0.45), 2) + S('M37,24 L45,21 M38,32 L48,31 M39,40 L47,42 M35,30 L28,27 M36,38 L30,37', dk(col, 0.45), 1.6) +
         bar('M44,52 L47,58', '#6b4423', 2.4);
