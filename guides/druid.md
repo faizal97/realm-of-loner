@@ -47,7 +47,7 @@ Your first point comes at level 10 and you have 51 by level 60. Each tree holds 
 ### When it goes wrong
 - [[Quick Mend]] (level 36): instant, 15 sec cooldown.
 - [[Barkskin]] (level 28) on yourself if you are being hit: +armor for 15 sec, no global cooldown.
-- [[Innervate]] (level 34) adds Spirit for 20 sec, which only gives mana if you stop casting for 5 sec while it runs.
+- [[Innervate]] (level 34): for 20 sec your mana refills while you cast, with extra Spirit. 6 min cooldown.
 
 ### Talents
 Restoration first: all 19 points fit. **Gift of Nature** and **Nature's Swiftness** raise all your healing, and Nature's Swiftness turns on **Clear Stream**. **Intensity** raises Intellect. In Balance, **Moonkin Form** (10 points there first) adds 3% spell crit and 4% less damage taken.
