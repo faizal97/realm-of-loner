@@ -130,3 +130,11 @@ test("a Shaman's imbue adds damage to the weapon's shot from range", () => {
   assert.ok(C.events.slice(ev0).some((x) => x.type === 'dmg' && x.src === u.uid && x.ab === 'rockbiter_weapon'), 'imbue damage seen');
   void e;
 });
+
+test('Warrior and Priest can queue as Damage (#245)', () => {
+  for (const [cls, main] of [['warrior', 'tank'], ['priest', 'healer']]) {
+    character(30, cls, 'human');
+    assert.deepStrictEqual(G.roles().slice().sort(), [main, 'dps'].sort(), cls);
+    G.setRole('dps'); assert.strictEqual(G.role(), 'dps', cls);
+  }
+});
