@@ -907,7 +907,7 @@
         h('button', { class: 'chip', disabled: p.tabs.length <= 1, onclick: () => { p.tabs.splice(i, 1); if (p.active !== 'requests' && p.active >= p.tabs.length) p.active = p.tabs.length - 1; else if (p.active !== 'requests' && p.active > i) p.active--; done(); } }, 'Remove'));
       list.append(h('div', { class: 'ctab' }, h('div', { class: 'ctab-top' }, name, btns), chips));
     });
-    showDialog([h('h3', null, 'Chat tabs'), h('p', { class: 'ai-note', style: { margin: '0 0 8px' } }, 'Pick which channels each tab shows. The strip on the main screen shows the tab you have open.'), list,
+    showDialog([h('h3', null, 'Chat tabs'), h('p', { class: 'ai-note', style: { margin: '0 0 8px' } }, 'Pick the channels for each tab. The main screen shows the open tab.'), list,
       h('div', { class: 'btn-row', style: { marginTop: '10px' } },
         h('button', { class: 'btn alt', disabled: p.tabs.length >= CHAT_MAX_TABS, onclick: () => { p.tabs.push({ name: 'New tab', chs: CHAT_GROUPS.map((g) => g[0]).filter((k) => k !== 'loot') }); p.active = p.tabs.length - 1; done('end'); } }, '+ Add tab'),
         h('button', { class: 'btn alt', onclick: () => { ui.chatPrefs = CHAT_DEFAULT(); done(); } }, 'Reset')),
@@ -948,7 +948,7 @@
     // your team with their Honor ranks (#57), after the decision (#66: the three banners and where you send them first)
     p.append(h('div', { class: 'bg-team' }, h('small', null, 'Your team: '), h('span', null, rankBadge(G.S.player, true), 'You'), ...(bg.team || []).map((m) => h('span', null, rankBadge(m), nm(m)))));
 
-    p.append(h('p', { class: 'ai-note' }, 'Where both teams meet, they fight; an empty banner is taken; they take the banners they reach alone. Every banner you hold scores each round. The scouts give a range and the true number is always inside it. They can still move when they see you coming, toward your pair or your group.'));
+    p.append(h('p', { class: 'ai-note' }, 'Each banner you hold scores every round. Teams that meet fight; an empty banner is taken. Scout counts are a range. Enemies may move when they see you.'));
     if (bg.log.length) p.append(h('div', { class: 'ai-box' }, ...bg.log.slice(0, 3).map((l) => h('div', { class: 'ai-row' }, h('span', null, l)))));
   }
   // ---------- the Bloodsand Brawl (v10.9): the arena card where you join, the bracket between rounds, then the result and
@@ -966,7 +966,7 @@
       row('Champion', G.brawlChestOpen() ? 'The Bloodsand chest: one of three blue items' : 'Chest taken today · open again tomorrow'),
       rec.fought ? row('Your record', `${rec.fought} brawl${rec.fought === 1 ? '' : 's'} · ${rec.champs || 0} won`) : null));
     p.append(h('button', { class: 'btn wide', disabled: !!why, onclick: () => { if (G.brawlJoin()) renderAll(); } }, why || 'Join the brawl'));
-    p.append(h('p', { class: 'ai-note' }, `It opens every ${B.every} hours on the hour for ${B.openMin} minutes. Full health before every round, and losing costs nothing. One fighter each: pets wait outside the pit.`));
+    p.append(h('p', { class: 'ai-note' }, `Opens every ${B.every}h for ${B.openMin} min. Full health each round; losing costs nothing. No pets.`));
   }
   function brawlPanel(p) {
     const S = G.S, P = S.player, br = S.brawl, B = G.BRAWL, nm = (x) => (x.you ? 'You' : x.name.split('-')[0]);
@@ -1003,7 +1003,7 @@
       for (let i = 0; i < br.slots.length; i += 2) { const a = br.slots[i], b = br.slots[i + 1]; pairs.append(h('div', { class: 'brawl-pair' + (a.you || b.you ? ' you' : '') }, side(a), h('span', { class: 'vs' }, 'vs'), side(b, ' r'))); }
       p.append(h('div', { class: 'sec-h' }, `Round ${br.round}`, h('small', null, `${br.slots.length} fighters left`)), pairs);
       br.results.forEach((res, r) => p.append(h('div', { class: 'sec-h' }, `Round ${r + 1}`, h('small', null, 'settled')), h('div', { class: 'ai-box' }, ...res.map((x) => h('div', { class: 'ai-row' }, h('span', null, `${x.a === P.name ? 'You' : x.a.split('-')[0]} vs ${x.b === P.name ? 'You' : x.b.split('-')[0]}`), h('b', null, (x.w === P.name ? 'You' : x.w.split('-')[0]) + ' won'))))));
-      p.append(h('p', { class: 'ai-note' }, 'The other pairs fight at the same time; their results stand when yours ends. Full health before every round.'));
+      p.append(h('p', { class: 'ai-note' }, 'Other pairs fight at the same time. Full health each round.'));
     }
   }
   function renderPanel() {
@@ -1183,7 +1183,7 @@
           h('div', { class: 't' }, h('b', null, `${bb.weekly ? 'Weekly: ' : ''}${bb.n} ${D.MOBS[bb.mob].name}`), h('small', { style: { whiteSpace: 'normal' } }, `${bb.xp} XP · ${G.moneyText(bb.money)} · ${bb.marks} Mentor Marks${bb.weekly ? ' · bonus gear' : ''}`)),
           h('div', { class: 'r' }, h('span', { class: st === 'complete' ? 'pill ready' : 'pill' }, label))));
       }
-      b.append(list, h('p', { class: 'ai-note' }, 'Bounties you take show in your Quest Log (the Quests tab at the bottom), with their progress. Hunt them anywhere in this zone, then hand them in here.'));
+      b.append(list, h('p', { class: 'ai-note' }, 'Taken bounties track in your Quest Log. Hunt anywhere in this zone, then hand in here.'));
     });
   }
   function questsTab(b) {
@@ -1354,9 +1354,9 @@
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { closeDialog(); G.attackIntruder(); } }, 'Attack'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Leave them'))], true);
   }
   function showWarModeIntro() {
-    showDialog([h('h3', null, 'War Mode'), h('p', null, 'Turn on War Mode and enemy players will show up in the world. Some pass by, some attack you, and you can attack them too.'),
-      h('p', null, 'While it is on you get +10% experience and gold, and Honor for every enemy player you defeat.'),
-      h('p', { style: { color: 'var(--muted)', fontSize: '13px' } }, 'Capitals and starting valleys stay safe. Guards help you in towns. You can change this any time in Hero.'),
+    showDialog([h('h3', null, 'War Mode'), h('p', null, 'Enemy players appear in the world. Some will attack you; you can attack them.'),
+      h('p', null, '+10% experience and gold, and Honor for each enemy player defeated.'),
+      h('p', { style: { color: 'var(--muted)', fontSize: '13px' } }, 'Capitals and starting valleys are safe; guards help in towns. Change it any time in Hero.'),
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { closeDialog(); G.setWarMode(true); } }, 'Turn on'), h('button', { class: 'btn alt', onclick: () => { closeDialog(); G.setWarMode(false); } }, 'Not now'))]);
   }
   function showPartyInvite(d) {
@@ -1445,7 +1445,7 @@
     const go = () => { closeDialog(); G.leaveGroup(); renderAll(); if (typeof after === 'function') after(); };
     if (!R || R.phase === 'done') return go();
     const left = R.pulls.length - R.idx;
-    showDialog([h('h3', null, `Leave ${R.name}?`), h('p', null, `The group still has ${left} pull${left === 1 ? '' : 's'} to go. Leaving now gives you Deserter for 10 minutes, and you can't join another group until it wears off.`),
+    showDialog([h('h3', null, `Leave ${R.name}?`), h('p', null, `${left} pull${left === 1 ? '' : 's'} left. Leaving now gives Deserter: no groups for 10 min.`),
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: go }, 'Leave'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Stay'))], true);
   }
   function runPanel(p) {
@@ -1597,7 +1597,7 @@
       if (pick != null) {
         b.append(h('p', { class: 'ai-note', style: { margin: 0 } }, `${D.ABILITIES[shown[pick]].name}: tap another button to swap places, or hide it.`),
           shown.length > 1 ? h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', onclick: () => { P.barOrder = shown.concat(hidden); P.barHide = (P.barHide || []).concat(shown[pick]); changed(); } }, 'Hide it'), h('button', { class: 'btn alt', onclick: () => { pick = null; ui.sheetFn(); } }, 'Cancel')) : null);
-      } else b.append(h('p', { class: 'ai-note', style: { margin: 0 } }, 'The first row stays when you fold the bar. ⚔ shows only in combat; Eat and Drink only out of it.'));
+      } else b.append(h('p', { class: 'ai-note', style: { margin: 0 } }, 'The first row stays when the bar is folded. ⚔ shows in combat; Eat and Drink out of it.'));
       if (hidden.length) {
         const hg = h('div', { class: 'actionbar bar-edit', style: { gridTemplateColumns: 'repeat(7, 1fr)' } });
         for (const id of hidden) hg.append(tile(id, () => { P.barHide = P.barHide.filter((x) => x !== id); changed(); }, ' hid'));
@@ -1730,12 +1730,12 @@
   const xpPct = (x, n) => { const p = x / n * 100; return p < 10 ? p.toFixed(1) : Math.floor(p); };
   function xpDetail() {
     const P = G.S.player;
-    if (P.level >= D.LEVEL_CAP) return showDialog([h('h3', null, 'Experience'), h('p', null, `You are level ${D.LEVEL_CAP}, the level cap. From here, gear, raids and collections are how you grow.`), h('button', { class: 'btn wide', onclick: closeDialog }, 'OK')], true);
+    if (P.level >= D.LEVEL_CAP) return showDialog([h('h3', null, 'Experience'), h('p', null, `Level ${D.LEVEL_CAP}: max level. Grow through gear, raids and collections.`), h('button', { class: 'btn wide', onclick: closeDialog }, 'OK')], true);
     const need = D.XP_TO_LEVEL[P.level], left = need - P.xp, rest = Math.round(P.rested);
     showDialog([h('h3', null, `Level ${P.level} → ${P.level + 1}`),
       h('div', { class: 'bar xp xpmain', style: { height: '18px', margin: '4px 0 8px' } }, h('i', { class: 'rest', style: { width: Math.min(100, (P.xp + P.rested) / need * 100) + '%' } }), h('i', { class: 'fill', style: { width: (P.xp / need * 100) + '%' } }), h('b', { class: 'tnum' }, `${xpPct(P.xp, need)}%`)),
       h('p', null, h('b', null, `${Math.floor(P.xp).toLocaleString()} of ${need.toLocaleString()} XP`), ` (${xpPct(P.xp, need)}%). ${left.toLocaleString()} more to level ${P.level + 1}.`),
-      h('p', { style: { color: rest > 0 ? '#8fb6ff' : 'var(--muted)' } }, rest > 0 ? `Rested: +${rest.toLocaleString()} bonus XP, the blue part of the bar. Kills give double XP until it runs out. You build more by logging out in an inn or a city.` : 'Not rested. Log out in an inn or a city to build bonus XP for your next kills.'),
+      h('p', { style: { color: rest > 0 ? '#8fb6ff' : 'var(--muted)' } }, rest > 0 ? `Rested: +${rest.toLocaleString()} XP (blue on the bar). Kills give double XP until it runs out. Log out in an inn or city to build more.` : 'Not rested. Log out in an inn or a city to build bonus XP for your next kills.'),
       h('button', { class: 'btn wide', onclick: closeDialog }, 'OK')], true);
   }
   function xpFloat(d) {
@@ -2009,7 +2009,7 @@
     const M = D.MOBS[r.key], u = E.mobUnit(r.key, M.lvl[1]), t = Date.now(), seen = new Date(G.huntLastSeen(r.key, t)), k = (n) => (n >= 10000 ? (n / 1000).toFixed(1) + 'k' : String(Math.round(n)));
     showDialog([h('h3', null, M.name), h('p', null, `Level ${M.lvl[1]}${M.elite ? ' elite' : ''} · ${k(u.maxHp)} health · hits for ${k(u.dmg[0])}–${k(u.dmg[1])}`),
       h('p', null, G.trophies()[r.key] ? `Trophy: taken by ${G.trophies()[r.key].by}` : 'Trophy: not yet'),
-      h('p', null, `A rare hunt at ${D.PLACES[r.place].name}: it shows up once in each 6 hours and stays about 30 minutes, or until someone kills it. Last seen ${seen.toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' })}.`),
+      h('p', null, `Rare at ${D.PLACES[r.place].name}. Spawns once every 6h, stays ~30 min. Last seen ${seen.toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' })}.`),
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: closeDialog }, 'Got it'))], true);
   }
   // ---------- item tooltip
@@ -2551,7 +2551,7 @@
       const P = G.S.player;
       const qs = readyFirst(Object.keys(P.quests)), bs = G.myBounties();
       const sub = title && title.querySelector('small'); if (sub) sub.textContent = counts(); // fresh after a hand-in or Back
-      if (!qs.length && !bs.length) b.append(h('p', null, 'Your quest log is empty. Look for people with a yellow ! above their name, or a Bounty Board in a town.'));
+      if (!qs.length && !bs.length) b.append(h('p', null, 'No quests. Look for a yellow ! or a Bounty Board in town.'));
       if (bs.length) b.append(h('div', { class: 'sec-h' }, 'Quests', h('small', null, qs.length ? `${qs.length} of 20` : 'none yet: look for a yellow !')));
       for (const qid of qs) {
         const st = G.questState(qid);
@@ -2586,7 +2586,7 @@
       if (npc === 'mentor_alliance' || npc === 'mentor_horde') {
         const acc = G.account();
         b.append(h('div', { class: 'sec-h' }, 'Heirlooms', h('small', null, `${acc.marks} Mentor Marks · shared by all your characters`)));
-        b.append(h('p', { style: { color: 'var(--muted)', fontSize: '13px', margin: '4px 0 8px' } }, 'Mentor Marks also upgrade level-60 blue and purple gear: tap the item in your bags or on your character, then Upgrade.'));
+        b.append(h('p', { style: { color: 'var(--muted)', fontSize: '13px', margin: '4px 0 8px' } }, 'Mentor Marks also upgrade level-60 blue and purple gear: tap the item, then Upgrade.'));
         const list = h('div', { class: 'list' });
         for (const id in D.HEIRLOOMS) {
           const H = D.HEIRLOOMS[id], it = G.makeHeirloom(id, P.level), owned = acc.heirlooms.includes(id);
@@ -2596,7 +2596,7 @@
             h('div', { class: 't' }, h('b', { style: { color: D.QUALITY[5].color } }, H.name), h('small', { style: { whiteSpace: 'normal' } }, `At your level: ${stats}. Grows with you. +5% experience.`)),
             h('div', { class: 'r' }, owned ? 'Copy' : `${H.cost} ✦`)));
         }
-        b.append(list, h('p', { class: 'ai-note' }, 'Earn Mentor Marks by answering Help Wanted in the group finder and from the daily Roulette.'));
+        b.append(list, h('p', { class: 'ai-note' }, 'Earned from Help Wanted (group finder) and the daily Roulette.'));
         // past months' Trialsworn cloaks (v10.7): only the ones you are missing, so the list stays short
         const past = G.pastMonthCloaks();
         if (past.length) {
@@ -2707,7 +2707,7 @@
     if (!G.sellNeedsConfirm(b.item)) return sell();
     const it = b.item, up = D.GEAR_SLOTS.includes(it.slot) && G.isUpgrade(it), cur = up ? P.equip[it.slot] : null;
     showDialog([h('h3', null, 'Sell ', h('span', { class: 'q' + it.q }, it.name + (b.n > 1 ? ' ×' + b.n : '')), '?'),
-      h('p', { html: `The vendor pays ${moneyHtml((it.sell || 1) * b.n)}. Sold items can't be bought back.` }),
+      h('p', { html: `Sells for ${moneyHtml((it.sell || 1) * b.n)}. Can't be bought back.` }),
       up ? h('p', null, cur ? ["It's an upgrade over your ", h('span', { class: 'q' + cur.q }, cur.name), '.'] : `It's an upgrade: nothing is in your ${D.SLOT_LABEL[it.slot]} slot.`) : null,
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: closeDialog }, 'Keep'), h('button', { class: 'btn alt', onclick: () => { closeDialog(); sell(); } }, 'Sell'))], true);
   }
@@ -2885,7 +2885,7 @@
       const got = all.filter((o) => o.have).length;
       b.append(h('div', { class: 'sec-h' }, 'Looks', h('small', null, `${got} of ${all.length} collected`)), g);
       const info = h('div', { style: { marginTop: '10px' } });
-      if (tried) info.append(h('b', { class: tried.have ? 'q' + tried.q : '' }, tried.name), h('div', { class: 'ai-note' }, tried.have ? (tried.source || 'In your collection') : `Not collected yet. ${tried.source ? 'Drops from ' + tried.source + '.' : tried.hidden ? 'It comes from beyond your level.' : 'Found somewhere in the world.'}`));
+      if (tried) info.append(h('b', { class: tried.have ? 'q' + tried.q : '' }, tried.name), h('div', { class: 'ai-note' }, tried.have ? (tried.source || 'In your collection') : `Not collected. ${tried.source ? 'Drops from ' + tried.source + '.' : tried.hidden ? 'Above your level.' : 'Found in the world.'}`));
       const same = (P.wardrobe || {})[pl] === (t || undefined) || (!t && !(P.wardrobe || {})[pl]);
       info.append(h('div', { class: 'btn-row', style: { marginTop: '8px' } },
         h('button', { class: 'btn', disabled: same || (tried && !tried.have), onclick: () => { G.setWardrobe(pl, t || null); toast(t === 'hidden' ? `${WPLACE[pl]} hidden.` : tried ? `Showing ${tried.name}.` : 'Showing your gear.', true); ui.sheetFn(); } }, same ? 'Showing' : 'Show this')));
@@ -3194,7 +3194,7 @@
           h('div', { class: 'r tnum' }, `${xs.filter((x) => got[x.key]).length} / ${xs.length}`, h('span', { class: 'nav-arr' }, open ? '▾' : '›'))));
         if (open) box.append(h('div', { class: 'trophies' }, ...xs.map(plaque)));
       }
-      b.append(box, h('p', { class: 'ai-note', style: { marginTop: '8px' } }, `A trophy is yours the first time any of your characters kills that rare or world boss. Level-60 rares show up once in each 6 hours (the map marks one that is up). At ${G.TROPHY_TITLE} trophies: the title "${T ? G.titleName(T, G.S.player.name) : ''}". Trophies give no power.`));
+      b.append(box, h('p', { class: 'ai-note', style: { marginTop: '8px' } }, `First kill of a rare or world boss, by any of your characters. Level-60 rares spawn every 6h (marked on the map). ${G.TROPHY_TITLE} trophies: title "${T ? G.titleName(T, G.S.player.name) : ''}". Cosmetic.`));
     });
   }
   // ---- the Effects codex (#55): every effect in D.EFFECTS (a new one adds a row), grouped by role, which ones any of your
@@ -3249,7 +3249,7 @@
     const R = D.HONOR_RANKS[r - 1], fac = f === 'horde' ? 'the Krugar' : 'the Accord';
     showDialog([h('div', { style: { display: 'flex', gap: '10px', alignItems: 'center' } }, h('img', { src: art('icon', `honor_${f}_${r}`), style: { width: '48px', height: '48px' } }),
       h('div', null, h('h3', { style: { margin: 0 } }, `Honor rank ${r}: ${G.rankName(r, f)}`), h('small', { class: 'dim' }, `${who ? who + ', ' : ''}${fac} · ${R.at.toLocaleString('en-US')}+ lifetime Honor`))),
-      h('p', { class: 'ai-note' }, 'Honor ranks come from lifetime Honor, earned in battlegrounds and in War Mode. They never drop. A rank gives a title, this insignia by the name, and looks at ranks 3, 5 and 8; no power.'),
+      h('p', { class: 'ai-note' }, 'Ranks come from lifetime Honor (battlegrounds and War Mode) and never drop. Each gives a title and an insignia; ranks 3, 5 and 8 give looks. Cosmetic.'),
       h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', onclick: () => { closeDialog(); openLadder(); } }, 'See the ladder'), h('button', { class: 'btn', onclick: closeDialog }, 'Got it'))], true);
   }
   const rankIcon = (rank, f) => img(art('icon', `honor_${f}_${Math.max(1, rank)}`));
@@ -3266,7 +3266,7 @@
       return h('div', { class: 'row' + (got ? '' : ' off') }, h('div', { class: 'ic' }, rankIcon(n, f)),
         h('div', { class: 't' }, h('b', null, `${n}. ${G.rankName(n, f)}`), h('small', { style: { whiteSpace: 'normal' } }, `${fmt(x.at)} Honor · the title "${T ? G.titleName(T, G.S.player.name) : ''}"${look ? ` and the ${look.name} (a look for your back)` : ''}`)),
         h('div', { class: 'r' }, got ? h('span', { style: { color: '#5fd46a' } }, '✓') : '')); });
-    showDialog([h('h3', null, 'Honor ranks'), h('p', null, `You have ${fmt(hon)} Honor. Honor comes from battlegrounds and from defeating enemy players in War Mode. It only ever goes up: ranks never drop and Honor is never spent.`),
+    showDialog([h('h3', null, 'Honor ranks'), h('p', null, `Honor: ${fmt(hon)}. From battlegrounds and War Mode kills. Never spent; ranks never drop.`),
       h('div', { class: 'list' }, ...rows), h('p', { class: 'ai-note' }, 'Ranks give titles, an insignia by your name and looks. No power.'),
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: closeDialog }, 'Got it'))], true);
   }
@@ -3279,7 +3279,7 @@
           h('div', { class: 'ai-row' }, h('span', null, 'Died to enemy players'), h('b', { class: 'tnum' }, String(pv.deaths))),
           h('div', { class: 'ai-row' }, h('span', null, 'Escaped'), h('b', { class: 'tnum' }, String(pv.escapes)))),
         h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', onclick: () => { G.setWarMode(!G.S.flags.warMode); ui.sheetFn(); } }, 'War Mode: ' + (G.S.flags.warMode ? 'On' : 'Off'))),
-        h('p', { class: 'ai-note' }, P.level < 6 ? 'Enemy players start showing up from level 6.' : 'Enemy players show up now and then. Towns are rare and guarded; capitals and starting valleys are safe. Honor unlocks PvP titles (see Titles).'));
+        h('p', { class: 'ai-note' }, P.level < 6 ? 'Enemy players start showing up from level 6.' : 'Enemy players appear now and then. Capitals and starting valleys are safe. Honor unlocks PvP titles.'));
     });
   }
   function openHero(tab) {
@@ -3370,12 +3370,12 @@
           h('p', { class: 'ai-note', style: { margin: 0 } }, 'Talk about the game, report bugs and suggest ideas.')]));
         if (window.UPD) b.append(...foldSec('set.support', 'Support the game', 'Ko-fi · SociaBuzz', [h('div', { class: 'btn-row' },
           h('button', { class: 'btn alt', onclick: () => UPD.open(UPD.KOFI) }, 'Ko-fi'), h('button', { class: 'btn alt', onclick: () => UPD.open(UPD.SOCIABUZZ) }, 'SociaBuzz (Indonesia)')),
-          h('p', { class: 'ai-note', style: { margin: 0 } }, 'Realm of Loner is free and stays free, with nothing to buy in the game. If you enjoy it and want to leave a tip, it helps pay for the time that goes into it.')], false));
+          h('p', { class: 'ai-note', style: { margin: 0 } }, 'Realm of Loner is free, with nothing to buy. Tips help pay for the time it takes.')], false));
         b.append(...foldSec('set.invites', 'Party invites', G.S.flags.noInvites ? 'Off' : 'On', [h('div', { class: 'btn-row' },
           h('button', { class: 'btn alt', onclick: () => { G.setInvites(!!G.S.flags.noInvites); ui.sheetFn(); } }, 'Invites from nearby players: ' + (G.S.flags.noInvites ? 'Off' : 'On')))]));
         { const on = fxOn(); b.append(...foldSec('set.fx', 'Combat effects', on ? 'On' : 'Off', [h('div', { class: 'btn-row' },
           h('button', { class: 'btn alt', onclick: () => { try { localStorage.setItem('azsolo.fx', on ? 'off' : 'on'); } catch (e) { } ui.sheetFn(); } }, 'Combat effects: ' + (on ? 'On' : 'Off'))),
-          h('p', { class: 'ai-note', style: { margin: 0 } }, 'Slashes, spells in flight, heals and boss attacks drawn over the fight. Damage numbers stay either way.')])); }
+          h('p', { class: 'ai-note', style: { margin: 0 } }, 'Slashes, spells, heals and boss attacks drawn over the fight. Damage numbers always show.')])); }
         if (D.EVENTS) { const off = !!lwPrefs().off; b.append(...foldSec('set.evl', 'Event lantern', off ? 'Hidden' : 'Shown', [h('div', { class: 'btn-row' },
           h('button', { class: 'btn alt', onclick: () => { const p = lwPrefs(); p.off = !off; lwSavePrefs(p); evLantern(); ui.sheetFn(); } }, 'Event lantern: ' + (off ? 'Hidden' : 'Shown'))),
           h('p', { class: 'ai-note', style: { margin: 0 } }, 'While a festival is on, a lantern floats over every screen and opens today\'s progress. Drag it to move it. The festival page stays in Hero → Journey → Events either way.')])); }
@@ -3404,9 +3404,9 @@
           // beta: test versions before everyone else (GitHub pre-releases in the app, the /beta/ page in a browser)
           const on = UPD.beta();
           const kids = UPD.inApp()
-            ? [h('p', { class: 'ai-note', style: { margin: 0 } }, 'Get test versions before everyone else. They can have bugs, so please report what you find. If you turn this off, you keep your version until the next normal update.'),
+            ? [h('p', { class: 'ai-note', style: { margin: 0 } }, 'Get test builds early. They may have bugs. Turning it off keeps your version until the next update.'),
               h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', onclick: () => { UPD.setBeta(!on); ui.sheetFn(); if (!on) manualUpdateCheck(); else toast('Beta updates off.'); } }, 'Beta updates: ' + (on ? 'On' : 'Off')))]
-            : [h('p', { class: 'ai-note', style: { margin: 0 } }, on ? 'You are on the beta page: test versions come here first. Your characters are the same on both pages.' : 'Test versions go to a separate beta page first. They can have bugs, so please report what you find. Your characters are the same on both pages.'),
+            : [h('p', { class: 'ai-note', style: { margin: 0 } }, on ? 'This is the beta page. Characters are shared with the main page.' : 'Test builds go to the beta page first. They may have bugs. Characters are shared.'),
               h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', onclick: async () => {
                 if (on) { if (G.S) G.save(); location.href = UPD.WEB; return; }
                 let ok = false; try { ok = (await fetch(UPD.WEB_BETA, { method: 'HEAD', cache: 'no-store' })).ok; } catch (e) { }
@@ -3552,7 +3552,7 @@
     const go = h('button', { class: 'btn wide', onclick: () => { if (start == null) { start = performance.now(); go.textContent = 'Take it off the heat!'; const step = () => { const pos = (performance.now() - start) / 1000 / sweep; shown = Math.min(1, pos); needle.style.left = (shown * 100).toFixed(1) + '%'; if (pos >= 1) return finish('burnt'); raf = requestAnimationFrame(step); }; raf = requestAnimationFrame(step); } else stop(); } }, 'Start cooking');
     bar.addEventListener('pointerdown', () => { if (start != null) stop(); });
     showDialog([h('h3', null, `${it.name}${count > 1 ? ' ×' + count : ''}`),
-      h('p', { class: 'ai-note' }, 'The needle sweeps from cold to burnt. Stop it in the gold for a Perfect batch (one extra serving per five, at least one); past the red end the first set burns. One round cooks the whole batch.' + (Object.keys(r.mats).some((m) => (D.ITEMS[m].q || 1) >= 2) ? ' A dish of a rare fish: the gold is narrow.' : it.wellFed ? ' A Well Fed meal: the gold is a little narrower.' : '') + ' The gold widens as your skill grows past the recipe.'),
+      h('p', { class: 'ai-note' }, 'Stop the needle in the gold for a Perfect batch (+1 serving per 5). Past the red, the first set burns.' + (Object.keys(r.mats).some((m) => (D.ITEMS[m].q || 1) >= 2) ? ' A dish of a rare fish: the gold is narrow.' : it.wellFed ? ' A Well Fed meal: the gold is a little narrower.' : '') + ' The gold widens as your skill grows past the recipe.'),
       bar, h('div', { class: 'cook-labels' }, h('span', null, 'cold'), h('span', { class: 'gold' }, 'Perfect'), h('span', { class: 'red' }, 'burnt')),
       go, h('div', { class: 'btn-row', style: { marginTop: '8px' } }, h('button', { class: 'btn alt', onclick: () => finish('normal') }, 'Auto (Normal)'), h('button', { class: 'btn alt', onclick: () => { done = true; cancelAnimationFrame(raf); closeDialog(); } }, 'Close'))], true);
   }
@@ -3577,7 +3577,7 @@
     // Cooking and Fishing (v10.9): on top of your two, for anyone
     const sec = h('div', { class: 'list' });
     for (const id in D.PROFESSIONS) if (D.isSecondary(id)) sec.append(rowFor(id, false));
-    b.append(list, h('div', { class: 'sec-h' }, 'Secondary skills', h('small', null, 'anyone can learn both')), sec, h('p', { class: 'ai-note' }, 'Gatherers find ore and herbs in the Fight tab and on the scene. Skinning happens as you loot beasts. Craft from Hero → Professions. Mining pairs with Blacksmithing, Herbalism with Alchemy, Skinning with Leatherworking; Tailoring uses the cloth humanoids drop.'));
+    b.append(list, h('div', { class: 'sec-h' }, 'Secondary skills', h('small', null, 'anyone can learn both')), sec, h('p', { class: 'ai-note' }, 'Gather in the Fight tab; skin beasts as you loot. Craft in Hero → Professions. Pairs: Mining + Blacksmithing, Herbalism + Alchemy, Skinning + Leatherworking. Tailoring uses cloth from humanoids.'));
   }
   function stableBlock(b) {
     const P = G.S.player;
@@ -3643,7 +3643,7 @@
           }
         }
         b.append(h('div', { class: 'sec-h' }, 'What you can catch', h('small', null, 'orange always raises your skill, yellow often, green rarely, grey never')), list,
-          h('p', { class: 'ai-note' }, 'Fish wherever there is water: tap "Fish here" in the Fight tab. Auto keeps casting and lands common fish; big and rare fish need you on the reel.'));
+          h('p', { class: 'ai-note' }, 'Fish anywhere with water (Fight tab). Auto lands common fish; big and rare fish need you on the reel.'));
         return;
       }
       if (k === 'herbalism' || k === 'skinning') {
@@ -3678,8 +3678,8 @@
         if (ui.profGrey[k]) grey.forEach(recipeRow);
       }
       b.append(h('div', { class: 'sec-h' }, k === 'mining' ? 'Smelting' : 'Recipes', h('small', null, 'orange always raises your skill, yellow often, green rarely, grey never')), list);
-      if (k === 'mining') b.append(h('p', { class: 'ai-note' }, 'Ore veins appear in the wild: look in the Fight tab. Copper in the starting zones, tin from about level 10, silver is rare.'));
-      else b.append(h('p', { class: 'ai-note' }, 'Rare plans, patterns and recipes drop from dungeon bosses and named rares. Materials sell on the auction house.'));
+      if (k === 'mining') b.append(h('p', { class: 'ai-note' }, 'Ore veins show in the Fight tab. Copper in starting zones, tin from ~level 10, silver is rare.'));
+      else b.append(h('p', { class: 'ai-note' }, 'Rare recipes drop from dungeon bosses and rares. Sell materials on the auction house.'));
     });
   }
   // ---------- talents: three trees, tap a talent to spend a point
@@ -3766,7 +3766,7 @@
       FRIENDS.add(input.value).then((r) => { closeDialog(); toast(r.what === 'accepted' ? 'They had already asked you, so you are friends now.' : 'Request sent. You will be friends once they accept.', true); if (ui.sheetFn) ui.sheetFn(); })
         .catch((e) => { go.disabled = false; friendErr(e); });
     } }, 'Send request');
-    showDialog([h('h3', null, 'Add a friend'), h('p', null, 'Type or paste their friend code. They get a request and choose whether to accept.'), input,
+    showDialog([h('h3', null, 'Add a friend'), h('p', null, 'Enter their friend code. They can accept or decline.'), input,
       h('div', { class: 'btn-row' }, go, h('button', { class: 'btn alt', onclick: closeDialog }, 'Cancel'))], true);
     setTimeout(() => input.focus(), 50);
   }
@@ -4090,7 +4090,7 @@
   // an Omen as a chip: tap it for its rule (v10.4; never how to beat it)
   function omenChip(k, lvl) {
     const O = window.TRIALS.OMENS[k];
-    return h('button', { class: 'chip', onclick: () => showDialog([h('h3', null, `Omen: ${O.name}`), h('p', null, O.rule), h('p', { class: 'ai-note' }, `From Trial ${window.TRIALS.TIER_LVL[O.tier]}. Omens change every week, on the 1st, 8th, 15th and 22nd.`), h('div', { class: 'btn-row' }, h('button', { class: 'btn alt wide', onclick: closeDialog }, 'Got it'))], true) }, O.name, lvl ? h('small', null, `from ${lvl}`) : null);
+    return h('button', { class: 'chip', onclick: () => showDialog([h('h3', null, `Omen: ${O.name}`), h('p', null, O.rule), h('p', { class: 'ai-note' }, `From Trial ${window.TRIALS.TIER_LVL[O.tier]}. Changes on the 1st, 8th, 15th and 22nd.`), h('div', { class: 'btn-row' }, h('button', { class: 'btn alt wide', onclick: closeDialog }, 'Got it'))], true) }, O.name, lvl ? h('small', null, `from ${lvl}`) : null);
   }
   // ---------- Trials (v10.4): this month's 8 dungeons, rating and realm rank, the weekly goal; a row opens a level picker
   const clockText = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
@@ -4284,7 +4284,7 @@
           h('div', { class: 'r tnum' }, String(r.rating))));
         prev = r.rank;
       }
-      b.append(h('p', { class: 'ai-note' }, `You are #${bd.rank} of ${bd.of} level-${D.LEVEL_CAP} players on your realm. Finish the month in the top 10 for a title.`), list);
+      b.append(h('p', { class: 'ai-note' }, `Rank #${bd.rank} of ${bd.of}. Top 10 at month's end earns a title.`), list);
     });
   }
   function openTrialHistory() {
@@ -4366,11 +4366,11 @@
       if (!mine.length) {
         // between brackets: offer the closest you have outlevelled, synced down
         mine = all.filter(doable).sort((a, c) => c.A.maxLvl - a.A.maxLvl).slice(0, 4);
-        b.append(h('p', { class: 'ai-note', style: { margin: 0 } }, mine.length ? 'Nothing is made for your level right now. These are the closest; you are synced down to fit.' : 'Nothing to queue for yet. Keep levelling: the first groups open at level 8.'));
+        b.append(h('p', { class: 'ai-note', style: { margin: 0 } }, mine.length ? 'Nothing at your level. Closest shown; you are synced down.' : 'Nothing to queue for yet. Keep levelling: the first groups open at level 8.'));
       }
       for (const x of mine) b.append(row(x, true));
       const next = all.filter((x) => !doable(x) && /^Requires level/.test(x.why)).sort(byLevel)[0];
-      if (next) b.append(h('p', { class: 'ai-note', style: { margin: 0 } }, `Next to open: ${next.A.name} (${KIND_LABEL[actKind(next.A)].toLowerCase()}) at level ${next.A.minLvl}.`));
+      if (next) b.append(h('p', { class: 'ai-note', style: { margin: 0 } }, `Next: ${next.A.name} (${KIND_LABEL[actKind(next.A)].toLowerCase()}) at level ${next.A.minLvl}.`));
     } else if (tab === 'trials') {
       trialsTab(b);
     } else {
@@ -5249,7 +5249,7 @@
     // wait for a calm moment: no fight, no run, no other dialog, no cutscene
     G.on('warModeIntro', () => whenCalm(showWarModeIntro));
     G.on('effectItem', () => whenCalm(() => { const a = G.account(); if (a.effectCard) return; a.effectCard = 1; G.saveAccount(a); // once per device (v10.10)
-      showDialog([h('h3', null, 'Items with an Effect'), h('p', null, 'Some items have an Effect instead of part of their stats. Whether it beats a plain item depends on the fight: the item shows what it did in your last run. The same effect on two items counts once.'), h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: closeDialog }, 'Got it'))]); }));
+      showDialog([h('h3', null, 'Items with an Effect'), h('p', null, 'Some items trade stats for an Effect. The item shows what it did in your last run. The same effect twice counts once.'), h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: closeDialog }, 'Got it'))]); }));
     G.on('intruder', (it) => { toast(`Enemy player nearby: ${it.name}`); snd('error', { gap: 0.4, vol: 0.5 }); renderAll(); });
     // a party invite waits for a calm moment too; by then the bot may have moved on, and then it lapses quietly (issue #24)
     G.on('partyInvite', (d) => whenCalm(() => { const S = G.S; if (S.flags.pendingInvite !== d.bot.id || S.wparty || !B.onlineIn(S, S.player.place, new Date()).some((x) => x.id === d.bot.id)) { if (S.flags.pendingInvite === d.bot.id) S.flags.pendingInvite = null; return; } showPartyInvite(d); }));
