@@ -25,7 +25,7 @@ const money = (c) => { const g = Math.floor(c / 10000), s = Math.floor(c / 100) 
 const cap = (s) => s[0].toUpperCase() + s.slice(1);
 const statName = { str: 'Strength', agi: 'Agility', sta: 'Stamina', int: 'Intellect', spi: 'Spirit' };
 const WTYPE = { sword: 'Sword', axe: 'Axe', mace: 'Mace', dagger: 'Dagger', staff: 'Staff', bow: 'Bow', gun: 'Gun', crossbow: 'Crossbow', wand: 'Wand' };
-const KIND = { item: 'Items', mob: 'Creatures', quest: 'Quests', npc: 'People', place: 'Places', zone: 'Zones', dungeon: 'Dungeons', act: 'Group finder', class: 'Classes', race: 'Races', ability: 'Abilities', guide: 'Guides', prof: 'Professions', collect: 'Collections' };
+const KIND = { item: 'Items', mob: 'Creatures', quest: 'Quests', npc: 'People', place: 'Places', zone: 'Zones', dungeon: 'Dungeons', act: 'Group finder', class: 'Classes', race: 'Races', ability: 'Abilities', talent: 'Talents', guide: 'Guides', prof: 'Professions', collect: 'Collections' };
 const push = (m, key, v) => (m[key] = m[key] || []).push(v);
 // a creature family as players read it: the renamed word where there is one (tools/rename_v10.json: Murloc → its new name)
 const RENAME = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/rename_v10.json'), 'utf8'));
@@ -207,6 +207,14 @@ const abCost = (ab, cls, L) => { const c = (ab.cost || 0) + (ab.costPerLvl || 0)
 const talentText = (t, rank) => (t.desc || '').replace('{v}', num(((t.fx || [])[0] || { v: 0 }).v * rank));
 const talentsOn = {}; // ability → talents that change it
 for (const [cls, trees] of Object.entries(D.TALENTS)) for (const tr of trees) for (const t of tr.talents) for (const fx of t.fx || []) for (const a of fx.ab || []) if (!(talentsOn[a] || []).some((x) => x[0] === t)) push(talentsOn, a, [t, tr, cls]);
+// a page per talent (talent/<class>_<id>: two classes can share a talent id, Toughness)
+const TID = (cls, t) => cls + '_' + t.id;
+for (const [cls, trees] of Object.entries(D.TALENTS)) if (D.CLASSES[cls] && !D.CLASSES[cls].hidden) for (const tr of trees) for (const t of tr.talents) {
+  const need = D.TALENT_TIER_POINTS[t.tier] || 0, abs = [...new Set((t.fx || []).flatMap((x) => x.ab || []).filter((a) => a !== '*'))];
+  P['talent/' + TID(cls, t)] = { k: 'talent', n: t.name, ic: t.icon, cls, sub: `${D.CLASSES[cls].name}, ${tr.name}`,
+    tip: [['nm q1', t.name], ['dim', `${D.CLASSES[cls].name} talent, ${tr.name}`], ['dim', `${t.ranks} ${t.ranks > 1 ? 'ranks' : 'rank'}${need ? `, ${need} points in ${tr.name} first` : ''}`], ['set', talentText(t, t.ranks)]],
+    f: { lv: need, c: cls }, abs };
+}
 
 const SHOWN = (cls) => D.CLASSES[cls] && !D.CLASSES[cls].hidden; // a hidden class (Bard: only the Legend Widya plays one) gets no pages
 for (const [id, c] of Object.entries(D.CLASSES)) if (SHOWN(id)) P['class/' + id] = { k: 'class', n: c.name, cls: id, ic: 'class_' + id }; // its crest (src/art_classes.js)
@@ -223,11 +231,18 @@ for (const [id, ab] of Object.entries(D.ABILITIES)) {
   if (cls && lv < 60 && /\{(b|h|d|hh|s|lt)\}|\{\w+\}/.test(ab.desc || '')) p.facts.push(['At level 60', abilityAt(ab, 60) + (cls ? ` (${abCost(ab, cls, 60)})` : '')]);
   const rc = Object.entries(D.RACIALS || {}).filter(([, R]) => R.active === id).map(([r]) => L('race', r)).filter(Boolean);
   if (rc.length) p.facts.push(['Race', rc]);
-  sec(p, 'Talents that change it', (talentsOn[id] || []).map(([t, tr]) => [t.name, tr.name, talentText(t, t.ranks)]), ['Talent', 'Tree', 'At full rank']);
+  sec(p, 'Talents that change it', (talentsOn[id] || []).map(([t, tr, c]) => [L('talent', TID(c, t)) || t.name, tr.name, talentText(t, t.ranks)]), ['Talent', 'Tree', 'At full rank']);
   const pr = ((D.PROCS || {})[cls] || []).filter((x) => x.lights.includes(id) || (x.from || []).includes(id));
   sec(p, 'Reactions', pr.map((x) => [x.name, x.teach]));
 }
 
+for (const [k, p] of Object.entries(P)) if (p.k === 'talent') {
+  const [cls, tid] = [p.cls, k.slice(('talent/' + p.cls + '_').length)], tr = D.TALENTS[cls].find((x) => x.talents.some((t) => t.id === tid)), t = tr.talents.find((x) => x.id === tid);
+  p.facts = [['Class', L('class', cls)], ['Tree', tr.name], ['Opens at', D.TALENT_TIER_POINTS[t.tier] ? `${D.TALENT_TIER_POINTS[t.tier]} points in ${tr.name}` : 'Any point'], ['Ranks', String(t.ranks)]];
+  if (p.abs.length) p.facts.push(['Changes', p.abs.map((a) => L('ability', a)).filter(Boolean)]);
+  sec(p, 'Per rank', Array.from({ length: t.ranks }, (_, i) => [String(i + 1), talentText(t, i + 1)]), ['Rank', 'Effect']);
+  delete p.abs;
+}
 for (const [id, c] of Object.entries(D.CLASSES)) {
   const p = P['class/' + id]; if (!p) continue;
   p.sub = (c.roles || [c.role]).map((r) => ROLE[r] || cap(r)).join(', ');
@@ -237,7 +252,7 @@ for (const [id, c] of Object.entries(D.CLASSES)) {
   sec(p, 'Stats with no gear', ['str', 'agi', 'sta', 'int', 'spi'].map((s) => [statName[s], String(at(1)[s]), String(s60[s])]), ['Stat', 'Level 1', 'Level 60']);
   const abil = Object.entries(D.ABILITIES).filter(([, a]) => a.cls === id).sort((a, b) => (a[1].lvl || 0) - (b[1].lvl || 0));
   sec(p, 'Abilities', abil.map(([a, A]) => [String(A.lvl || 1), L('ability', a), A.form ? cap(A.form) + ' Form' : A.cd ? cdText(A.cd) : '']), ['Level', 'Ability', '']);
-  for (const tr of D.TALENTS[id] || []) sec(p, `${tr.name} talents`, tr.talents.map((t) => [String(D.TALENT_TIER_POINTS[t.tier] || 0), t.name, `${t.ranks}`, talentText(t, t.ranks)]), ['Points in tree', 'Talent', 'Ranks', 'At full rank']);
+  for (const tr of D.TALENTS[id] || []) sec(p, `${tr.name} talents`, tr.talents.map((t) => [String(D.TALENT_TIER_POINTS[t.tier] || 0), L('talent', TID(id, t)) || t.name, `${t.ranks}`, talentText(t, t.ranks)]), ['Points in tree', 'Talent', 'Ranks', 'At full rank']);
   sec(p, 'Races', Object.entries(D.RACES).filter(([, r]) => (r.classes || []).includes(id)).map(([r, R]) => [L('race', r), factionOf(R.faction)]), ['Race', 'Faction']);
 }
 
@@ -374,7 +389,7 @@ const FILTERS = {
   stat: { sp: 'Spell power', int: 'Intellect', spi: 'Spirit', sta: 'Stamina', str: 'Strength', agi: 'Agility', fx: 'Has an effect' },
   quality: Object.fromEntries(D.QUALITY.map((q, i) => [i, q.name])),
   zone: Object.fromEntries(Object.keys(D.REGIONS).sort((a, b) => P['zone/' + a].f.lv - P['zone/' + b].f.lv).map((z) => ['zone/' + z, D.REGIONS[z].name]).concat(Object.keys(D.DUNGEONS).sort((a, b) => D.DUNGEONS[a].minLvl - D.DUNGEONS[b].minLvl).map((d) => ['dungeon/' + d, D.DUNGEONS[d].name]))),
-  class: Object.fromEntries(Object.entries(D.CLASSES).map(([c, C]) => [c, C.name]).concat([['racial', 'Racial']])),
+  class: Object.fromEntries(Object.entries(D.CLASSES).filter(([c]) => SHOWN(c)).map(([c, C]) => [c, C.name]).concat([['racial', 'Racial']])),
   rank: { 'reward track': 'Reward tracks', mount: 'Mounts', title: 'Titles', companion: 'Companions', heirloom: 'Heirlooms', worldboss: 'World boss', bg: 'Battleground', festival: 'Festival', boss: 'Boss', elite: 'Elite', named: 'Named', normal: 'Normal', dungeon: 'Dungeon', group: 'Group', solo: 'Solo', town: 'Town', wild: 'Wilds', raid: 'Raid' },
 };
 
@@ -424,7 +439,7 @@ if (process.argv.includes('--check')) {
 const lists = {};
 for (const kind of Object.keys(KIND)) {
   const ids = Object.keys(P).filter((x) => P[x].k === kind).map((x) => x.split('/')[1]);
-  const lv = (id) => kind === 'item' ? D.ITEMS[id].lvl || 0 : kind === 'dungeon' ? D.DUNGEONS[id].minLvl : kind === 'ability' ? D.ABILITIES[id].lvl || 0 : kind === 'act' ? D.ACTIVITIES[id].minLvl : kind === 'guide' ? (P['guide/' + id].g.by ? 1 : 0) : lvlOf(kind, id);
+  const lv = (id) => kind === 'item' ? D.ITEMS[id].lvl || 0 : kind === 'dungeon' ? D.DUNGEONS[id].minLvl : kind === 'ability' ? D.ABILITIES[id].lvl || 0 : kind === 'talent' ? P['talent/' + id].f.lv : kind === 'act' ? D.ACTIVITIES[id].minLvl : kind === 'guide' ? (P['guide/' + id].g.by ? 1 : 0) : lvlOf(kind, id);
   const nm = (id) => P[kind + '/' + id].n.replace(/<name>,?/, '').trim(), grp = (id) => (kind === 'collect' ? P['collect/' + id].sub : '');
   lists[kind] = ids.sort((a, b) => grp(a).localeCompare(grp(b)) || lv(a) - lv(b) || nm(a).localeCompare(nm(b)));
 }

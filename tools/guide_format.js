@@ -50,6 +50,8 @@
       if (pages[ref]) return link(ref);
       const hits = byName[ref.toLowerCase()] || [];
       if (hits.length === 1) return link(hits[0]);
+      const nt = hits.filter((k) => pages[k].k !== 'talent'); // a talent named like an ability (Last Stand): the name means the ability
+      if (nt.length === 1) return link(nt[0]);
       return hits.length ? 'could be ' + hits.join(', ') : 'is not in the database';
     };
   }
