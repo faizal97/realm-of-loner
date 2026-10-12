@@ -644,7 +644,7 @@
     if (abCost(ab, u) > u.res + 0.001) return u.resType === 'rage' ? 'Not enough rage' : u.resType === 'energy' ? 'Not enough energy' : 'Not enough mana';
     if (ab.finisher && (u.cp <= 0 || (ab.target === 'enemy' && u.cpTarget !== (tgt && tgt.uid)))) return 'No combo points';
     if (ab.form && u.form !== ab.form) return 'Requires Bear Form';
-    if (u.form && !ab.form && !ab.shapeshift) return 'Not while in Bear Form';
+    if (u.form && !ab.form && !ab.shapeshift && !ab.anyForm) return 'Not while in Bear Form'; // anyForm: a self-buff a bear may use (#233)
     if (ab.needSeal && !auraOf(u, 'seal')) return 'No seal active';
     if (ab.lifetap && u.hp <= ab.lifetap.base + ab.lifetap.perLvl * u.level + 1) return 'Not enough health';
     if (ab.opener && (C.t - (u.closedAt != null ? u.closedAt : C.t) > 3 || C.t > 3 && u.closedAt == null && !C.opts.apart || (tgt && tgt.hitBy && tgt.hitBy[u.uid]))) return 'Already in combat'; // an opener: within 3 sec of first reaching melee (a fight that starts apart gives you the run in)
@@ -793,6 +793,7 @@
       if (b.frozen) { extra.frozen = true; u.cast = null; }
       if (b.speed) extra.speed = b.speed; // distance: run faster (Sprint)
       if (b.group) for (const w of who) w.auras = w.auras.filter((a) => a.id === b.id || ((D.ABILITIES[a.id] || {}).buff || {}).group !== b.group); // one of a group at a time (aspects, demon armors)
+      if (b.castRegen) extra.castRegen = true; // mana keeps refilling while you cast (Innervate)
       for (const w of who) addAura(C, w, Object.assign({ id: b.id, until: C.t + dur, stats: Object.keys(stats).length ? stats : null, persistent: dur >= 60 }, extra));
       if (ab.threat) for (const e of alive(foes(C, u))) e.threat[u.uid] = (e.threat[u.uid] || 0) + ab.threat;
     }
@@ -1292,8 +1293,15 @@
       if (!tgt || tgt.dead) { tgt = skull || en[0]; u.target = tgt.uid; }
       if (u.cls === 'druid') {
         if (!u.form && has('bear_form') && try_('bear_form')) return;
-        if (u.form === 'bear') {
+        if (u.form === 'bear') { // the whole bear kit (#233; bear abilities aren't in the class list, so knows()): defensives, then the loose one, then threat on the pack
+          const hp = u.hp / u.maxHp, sk = b.skill || 0.5;
+          if (hp < 0.6 && knows(u, 'barkskin') && try_('barkskin')) return;
+          if (hp < 0.4 && knows(u, 'frenzied_regeneration') && try_('frenzied_regeneration')) return;
           if (loose && try_('growl', loose)) return;
+          if (loose && knows(u, 'feral_charge') && loose.pos && u.pos && E.dist(u, loose) > DIST.melee + 1 && try_('feral_charge', loose)) return;
+          const caster = en.find((e) => e.cast && !e.boss && (!e.pos || !u.pos || E.dist(u, e) <= DIST.melee + 1));
+          if ((caster || (loose && !loose.boss)) && knows(u, 'bash') && Math.random() < sk && try_('bash', caster || loose)) return;
+          if (en.length >= 2 && u.res >= 20 && knows(u, 'swipe') && try_('swipe', tgt)) return;
           if (u.res >= 20) try_('maul', tgt);
         } else try_('wrath', tgt);
         return;
@@ -1412,7 +1420,7 @@
       if (u.race === 'troll' && u.side === 'ally' && u.hp < u.maxHp) u.hp = Math.min(u.maxHp, u.hp + u.maxHp * 0.002 * dt);
       // resources
       if (u.resType === 'energy') u.res = Math.min(100, u.res + 10 * dt);
-      if (u.resType === 'mana' && C.t - u.lastCastT >= 5) u.res = Math.min(u.maxRes, u.res + ((13 + u.st.spi / 4) / 2) * dt);
+      if (u.resType === 'mana' && (C.t - u.lastCastT >= 5 || u.auras.some((x) => x.castRegen))) u.res = Math.min(u.maxRes, u.res + ((13 + u.st.spi / 4) / 2) * dt);
       // casting
       if (u.cast) {
         if (stunned(C, u)) { u.cast = null; continue; }

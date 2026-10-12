@@ -651,7 +651,12 @@
   G.knownAbilities = function () {
     const P = G.S.player;
     const C = D.CLASSES[P.cls];
-    if (G.fight && G.pUnit && G.pUnit.form && C.forms) return C.forms[G.pUnit.form].filter((a) => D.ABILITIES[a].lvl <= P.level);
+    // in a form: that form's abilities, the shift itself and the few that work in any form (#233)
+    const f = G.fight && G.pUnit && G.pUnit.form;
+    if (f) {
+      const all = [...new Set(C.abilities.concat(Object.keys(D.ABILITIES).filter((a) => D.ABILITIES[a].cls === P.cls)))]; // Maul, Growl, Swipe live only in the form
+      return all.filter((a) => { const A = D.ABILITIES[a]; return A.lvl <= P.level && (A.form === f || A.shapeshift || A.anyForm); });
+    }
     return C.abilities.filter((a) => D.ABILITIES[a].lvl <= P.level);
   };
 
