@@ -4,76 +4,107 @@ by: official
 written: 10.11.0
 checked: 10.11.0
 ---
-A Druid can fill all three roles: healer, tank and damage. You get [[Bear Form]] at level 10, and from then on you choose the role each time you join a group. Your gear stays the same; only the stats you want from it change.
+A Druid heals, tanks or deals damage, and chooses which each time it joins a group. You heal and cast in your own form and tank in [[Bear Form]] (level 10). Druids wear leather, use a staff, mace or dagger, and run on mana.
 
-Druids wear leather and use a staff, mace or dagger. Your mana is shared between forms: when you leave [[Bear Form]] you get back the mana you had when you went in.
+### At a glance
+- Good at: any role with the same gear; only the stats you look for change.
+- Good at: heals over time that stack on one target.
+- Watch out for: no spells in [[Bear Form]], so a bear can't heal itself or cast [[Barkskin]].
+- Watch out for: mana only refills once 5 sec have passed since your last spell.
+
+### Leveling
+- Open with [[Moonbeam]] (level 2), then cast [[Wrath]]. Keep [[Rejuvenation]] (level 4) on yourself when a fight runs long.
+- [[Entangling Roots]] (level 12) holds a melee enemy in place and slows it, so you can cast in peace.
+- [[Bear Form]] (level 10) is your answer when a fight turns: much more armor and health. Your health share stays the same when you shift.
+- From level 24, add [[Insect Swarm]]: with [[Moonbeam]] it does the most damage for its mana.
 
 ### Before every fight
 - [[Mark of the Grove]] on your party: armor and all stats for 30 min.
-- From level 48, [[Gift of the Grove]] gives more stats for 1 hour, but less armor than the Mark. They don't stack: the one you cast last replaces the other. A tank wants the Mark for its armor.
-- [[Thorns]] on yourself for solo play: melee attackers take Nature damage, up to 20 hits.
+- From level 48, [[Gift of the Grove]] gives more stats for 1 hour, but less armor than the Mark. The one you cast last replaces the other, so a tank keeps the Mark.
+- [[Thorns]] on yourself when alone: melee attackers take Nature damage, up to 20 hits.
 
 ### Talents
-You get your first talent point at level 10 and 51 by level 60. Each tree holds 19 points, so you can fill two trees and part of a third. The first talent reset is free; after that it costs 1g, then 5g, then 10g.
+Your first point comes at level 10 and you have 51 by level 60. Each tree holds 19, so you can fill two trees and part of the third. The first reset is free; then 1g, 5g and 10g.
 
 ## Healer
-### Stats
-- **Spell power** adds to every heal.
-- **Intellect**: 15 mana per point, and 1% spell crit per 60. Crits only land on direct heals ([[Healing Touch]], [[Regrowth]], [[Quick Mend]]); heals over time never crit.
-- **Spirit** only refills mana once 5 sec have passed since your last spell. It helps between pulls more than during a long boss fight.
+### Quick start
+- Keep [[Rejuvenation]] on the tank.
+- Use [[Regrowth]] for steady healing, and [[Blossoming Life]] once you have it (level 58).
+- Save [[Quick Mend]] for the moment someone is about to die.
 
-### Your heals at level 60
-These numbers are with no gear.
-- [[Blossoming Life]] (level 58) heals the most for its mana, about 5 health per mana, over 7 sec. Your main heal once you have it.
-- [[Regrowth]] heals at once and then over 21 sec, about 3 health per mana. It gains the most from spell power.
-- [[Wild Growth]] (level 54) heals over 7 sec on a 6 sec cooldown. Keep it rolling on whoever takes the most damage.
-- [[Quick Mend]] (level 36) is instant, on a 15 sec cooldown. Save it for the moment someone is about to die.
-- [[Rejuvenation]] is cheap and runs for 12 sec. Keep it on the tank.
-- [[Healing Touch]] is your slowest and least efficient heal, a 2.5 sec cast. Use it when **Clear Stream** makes it instant.
+### Stats
+- **Spell power** adds to every heal; [[Regrowth]] gains the most from it.
+- **Intellect**: 15 mana per point and 1% spell crit per 60. Only direct heals crit ([[Healing Touch]], [[Regrowth]], [[Quick Mend]]); heals over time never do.
+- **Spirit** refills mana only once 5 sec have passed since your last spell, so it helps between pulls more than in a long fight.
 
 ### How to play it
-- Different heals over time stack on the same target. The same one cast again restarts and loses the ticks it had left, so let [[Blossoming Life]] finish before you cast it again on that target.
-- With **Nature's Swiftness** taken, [[Rejuvenation]] and [[Regrowth]] can make your next [[Healing Touch]] instant (Clear Stream). Tap it while it glows.
-- [[Innervate]] (level 34) adds Spirit for 20 sec. Spirit only works when you are not casting, so it gives mana only if you stop for 5 sec while it runs.
+- [[Blossoming Life]] heals the most for its mana: about 5 health per mana over 7 sec.
+- [[Regrowth]] heals at once and then over 21 sec, about 3 health per mana.
+- [[Wild Growth]] (level 54) heals over 7 sec on a 6 sec cooldown. Keep it on whoever takes the most damage.
+- Different heals over time stack on one target. The same one cast again restarts and loses the ticks it had left, so let it finish first.
+- [[Healing Touch]] is your slowest and least efficient heal (2.5 sec). Use it when **Clear Stream** makes it instant.
+
+### When it goes wrong
+- [[Quick Mend]] (level 36): instant, 15 sec cooldown.
+- [[Barkskin]] (level 28) on yourself if you are being hit: +armor for 15 sec, no global cooldown.
+- [[Innervate]] (level 34) adds Spirit for 20 sec, which only gives mana if you stop casting for 5 sec while it runs.
 
 ### Talents
-Restoration first: all 19 points fit. **Gift of Nature** and **Nature's Swiftness** raise all your healing; **Intensity** raises Intellect. **Moonkin Form** in Balance (10 points there first) adds 3% spell crit and 4% less damage taken.
+Restoration first: all 19 points fit. **Gift of Nature** and **Nature's Swiftness** raise all your healing, and Nature's Swiftness turns on **Clear Stream**. **Intensity** raises Intellect. In Balance, **Moonkin Form** (10 points there first) adds 3% spell crit and 4% less damage taken.
 
 ## Tank
+### Quick start
+- In a fight: [[Barkskin]], then [[Bear Form]].
+- [[Maul]] your target, [[Swipe]] when there is more than one enemy.
+- [[Growl]] anything that turns to a teammate.
+
 ### Stats
 - **Armor** is multiplied by 2.8 in [[Bear Form]], including the armor from [[Mark of the Grove]] and [[Barkskin]].
 - **Stamina**: 10 health per point, and 25% more in [[Bear Form]].
 - **Agility**: 1% dodge and 1% crit per 20.
 - **Strength**: 2 attack power per point in [[Bear Form]].
-- Your weapon's own damage doesn't count in [[Bear Form]]: you fight with claws. Pick a weapon for its stats.
+- You fight with claws in [[Bear Form]], so your weapon's own damage doesn't count. Pick it for its stats.
 
 ### How to play it
-- [[Bear Form]] costs 55 mana and only works in combat. Your rage starts at 0 each time.
-- You can't cast spells in [[Bear Form]], [[Barkskin]], [[Frenzied Regeneration]] and [[Innervate]] included. Leaving is free; coming back costs another 55 mana and your rage.
-- Cast [[Barkskin]] first, then shift: its armor is multiplied while it lasts (15 sec).
-- [[Maul]] on your target, [[Swipe]] when there is more than one enemy. Both add extra threat.
-- [[Growl]] pulls an enemy off a teammate. It doesn't use the global cooldown, 10 sec cooldown.
-- [[Bash]] (level 32) and [[Feral Charge]] (level 44) stun. Feral Charge also closes the distance.
+- [[Bear Form]] costs 55 mana and only works in a fight. Rage starts at 0 each time.
+- No spells in [[Bear Form]]: cast [[Barkskin]] before you shift, so its armor is multiplied for its 15 sec.
+- [[Maul]] and [[Swipe]] both add extra threat. Swipe hits every enemy near you.
+- [[Growl]] has a 10 sec cooldown and no global cooldown.
+
+### When it goes wrong
+- [[Bash]] (level 32) stuns your target for 4 sec; [[Feral Charge]] (level 44) closes the distance and stuns for 3. Stuns don't work on bosses.
+- [[Frenzied Regeneration]] (level 38) heals you over 10 sec, but only out of [[Bear Form]]. Leaving is free; coming back costs 55 mana and all your rage.
 
 ### Talents
-Feral first: all 19 points fit. **Thick Hide** raises armor from items, **Feral Instinct** raises threat, **Ferocity** makes [[Maul]] and [[Swipe]] cheaper. **Heart of the Wild** adds 5% Stamina and 3% physical damage.
+Feral first: all 19 points fit. **Thick Hide** raises your armor, **Feral Instinct** your threat, and **Ferocity** makes [[Maul]] and [[Swipe]] cheaper. **Heart of the Wild** adds 5% Stamina and 3% physical damage.
 
 ## Damage
+### Quick start
+- Keep [[Moonbeam]] and [[Insect Swarm]] on your target.
+- [[Star Bolt]] on enemies that will live through a 3 sec cast; [[Wrath]] between.
+- Tap a spell while it glows.
+
 ### Stats
 - **Spell power** adds to every spell.
-- **Intellect**: 15 mana per point, and 1% spell crit per 60.
+- **Intellect**: 15 mana per point and 1% spell crit per 60.
+- **Spirit** refills mana only once 5 sec have passed since your last spell.
 
 ### How to play it
-1. [[Moonbeam]] and [[Insect Swarm]] (level 24) first. They are instant and do the most damage for their mana. Recast them when they wear off: casting one again early loses the ticks it had left.
-2. [[Star Bolt]] (level 20) on an enemy that will live through a 3 sec cast.
+1. [[Moonbeam]] and [[Insect Swarm]] (level 24). They are instant and do the most damage for their mana. Recast them when they wear off: casting one early loses the ticks it had left.
+2. [[Star Bolt]] (level 20) on an enemy that will live through the cast.
 3. [[Wrath]] to fill the gaps.
 
-Three things light up your spells. Tap them while they glow:
+Spells that glow:
 - **Grove's Grace**: while [[Moonbeam]] burns, your next [[Wrath]] can become instant.
 - **Moonrise** (level 24): a [[Wrath]] can make your next [[Star Bolt]] instant.
 - **Night Sky** (with **Moonkin Form**): a [[Wrath]] or [[Star Bolt]] crit makes [[Falling Stars]] ready and free.
 
-Against groups: [[Falling Stars]] (level 52), [[Typhoon]] (level 56, also stuns for 2 sec) and [[Hurricane]] (level 26, slows). Solo, [[Entangling Roots]] holds a melee enemy in place while you cast.
+Against groups: [[Hurricane]] (level 26, slows), [[Falling Stars]] (level 52) and [[Typhoon]] (level 56, stuns for 2 sec).
+
+### When it goes wrong
+- [[Entangling Roots]] holds a melee enemy in place while you cast.
+- [[Barkskin]] for 15 sec of extra armor.
+- Alone, [[Bear Form]] takes the hits you can't: much more armor and health.
 
 ### Talents
 Balance first: all 19 points fit. **Moonfury** raises your Arcane and Nature damage, **Improved Wrath** makes Wrath faster, and **Moonkin Form** turns on Night Sky.
