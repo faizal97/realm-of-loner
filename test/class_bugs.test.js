@@ -164,3 +164,12 @@ test('a caster at the back steps in for a close area attack, uses it, and walks 
   assert.ok(hit >= 2, `Arcane Explosion hit ${hit} enemies`);
   assert.ok(Math.hypot(u.pos.x - start.x, u.pos.y - start.y) < 1, 'back where it stood');
 });
+
+test('each recent Arcane Blast makes the next cost 50% more, up to 3 times, for 6 sec (#245)', () => {
+  const { C, u, e } = fight(60, 'mage', {});
+  const base = E.abCost(D.ABILITIES.arcane_blast, u), costs = [];
+  for (let i = 0; i < 5; i++) { costs.push(E.abCost(D.ABILITIES.arcane_blast, u)); use(C, u, 'arcane_blast', e); for (let k = 0; k < 25 && u.cast; k++) E.tick(C, 0.1); }
+  assert.deepStrictEqual(costs.map((c) => Math.round((c / base) * 10) / 10), [1, 1.5, 2, 2.5, 2.5]);
+  for (let k = 0; k < 70; k++) E.tick(C, 0.1);
+  assert.strictEqual(E.abCost(D.ABILITIES.arcane_blast, u), base, 'back to normal after 6 sec');
+});

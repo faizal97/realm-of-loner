@@ -605,7 +605,7 @@
   }
 
   // ------------------------------------------------------------- abilities
-  function abCost(ab, u) { if (ab.shapeshift && u.form) return 0; if (ab.id) { const la = litAura(u, ab.id); if (la && la.proc.free) return 0; } const base = (ab.cost || 0) + (ab.costPerLvl || 0) * ((u.level || E.levelOf(u)) - 1); const off = ab.id ? Math.min(90, abPct(tmOf(u).abilCost, ab.id)) : 0; const lm = (ab.heal || ab.hot) && fxOf(u, 'lavish_mend') ? 1 + D.EFFECTS.lavish_mend.mana : 1; return Math.round(base * (1 - off / 100) * lm); } /* Lavish Mend: a healing spell costs more mana (#40) */
+  function abCost(ab, u) { if (ab.shapeshift && u.form) return 0; if (ab.id) { const la = litAura(u, ab.id); if (la && la.proc.free) return 0; } const base = (ab.cost || 0) + (ab.costPerLvl || 0) * ((u.level || E.levelOf(u)) - 1); const off = ab.id ? Math.min(90, abPct(tmOf(u).abilCost, ab.id)) : 0; const lm = (ab.heal || ab.hot) && fxOf(u, 'lavish_mend') ? 1 + D.EFFECTS.lavish_mend.mana : 1; const sc = ab.stackCost && ab.id ? auraOf(u, ab.id + '_stack') : null; return Math.round(base * (1 - off / 100) * lm * (sc ? 1 + ab.stackCost.pct * sc.stacks / 100 : 1)); } /* stackCost: each recent cast makes the next dearer (Arcane Blast, #245) */ /* Lavish Mend: a healing spell costs more mana (#40) */
   E.abCost = abCost;
 
   function spellRoll(src, tgt, C) {
@@ -688,6 +688,7 @@
     const L = u.level;
     u.res -= abCost(ab, u);
     { const la = litAura(u, abId); if (la) u.auras = u.auras.filter((a) => a !== la); } // a reaction's light is spent
+    if (ab.stackCost) { const sk = ab.stackCost, old = auraOf(u, abId + '_stack'), n = Math.min(sk.max, ((old && old.stacks) || 0) + 1); addAura(C, u, { id: abId + '_stack', until: C.t + sk.window, stacks: n, name: `${ab.name}: +${sk.pct * n}% mana`, icon: abId, debuff: true }); }
     if (ab.cd) u.cds[abId] = C.t + Math.max(1, ab.cd - (tmOf(u).abilCd[abId] || 0));
     if (u.resType === 'mana' && abCost(ab, u) > 0) u.lastCastT = C.t;
     ev(C, { type: 'ability', src: u.uid, ab: abId, tgt: tgt && tgt.uid });
