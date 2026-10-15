@@ -769,12 +769,21 @@
     const hit = S.area ? alive(foes(C, u)).filter((e) => e === t || !e.pos || !t.pos || E.dist(t, e) <= DIST.radius) : [t]; // an area song reaches everything near its target
     for (const e of hit) dealDamage(C, u, e, amount, Object.assign({ school: S.school, ab: s.ab }, o));
   }
+  // Every song a bard sings keeps one beat (#257): a song started while another plays ends its first round on the other's
+  // beat (never sooner than half a round away), so two or three songs open their beat windows together.
+  function songJoin(C, u, R) {
+    const on = u.auras.filter((a) => a.song); if (!on.length) return C.t + R.len;
+    let b = on[0].until;
+    while (b - R.len >= C.t + R.len / 2) b -= R.len;
+    while (b < C.t + R.len / 2) b += R.len;
+    return b;
+  }
   function playSong(C, u, abId, tgt) {
     const ab = D.ABILITIES[abId], R = E.rhythmOf(u), s = E.songOf(u, abId);
     if (!s) {
       const on = u.auras.filter((a) => a.song).sort((a, b) => a.began - b.began);
       if (on.length >= E.SONG_SLOTS) { u.auras = u.auras.filter((a) => a !== on[0]); ev(C, { type: 'song', src: u.uid, ab: on[0].ab, what: 'end', replaced: abId }); }
-      u.auras.push({ id: 'song:' + abId, song: true, ab: abId, src: u.uid, began: C.t, until: C.t + R.len, verses: 0, every: ab.song.every, next: C.t + ab.song.every, tgt: tgt && tgt.side !== u.side ? tgt.uid : null });
+      u.auras.push({ id: 'song:' + abId, song: true, ab: abId, src: u.uid, began: C.t, until: songJoin(C, u, R), verses: 0, every: ab.song.every, next: C.t + ab.song.every, tgt: tgt && tgt.side !== u.side ? tgt.uid : null });
       ev(C, { type: 'song', src: u.uid, ab: abId, what: 'start', verses: 0 });
       if (ab.song.pulse === 'haste') songHits(C, u, E.songOf(u, abId), songPulse(C, u, abId, 0));
       return;
@@ -790,7 +799,7 @@
       return;
     }
     s.verses = onBeat ? Math.min(R.max, s.verses + 1) : Math.max(0, s.verses - 1);
-    s.until = C.t + R.len;
+    if (onBeat) s.until += R.len; // on the beat: one more round from the beat itself, not from the tap, so songs keep one clock
     ev(C, { type: 'song', src: u.uid, ab: abId, what: onBeat ? 'beat' : 'early', verses: s.verses });
   }
 
@@ -1224,13 +1233,17 @@
     if (!st.playing) return u.auras.filter((a) => a.song).length < E.SONG_SLOTS && try_(abId, tgt); // a free slot only: songs are started in the order a bot wants them
     if (st.finale && spend && !st.inWindow) return try_(abId, tgt);
     const s = E.songOf(u, abId);
+    const sk = b.skill || 0.5, onBeat = () => rnd(0.55, Math.max(0.6, st.win - 0.1));
     if (s.planFor !== s.until) {
-      const sk = b.skill || 0.5;
       s.planFor = s.until;
-      s.plan = Math.random() < 0.55 + 0.4 * sk ? rnd(0.55, Math.max(0.6, st.win - 0.1)) : Math.random() < 0.5 ? st.win + rnd(0.3, 1.5) : -1;
+      s.plan = Math.random() < 0.55 + 0.4 * sk ? onBeat() : Math.random() < 0.5 ? st.win + rnd(0.3, 1.5) : -1;
       s.patient = Math.random() < 0.3 + 0.7 * sk; // holds back a cast that would run past the beat
     }
-    return s.plan >= 0 && st.left <= s.plan ? try_(abId, tgt) : false;
+    if (!(s.plan >= 0 && st.left <= s.plan)) return false;
+    const early = s.plan > st.win, done = try_(abId, tgt);
+    // an early tap leaves the beat where it was (#257): one more try at this same beat, on it or not at all
+    if (done && early) s.plan = Math.random() < 0.55 + 0.4 * sk ? onBeat() : -1;
+    return done;
   }
   // a bard bot about to start a cast: would it still be casting when a song's beat window closes? (a skilled one waits)
   // (never when someone is close to dying: then the heal comes first)

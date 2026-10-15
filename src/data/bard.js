@@ -21,9 +21,6 @@
   B('song_of_rest', { name: 'Song of Rest', lvl: 4, cost: 45, costPerLvl: 4, cd: 0, target: 'party', combatOnly: true, song: { pulse: 'heal', every: 3, amt: 5, perLvl: 0.9, coef: 0.1, finale: 3 }, desc: 'Song: heals your party for {p} every 3 sec.' + SONG });
   B('marching_song', { name: 'Marching Song', lvl: 6, cost: 30, costPerLvl: 2, cd: 0, target: 'party', combatOnly: true, song: { pulse: 'haste', every: 3, amt: 3, perLvl: 0.08, finale: 3, surge: 6 }, desc: 'Song: your party attacks and casts {p}% faster while it plays. Its Finale: three times that for 6 sec.' + SONG });
   B('ballad_of_blades', { name: 'Ballad of Blades', lvl: 16, cost: 50, costPerLvl: 3, cd: 0, target: 'enemy', combatOnly: true, icon: 'requiem', song: { pulse: 'dmg', area: true, every: 3, amt: 8, perLvl: 1.4, coef: 0.1, school: 'arcane', finale: 1.5 }, desc: 'Song: {p} Arcane damage to your target and every enemy near it, every 3 sec.' + SONG });
-  // a song tap has a short global cooldown (0.5 sec): two songs started together share their beat window, and a full
-  // 1.5 sec one after the first tap would leave no time to land the second
-  for (const id in D.ABILITIES) if (D.ABILITIES[id].song) D.ABILITIES[id].gcdLen = 0.5;
   // the eight new abilities (#251)
   B('sharp_refrain', { name: 'Sharp Refrain', lvl: 8, cost: 12, costPerLvl: 1.3, cd: 6, target: 'enemy', icon: 'dissonant_note', dmg: { base: [14, 18], perLvl: 2.5, coef: 0.45, school: 'arcane' }, desc: 'A quick, bright phrase: {b} Arcane damage. 6 sec cooldown.' });
   B('cleansing_verse', { name: 'Cleansing Verse', lvl: 12, cost: 30, costPerLvl: 2, cd: 0, target: 'ally', icon: 'verse_of_mending', cleanse: true, desc: 'Removes every poison, curse and other damage over time an enemy put on a friend.' });
@@ -78,6 +75,9 @@
   // before it ships (#255); a live build keeps it hidden until step 6 of docs/plans/2026-10-15-bard-playable-design.md.
   // build.py sets AZ_DEV and AZ_VERSION before any game script runs.
   if (root.AZ_DEV || /-beta\./.test(String(root.AZ_VERSION || ''))) { delete D.CLASSES.bard.hidden; for (const r in D.RACES) if (!D.RACES[r].classes.includes('bard')) D.RACES[r].classes.push('bard'); }
+  // a song tap has a short global cooldown (0.5 sec): songs share one beat window (#257), and a full 1.5 sec one after the
+  // first tap would leave no time to land the next. Here, after every song is defined (Dirge comes later than the rest).
+  for (const id in D.ABILITIES) if (D.ABILITIES[id].song) D.ABILITIES[id].gcdLen = 0.5;
   D.TALENT_BOT.healer.bard = ['harmony', 'tempo'];
   D.TALENT_BOT.dps.bard = ['discord', 'harmony'];
 })(typeof window !== 'undefined' ? window : globalThis);
