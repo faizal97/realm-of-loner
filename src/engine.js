@@ -631,14 +631,14 @@
   E.GCD_WHY = 'Not ready';
   E.cooldownText = (abId, secs) => `${D.ABILITIES[abId].name} isn't ready (${Math.max(1, Math.ceil(secs))}s)`;
   E.castingText = (abId) => `Still casting ${D.ABILITIES[abId].name}`;
-  E.canUse = function (C, u, abId, tgt) {
+  E.canUse = function (C, u, abId, tgt, untimed) { // untimed: leave out the cast and the global cooldown (the spell queue asks this)
     const ab = D.ABILITIES[abId];
     if (!ab) return 'Unknown';
     if (u.dead) return 'You are dead';
     { const fz = u.auras.find((a) => a.frozen); if (fz) return abId === fz.id ? null : `In ${D.ABILITIES[fz.id].name}`; } // frozen (Ice Block, #245): only breaking out
     if (stunned(C, u) && !ab.freeOf) return 'Stunned';
-    if (u.cast) return E.castingText(u.cast.ab);
-    if (ab.gcd !== false && u.gcdUntil > C.t) return E.GCD_WHY;
+    if (u.cast && !untimed) return E.castingText(u.cast.ab);
+    if (ab.gcd !== false && u.gcdUntil > C.t && !untimed) return E.GCD_WHY;
     if ((u.cds[abId] || 0) > C.t) return E.cooldownText(abId, u.cds[abId] - C.t);
     if (ab.needAura && !auraOf(u, ab.needAura)) return 'Not lit yet';
     if (abCost(ab, u) > u.res + 0.001) return u.resType === 'rage' ? 'Not enough rage' : u.resType === 'energy' ? 'Not enough energy' : 'Not enough mana';
@@ -685,6 +685,30 @@
     resolve(C, u, abId, tgt);
     return null;
   };
+
+  // spell queue (#249): a tap that only a cast or the global cooldown stops, with that ending within the window, waits
+  // as the one queued spell (a newer tap replaces it) and fires the moment it ends. An earlier tap is refused as before
+  // and never cuts the cast short. Only the player's taps queue; bots and the sims choose when to act themselves.
+  E.QUEUE_WINDOW = 0.4;
+  E.queue = function (C, u, abId, tgtUid, why) {
+    const ab = D.ABILITIES[abId];
+    if (!ab || (why !== E.GCD_WHY && !(u.cast && why === E.castingText(u.cast.ab)))) return false;
+    const left = Math.max(u.cast ? u.cast.end - C.t : 0, ab.gcd !== false ? u.gcdUntil - C.t : 0);
+    if (left > E.QUEUE_WINDOW + 1e-9) return false;
+    const tgt = tgtUid != null ? C.units[tgtUid] : null;
+    if (E.canUse(C, u, abId, ab.target === 'enemy' || ab.target === 'ally' ? tgt : u, true)) return false; // it would fail anyway: say why now
+    u.queued = { ab: abId, tgt: tgtUid };
+    return true;
+  };
+  function fireQueued(C, u) {
+    const q = u.queued, ab = D.ABILITIES[q.ab];
+    if (u.cast || (ab.gcd !== false && u.gcdUntil > C.t)) return; // still waiting
+    u.queued = null;
+    let tgt = q.tgt;
+    if (ab.target === 'enemy' && (!C.units[tgt] || C.units[tgt].dead)) tgt = u.target; // its target died: the one you have now
+    const why = E.use(C, u, q.ab, tgt);
+    if (why) ev(C, { type: 'queueFail', src: u.uid, ab: q.ab, why });
+  }
 
   function scaled(base, perLvl, L) {
     return rnd(base[0], base[1]) + (perLvl || 0) * L;
@@ -1440,7 +1464,7 @@
             if (r === 'miss') ev(C, { type: 'avoid', src: u.uid, tgt: tgt.uid, what: 'resist', ab: cast.ab });
             else { dealDamage(C, u, tgt, r === 'crit' ? base * 1.5 : base, { school: ab.dmg.school, crit: r === 'crit', ab: cast.ab }); proc(C, u, 'hit', cast.ab); if (r === 'crit') proc(C, u, 'crit', cast.ab); }
           }
-          if (C.t >= cast.end || cast.ticks >= 3) { u.cast = null; ev(C, { type: 'castStop', src: u.uid, done: true }); }
+          if (C.t >= cast.end || cast.ticks >= 3) { u.cast = null; ev(C, { type: 'castStop', src: u.uid, done: true }); if (u.queued) fireQueued(C, u); }
           continue;
         }
         if (C.t >= cast.end) {
@@ -1450,9 +1474,11 @@
           if (crg != null && tgt !== u && tgt.pos && u.pos && E.dist(u, tgt) > crg + 0.01) { ev(C, { type: 'castStop', src: u.uid, range: true }); continue; }
           ev(C, { type: 'castStop', src: u.uid, done: true });
           resolve(C, u, cast.ab, tgt);
+          if (u.queued && !u.dead && !C.over) fireQueued(C, u);
         }
         continue;
       }
+      if (u.queued) fireQueued(C, u);
       if (stunned(C, u)) { if (u.fleeUntil > C.t) moveTick(C, u, dt); if (u.kind === 'bot') botThink(C, u); continue; }
       if (u.auras.some((a) => a.frozen)) continue; // in Ice Block (#245): no moving, casting or auto attack
       // AI

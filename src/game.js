@@ -1513,6 +1513,7 @@
     let tgt = G.pUnit.target;
     if (ab.target === 'ally' || (ab.either && G.role() === 'healer')) tgt = C.allyTarget != null && C.units[C.allyTarget] && !C.units[C.allyTarget].dead ? C.allyTarget : G.pUnit.uid;
     const why = E.use(C, G.pUnit, abId, tgt);
+    if (why && E.queue(C, G.pUnit, abId, tgt, why)) return null; // the last 0.4 s of a cast or the global cooldown: it waits and fires then (#249)
     if (why && why !== E.GCD_WHY) emit('error', why); // the global cooldown says nothing (#173)
     return why;
   };

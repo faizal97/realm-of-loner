@@ -804,6 +804,7 @@
         else if (e.type === 'castStart' && src && src.kind === 'player') S_.play('cast', { vol: 0.5 });
         else if (e.type === 'die' && C.units[e.uid] && C.units[e.uid].kind === 'player' && C.over !== 'win') S_.play('death'); // a kill in the same moment wins the fight and you live (#121): no death sound
       }
+      if (e.type === 'queueFail' && src && src.kind === 'player' && e.why !== E.GCD_WHY) { toast(e.why); if (S_) S_.play('error', { gap: 0.4, vol: 0.6 }); } // a queued spell that can't go when its turn comes (#249)
       if (e.type === 'join') redraw = true; // a social add arrived: it takes the place of its "joins in" row (#122)
       // bosses (v10.8): a low gong before a special or a call for help, a roar when they frenzy
       if (S_ && e.type === 'emote' && C.units[e.uid] && C.units[e.uid].boss && C.units[e.uid].side === 'enemy') S_.play('warn', { gap: 1.2, vol: 0.7 });
@@ -1907,6 +1908,7 @@
         btn.classList.toggle('on', on);
         const u2 = C && G.pUnit, lit = !!u2 && (E.lit(u2, id) || (u2.cp >= 5 && ((D.PROCS || {})[u2.cls] || []).some((pr) => pr.on.includes('cp5') && pr.lights.includes(id))));
         btn.classList.toggle('lit', lit); // a reaction lit this ability (v10.4)
+        btn.classList.toggle('queued', !!u2 && !!u2.queued && u2.queued.ab === id); // waiting to fire when the cast ends (#249)
         btn.classList.toggle('unlit', (!lit && !!(D.ABILITIES[id] || {}).needAura) || (!C && G.fightBuff(id)) || !!G.barBlock(id)); // on the road or dead the bar dims as #165's buffs do, cooldowns still sweeping (#167); usable only while lit (Overpower): grey until then (v10.8); a short buff out of a fight (#165)
         // distance (v10.9): too far from its target, the button greys and says how close it needs to be
         let far = 0;
