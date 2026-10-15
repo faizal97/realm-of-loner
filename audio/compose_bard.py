@@ -1,107 +1,214 @@
-"""Realm of Loner: the Bard's song music (#257). While a Bard sings, the song is the music: one phrase in the
-instrument's voice, as long as the song (Lute 12 s, Drum 8 s, Horn 16 s), played from the start on every tap.
+"""Realm of Loner: the Bard's song music (#257). While a Bard sings, the song is the music: one phrase in the instrument's
+voice, as long as the song (Lute 12 s, Drum 8 s, Horn 16 s), on the songs' shared beat.
 
-Four bars, A major: A, F#m, D, then E. The E bar is the beat: it starts about a second before the beat window opens and
-ends on a rising run that only resolves (back to A, bar 1) when the player taps. A missed beat leaves the music hanging
-on E as it rings out. Each layer is its own file (music_bard_<instrument>_<n>); the game adds one per verse:
-  1 the melody  2 the chords  3 bass and percussion  4 a bell counter-line (Lute and Drum, which have 3 verses)
-Each layer is set to its own loudness (the melody leads), then all by one gain so the full mix sits at -20 LUFS.
+Build-up (decided 2026-10-15): calm when a song starts, big at full verses, so playing well makes the fight sound bigger.
+A mixolydian, folk-heroic: A G D A | F#m G E E. The E slots start about a second before the beat window and end on a run
+that only resolves (back to A) when the beat lands; a missed beat leaves it ringing on E.
+  Lute: a jig, 160 bpm, 8 bars (the Accord heralds)
+  Drum: war drums, 120 bpm, 4 bars (the Krugar drum-speakers), the most driving
+  Horn: an anthem, 120 bpm, 8 bars, slow and grand
+Layers (music_bard_<instrument>_<n>), one more per verse: 1 the lead, 2 the chords, 3 bass and drums, 4 a top line (Lute
+and Drum, which have 3 verses). Parts (music_bard_<instrument>_<part>), one per song that is up, each in its own range so
+any of them fit together: high (Song of Rest), low (Dirge), march (Marching Song), riff (Ballad of Blades). The parts are
+src/data/bard.js D.SONG_PARTS; a new one needs its function here.
+Each file is mono, set to its own loudness (the lead first), then all by one gain so the full mix sits at -20 LUFS.
 
 Usage: ~/.venvs/audio/bin/python compose_bard.py   (writes out/ and a listening reel to preview/)
 """
 import os
+import wave
 import numpy as np
 import compose_game as cg
-from compose_game import SR, t_, midi, env, lp, harp, pluck, bassnote, pad, flute, fiddle, tamb, kick, noise, write_wav, enc
+from compose_game import SR, t_, midi, env, lp, harp, pluck, bassnote, pad, flute, fiddle, tamb, kick, noise, enc
 from compose_themes import horn, bell
 
-TAIL = 2.0  # the last chord rings out this long after the phrase, when no tap comes
-CHORDS = [(57, 61, 64), (54, 57, 61), (50, 54, 57), (52, 56, 59)]  # A, F#m, D, E
-ROOTS = [45, 42, 38, 40]
-# the melody: (bar, beat, midi, beats). Bar 4 holds B, then runs C# D E G# up to the tap.
-MEL = [(0, 0, 76, 1), (0, 1, 73, .5), (0, 1.5, 74, .5), (0, 2, 76, 1), (0, 3, 81, 1),
-       (1, 0, 78, 1.5), (1, 1.5, 76, .5), (1, 2, 73, 1), (1, 3, 69, 1),
-       (2, 0, 74, 1), (2, 1, 78, 1), (2, 2, 81, 1), (2, 3, 78, .5), (2, 3.5, 76, .5),
-       (3, 0, 71, 2), (3, 2, 73, .5), (3, 2.5, 74, .5), (3, 3, 76, .5), (3, 3.5, 80, .5)]
-COUNTER = [(0, 0, 88), (0, 2, 85), (1, 0, 85), (1, 2, 81), (2, 0, 86), (2, 2, 90), (3, 0, 83)]
-RHYTHM = {'lute': 12, 'drum': 8, 'horn': 16}  # src/engine.js E.RHYTHM: song length in seconds = 4 bars
+TAIL = 2.0  # the last chord rings this long after the phrase, when no beat lands
+INST = {'lute': dict(len=12, slots=16), 'drum': dict(len=8, slots=8), 'horn': dict(len=16, slots=16)}  # a slot = 2 beats
+TRIADS = {'A': (57, 61, 64), 'G': (55, 59, 62), 'D': (50, 54, 57), 'F#m': (54, 57, 61), 'E': (52, 56, 59)}
+PROG16 = ['A', 'A', 'G', 'G', 'D', 'D', 'A', 'A', 'F#m', 'F#m', 'G', 'G', 'E', 'E', 'E', 'E']
+# the tune, per 2-beat slot of PROG16: (beat in the slot, midi, beats). The last slots climb D E F# G# to the beat.
+MEL16 = [[(0, 76, 1), (1, 74, .5), (1.5, 73, .5)], [(0, 69, 1), (1, 73, .5), (1.5, 76, .5)],
+         [(0, 74, 1.5), (1.5, 71, .5)], [(0, 67, 1), (1, 71, .5), (1.5, 74, .5)],
+         [(0, 78, 1), (1, 76, .5), (1.5, 74, .5)], [(0, 74, 1), (1, 78, .5), (1.5, 81, .5)],
+         [(0, 81, 1.5), (1.5, 79, .5)], [(0, 76, 2)],
+         [(0, 78, 1), (1, 76, .5), (1.5, 73, .5)], [(0, 69, 1), (1, 73, .5), (1.5, 78, .5)],
+         [(0, 79, 1), (1, 78, .5), (1.5, 76, .5)], [(0, 74, 1), (1, 71, 1)],
+         [(0, 71, 2)], [(0, 68, 1), (1, 71, 1)],
+         [(0, 74, .5), (.5, 76, .5), (1, 78, .5), (1.5, 80, .5)], [(0, 76, .5), (.5, 78, .5), (1, 80, 1)]]
 
 
-def hand_drum(note, gain=1.0):
-    t = t_(0.4); f = midi(note) * (1 + 0.35 * np.exp(-t * 40))
-    body = np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-t * 10)
-    return (body + lp(noise(0.4), 2400) * np.exp(-t * 60) * 0.45) * gain
+def plan(inst):
+    """the chord and tune of each slot; the Drum's 4 bars take every other slot of the 8-bar tune"""
+    if INST[inst]['slots'] == 16: return PROG16, MEL16
+    return PROG16[::2], [MEL16[i] for i in range(0, 16, 2)]
 
 
-def layers(inst):
-    bar = RHYTHM[inst] / 4; beat = bar / 4; n = int((RHYTHM[inst] + TAIL) * SR)
-    L = [np.zeros(n) for _ in range(4 if inst != 'horn' else 3)]
+def hand_drum(note, gain=1.0, dur=0.4):
+    t = t_(dur); f = midi(note) * (1 + 0.35 * np.exp(-t * 40))
+    body = np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-t * 9)
+    return (body + lp(noise(dur), 2400) * np.exp(-t * 60) * 0.45) * gain
 
-    def put(i, sig, at):
-        s = int(at * SR); e = min(n, s + len(sig)); L[i][s:e] += sig[: e - s]
 
-    for b, bt, note, beats in MEL:  # 1: the melody
-        at = b * bar + bt * beat; d = beats * beat + (TAIL if b == 3 and bt == 0 else 0)
-        if inst == 'lute': put(0, harp(note, max(0.9, d * 1.2), gain=0.5), at)
-        elif inst == 'drum': put(0, fiddle(note, d * 0.95, gain=0.32), at)
-        else: put(0, horn(note - 12, d * 0.97, gain=0.5), at)
-    for b, ch in enumerate(CHORDS):  # 2: the chords (the E chord holds into the tail)
-        d = bar + (TAIL if b == 3 else 0.05)
-        if inst == 'lute':
-            put(1, pad(list(ch), d, cut=1100, gain=0.35, a=0.3, r=0.6), b * bar)
-            for k in range(4): put(1, pluck(ch[k % 3] + 12, beat * 0.9, bright=1800, gain=0.12), b * bar + k * beat)
-        elif inst == 'drum': put(1, pad(list(ch), d, cut=900, gain=0.4, a=0.2, r=0.5), b * bar)
+def snare(gain=0.4):
+    t = t_(0.18); n = noise(0.18)
+    return ((n - lp(n, 1800)) * np.exp(-t * 28) + np.sin(2 * np.pi * 190 * t) * np.exp(-t * 35) * 0.5) * gain
+
+
+class Track:
+    def __init__(self, inst):
+        self.inst = inst; c = INST[inst]
+        self.len = c['len']; self.slot = c['len'] / c['slots']; self.beat = self.slot / 2
+        self.n = int((self.len + TAIL) * SR)
+        self.prog, self.mel = plan(inst)
+
+    def new(self): return np.zeros(self.n)
+
+    def put(self, x, sig, at):
+        s = int(at * SR); e = min(self.n, s + len(sig))
+        if e > s: x[s:e] += sig[: e - s]
+
+    def last(self, i): return i == len(self.prog) - 1  # the slot that rings into the tail
+
+
+def lead(T):
+    x = T.new()
+    if T.inst == 'drum':  # the Drum leads with its own voice: a war-drum groove, low on 1, answers between
+        for i in range(len(T.prog)):
+            at = i * T.slot
+            T.put(x, hand_drum(45, 1.0), at); T.put(x, hand_drum(52, 0.45), at + 0.5 * T.beat)
+            T.put(x, hand_drum(57, 0.6), at + T.beat); T.put(x, hand_drum(52, 0.35), at + 1.5 * T.beat)
+        return x
+    for i, notes in enumerate(T.mel):
+        for b, nn, beats in notes:
+            d = beats * T.beat + (TAIL if T.last(i) and b == notes[-1][0] else 0)
+            if T.inst == 'lute': T.put(x, harp(nn, max(0.5, d * 1.3), gain=0.5), i * T.slot + b * T.beat)
+            else: T.put(x, horn(nn - 12, d * 0.97, gain=0.5), i * T.slot + b * T.beat)
+    return x
+
+
+def chords(T):
+    x = T.new()
+    for i, c in enumerate(T.prog):
+        ch = TRIADS[c]; at = i * T.slot; d = T.slot + (TAIL if T.last(i) else 0.03)
+        if T.inst == 'lute':  # a strum on every eighth: the rhythm doubles when this joins
+            T.put(x, pad(list(ch), d, cut=1000, gain=0.25, a=0.05, r=0.4), at)
+            for k in range(4): T.put(x, pluck(ch[k % 3] + 12, T.beat * 0.45, bright=2200, gain=0.14 if k % 2 else 0.2), at + k * T.beat / 2)
+        elif T.inst == 'drum':  # a drone on the fifths under the chord
+            T.put(x, pad([45, 52] + list(ch), d, cut=800, gain=0.4, a=0.1, r=0.5), at)
         else:
-            for nn in ch: put(1, horn(nn, d, gain=0.22), b * bar)
-    for b, r in enumerate(ROOTS):  # 3: bass and percussion
-        for k in ((0, 2) if b < 3 else (0,)):
-            put(2, bassnote(r + 12, beat * (2 if b < 3 else 4 + TAIL / beat) * 0.9, gain=0.5), b * bar + k * beat)
-        for k in range(4):
-            if inst == 'horn': put(2, kick(0.7 if k == 0 else 0.35), b * bar + k * beat)
-            else:
-                if k in (1, 3): put(2, tamb(0.35), b * bar + k * beat)
-        if b == 3:  # the beat bar: a roll that climbs to the tap
-            for k in range(8 if inst != 'horn' else 6):
-                at = b * bar + 2 * beat + k * (2 * beat / (8 if inst != 'horn' else 6))
-                put(2, tamb(0.15 + 0.04 * k) if inst != 'horn' else kick(0.2 + 0.06 * k), at)
-    if inst == 'drum':  # the Drum's own voice leads under the melody: a hand-drum groove in layer 1
-        for b in range(4):
-            for k, (nn, g) in enumerate(((45, 1), (57, .5), (45, .7), (57, .6))):
-                put(0, hand_drum(nn, g * 0.9), b * bar + k * beat)
-            put(0, hand_drum(57, 0.4), b * bar + 3.5 * beat)
-    if len(L) > 3:  # 4: a bell counter-line
-        for b, bt, note in COUNTER:
-            put(3, bell(note - 12, 2.0 if b < 3 else 2.0 + TAIL, gain=0.35), b * bar + bt * beat)
-    for x in L:  # a short fade at the very end only
-        f = int(0.3 * SR); x[-f:] *= np.linspace(1, 0, f)
-    return L
+            for nn in ch: T.put(x, horn(nn, d, gain=0.22), at)
+    return x
 
 
-def level(L, target=-20.0):
-    """each layer to its own loudness first (the melody leads, the rest sit under it), then the full mix to target"""
+def drive(T):
+    x = T.new()
+    for i, c in enumerate(T.prog):
+        r = TRIADS[c][0] - 12 if TRIADS[c][0] > 52 else TRIADS[c][0]; at = i * T.slot
+        if T.last(i):
+            T.put(x, bassnote(r + 12, T.slot + TAIL, gain=0.5), at)
+        else:
+            for k in range(4): T.put(x, bassnote(r + 12 + (12 if k == 3 else 0), T.beat * 0.45, gain=0.5), at + k * T.beat / 2)
+        T.put(x, kick(0.8), at)
+        if T.inst == 'drum':  # driving toms on every eighth
+            for k in range(1, 4): T.put(x, hand_drum(40, 0.5 if k % 2 else 0.7), at + k * T.beat / 2)
+        else:
+            T.put(x, snare(0.45) if T.inst == 'horn' else tamb(0.4), at + T.beat)
+        if i >= len(T.prog) - 2:  # the build into the beat: a roll that climbs
+            for k in range(8): T.put(x, snare(0.08 + 0.03 * k) if T.inst != 'drum' else hand_drum(57, 0.25 + 0.08 * k, 0.2), at + k * T.slot / 8)
+    return x
+
+
+def top(T):
+    x = T.new()
+    if T.inst == 'drum':  # the Drum's tune arrives last, a shout on the fiddle
+        for i, notes in enumerate(T.mel):
+            for b, nn, beats in notes:
+                d = beats * T.beat + (TAIL if T.last(i) and b == notes[-1][0] else 0)
+                T.put(x, fiddle(nn, d * 0.95, gain=0.35), i * T.slot + b * T.beat)
+        return x
+    for i, c in enumerate(T.prog):  # the Lute's descant: a bell on each chord, an octave up
+        ch = TRIADS[c]
+        T.put(x, bell(ch[2] + 12, 1.6 + (TAIL if T.last(i) else 0), gain=0.3), i * T.slot)
+        if i % 2: T.put(x, bell(ch[1] + 24, 0.8, gain=0.18), i * T.slot + T.beat)
+    return x
+
+
+# ---- the songs' parts: each in its own range, so any two or three fit together
+def part_high(T):  # Song of Rest: a soft line a third above, held
+    x = T.new()
+    for i, c in enumerate(T.prog):
+        if i % 2 and not T.last(i): continue
+        nn = TRIADS[c][1] + 24; d = T.slot * 2 + (TAIL if T.last(i) else 0)
+        T.put(x, flute(nn, d * 0.95, gain=0.4), i * T.slot)
+    return x
+
+
+def part_low(T):  # Dirge: a dark low line, root then fifth, bowed
+    x = T.new()
+    for i, c in enumerate(T.prog):
+        ch = TRIADS[c]; nn = (ch[0] if i % 2 == 0 else ch[2] - 12) - 12
+        T.put(x, fiddle(nn, (T.slot + (TAIL if T.last(i) else 0)) * 0.97, gain=0.4), i * T.slot)
+    return x
+
+
+def part_march(T):  # Marching Song: a snare march, no pitch
+    x = T.new()
+    for i in range(len(T.prog)):
+        at = i * T.slot
+        for k, g in ((0, .5), (1, .25), (1.5, .3), (2, .45), (3, .25), (3.25, .2), (3.5, .3)):
+            T.put(x, snare(g), at + k * T.beat / 2)
+    return x
+
+
+def part_riff(T):  # Ballad of Blades: a sharp plucked riff in the middle
+    x = T.new()
+    for i, c in enumerate(T.prog):
+        ch = TRIADS[c]
+        for k, nn in enumerate((ch[0], ch[2], ch[0] + 12, ch[2])):
+            T.put(x, pluck(nn, T.beat * 0.4, bright=3400, gain=0.3), i * T.slot + k * T.beat / 2)
+    return x
+
+
+PARTS = {'high': part_high, 'low': part_low, 'march': part_march, 'riff': part_riff}
+OWN = {1: -23.0, 2: -27.0, 3: -26.0, 4: -29.0, 'part': -28.5}
+
+
+def render(inst):
+    T = Track(inst)
+    L = {1: lead(T), 2: chords(T), 3: drive(T)}
+    if inst != 'horn': L[4] = top(T)
+    for k, fn in PARTS.items(): L[k] = fn(T)
     import pyloudnorm as pyln
     m = pyln.Meter(SR); st = lambda x: np.stack([x, x], 1)
-    own = [-23.0, -27.0, -27.5, -30.0][: len(L)]
-    L = [x * 10 ** ((o - m.integrated_loudness(st(x))) / 20) for x, o in zip(L, own)]
-    mix = sum(L); g = 10 ** ((target - m.integrated_loudness(st(mix))) / 20)
-    peak = np.abs(mix).max() * g
-    if peak > 0.89: g *= 0.89 / peak
-    return [x * g for x in L]
+    for k in L: L[k] = L[k] * 10 ** ((OWN[k if isinstance(k, int) else 'part'] - m.integrated_loudness(st(L[k]))) / 20)
+    full = sum(L[k] for k in L if isinstance(k, int)) + L['high'] + L['march']  # the loudest it gets: every layer, two parts
+    g = 10 ** ((-20.0 - m.integrated_loudness(st(full))) / 20)
+    g = min(g, 0.89 / (np.abs(full).max() + 1e-9))
+    for k in L:
+        x = L[k] * g; f = int(0.3 * SR); x[-f:] *= np.linspace(1, 0, f); L[k] = x
+    return T, L
+
+
+def write_mono(path, x):
+    pcm = (np.clip(x, -1, 1) * 32767).astype('<i2')
+    with wave.open(path, 'wb') as w:
+        w.setnchannels(1); w.setsampwidth(2); w.setframerate(SR); w.writeframes(pcm.tobytes())
+
 
 if __name__ == '__main__':
     reel = []
-    for inst in RHYTHM:
-        L = level(layers(inst))
-        for i, x in enumerate(L, 1):
-            name = f'bard_{inst}_{i}'
-            p = os.path.join(cg.WAV, f'music_{name}.wav'); write_wav(p, x); enc(p, os.path.join(cg.OUT, f'music_{name}.m4a'), 128)
-        # the reel plays the song as a player hears it: one more layer each time round, then the last one left hanging
-        song = RHYTHM[inst]
-        for k in range(1, len(L) + 1):
-            mix = sum(L[:k]); reel.append(mix[: int(song * SR)])
-        reel += [sum(L), np.zeros(int(1.2 * SR))]
-        print(inst, song, 's,', len(L), 'layers')
-    y = np.concatenate(reel); rp = os.path.join(cg.WAV, 'bard_reel.wav'); write_wav(rp, np.stack([y, y], 1))
+    for inst in INST:
+        T, L = render(inst)
+        for k, x in L.items():
+            name = f'bard_{inst}_{k}'
+            p = os.path.join(cg.WAV, f'music_{name}.wav'); write_mono(p, x); enc(p, os.path.join(cg.OUT, f'music_{name}.m4a'), 96)
+        # the reel: the song as a player hears it, one more layer each round, then two songs' parts, then a missed beat
+        lay = [k for k in L if isinstance(k, int)]
+        for j in range(1, len(lay) + 1): reel.append(sum(L[k] for k in lay[:j])[: int(T.len * SR)])
+        for pr in (('low',), ('low', 'high'), ('march', 'riff')): reel.append((sum(L[k] for k in lay) + sum(L[p] for p in pr))[: int(T.len * SR)])
+        reel += [sum(L[k] for k in lay) + L['low'], np.zeros(int(1.2 * SR))]
+        print(inst, T.len, 's,', len(lay), 'layers,', len(PARTS), 'parts')
+    y = np.concatenate(reel); rp = os.path.join(cg.WAV, 'bard_reel.wav'); write_mono(rp, y)
     os.makedirs(os.path.join(cg.HERE, 'preview'), exist_ok=True)
     enc(rp, os.path.join(cg.HERE, 'preview', 'bard-song-music-reel.m4a'), 160)
     print('reel:', round(len(y) / SR), 's')

@@ -93,3 +93,15 @@ bard_drum_4
 bard_horn_1
 bard_horn_2
 bard_horn_3
+bard_lute_high
+bard_lute_low
+bard_lute_march
+bard_lute_riff
+bard_drum_high
+bard_drum_low
+bard_drum_march
+bard_drum_riff
+bard_horn_high
+bard_horn_low
+bard_horn_march
+bard_horn_riff
