@@ -9,6 +9,8 @@ const { G, D, character, setNow, advance, store } = require('./world');
 
 const at = (y, mo, d, h) => setNow(new Date(y, mo - 1, d, h || 12).getTime());
 const LW = D.EVENTS.lanternwake;
+// the tests of a forced test season switch it on themselves; the shipped data follows the dates
+const forced = (fn) => { const was = LW.force; LW.force = 'test'; try { fn(); } finally { LW.force = was; } };
 // a whole Snuffed Road run, as a player plays it: queue, accept, every pull cleared, done
 function playRoad(hard, onStart) {
   G.queueFor(LW.act, hard ? { hard: true } : undefined);
@@ -36,7 +38,7 @@ test('on from 24 October to 7 November in the player\'s own time, every year; of
   assert.strictEqual(G.lw(), null, 'no festival state outside it');
 });
 
-test('a test build (beta or dev) keeps it on whatever the date, and its candles never carry into the real season', () => {
+test('a test build (beta or dev) keeps it on whatever the date, and its candles never carry into the real season', () => forced(() => {
   character(20); fresh();
   at(2026, 10, 12); globalThis.AZ_VERSION = '10.13.0-beta.1';
   try {
@@ -46,7 +48,7 @@ test('a test build (beta or dev) keeps it on whatever the date, and its candles 
     at(2026, 10, 24); assert.strictEqual(G.lw().candles, 0, 'the real season starts fresh');
   } finally { delete globalThis.AZ_VERSION; }
   at(2026, 10, 12); assert.ok(!G.eventLive('lanternwake'), 'a normal build follows the dates');
-});
+}));
 
 test('candles: a kill that is not grey pays one, even at the level cap; the daily cap holds; midnight resets it; they go when it ends', () => {
   const { P } = character(60); fresh(); at(2026, 10, 25, 10);
@@ -114,7 +116,7 @@ test('outside the festival the run and the keeper\'s wares are gone', () => {
   assert.ok(/over/.test(G.lwBuy('lw_robe') || ''), 'the keeper is gone');
 });
 
-test('a beta shares characters with the live game: what a test season gives stays in test builds, and real buys stay', () => {
+test('a beta shares characters with the live game: what a test season gives stays in test builds, and real buys stay', () => forced(() => {
   const { P } = character(30); fresh();
   // a real season first: the robe is bought for real and stays
   at(2026, 10, 25, 10); G.lw().candles = 5000; G.lwBuy('lw_robe');
@@ -139,9 +141,9 @@ test('a beta shares characters with the live game: what a test season gives stay
   assert.ok(!Q.bags.some((b) => D.ITEMS[b.item.id].event), 'no festival wares in the bags');
   assert.strictEqual(G.account().lwTest, undefined, 'the test record is gone');
   assert.deepStrictEqual(G.companions(), [], 'Flicker is not owned for real');
-});
+}));
 
-test('a beta tester online when the real season starts loses the test rewards then', () => {
+test('a beta tester online when the real season starts loses the test rewards then', () => forced(() => {
   const { P } = character(30); fresh();
   at(2026, 10, 23, 23); globalThis.AZ_VERSION = '10.13.0-beta.2';
   try {
@@ -151,4 +153,4 @@ test('a beta tester online when the real season starts loses the test rewards th
     assert.strictEqual(P.companion, null, 'the test Flicker went');
     assert.deepStrictEqual(G.companions(), []);
   } finally { delete globalThis.AZ_VERSION; }
-});
+}));

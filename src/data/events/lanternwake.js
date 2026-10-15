@@ -8,8 +8,8 @@
     name: 'Lanternwake',
     // [month, day], inclusive, in the player's own time
     from: [10, 24], to: [11, 7],
-    // test builds (beta and dev) keep it on whatever the date, until this is set back to null by hand
-    force: 'test',
+    // 'test' keeps it on in test builds (beta and dev) whatever the date; null follows the dates everywhere
+    force: null,
     story: [
       'On Lanternwake night Caldreth lights candles for its dead, so they can find the road home.',
       'The old tale says a knight lost his way centuries ago, and now he puts out every lantern he passes. Some years, the tale is true.',
