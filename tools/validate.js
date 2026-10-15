@@ -7,6 +7,8 @@ require(path.join(ROOT, 'src/data.js'));
 const D = globalThis.D;
 const errors = [], warn = [];
 const err = (m) => errors.push(m);
+// every song plays a part the song music has (#257)
+for (const k in D.ABILITIES) { const S = D.ABILITIES[k].song; if (S && S.part && !(D.SONG_PARTS || []).includes(S.part)) err(`ability ${k}: song part '${S.part}' is not one of ${(D.SONG_PARTS || []).join(', ')}`); }
 
 // art: every scene, mob and ability icon the data asks for must exist
 const w = {}; vm.createContext(w); w.window = w;

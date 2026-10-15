@@ -18,9 +18,9 @@
   B('dissonant_note', { name: 'Dissonant Note', lvl: 1, cost: 25, costPerLvl: 3, cd: 0, cast: 2, target: 'enemy', dmg: { base: [18, 24], perLvl: 4, coef: 0.7, school: 'arcane' }, desc: 'A sour, piercing note deals {b} Arcane damage.' });
   // combat songs (#250): on the beat, with verses and a Finale (engine.js, songs on the beat)
   const SONG = ' Tap again on the beat (its last {win} sec) for a verse, up to {max}. At full verses, tap off the beat for its Finale.';
-  B('song_of_rest', { name: 'Song of Rest', lvl: 4, cost: 45, costPerLvl: 4, cd: 0, target: 'party', combatOnly: true, song: { pulse: 'heal', every: 3, amt: 5, perLvl: 0.9, coef: 0.1, finale: 3 }, desc: 'Song: heals your party for {p} every 3 sec.' + SONG });
-  B('marching_song', { name: 'Marching Song', lvl: 6, cost: 30, costPerLvl: 2, cd: 0, target: 'party', combatOnly: true, song: { pulse: 'haste', every: 3, amt: 3, perLvl: 0.08, finale: 3, surge: 6 }, desc: 'Song: your party attacks and casts {p}% faster while it plays. Its Finale: three times that for 6 sec.' + SONG });
-  B('ballad_of_blades', { name: 'Ballad of Blades', lvl: 16, cost: 50, costPerLvl: 3, cd: 0, target: 'enemy', combatOnly: true, icon: 'requiem', song: { pulse: 'dmg', area: true, every: 3, amt: 8, perLvl: 1.4, coef: 0.1, school: 'arcane', finale: 1.5 }, desc: 'Song: {p} Arcane damage to your target and every enemy near it, every 3 sec.' + SONG });
+  B('song_of_rest', { name: 'Song of Rest', lvl: 4, cost: 45, costPerLvl: 4, cd: 0, target: 'party', combatOnly: true, song: { part: 'high', pulse: 'heal', every: 3, amt: 5, perLvl: 0.9, coef: 0.1, finale: 3 }, desc: 'Song: heals your party for {p} every 3 sec.' + SONG });
+  B('marching_song', { name: 'Marching Song', lvl: 6, cost: 30, costPerLvl: 2, cd: 0, target: 'party', combatOnly: true, song: { part: 'march', pulse: 'haste', every: 3, amt: 3, perLvl: 0.08, finale: 3, surge: 6 }, desc: 'Song: your party attacks and casts {p}% faster while it plays. Its Finale: three times that for 6 sec.' + SONG });
+  B('ballad_of_blades', { name: 'Ballad of Blades', lvl: 16, cost: 50, costPerLvl: 3, cd: 0, target: 'enemy', combatOnly: true, icon: 'requiem', song: { part: 'riff', pulse: 'dmg', area: true, every: 3, amt: 8, perLvl: 1.4, coef: 0.1, school: 'arcane', finale: 1.5 }, desc: 'Song: {p} Arcane damage to your target and every enemy near it, every 3 sec.' + SONG });
   // the eight new abilities (#251)
   B('sharp_refrain', { name: 'Sharp Refrain', lvl: 8, cost: 12, costPerLvl: 1.3, cd: 6, target: 'enemy', icon: 'dissonant_note', dmg: { base: [14, 18], perLvl: 2.5, coef: 0.45, school: 'arcane' }, desc: 'A quick, bright phrase: {b} Arcane damage. 6 sec cooldown.' });
   B('cleansing_verse', { name: 'Cleansing Verse', lvl: 12, cost: 30, costPerLvl: 2, cd: 0, target: 'ally', icon: 'verse_of_mending', cleanse: true, desc: 'Removes every poison, curse and other damage over time an enemy put on a friend.' });
@@ -39,7 +39,7 @@
   B('counterpoint', { name: 'Counterpoint', lvl: 22, cost: 60, costPerLvl: 4, cd: 6, target: 'ally', shield: { base: 60, perLvl: 9, coef: 0.3, dur: 15 }, desc: 'A second melody wraps a friend: absorbs {s} damage for 15 sec. 6 sec cooldown.' });
   B('hearthsong', { name: 'Hearthsong', lvl: 26, cost: 50, costPerLvl: 3, cd: 0, target: 'party', buff: { id: 'hearthsong', dur: 1800, stats: { spi: 6, int: 4 }, perLvl: { spi: 0.4, int: 0.3 } }, desc: 'A song of home: your party gains {spi} Spirit and {int} Intellect for 30 min.' });
   B('crescendo', { name: 'Crescendo', lvl: 30, cost: 80, costPerLvl: 6, cd: 0, cast: 3, target: 'ally', heal: { base: [160, 190], perLvl: 11, coef: 1.1 }, desc: 'The song swells and breaks over one friend: heals them for {h}.' });
-  B('dirge', { name: 'Dirge', lvl: 4, cost: 25, costPerLvl: 2, cd: 0, target: 'enemy', combatOnly: true, song: { pulse: 'dmg', every: 3, amt: 12, perLvl: 2, coef: 0.15, school: 'shadow', finale: 1.5 }, desc: 'Song: {p} Shadow damage to your target every 3 sec.' + SONG });
+  B('dirge', { name: 'Dirge', lvl: 4, cost: 25, costPerLvl: 2, cd: 0, target: 'enemy', combatOnly: true, song: { part: 'low', pulse: 'dmg', every: 3, amt: 12, perLvl: 2, coef: 0.15, school: 'shadow', finale: 1.5 }, desc: 'Song: {p} Shadow damage to your target every 3 sec.' + SONG });
   B('anthem_of_stone', { name: 'Anthem of Stone', lvl: 40, cost: 60, costPerLvl: 3, cd: 0, target: 'party', buff: { id: 'anthem_of_stone', dur: 1800, stats: { armor: 40, sta: 5 }, perLvl: { armor: 3.5, sta: 0.2 } }, desc: 'Your party stands firm: {armor} armor and {sta} Stamina for 30 min.' });
   B('encore', { name: 'Encore', lvl: 50, cost: 180, cd: 180, target: 'party', hot: { id: 'encore', ticks: 6, every: 2, heal: 20, perLvl: 1.2, coef: 0.1 }, desc: 'Once more, louder: heals everyone in your party for {hh} over 12 sec. 3 min cooldown.' });
   B('requiem', { name: 'Requiem', lvl: 56, cost: 140, costPerLvl: 4, cd: 10, target: 'aoe', dmg: { base: [60, 70], perLvl: 3, coef: 0.25, school: 'arcane' }, desc: 'A song for the fallen strikes all nearby enemies for {b} Arcane damage. 10 sec cooldown.' });
@@ -78,6 +78,10 @@
   // a song tap has a short global cooldown (0.5 sec): songs share one beat window (#257), and a full 1.5 sec one after the
   // first tap would leave no time to land the next. Here, after every song is defined (Dirge comes later than the rest).
   for (const id in D.ABILITIES) if (D.ABILITIES[id].song) D.ABILITIES[id].gcdLen = 0.5;
+  // each song's part in the song music (#257, audio/compose_bard.py): one per range, so any songs played together fit. A
+  // song that names none gets one from what it does; a new part needs its layers in the composer.
+  D.SONG_PARTS = ['high', 'low', 'march', 'riff'];
+  D.songPart = (abId) => { const S = D.ABILITIES[abId].song; return S.part || (S.pulse === 'heal' ? 'high' : S.pulse === 'haste' ? 'march' : S.area ? 'riff' : 'low'); };
   D.TALENT_BOT.healer.bard = ['harmony', 'tempo'];
   D.TALENT_BOT.dps.bard = ['discord', 'harmony'];
 })(typeof window !== 'undefined' ? window : globalThis);
