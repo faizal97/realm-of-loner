@@ -4942,6 +4942,7 @@
     shaman: 'Damage or healer. Lightning and earth shocks, totems for the party, and healing waves.',
     hunter: 'Damage. Shoots from range with a bow. At level 10 you tame a beast to fight beside you.',
     druid: 'Healer, tank or damage. Nature spells and heals; at level 10, Bear Form makes you a tank.',
+    bard: 'Healer or damage. Songs that grow when you tap on the beat; daggers, staves and an instrument.',
   };
   // ============================================================ in-app updater (v9.3, src/update.js)
   // Checks when the character list opens and whenever you come back to the app (at most every 10 min here, and

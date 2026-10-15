@@ -274,6 +274,7 @@
     hunter: { str: 0.4, agi: 2.2, sta: 1.2, int: 0.6, spi: 0.3, armor: 0.05, sp: 0, dps: 1.5, rdps: 4 },
     druid: { str: 0.6, agi: 0.6, sta: 1.3, int: 1.6, spi: 1.6, armor: 0.06, sp: 1.4, dps: 0.6 },
     shaman: { str: 1.4, agi: 0.8, sta: 1.3, int: 1.2, spi: 0.8, armor: 0.05, sp: 1, dps: 2.5 },
+    bard: { str: 0, agi: 0.2, sta: 1.2, int: 1.7, spi: 1.5, armor: 0.03, sp: 1.5, dps: 0.2 },
   };
   G.itemScore = function (it, cls) {
     if (!it) return 0;
@@ -2401,7 +2402,7 @@
   // hub towns (guards fight for you), low in questing zones. Contested zones (later) set place.danger higher.
   // Ambushers pick fair fights: their level is set by your class so you win ~65-80% of the time (sim/pvp.js).
   const AMBUSH_MIN_LEVEL = 6, AMBUSH_GAP = 12 * 60000, AMBUSH_AFTER_DEATH = 20 * 60000, AMBUSH_PER_MIN = 1 / 30;
-  G.AMBUSH_OFFSET = { warrior: 0, paladin: 0, hunter: 3, priest: -1, druid: 0, shaman: -1, mage: -2, warlock: 2, rogue: -1 };
+  G.AMBUSH_OFFSET = { warrior: 0, paladin: 0, hunter: 3, priest: -1, druid: 0, shaman: -1, mage: -2, warlock: 2, rogue: -1, bard: -1 };
   const WAR_MODE_BONUS = 1.1;
   G.warBonus = () => (G.S && G.S.flags.warMode ? WAR_MODE_BONUS : 1);
   G.dangerOf = function (placeId) {

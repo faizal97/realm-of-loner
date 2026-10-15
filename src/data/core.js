@@ -663,7 +663,7 @@
     fam_legs9: { slot: 'legs', lvl: 9, q: 2 },
     fam_hands9: { slot: 'hands', lvl: 10, q: 2 },
     fam_back_rare: { slot: 'back', lvl: 10, q: 3 },
-    militia: { fixed: { warrior: 'militia_shortsword', rogue: 'militia_dagger', mage: 'militia_staff', priest: 'militia_hammer', paladin: 'militia_hammer', warlock: 'militia_staff', hunter: 'militia_longbow', druid: 'militia_staff', shaman: 'militia_hammer' } },
+    militia: { fixed: { warrior: 'militia_shortsword', rogue: 'militia_dagger', mage: 'militia_staff', priest: 'militia_hammer', paladin: 'militia_hammer', warlock: 'militia_staff', hunter: 'militia_longbow', druid: 'militia_staff', shaman: 'militia_hammer', bard: 'militia_staff' } },
     fam_feet12: { slot: 'feet', lvl: 11, q: 2 },
     fam_wrist12: { slot: 'wrist', lvl: 12, q: 2 },
     fam_weapon12: { slot: 'weapon', lvl: 12, q: 2 },
