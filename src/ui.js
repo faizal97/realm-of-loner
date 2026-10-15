@@ -3089,7 +3089,7 @@
       b.append(h('div', { class: 'list' },
         h('div', { class: 'row' }, h('div', { class: 'ic' }, img(art('icon', 'mount_wickless_steed'))), h('div', { class: 't' }, h('b', { style: { color: D.QUALITY[4].color } }, 'Wickless Steed'), h('small', null, 'Mount · Wickless Knight, daily loot')), h('div', { class: 'r' }, a.steed ? h('span', { class: 'ok' }, 'Owned') : `${a.steedKills}/${Ev.steedAt}`)),
         h('div', { class: 'row' }, h('div', { class: 'ic' }, img(art('icon', 'lw_robe'))), h('div', { class: 't' }, h('b', { style: { color: D.QUALITY[4].color } }, 'Hard set'), h('small', null, 'Cosmetic · Wickless Knight on Hard')), h('div', { class: 'r' }, `${Ev.set.length - G.lwHardLeft().length}/${Ev.set.length}`)),
-        h('div', { class: 'row' }, h('div', { class: 'ic' }, img(art('icon', 'event_lanternwake'))), h('div', { class: 't' }, h('b', null, `Keepsake: Lanternwake ${season}`), h('small', null, 'First Knight kill this year · never sold')), h('div', { class: 'r' }, a.keepsakes.includes(season) ? h('span', { class: 'ok' }, 'Owned') : 'Not yet'))));
+        h('div', { class: 'row' }, h('div', { class: 'ic' }, img(art('icon', 'event_lanternwake'))), h('div', { class: 't' }, h('b', null, `Keepsake: Lanternwake ${season}`), h('small', null, 'Your first Wickless Knight kill this year')), h('div', { class: 'r' }, a.keepsakes.includes(season) ? h('span', { class: 'ok' }, 'Owned') : 'Not yet'))));
       if (a.keepsakes.length) b.append(h('p', { class: 'ai-note' }, `Keepsakes: ${a.keepsakes.map((y) => 'Lanternwake ' + y).join(', ')}`));
     });
   }
