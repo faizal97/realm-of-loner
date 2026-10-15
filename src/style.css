@@ -351,6 +351,20 @@ img { max-width: 100%; display: block; }
 /* a reaction lit this ability (v10.4): a gold pulse you cannot miss (a fill over the icon, since a glow gets clipped) */
 .ab.lit { outline: 3px solid #ffd84a; outline-offset: -1px; transform: scale(1.06); z-index: 2; }
 .ab.lit::before { content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none; border-radius: inherit; background: radial-gradient(circle, rgba(255, 236, 140, .55) 0%, rgba(255, 190, 40, .25) 60%, transparent 100%); animation: litpulse .7s ease-in-out infinite alternate; }
+/* a bard's song (#252): teal while it plays; the string at the bottom drains toward the gold beat zone at its left end;
+   gold ring = the beat is on, tap now (steady, unlike a reaction's pulse); diamonds = verses, all gold = Finale ready */
+.ab .song { display: none; position: absolute; left: 4px; right: 4px; bottom: 3px; height: 4px; z-index: 3; pointer-events: none; border-radius: 2px; background: rgba(0, 0, 0, .65); box-shadow: 0 0 0 1px rgba(0, 0, 0, .8); }
+.ab.singing .song { display: block; }
+.ab .song i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; }
+.ab .song .beatz { width: calc(var(--win, 0) * 100%); background: rgba(255, 216, 74, .45); }
+.ab .song .str { width: calc(var(--left, 0) * 100%); background: #2ec4b6; }
+.ab.beat .song .str { background: #ffd84a; }
+.ab.singing { box-shadow: 0 0 0 1px #000, 0 0 0 2px #2ec4b6; }
+.ab.beat { outline: 3px solid #ffd84a; outline-offset: -1px; z-index: 2; }
+.ab .verses { position: absolute; top: 4px; left: 0; right: 0; z-index: 3; display: flex; justify-content: center; gap: 4px; pointer-events: none; }
+.ab .verses i { width: 7px; height: 7px; transform: rotate(45deg); border: 1.5px solid #2ec4b6; background: rgba(0, 0, 0, .7); box-shadow: 0 0 2px #000; }
+.ab .verses i.on { background: #2ec4b6; }
+.ab.loaded .verses i { background: #ffd84a; border-color: #ffd84a; }
 /* a queued ability (#249): it fires the moment the cast or the global cooldown ends; a steady white ring, unlike a reaction's gold pulse */
 .ab.queued { outline: 2px solid #e8f4ff; outline-offset: -2px; z-index: 2; }
 @keyframes litpulse { from { opacity: .35; } to { opacity: 1; } }

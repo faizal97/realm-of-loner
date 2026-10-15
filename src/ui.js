@@ -1635,6 +1635,7 @@
       if (!id) { const e = h('div', { class: 'ab empty' }); let t = null; e.addEventListener('pointerdown', () => { t = setTimeout(() => abilityTip(null), 450); }); e.addEventListener('pointerup', () => clearTimeout(t)); e.addEventListener('pointerleave', () => clearTimeout(t)); bar.append(e); continue; }
       const ab = D.ABILITIES[id];
       const btn = h('button', { class: 'ab', 'aria-label': ab.name }, img(abIcon(id)), h('div', { class: 'cd' }), h('div', { class: 'cdt tnum' }));
+      if (ab.song) btn.append(h('div', { class: 'song' }, h('i', { class: 'beatz' }), h('i', { class: 'str' })), h('div', { class: 'verses' })); // a bard's song (#252)
       if (id === 'eat' || id === 'drink' || id === 'potion') {
         const n = G.S.player.bags.filter((b) => b.item.slot === (id === 'eat' ? 'food' : id === 'potion' ? 'potion' : 'drink')).reduce((a, b) => a + b.n, 0);
         btn.append(h('span', { class: 'cnt tnum' }, n));
@@ -1648,6 +1649,17 @@
       els.abs[id] = btn;
       bar.append(btn);
     }
+  }
+  // a bard's song on its button (#252): a teal ring while it plays; the string along the bottom drains toward the gold
+  // beat zone at its left end, and the button rings gold while the beat is on; the diamonds are verses, all gold when the
+  // Finale is ready (a tap off the beat plays it)
+  function songButton(btn, st, C) {
+    const on = !!st && st.playing;
+    btn.classList.toggle('singing', on); btn.classList.toggle('beat', on && st.inWindow); btn.classList.toggle('loaded', on && st.finale);
+    const sg = btn.querySelector('.song');
+    if (sg && on) { const left = Math.max(0, st.left - (G.fightNow ? G.fightNow() - C.t : 0)); sg.style.setProperty('--left', Math.min(1, left / st.len)); sg.style.setProperty('--win', st.win / st.len); }
+    const vs = btn.querySelector('.verses'), k = on ? st.max + ':' + st.verses : '';
+    if (vs && vs._k !== k) { vs._k = k; vs.replaceChildren(...(on ? Array.from({ length: st.max }, (_, i) => h('i', { class: i < st.verses ? 'on' : '' })) : [])); }
   }
   // taps still landing from a combo when the last enemy dies must not pull the next one
   let fightEndAt = 0;
@@ -1910,6 +1922,7 @@
         const u2 = C && G.pUnit, lit = !!u2 && (E.lit(u2, id) || (u2.cp >= 5 && ((D.PROCS || {})[u2.cls] || []).some((pr) => pr.on.includes('cp5') && pr.lights.includes(id))));
         btn.classList.toggle('lit', lit); // a reaction lit this ability (v10.4)
         btn.classList.toggle('queued', !!u2 && !!u2.queued && u2.queued.ab === id); // waiting to fire when the cast ends (#249)
+        if ((D.ABILITIES[id] || {}).song) songButton(btn, C && u2 ? E.songState(C, u2, id) : null, C);
         btn.classList.toggle('unlit', (!lit && !!(D.ABILITIES[id] || {}).needAura) || (!C && G.fightBuff(id)) || !!G.barBlock(id)); // on the road or dead the bar dims as #165's buffs do, cooldowns still sweeping (#167); usable only while lit (Overpower): grey until then (v10.8); a short buff out of a fight (#165)
         // distance (v10.9): too far from its target, the button greys and says how close it needs to be
         let far = 0;
