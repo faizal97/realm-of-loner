@@ -74,6 +74,10 @@
       t('last_note', 3, 1, 'Last Note', 'requiem', 'Requiem deals {v}% more damage, and +2% spell critical strike chance.', f('abilDmg', 20, { ab: ['requiem'] }), f('spellCrit', 2)),
     ] },
   ];
+  // on test builds only (/dev/ and betas, the same rule as G.testBuild) every race can pick the Bard so it can be tried
+  // before it ships (#255); a live build keeps it hidden until step 6 of docs/plans/2026-10-15-bard-playable-design.md.
+  // build.py sets AZ_DEV and AZ_VERSION before any game script runs.
+  if (root.AZ_DEV || /-beta\./.test(String(root.AZ_VERSION || ''))) { delete D.CLASSES.bard.hidden; for (const r in D.RACES) if (!D.RACES[r].classes.includes('bard')) D.RACES[r].classes.push('bard'); }
   D.TALENT_BOT.healer.bard = ['harmony', 'tempo'];
   D.TALENT_BOT.dps.bard = ['discord', 'harmony'];
 })(typeof window !== 'undefined' ? window : globalThis);
