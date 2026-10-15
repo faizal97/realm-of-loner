@@ -795,6 +795,7 @@
     for (const e of evs) {
       const tgt = C.units[e.tgt], src = C.units[e.src];
       const onAlly = tgt && tgt.side === 'ally';
+      if (e.type === 'song' && src && src.kind === 'player') songSound(e, C, src);
       const meInvolved = (src && src.kind === 'player') || (tgt && tgt.kind === 'player');
       if (S_ && meInvolved) {
         if (e.type === 'dmg') S_.play(e.school === 'nature' ? 'arcane' : e.school && e.school !== 'physical' ? e.school : e.crit ? 'crit' : 'hit', { vol: tgt && tgt.kind === 'player' ? 0.75 : 1 });
@@ -844,6 +845,7 @@
         fct(e.tgt, 'Aggro!', 'small');
       }
     }
+    try { songSync(C); } catch (e) { /* music never breaks a fight */ }
     if (redraw) { renderScene(); renderTarget(); renderPanel(); }
     renderChat();
   }
@@ -1660,6 +1662,35 @@
     if (sg && on) { const left = Math.max(0, st.left - (G.fightNow ? G.fightNow() - C.t : 0)); sg.style.setProperty('--left', Math.min(1, left / st.len)); sg.style.setProperty('--win', st.win / st.len); }
     const vs = btn.querySelector('.verses'), k = on ? st.max + ':' + st.verses : '';
     if (vs && vs._k !== k) { vs._k = k; vs.replaceChildren(...(on ? Array.from({ length: st.max }, (_, i) => h('i', { class: i < st.verses ? 'on' : '' })) : [])); }
+  }
+  // ---------- the Bard's song sounds and music (#257). Sounds: a note in your instrument's voice when a song starts, higher
+  // for each verse on the beat (the last verse a fifth up), a chord for the Finale, a muted note when a verse is lost.
+  // Music: the phrase of the song you last tapped (src/sound.js SND.song), one layer per verse, kept in time with it.
+  const songRate = (C) => (G.speed > 1 && !G.isPvp(C) ? G.speed : 1);
+  const semis = (n) => Math.pow(2, n / 12);
+  function songSound(e, C, u) {
+    const S_ = window.SND; if (!S_) return;
+    const inst = u.instrument || 'lute', R = E.rhythmOf(u), note = 'song_' + inst;
+    if (e.what === 'start') S_.play(note, { gap: 0, vol: 0.8 });
+    else if (e.what === 'beat') S_.play(note, { gap: 0, vol: 0.85, rate: semis(e.verses >= R.max ? 7 : [0, 2, 4][e.verses]) });
+    else if (e.what === 'early' || (e.what === 'end' && !e.replaced)) S_.play('song_miss', { gap: 0.2, vol: 0.7 });
+    else if (e.what === 'finale' || e.what === 'echo') for (const n of [0, 4, 7, 12]) S_.play(note, { gap: 0, vol: e.what === 'echo' ? 0.35 : 0.55, rate: semis(n) });
+    if (!S_.hasSong || !S_.hasSong(inst)) return;
+    if (e.what === 'start' || e.what === 'beat' || e.what === 'early') { ui.songAb = e.ab; S_.song(inst, 1 + e.verses, 0, songRate(C)); }
+    else if (e.what === 'finale' && e.ab === ui.songAb) S_.songLayers(1);
+    else if (e.what === 'end' && !e.replaced && e.ab === ui.songAb) {
+      const other = u.auras.find((a) => a.song && a.ab !== e.ab);
+      if (other) { ui.songAb = other.ab; S_.song(inst, 1 + other.verses, R.len - (other.until - C.t), songRate(C)); }
+      else { ui.songAb = null; S_.songOut(); }
+    }
+  }
+  // the music follows the song's own timer: a slow frame, a speed change or a song picked up again puts it back in time
+  function songSync(C) {
+    const S_ = window.SND, u = G.pUnit; if (!S_ || !S_.songCur || !u || !ui.songAb) return;
+    const st = E.songState(C, u, ui.songAb); if (!st.playing) return;
+    const want = st.len - st.left, rate = songRate(C), at = S_.songPos();
+    if (S_.songCur.rate !== rate || at == null || Math.abs(at - want) > 0.3) S_.song(S_.songCur.inst, 1 + st.verses, want, rate);
+    else if (S_.songCur.layers !== 1 + st.verses) S_.songLayers(1 + st.verses);
   }
   // taps still landing from a combo when the last enemy dies must not pull the next one
   let fightEndAt = 0;
@@ -5213,7 +5244,7 @@
     G.on('runUpdate', () => { if (G.S && G.S.run && G.S.run.phase === 'rest') tip('run'); });
     G.on('levelup', (d) => { if (d.level === 2) tip('level'); if (d.level === 8) tip('dungeon'); if (d.level === D.TALENT_START) tip('talents'); });
     G.on('chat', () => { if (G.S && G.S.chat.some((m) => m.act && m.act.state === 'open' && !m.act.accepted)) tip('request'); });
-    G.on('fightEnd', (d) => { fightEndAt = performance.now(); renderAll(); if (d.result === 'lose' && !G.S.run) banner('You died'); });
+    G.on('fightEnd', (d) => { fightEndAt = performance.now(); ui.songAb = null; if (window.SND && SND.songOut) SND.songOut(); renderAll(); if (d.result === 'lose' && !G.S.run) banner('You died'); });
     G.on('runUpdate', renderAll);
     G.on('runTick', () => {});
     // a chapter that waits on a quest (x1 waits for Veshmira) plays as soon as that quest is turned in

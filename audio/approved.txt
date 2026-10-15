@@ -82,3 +82,14 @@ sunken_archive
 shalzua
 rumhook
 lanternwake
+bard_lute_1
+bard_lute_2
+bard_lute_3
+bard_lute_4
+bard_drum_1
+bard_drum_2
+bard_drum_3
+bard_drum_4
+bard_horn_1
+bard_horn_2
+bard_horn_3

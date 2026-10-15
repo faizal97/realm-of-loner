@@ -154,10 +154,35 @@ def sfx_burnt():
     return fizz + low
 
 
+# ---- the Bard's songs (#257): one note per instrument, played higher for each verse (src/ui.js sets the pitch), a
+# chord of the same note for the Finale, and a muted note when a verse is lost. Same notes on every instrument, so the
+# rhythm reads the same whichever is played.
+def sfx_song_lute():
+    return mix([(harp(69, 0.9, gain=0.5), 0), (pluck(81, 0.25, bright=3200, gain=0.12), 0)], 0.9)
+
+
+def sfx_song_drum():
+    t = t_(0.45); f = midi(45) * (1 + 0.35 * np.exp(-t * 40))
+    body = np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-t * 9)
+    slap = lp(noise(0.45), 2400) * np.exp(-t * 60) * 0.5
+    return (body + slap) * env(len(t), 0.001, 0.0, 1.0, 0.04)
+
+
+def sfx_song_horn():
+    return horn(57, 0.8, gain=0.6)
+
+
+def sfx_song_miss():
+    t = t_(0.22)
+    x = 0.6 * saw(midi(52), t) + 0.4 * saw(midi(52) * 0.97, t)
+    return lp(x, 180 + 700 * np.exp(-t * 30)) * np.exp(-t * 16) + lp(noise(0.22), 900) * np.exp(-t * 50) * 0.3
+
+
 SFX = {'tap': sfx_tap, 'open': sfx_open, 'close': sfx_close, 'equip': sfx_equip, 'chime': sfx_chime, 'arrive': sfx_arrive, 'roll': sfx_roll,
        'begin': sfx_begin, 'collect': sfx_collect, 'reaction': sfx_reaction, 'warn': sfx_warn, 'enrage': sfx_enrage, 'victory': sfx_victory,
        'defeat': sfx_defeat, 'capture': sfx_capture,
-       'splash': sfx_splash, 'bite': sfx_bite, 'fishreel': sfx_reel, 'catch': sfx_catch, 'sizzle': sfx_sizzle, 'burnt': sfx_burnt}
+       'splash': sfx_splash, 'bite': sfx_bite, 'fishreel': sfx_reel, 'catch': sfx_catch, 'sizzle': sfx_sizzle, 'burnt': sfx_burnt,
+       'song_lute': sfx_song_lute, 'song_drum': sfx_song_drum, 'song_horn': sfx_song_horn, 'song_miss': sfx_song_miss}
 
 if __name__ == '__main__':
     import sys

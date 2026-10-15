@@ -31,6 +31,7 @@
     if (!AC || !root.AUDIO_DATA) return;
     const ctx = SND.ctx = new AC();
     SND.musicGain = ctx.createGain(); SND.musicGain.gain.value = gainOf(prefs, 'music'); SND.musicGain.connect(ctx.destination);
+    SND.zoneGain = ctx.createGain(); SND.zoneGain.connect(SND.musicGain); // the place's music, turned down while a Bard sings (#257)
     SND.sfxGain = ctx.createGain(); SND.sfxGain.gain.value = gainOf(prefs, 'sfx'); SND.sfxGain.connect(ctx.destination);
     if (SND.want) SND.music(SND.want, true, SND.wantFallback);
   }
@@ -52,7 +53,7 @@
   const MUSIC_KEEP = 4, musicLru = [], failed = new Set(); // failed: files that would not load (not asked for again)
   function keep(name, b) {
     SND.bufs[name] = b;
-    if (!name.startsWith('music_')) return;
+    if (!name.startsWith('music_') || name.startsWith('music_bard_')) return;
     const i = musicLru.indexOf(name); if (i >= 0) musicLru.splice(i, 1); musicLru.push(name);
     while (musicLru.length > MUSIC_KEEP) { // drop the oldest, never the one playing
       const old = musicLru.find((n) => n !== 'music_' + SND.curName && n !== name); if (!old) break;
@@ -115,7 +116,7 @@
       const meta = (root.AUDIO_META || {})[name];
       s.loopStart = 0; s.loopEnd = meta ? Math.min(meta.loop_s, b.duration) : b.duration;
       const g = SND.ctx.createGain(); g.gain.value = 0.0001;
-      s.connect(g); g.connect(SND.musicGain);
+      s.connect(g); g.connect(SND.zoneGain);
       s.start(); g.gain.setTargetAtTime(1, SND.ctx.currentTime, 0.5);
       SND.cur = { s, g };
     });
@@ -135,6 +136,48 @@
     if (prefs[k + 'Vol'] === v) return;
     prefs[k + 'Vol'] = v; savePrefs(); apply(k);
   };
+  // ---------- the Bard's song music (#257): while you sing, the song is the music. One phrase per instrument, as long as
+  // the song, in layers (music_bard_<instrument>_<n>, audio/compose_bard.py); a layer joins with each verse. Each tap plays
+  // the phrase from the start, so its last bar always falls on the beat window; a missed beat lets it ring out on its
+  // last chord. Only the current instrument's layers stay decoded.
+  const LAYERS = { lute: 4, drum: 4, horn: 3 }, DUCK = 0.25;
+  SND.songCur = null; // { inst, src: [{ s, g }], start (audio time at phrase 0), rate, layers }
+  SND.hasSong = (inst) => !!LAYERS[inst] && (root.AUDIO_FILES || []).includes(`bard_${inst}_1`);
+  const songStems = (inst) => Array.from({ length: LAYERS[inst] }, (_, i) => `music_bard_${inst}_${i + 1}`);
+  function songFade(cur, secs) {
+    if (!cur) return;
+    const t = SND.ctx.currentTime;
+    for (const x of cur.src) { x.g.gain.cancelScheduledValues(t); x.g.gain.setTargetAtTime(0, t, secs / 3); try { x.s.stop(t + secs + 0.1); } catch (e) { } }
+  }
+  const duck = (on) => { if (SND.zoneGain) SND.zoneGain.gain.setTargetAtTime(on ? DUCK : 1, SND.ctx.currentTime, on ? 0.15 : 0.8); };
+  // play the phrase from `pos` seconds in (the song's elapsed time), with `layers` layers, at the fight's speed
+  SND.song = function (inst, layers, pos, rate) {
+    if (!SND.ctx || !SND.hasSong(inst)) return;
+    for (const n in SND.bufs) if (n.startsWith('music_bard_') && !n.startsWith(`music_bard_${inst}_`)) delete SND.bufs[n];
+    const want = { inst, layers, pos: pos || 0, rate: rate || 1, at: SND.ctx.currentTime };
+    SND.songWant = want;
+    Promise.all(songStems(inst).map(load)).then((bufs) => {
+      if (SND.songWant !== want || bufs.some((b) => !b)) return;
+      songFade(SND.songCur, 0.06);
+      const t = SND.ctx.currentTime, pos0 = want.pos + (t - want.at) * want.rate; // time spent loading counts
+      const src = bufs.map((b, i) => {
+        const s = SND.ctx.createBufferSource(); s.buffer = b; s.playbackRate.value = want.rate;
+        const g = SND.ctx.createGain(); g.gain.value = i < layers ? 1 : 0;
+        s.connect(g); g.connect(SND.musicGain); s.start(t, Math.min(Math.max(0, pos0), b.duration - 0.05));
+        return { s, g };
+      });
+      SND.songCur = { inst, src, start: t - pos0 / want.rate, rate: want.rate, layers };
+      duck(true);
+    });
+  };
+  // how many layers play (a Finale spends the verses: back to the melody alone, in place)
+  SND.songLayers = function (n) { const c = SND.songCur; if (!c) return; c.layers = n; c.src.forEach((x, i) => x.g.gain.setTargetAtTime(i < n ? 1 : 0, SND.ctx.currentTime, 0.08)); };
+  // where the phrase is now (seconds into it), or null
+  SND.songPos = () => (SND.songCur && SND.ctx ? (SND.ctx.currentTime - SND.songCur.start) * SND.songCur.rate : null);
+  // the song ran out: no tap, so the last chord rings out; the place's music comes back after it
+  SND.songOut = function () { const c = SND.songCur; SND.songWant = null; if (!c) return; SND.songCur = null; songFade(c, 2.2); setTimeout(() => { if (!SND.songCur) duck(false); }, 1600); };
+  // stop at once (the fight is over, the song was replaced by one we don't follow)
+  SND.songStop = function () { const c = SND.songCur; SND.songWant = null; if (!c) return; SND.songCur = null; songFade(c, 0.4); duck(false); };
   SND.pause = function () { if (SND.ctx && SND.ctx.state === 'running') SND.ctx.suspend(); };
   SND.resume = function () { if (SND.ctx && SND.ctx.state === 'suspended') SND.ctx.resume(); };
 
