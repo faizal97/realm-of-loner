@@ -71,3 +71,16 @@ test('the global cooldown queues too: an instant then a cast, no gap', () => {
   stepUntil(C, () => !!u.cast);
   assert.ok(u.cast.ab === 'frostbolt' && u.cast.start < gcdEnd + 0.1 + 1e-9, `started ${u.cast.start}, global cooldown ended ${gcdEnd}`);
 });
+
+test('the bar sweeps until the cast ends, not just the global cooldown', () => {
+  const { C, u } = castingMage();
+  const cast = u.cast; cast.end = cast.start + 3; // a long cast, like the Starbolt in the report
+  stepUntil(C, () => C.t >= cast.start + 1.6); // the global cooldown is over, the cast is not
+  assert.ok(u.gcdUntil <= C.t && u.cast === cast);
+  for (const id of ['frostbolt', 'fire_blast', 'mana_shield']) { // mana_shield is off the global cooldown: a cast still blocks it
+    const b = E.busy(C, u, id);
+    assert.ok(b && b.end === cast.end && b.p > 0 && b.p < 1, `${id} still sweeping (${b && b.p})`);
+  }
+  stepUntil(C, () => u.cast !== cast);
+  assert.strictEqual(E.busy(C, u, 'mana_shield'), null, 'free once the cast ends');
+});

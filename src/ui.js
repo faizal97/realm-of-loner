@@ -1892,7 +1892,7 @@
           else {
             const cdEnd = u.cds[id] || 0;
             if (cdEnd > C.t) { p = 1 - (cdEnd - C.t) / ab.cd; left = cdEnd - C.t; }
-            else if (ab.gcd !== false && u.gcdUntil > C.t) p = 1 - (u.gcdUntil - C.t) / (ab.gcdLen || 1.5);
+            else { const b = E.busy(C, u, id); if (b) p = b.p; } // the cast and the global cooldown, whichever ends later (#249)
             nores = E.abCost(ab, u) > u.res + 0.01;
           }
         } else if (id !== 'eat' && id !== 'drink' && id !== 'attack' && id !== 'potion') {

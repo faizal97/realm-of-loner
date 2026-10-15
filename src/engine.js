@@ -690,6 +690,14 @@
   // as the one queued spell (a newer tap replaces it) and fires the moment it ends. An earlier tap is refused as before
   // and never cuts the cast short. Only the player's taps queue; bots and the sims choose when to act themselves.
   E.QUEUE_WINDOW = 0.4;
+  // how long an ability waits on the cast and the global cooldown, for the bar's sweep (#249): a cast longer than the
+  // global cooldown keeps every button sweeping until it ends, so a button never looks ready while a tap is refused
+  E.busy = function (C, u, abId) {
+    const ab = D.ABILITIES[abId] || {}, g = ab.gcd !== false && u.gcdUntil > C.t ? u.gcdUntil : 0, c = u.cast && u.cast.end > C.t ? u.cast : null;
+    const end = Math.max(g, c ? c.end : 0); if (end <= C.t) return null;
+    const start = c ? c.start : g - (ab.gcdLen || 1.5);
+    return { start, end, p: Math.min(1, Math.max(0, (C.t - start) / (end - start))) };
+  };
   E.queue = function (C, u, abId, tgtUid, why) {
     const ab = D.ABILITIES[abId];
     if (!ab || (why !== E.GCD_WHY && !(u.cast && why === E.castingText(u.cast.ab)))) return false;
