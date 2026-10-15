@@ -9,13 +9,15 @@
     name: 'Bard', color: '#2EC4B6', role: 'healer', roles: ['healer'], hidden: true, resource: 'mana', armorType: 'leather', weapons: ['dagger', 'sword'],
     base: { str: 20, agi: 21, sta: 21, int: 22, spi: 23 }, gain: { str: 0.5, agi: 1, sta: 1.2, int: 1.6, spi: 1.7 },
     baseHp: -150, hpPerLvl: 10, baseMana: -230, manaPerLvl: 16, baseArmor: 20, startWeapon: 'worn_dagger', startChest: 'footpad_shirt',
-    abilities: ['soothing_chord', 'dissonant_note', 'song_of_rest', 'marching_song', 'lullaby', 'verse_of_mending', 'chorus_grove', 'counterpoint',
-      'hearthsong', 'crescendo', 'dirge', 'anthem_of_stone', 'encore', 'requiem', 'grand_finale'],
+    abilities: ['soothing_chord', 'dissonant_note', 'song_of_rest', 'dirge', 'marching_song', 'lullaby', 'verse_of_mending', 'chorus_grove', 'counterpoint',
+      'hearthsong', 'crescendo', 'anthem_of_stone', 'encore', 'requiem', 'grand_finale'],
   };
   const B = (id, o) => { D.ABILITIES[id] = Object.assign({ cls: 'bard' }, o); };
   B('soothing_chord', { name: 'Soothing Chord', lvl: 1, cost: 30, costPerLvl: 4, cd: 0, cast: 1.8, target: 'ally', heal: { base: [42, 52], perLvl: 6.5, coef: 0.8 }, desc: 'A warm chord heals a friendly target for {h}.' });
   B('dissonant_note', { name: 'Dissonant Note', lvl: 1, cost: 25, costPerLvl: 3, cd: 0, cast: 2, target: 'enemy', dmg: { base: [18, 24], perLvl: 4, coef: 0.7, school: 'arcane' }, desc: 'A sour, piercing note deals {b} Arcane damage.' });
-  B('song_of_rest', { name: 'Song of Rest', lvl: 4, cost: 45, costPerLvl: 4, cd: 8, target: 'party', hot: { id: 'song_of_rest', ticks: 4, every: 3, heal: 5, perLvl: 0.9, coef: 0.1 }, desc: 'A slow song heals everyone in your party for {hh} over 12 sec. 8 sec cooldown.' });
+  // combat songs (#250): on the beat, with verses and a Finale (engine.js, songs on the beat)
+  const SONG = ' Tap again on the beat (its last {win} sec) for a verse, up to {max}. At full verses, tap off the beat for its Finale.';
+  B('song_of_rest', { name: 'Song of Rest', lvl: 4, cost: 45, costPerLvl: 4, cd: 0, target: 'party', combatOnly: true, song: { pulse: 'heal', every: 3, amt: 5, perLvl: 0.9, coef: 0.1, finale: 3 }, desc: 'Song: heals your party for {p} every 3 sec.' + SONG });
   B('marching_song', { name: 'Marching Song', lvl: 6, cost: 30, costPerLvl: 2, cd: 0, target: 'party', buff: { id: 'marching_song', dur: 1800, stats: { haste: 3 }, perLvl: { haste: 0.08 } }, desc: 'Your party moves to the beat: attack speed raised by {haste}% for 30 min.' });
   B('lullaby', { name: 'Lullaby', lvl: 10, cost: 50, costPerLvl: 2, cd: 30, target: 'self', combatOnly: true, stompAll: 3, desc: 'A soft song: nearby enemies (not bosses) fall asleep for 3 sec. 30 sec cooldown.' });
   B('verse_of_mending', { name: 'Verse of Mending', lvl: 14, cost: 40, costPerLvl: 4, cd: 0, target: 'ally', hot: { id: 'verse_of_mending', ticks: 5, every: 3, heal: 9, perLvl: 1.5, coef: 0.2 }, desc: 'A verse for one friend heals them for {hh} over 15 sec.' });
@@ -23,7 +25,7 @@
   B('counterpoint', { name: 'Counterpoint', lvl: 22, cost: 60, costPerLvl: 4, cd: 6, target: 'ally', shield: { base: 60, perLvl: 9, coef: 0.3, dur: 15 }, desc: 'A second melody wraps a friend: absorbs {s} damage for 15 sec. 6 sec cooldown.' });
   B('hearthsong', { name: 'Hearthsong', lvl: 26, cost: 50, costPerLvl: 3, cd: 0, target: 'party', buff: { id: 'hearthsong', dur: 1800, stats: { spi: 6, int: 4 }, perLvl: { spi: 0.4, int: 0.3 } }, desc: 'A song of home: your party gains {spi} Spirit and {int} Intellect for 30 min.' });
   B('crescendo', { name: 'Crescendo', lvl: 30, cost: 80, costPerLvl: 6, cd: 0, cast: 3, target: 'ally', heal: { base: [160, 190], perLvl: 11, coef: 1.1 }, desc: 'The song swells and breaks over one friend: heals them for {h}.' });
-  B('dirge', { name: 'Dirge', lvl: 34, cost: 60, costPerLvl: 4, cd: 0, target: 'enemy', dot: { id: 'dirge', ticks: 6, every: 3, dmg: 12, perLvl: 2, coef: 0.15, school: 'shadow' }, desc: 'A mourning song clings to the target: {d} Shadow damage over 18 sec.' });
+  B('dirge', { name: 'Dirge', lvl: 4, cost: 40, costPerLvl: 3, cd: 0, target: 'enemy', combatOnly: true, song: { pulse: 'dmg', every: 3, amt: 12, perLvl: 2, coef: 0.15, school: 'shadow', finale: 3 }, desc: 'Song: {p} Shadow damage to your target every 3 sec.' + SONG });
   B('anthem_of_stone', { name: 'Anthem of Stone', lvl: 40, cost: 60, costPerLvl: 3, cd: 0, target: 'party', buff: { id: 'anthem_of_stone', dur: 1800, stats: { armor: 40, sta: 5 }, perLvl: { armor: 3.5, sta: 0.2 } }, desc: 'Your party stands firm: {armor} armor and {sta} Stamina for 30 min.' });
   B('encore', { name: 'Encore', lvl: 50, cost: 180, cd: 180, target: 'party', hot: { id: 'encore', ticks: 6, every: 2, heal: 20, perLvl: 1.2, coef: 0.1 }, desc: 'Once more, louder: heals everyone in your party for {hh} over 12 sec. 3 min cooldown.' });
   B('requiem', { name: 'Requiem', lvl: 56, cost: 140, costPerLvl: 4, cd: 10, target: 'aoe', dmg: { base: [60, 70], perLvl: 3, coef: 0.25, school: 'arcane' }, desc: 'A song for the fallen strikes all nearby enemies for {b} Arcane damage. 10 sec cooldown.' });

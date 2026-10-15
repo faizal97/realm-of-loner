@@ -1693,6 +1693,7 @@
     }
     if (ab.dot) d = d.replace('{d}', f((ab.dot.dmg + ab.dot.perLvl * L) * ab.dot.ticks));
     if (ab.hot) d = d.replace('{hh}', f((ab.hot.heal + ab.hot.perLvl * L) * ab.hot.ticks));
+    if (ab.song) { const R = E.rhythmOf(G.pUnit || P); d = d.replace('{p}', f(ab.song.amt + (ab.song.perLvl || 0) * L + (ab.song.coef || 0) * st.sp)).replace('{win}', R.win).replace('{max}', R.max); } // a song (#250): one pulse with no verses
     if (ab.shield) d = d.replace('{s}', f(ab.shield.base + ab.shield.perLvl * L));
     if (ab.lifetap) d = d.split('{lt}').join(f(ab.lifetap.base + ab.lifetap.perLvl * L));
     if (ab.buff && ab.buff.stats) for (const k in ab.buff.stats) d = d.replace('{' + k + '}', f(ab.buff.stats[k] + ((ab.buff.perLvl && ab.buff.perLvl[k]) || 0) * L));

@@ -718,6 +718,68 @@
     if (why) ev(C, { type: 'queueFail', src: u.uid, ab: q.ab, why });
   }
 
+  // ---- songs on the beat (#250, design: docs/plans/2026-10-15-bard-playable-design.md) ----
+  // A combat song plays on the bard for its instrument's length, pulsing every few seconds (a heal on the party, or
+  // damage on the target). Tapping it again inside the beat window (its last seconds) adds a verse, each verse making
+  // it stronger; tapping it early costs a verse; letting it run out loses them all. At full verses a tap off the beat
+  // plays the Finale (every verse spent at once in a burst) and a tap on the beat keeps the song at full. Two songs play
+  // at once; a third takes the place of the one started first. The instrument sets the rhythm (Lute until #251).
+  E.RHYTHM = {
+    lute: { len: 12, win: 2, max: 3, finale: 1 },
+    drum: { len: 8, win: 1.5, max: 3, finale: 1 },
+    horn: { len: 16, win: 3, max: 2, finale: 1.6 },
+  };
+  E.VERSE_BONUS = 0.2; // each verse: +20% to the song's pulses
+  E.SONG_SLOTS = 2;
+  E.rhythmOf = (u) => E.RHYTHM[(u && u.instrument) || 'lute'];
+  E.songOf = (u, abId) => u.auras.find((a) => a.song && a.ab === abId) || null;
+  // what a song's button shows and a bot reads: playing, verses, seconds left, in the beat window, Finale ready
+  E.songState = function (C, u, abId) {
+    const s = E.songOf(u, abId), R = E.rhythmOf(u);
+    if (!s) return { playing: false, verses: 0, max: R.max, left: 0, len: R.len, win: R.win, inWindow: false, finale: false };
+    const left = Math.max(0, s.until - C.t), inWindow = left <= R.win + 1e-9;
+    return { playing: true, verses: s.verses, max: R.max, left, len: R.len, win: R.win, inWindow, finale: s.verses >= R.max };
+  };
+  // one pulse at the song's present strength (before the verse bonus for a Finale's base)
+  function songPulse(C, u, abId, verses) {
+    const ab = D.ABILITIES[abId], S = ab.song, tm = tmOf(u), L = u.level;
+    const base = S.amt + (S.perLvl || 0) * L + (S.coef || 0) * u.st.sp;
+    const tal = S.pulse === 'heal' ? (tm.hot[abId] || 0) : (tm.dot[abId] || 0);
+    return base * (1 + tal / 100) * (1 + E.VERSE_BONUS * verses);
+  }
+  function songTarget(C, u, s) {
+    const t = C.units[s.tgt]; if (t && !t.dead && t.side !== u.side) return t;
+    const n = C.units[u.target]; if (n && !n.dead && n.side !== u.side) { s.tgt = n.uid; return n; }
+    return null;
+  }
+  function songHits(C, u, s, amount, o) {
+    const ab = D.ABILITIES[s.ab];
+    if (ab.song.pulse === 'heal') { for (const w of alive(friends(C, u)).filter((a) => !a.pos || !u.pos || E.dist(u, a) <= DIST.ally)) heal(C, u, w, amount, Object.assign({ ab: s.ab }, o)); return; }
+    const t = songTarget(C, u, s); if (t) dealDamage(C, u, t, amount, Object.assign({ school: ab.song.school, ab: s.ab }, o));
+  }
+  function playSong(C, u, abId, tgt) {
+    const ab = D.ABILITIES[abId], R = E.rhythmOf(u), s = E.songOf(u, abId);
+    if (!s) {
+      const on = u.auras.filter((a) => a.song).sort((a, b) => a.began - b.began);
+      if (on.length >= E.SONG_SLOTS) { u.auras = u.auras.filter((a) => a !== on[0]); ev(C, { type: 'song', src: u.uid, ab: on[0].ab, what: 'end', replaced: abId }); }
+      u.auras.push({ id: 'song:' + abId, song: true, ab: abId, src: u.uid, began: C.t, until: C.t + R.len, verses: 0, every: ab.song.every, next: C.t + ab.song.every, tgt: tgt && tgt.side !== u.side ? tgt.uid : null });
+      ev(C, { type: 'song', src: u.uid, ab: abId, what: 'start', verses: 0 });
+      return;
+    }
+    if (tgt && tgt.side !== u.side) s.tgt = tgt.uid;
+    const onBeat = s.until - C.t <= R.win + 1e-9;
+    if (s.verses >= R.max && !onBeat) { // the Finale: every verse at once; the song plays on from none
+      const amt = songPulse(C, u, abId, s.verses) * ab.song.finale * s.verses * R.finale; // at 3 verses on a Lute: 9 full pulses at once
+      songHits(C, u, s, amt, { finale: true });
+      ev(C, { type: 'song', src: u.uid, ab: abId, what: 'finale', verses: s.verses });
+      s.verses = 0;
+      return;
+    }
+    s.verses = onBeat ? Math.min(R.max, s.verses + 1) : Math.max(0, s.verses - 1);
+    s.until = C.t + R.len;
+    ev(C, { type: 'song', src: u.uid, ab: abId, what: onBeat ? 'beat' : 'early', verses: s.verses });
+  }
+
   function scaled(base, perLvl, L) {
     return rnd(base[0], base[1]) + (perLvl || 0) * L;
   }
@@ -733,6 +795,7 @@
     if (u.resType === 'mana' && abCost(ab, u) > 0) u.lastCastT = C.t;
     ev(C, { type: 'ability', src: u.uid, ab: abId, tgt: tgt && tgt.uid });
     if (tgt && tgt.side !== u.side) { tgt.hitBy = tgt.hitBy || {}; tgt.hitBy[u.uid] = true; if (u.side === 'ally') u.target = tgt.uid; }
+    if (ab.song) { playSong(C, u, abId, tgt); return; } // a bard's combat song (#250): start, renew on the beat, or its Finale
 
     if (ab.taunt) {
       const top = Math.max(0, ...Object.values(tgt.threat));
@@ -1134,6 +1197,30 @@
     return (SOLO[cls] = k);
   }
   E.soloKit = soloKit;
+  // a bot plays a song on the beat (#250): it starts it, then once per beat window decides by its skill whether it lands
+  // the beat (renews somewhere inside the window), comes in early (a verse lost) or lets the song run out (all lost);
+  // with spend set it plays the Finale once the verses are full
+  function botSong(C, u, b, abId, tgt, try_, spend) {
+    const st = E.songState(C, u, abId);
+    if (!st.playing) return try_(abId, tgt);
+    if (st.finale && spend && !st.inWindow) return try_(abId, tgt);
+    const s = E.songOf(u, abId);
+    if (s.planFor !== s.until) {
+      const sk = b.skill || 0.5;
+      s.planFor = s.until;
+      s.plan = Math.random() < 0.55 + 0.4 * sk ? rnd(0.15, Math.max(0.2, st.win - 0.1)) : Math.random() < 0.5 ? st.win + rnd(0.3, 1.5) : -1;
+      s.patient = Math.random() < 0.3 + 0.7 * sk; // holds back a cast that would run past the beat
+    }
+    return s.plan >= 0 && st.left <= s.plan ? try_(abId, tgt) : false;
+  }
+  // a bard bot about to start a cast: would it still be casting when a song's beat window closes? (a skilled one waits)
+  // (never when someone is close to dying: then the heal comes first)
+  function castWouldMissBeat(C, u, abId) {
+    const A = D.ABILITIES[abId]; if (!A || A.song) return false;
+    if (alive(friends(C, u)).some((a) => a.hp / a.maxHp < 0.35)) return false;
+    const t = Math.max(A.cast || 0, A.gcd === false ? 0 : 1.5);
+    return u.auras.some((s) => s.song && s.patient && s.plan >= 0 && s.until - C.t - t < Math.min(s.plan, 0.3) && s.until - C.t > s.plan);
+  }
   // how long a fighter still cannot move toward you: rooted, stunned or running in fear
   const holdLeft = (C, f) => Math.max(0, f.stunUntil - C.t || 0, f.fleeUntil - C.t || 0, ...f.auras.filter((a) => a.root).map((a) => a.until - C.t));
   // kiting: open the gap while a melee foe is held, up to `gap` metres, running at most `run` seconds (sim/brawl.js tunes them)
@@ -1202,7 +1289,7 @@
     if (b.afkUntil && b.afkUntil > C.t) return;
     const en = alive(foes(C, u));
     if (!en.length) return;
-    const try_ = (id, tgt) => E.use(C, u, id, tgt && tgt.uid) === null;
+    const try_ = (id, tgt) => !(u.cls === 'bard' && castWouldMissBeat(C, u, id)) && E.use(C, u, id, tgt && tgt.uid) === null; // a bard keeps its beat (#250)
     const rac = u.race && D.RACIALS[u.race] && D.RACIALS[u.race].active;
     if (rac && Math.random() < 0.08 * (b.skill || 0.5)) {
       const rA = D.ABILITIES[rac];
@@ -1242,14 +1329,14 @@
         if (low2 >= 3 && has('grand_finale') && try_('grand_finale')) return;
         if (low2 >= 2 && has('chorus_grove') && try_('chorus_grove')) return;
         if (hurt >= 3 && has('encore') && try_('encore')) return;
-        if (hurt >= 2 && has('song_of_rest') && !auraOf(tank, 'song_of_rest') && try_('song_of_rest')) return;
+        if (has('song_of_rest') && (hurt >= 1 || E.songOf(u, 'song_of_rest')) && botSong(C, u, b, 'song_of_rest', null, try_, low2 >= 2)) return; // the song on the beat (#250); its Finale when two are low
         if (low && low.hp / low.maxHp < 0.4 && has('crescendo') && low.hp / low.maxHp > 0.2 && try_('crescendo', low)) return;
         if (low && low.hp / low.maxHp < thr && try_('soothing_chord', low)) return;
         if (tank && tank.hp / tank.maxHp < 0.9 && has('counterpoint') && !auraOf(tank, 'counterpoint') && try_('counterpoint', tank)) return;
         if (tank && tank.hp / tank.maxHp < 0.85 && has('verse_of_mending') && !auraOf(tank, 'verse_of_mending') && try_('verse_of_mending', tank)) return;
         for (const s of ['marching_song', 'hearthsong', 'anthem_of_stone']) if (has(s) && !auraOf(u, s) && try_(s)) return;
         if (en.length >= 3 && has('lullaby') && Math.random() < 0.3 * (b.skill || 0.5) && try_('lullaby')) return;
-        if (!b.healOnly && u.res / u.maxRes > 0.7 && Math.random() < 0.4) { const f = focusTarget(C, u); if (f && has('dirge') && !auraOf(f, 'dirge') && try_('dirge', f)) return; if (f) try_('dissonant_note', f); }
+        if (!b.healOnly && u.res / u.maxRes > 0.7 && Math.random() < 0.4) { const f = focusTarget(C, u); if (f && has('dirge') && botSong(C, u, b, 'dirge', f, try_, true)) return; if (f) try_('dissonant_note', f); }
         return;
       }
       if (low && low.hp / low.maxHp < thr && has('lesser_heal') && try_('lesser_heal', low)) return;
@@ -1411,7 +1498,7 @@
       try_('smite', tgt);
     } else if (u.cls === 'bard') { // a bard dealing damage (v10.9): the dirge on the target, the marching song, the sour note
       if (has('marching_song') && !auraOf(u, 'marching_song') && try_('marching_song')) return;
-      if (has('dirge') && !auraOf(tgt, 'dirge') && tgt.hp > tgt.maxHp * 0.3 && try_('dirge', tgt)) return;
+      if (has('dirge') && botSong(C, u, b, 'dirge', tgt, try_, true)) return; // on the beat (#250), its Finale when full
       try_('dissonant_note', tgt);
     }
   }
@@ -1445,7 +1532,8 @@
           if (u.dead) break;
         }
         if (a.hot != null && a.next <= C.t + 1e-6) { a.next += a.every; heal(C, C.units[a.src] || u, u, a.hot, { ab: a.ab, tick: true, effect: a.effect }); }
-        if (a.until <= C.t) { u.auras.splice(u.auras.indexOf(a), 1); if (a.stats) changed = true; }
+        if (a.song && a.next <= C.t + 1e-6 && a.until > C.t) { a.next += a.every; songHits(C, u, a, songPulse(C, u, a.ab, a.verses), { tick: true }); if (u.dead) break; }
+        if (a.until <= C.t) { u.auras.splice(u.auras.indexOf(a), 1); if (a.stats) changed = true; if (a.song) ev(C, { type: 'song', src: u.uid, ab: a.ab, what: 'end', verses: a.verses }); }
       }
       if (u.dead) continue;
       if (changed) E.recalc(u);
