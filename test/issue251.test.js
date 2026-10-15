@@ -25,6 +25,8 @@ test('the kit: daggers and staves, 23 abilities plus three instruments, Standing
   const B = D.CLASSES.bard;
   assert.deepStrictEqual(B.weapons, ['dagger', 'staff']);
   assert.deepStrictEqual(B.roles, ['healer', 'dps']);
+  assert.ok(B.hidden, 'hidden on a live build until #255 ships it');
+  for (const r in D.RACES) assert.ok(!D.RACES[r].classes.includes('bard'), `${r}: no Bard on a live build`);
   assert.strictEqual(B.abilities.filter((id) => !D.ABILITIES[id].instrument).length, 23);
   assert.strictEqual(D.ABILITIES.grand_finale.name, 'Standing Ovation');
   for (const id of ['song_of_rest', 'dirge', 'marching_song', 'ballad_of_blades']) assert.ok(D.ABILITIES[id].song, `${id} is a song`);

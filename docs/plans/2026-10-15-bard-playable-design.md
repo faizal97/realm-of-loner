@@ -32,6 +32,10 @@ caster on swords finds no upgrades and fills its rolls with gear it cannot use w
 - At full verses the song's button becomes its **Finale**: tap it to spend every verse at once in a burst; the song
   keeps playing from verse 1.
 - **Up to two combat songs at once** (three with the Medley talent).
+- **At full verses** a tap **on the beat** keeps the song at full, and a tap **off the beat** plays the Finale, so
+  holding the bonus and spending it are both one tap (decided while building #250).
+- **A song tap has a 0.5 s global cooldown**, not 1.5 s: two songs started together share their beat window, and a full
+  global cooldown after the first tap left no time to land the second (found by the bot sims in #251).
 - Why: it rewards timing, not tapping speed (docs/design-mindset.md §7), one tap every 8 to 16 seconds per song is
   kind to a phone, and the hold-or-spend choice is a real decision every fight. No other class plays like it.
 
