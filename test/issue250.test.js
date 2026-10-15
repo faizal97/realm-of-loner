@@ -7,6 +7,7 @@ const assert = require('node:assert');
 const { G, D, E, character } = require('./world');
 
 function bardFight(level) {
+  G.fight = null;
   const { P } = character(level || 20, 'bard', 'human');
   P.place = Object.keys(D.PLACES).find((k) => { const p = D.PLACES[k]; return p.lvl && p.lvl[0] <= 20 && p.lvl[1] >= 20 && !p.safe && (p.mobs || []).length; });
   const m = G.placeMobs().find((x) => x.state === 'alive'); G.engage(m.id);

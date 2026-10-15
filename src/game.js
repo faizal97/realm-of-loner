@@ -259,7 +259,7 @@
     cls = cls || G.S.player.cls;
     const C = D.CLASSES[cls];
     if (it.slot === 'weapon') return C.weapons.includes(it.wtype);
-    if (it.slot === 'ranged') return !!C.ranged;
+    if (it.slot === 'ranged') return it.wtype === 'instrument' ? !!C.instrument : !!C.ranged && it.wtype !== 'instrument'; // a bard's instrument, a hunter's bow (#251)
     // armour up to the class's own type: cloth < leather < mail (v10.9: the old class list left out the bard's leather)
     if (it.atype) { const R = { cloth: 0, leather: 1, mail: 2 }; return (R[it.atype] || 0) <= (R[C.armorType] || 0); }
     return D.GEAR_SLOTS.includes(it.slot);
@@ -344,12 +344,12 @@
     const it = { id: 'g' + Math.floor(Math.random() * 1e9), slot, q, lvl: q <= 1 ? Math.max(1, lvl - 2) : lvl };
     const qm = [0.8, 1, 1.1, 1.22, 1.35][q];
     if (slot === 'weapon' || slot === 'ranged') {
-      const wtype = slot === 'ranged' ? 'bow' : opts.wtype || pick(Object.keys(D.WEAPON_BASES).filter((k) => k !== 'bow'));
+      const wtype = slot === 'ranged' ? (opts.wtype === 'instrument' ? 'instrument' : 'bow') : opts.wtype || pick(Object.keys(D.WEAPON_BASES).filter((k) => k !== 'bow' && k !== 'instrument'));
       const Wb = D.WEAPON_BASES[wtype];
       const dps = (1.6 + lvl * 0.45) * qm * (wtype === 'staff' ? 1.35 : 1);
       const sp = Wb.speed + rnd(-0.2, 0.2);
       it.wtype = wtype; it.speed = Math.round(sp * 10) / 10;
-      it.dmg = [Math.max(1, Math.round(dps * it.speed * 0.7)), Math.max(2, Math.round(dps * it.speed * 1.3))];
+      if (wtype !== 'instrument') it.dmg = [Math.max(1, Math.round(dps * it.speed * 0.7)), Math.max(2, Math.round(dps * it.speed * 1.3))]; // an instrument gives stats only (#251)
       it.icon = Wb.icon;
       const pre = q === 0 ? pick(['Rusty', 'Cracked', 'Chipped']) : q === 1 ? pick(['Sturdy', 'Heavy', 'Plain']) : pick(['Keen', 'Polished', 'Guard\'s', 'Soldier\'s', 'Scout\'s']);
       it.name = `${pre} ${pick(Wb.names)}`;
@@ -541,7 +541,7 @@
     if (npc === 'corina' || npc === 'grawn' || npc === 'bruuk' || npc === 'ilyenia' || npc === 'mydrannul' || npc === 'kaplak' || npc === 'rahauro' || npc === 'mahnott' || npc === 'etu' || npc === 'gerard' || npc === 'abigail' || npc === 'lewis' || npc === 'nargal' || npc === 'thurman' || npc === 'verner' || npc === 'krond' || npc === 'gavin' || npc === 'dogran' || npc === 'aeolynn' || npc === 'burkrum' || npc === 'murndan' || npc === 'uthok' || npc === 'urda' || npc === 'blizrik' || npc === 'vivianna' || npc === 'krueg' || npc === 'shul_kar' || npc === 'xizzer_fizzbolt' || npc === 'armorer_hale' || npc === 'armorer_krosh') {
       if (!G.S.flags.corina || G.S.flags.corinaLvl !== G.S.player.level) {
         const L = G.S.player.level;
-        G.S.flags.corina = Object.keys(D.WEAPON_BASES).map((w) => { const it = G.genGear('weapon', Math.max(2, L), 1, { wtype: w }); it.cost = it.sell * 5; return it; });
+        G.S.flags.corina = Object.keys(D.WEAPON_BASES).map((w) => { const it = G.genGear(w === 'instrument' ? 'ranged' : 'weapon', Math.max(2, L), 1, { wtype: w }); it.cost = it.sell * 5; return it; }); // an instrument for a bard's ranged slot (#251)
         G.S.flags.corinaLvl = L;
       }
       return G.S.flags.corina;
@@ -1182,9 +1182,9 @@
   G.classAffix = (cls) => D.AFFIXES.find((a) => a.name === G.CLASS_AFFIX[cls]) || null;
   // a fitted piece: a slot the class can use, its armour type, one of its weapon types and its stat affix
   G.fittedGear = function (L, q, cls) {
-    const C = D.CLASSES[cls], slots = D.GEAR_SLOTS.filter((sl) => sl !== 'offhand' && (sl !== 'ranged' || C.ranged));
+    const C = D.CLASSES[cls], slots = D.GEAR_SLOTS.filter((sl) => sl !== 'offhand' && (sl !== 'ranged' || C.ranged || C.instrument));
     const slot = pick(slots), aff = G.classAffix(cls);
-    const opts = Object.assign(slot === 'weapon' ? { wtype: pick(C.weapons) } : slot === 'ranged' ? {} : { atype: C.armorType }, aff ? { affix: aff } : {});
+    const opts = Object.assign(slot === 'weapon' ? { wtype: pick(C.weapons) } : slot === 'ranged' ? (C.instrument ? { wtype: 'instrument' } : {}) : { atype: C.armorType }, aff ? { affix: aff } : {});
     return G.genGear(slot, L, q, opts);
   };
   // a dungeon's boss blues this class can use; none, then a fitted blue
@@ -1223,10 +1223,10 @@
     let had = G.S.flags[key];
     if (had && !Array.isArray(had)) had = [had]; // a save from before #141 keeps the one it showed
     if (had && had.length >= (two ? 2 : 1)) return had;
-    const kinds = fam.slot === 'weapon' ? C.weapons.concat(C.ranged ? ['ranged'] : []) : [null];
+    const kinds = fam.slot === 'weapon' ? C.weapons.concat(C.ranged || C.instrument ? ['ranged'] : []) : [null];
     const make = (kind, affName) => {
       const slot = kind === 'ranged' ? 'ranged' : fam.slot;
-      const opts = slot === 'ranged' ? {} : fam.slot === 'weapon' ? { wtype: kind } : { atype: C.armorType };
+      const opts = slot === 'ranged' ? (C.instrument ? { wtype: 'instrument' } : {}) : fam.slot === 'weapon' ? { wtype: kind } : { atype: C.armorType };
       const aff = affName ? D.AFFIXES.find((a) => a.name === affName) : null;
       return G.genGear(slot, fam.lvl, fam.q, Object.assign(opts, aff ? { affix: aff } : {}));
     };
@@ -1583,6 +1583,7 @@
     const P = G.S.player, ab = D.ABILITIES[abId];
     if (G.fight) return G.useAbility(abId);
     if (ab.combatOnly) return 'Use it in combat';
+    if (ab.instrument) { if (P.level < ab.lvl) return 'Not learned yet'; P.instrument = ab.instrument; G.save(); emit('change'); emit('info', `Now playing: ${ab.name.replace(/^Play (the )?/, '')}`); return null; } // a bard's rhythm (#251)
     if (G.fightBuff(abId)) return 'Use it in a fight.'; // before any cost (#165: it took the mana and the cooldown and applied nothing)
     if (ab.cd && ((P.cds || {})[abId] || 0) > now()) return E.cooldownText(abId, (P.cds[abId] - now()) / 1000); // (#173)
     if (ab.lifetap) {
@@ -3310,7 +3311,7 @@
     const q = b.skill > 0.72 ? (Math.random() < 0.4 ? 3 : 2) : b.skill > 0.4 ? 2 : 1;
     const wt = b.cls === 'paladin' ? 'mace' : b.role === 'healer' || b.cls === 'mage' || b.cls === 'warlock' ? 'staff' : C.weapons[0];
     const equip = { weapon: G.genGear('weapon', b.level, q, { wtype: wt }) };
-    if (C.ranged) equip.ranged = G.genGear('ranged', b.level, q);
+    if (C.ranged || C.instrument) equip.ranged = G.genGear('ranged', b.level, q, C.instrument ? { wtype: 'instrument' } : {});
     if (b.level >= 10 && q === 3) {
       const wl = BOT_WEAPON_LOOKS[b.cls];
       const named = wl && wl.map((k) => Object.keys(D.ITEMS).find((id) => D.ITEMS[id].look && D.ITEMS[id].look[1] === k)).filter((id) => id && G.canUseItem(D.ITEMS[id], b.cls));

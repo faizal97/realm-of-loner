@@ -226,6 +226,7 @@
   E.charUnit = function (char, side, kind, nowMs) {
     const C = D.CLASSES[char.cls];
     const u = baseUnit({ side, kind, char, name: char.name, cls: char.cls, level: E.levelOf(char), resType: C.resource, role: char.role || C.role, race: char.race || (char.bot && char.bot.race) || 'human' });
+    if (char.instrument) u.instrument = char.instrument; // a bard's chosen rhythm (#251); a Lute when none
     for (const a of (char.auras || [])) {
       const left = (a.until - nowMs) / 1000;
       if (left > 0) u.auras.push({ id: a.id, until: left, stats: a.stats, src: null, persistent: true, seal: a.seal, sealSchool: a.sealSchool, thorns: a.thorns, name: a.name, icon: a.icon, keep: a.keep });
@@ -414,6 +415,7 @@
       if (om.includes('enraging') && OM.enraging && src.boss) amount *= 1 + OM.enraging.dmg * Math.floor(C.t / OM.enraging.every);
     }
     if (auraOf(tgt, 'hunters_mark') && (src.cls === 'hunter' || (src.kind === 'pet' && C.units[src.owner] && C.units[src.owner].cls === 'hunter'))) amount *= 1.1;
+    { const mv = tgt.auras.find((a) => a.takenPct && a.bySide === src.side); if (mv) amount *= 1 + mv.takenPct / 100; } // Mocking Verse: the whole party's damage (#251)
     const tRP = tgt.race && D.RACIALS[tgt.race] && D.RACIALS[tgt.race].passives;
     if (tRP && tRP.resist && o.school && tRP.resist[o.school]) amount *= 1 - tRP.resist[o.school] / 100;
     const sRP = src.race && D.RACIALS[src.race] && D.RACIALS[src.race].passives;
@@ -637,6 +639,7 @@
     if (u.dead) return 'You are dead';
     { const fz = u.auras.find((a) => a.frozen); if (fz) return abId === fz.id ? null : `In ${D.ABILITIES[fz.id].name}`; } // frozen (Ice Block, #245): only breaking out
     if (stunned(C, u) && !ab.freeOf) return 'Stunned';
+    if (ab.instrument) return 'Change instruments outside a fight'; // (#251)
     if (u.cast && !untimed) return E.castingText(u.cast.ab);
     if (ab.gcd !== false && u.gcdUntil > C.t && !untimed) return E.GCD_WHY;
     if ((u.cds[abId] || 0) > C.t) return E.cooldownText(abId, u.cds[abId] - C.t);
@@ -752,10 +755,19 @@
     const n = C.units[u.target]; if (n && !n.dead && n.side !== u.side) { s.tgt = n.uid; return n; }
     return null;
   }
+  const songParty = (C, u) => alive(friends(C, u)).filter((a) => !a.pos || !u.pos || E.dist(u, a) <= DIST.ally);
   function songHits(C, u, s, amount, o) {
-    const ab = D.ABILITIES[s.ab];
-    if (ab.song.pulse === 'heal') { for (const w of alive(friends(C, u)).filter((a) => !a.pos || !u.pos || E.dist(u, a) <= DIST.ally)) heal(C, u, w, amount, Object.assign({ ab: s.ab }, o)); return; }
-    const t = songTarget(C, u, s); if (t) dealDamage(C, u, t, amount, Object.assign({ school: ab.song.school, ab: s.ab }, o));
+    const ab = D.ABILITIES[s.ab], S = ab.song;
+    if (o && o.finale) u.lastFinale = { ab: s.ab, amount, tgt: s.tgt }; // what Echo replays (#251)
+    if (S.pulse === 'heal') { for (const w of songParty(C, u)) heal(C, u, w, amount, Object.assign({ ab: s.ab }, o)); return; }
+    if (S.pulse === 'haste') { // the party's haste while the song plays; a Finale is a short surge on top
+      const id = o && o.finale ? s.ab + '_finale' : s.ab, dur = o && o.finale ? S.surge : s.every + 0.5;
+      for (const w of songParty(C, u)) addAura(C, w, { id, until: C.t + dur, stats: { haste: Math.round(amount * 10) / 10 }, src: u.uid, ab: s.ab });
+      return;
+    }
+    const t = songTarget(C, u, s); if (!t) return;
+    const hit = S.area ? alive(foes(C, u)).filter((e) => e === t || !e.pos || !t.pos || E.dist(t, e) <= DIST.radius) : [t]; // an area song reaches everything near its target
+    for (const e of hit) dealDamage(C, u, e, amount, Object.assign({ school: S.school, ab: s.ab }, o));
   }
   function playSong(C, u, abId, tgt) {
     const ab = D.ABILITIES[abId], R = E.rhythmOf(u), s = E.songOf(u, abId);
@@ -764,12 +776,14 @@
       if (on.length >= E.SONG_SLOTS) { u.auras = u.auras.filter((a) => a !== on[0]); ev(C, { type: 'song', src: u.uid, ab: on[0].ab, what: 'end', replaced: abId }); }
       u.auras.push({ id: 'song:' + abId, song: true, ab: abId, src: u.uid, began: C.t, until: C.t + R.len, verses: 0, every: ab.song.every, next: C.t + ab.song.every, tgt: tgt && tgt.side !== u.side ? tgt.uid : null });
       ev(C, { type: 'song', src: u.uid, ab: abId, what: 'start', verses: 0 });
+      if (ab.song.pulse === 'haste') songHits(C, u, E.songOf(u, abId), songPulse(C, u, abId, 0));
       return;
     }
     if (tgt && tgt.side !== u.side) s.tgt = tgt.uid;
     const onBeat = s.until - C.t <= R.win + 1e-9;
     if (s.verses >= R.max && !onBeat) { // the Finale: every verse at once; the song plays on from none
-      const amt = songPulse(C, u, abId, s.verses) * ab.song.finale * s.verses * R.finale; // at 3 verses on a Lute: 9 full pulses at once
+      const amt = ab.song.pulse === 'haste' ? songPulse(C, u, abId, s.verses) * ab.song.finale * R.finale // a haste surge: the song's haste times its Finale factor
+        : songPulse(C, u, abId, s.verses) * ab.song.finale * s.verses * R.finale; // at 3 verses on a Lute: 9 full pulses at once
       songHits(C, u, s, amt, { finale: true });
       ev(C, { type: 'song', src: u.uid, ab: abId, what: 'finale', verses: s.verses });
       s.verses = 0;
@@ -796,6 +810,11 @@
     ev(C, { type: 'ability', src: u.uid, ab: abId, tgt: tgt && tgt.uid });
     if (tgt && tgt.side !== u.side) { tgt.hitBy = tgt.hitBy || {}; tgt.hitBy[u.uid] = true; if (u.side === 'ally') u.target = tgt.uid; }
     if (ab.song) { playSong(C, u, abId, tgt); return; } // a bard's combat song (#250): start, renew on the beat, or its Finale
+    if (ab.echo) { // Echo (#251): your last Finale again, at half strength
+      const lf = u.lastFinale; if (lf) { const s = { ab: lf.ab, tgt: lf.tgt, every: 3 }; songHits(C, u, s, lf.amount * ab.echo, { echo: true }); u.lastFinale = lf; ev(C, { type: 'song', src: u.uid, ab: lf.ab, what: 'echo' }); }
+      return;
+    }
+    if (ab.manaBack) addAura(C, u, { id: abId, until: C.t + ab.manaBack.over, manaBack: (u.maxRes * ab.manaBack.pct) / 100 / ab.manaBack.over }); // Intermission (#251)
 
     if (ab.taunt) {
       const top = Math.max(0, ...Object.values(tgt.threat));
@@ -803,7 +822,7 @@
       ev(C, { type: 'taunt', src: u.uid, tgt: tgt.uid });
     }
     if (ab.rage) u.res = Math.min(100, u.res + ab.rage);
-    if (ab.stun && tgt && !tgt.boss) { tgt.stunUntil = C.t + ab.stun; ev(C, { type: 'stun', tgt: tgt.uid, dur: ab.stun }); }
+    if (ab.stun && tgt && !tgt.boss) { tgt.stunUntil = C.t + ab.stun; if (ab.fear) { tgt.fleeUntil = C.t + ab.stun; tgt.fleeFrom = u.uid; } ev(C, { type: 'stun', tgt: tgt.uid, dur: ab.stun }); } // fear: it runs from you (Stage Fright, #251)
 
     const centre = ab.target === 'aoe' && aoeAtTarget(ab) ? (C.units[u.target] && !C.units[u.target].dead ? C.units[u.target] : u) : u;
     const targets = ab.target === 'aoe' ? alive(foes(C, u)).filter((e) => !e.pos || !centre.pos || E.dist(centre, e) <= (ab.radius || DIST.radius)) : tgt ? [tgt] : []; // distance: an area attack has a radius
@@ -833,7 +852,7 @@
     }
     if (ab.slow && !ab.dmg && tgt && !tgt.dead) addAura(C, tgt, { id: abId + '_slow', until: C.t + ab.slow.dur, slow: ab.slow.pct });
     if (ab.root && !ab.dmg && tgt && !tgt.dead && !tgt.boss) addAura(C, tgt, { id: abId + '_root', until: C.t + ab.root, root: true });
-    if (ab.debuff && tgt && !tgt.dead) addAura(C, tgt, { id: ab.debuff.id, until: C.t + ab.debuff.dur });
+    if (ab.debuff && tgt && !tgt.dead) addAura(C, tgt, { id: ab.debuff.id, until: C.t + ab.debuff.dur, takenPct: ab.debuff.taken || 0, bySide: u.side }); // taken: % more damage from that side (Mocking Verse, #251)
     if (ab.shapeshift) { if (u.form) E.shiftOut(C, u); else E.shiftIn(C, u, ab.shapeshift); }
     if (ab.cp && tgt) {
       if (u.cpTarget !== tgt.uid) u.cp = 0;
@@ -901,7 +920,7 @@
     if (ab.stunImmune) u.stunImmuneUntil = C.t + ab.stunImmune;
     // a stomp or a scream reaches the foes within 8 m (stage 4)
     if (ab.stompAll) { for (const e of alive(foes(C, u))) if (!e.boss && (!e.pos || !u.pos || E.dist(u, e) <= (ab.radius || DIST.radius))) { e.stunUntil = C.t + ab.stompAll; if (ab.fear) { e.fleeUntil = C.t + ab.stompAll; e.fleeFrom = u.uid; } ev(C, { type: 'stun', tgt: e.uid, dur: ab.stompAll, fear: !!ab.fear }); } ev(C, { type: 'emote', uid: u.uid, text: `${u.name} stomps the ground!` }); }
-    if (ab.cleanse) u.auras = u.auras.filter((a) => !(a.dot != null && a.src !== u.uid));
+    if (ab.cleanse) { const cw = ab.target === 'ally' && tgt ? tgt : u; cw.auras = cw.auras.filter((a) => !(a.dot != null && a.src !== cw.uid && (!C.units[a.src] || C.units[a.src].side !== cw.side))); } // an ally's too (Cleansing Verse, #251)
     if (ab.dropThreat) {
       const others = alive(friends(C, u)).filter((a) => a !== u);
       for (const e of alive(foes(C, u))) {
@@ -1202,13 +1221,13 @@
   // with spend set it plays the Finale once the verses are full
   function botSong(C, u, b, abId, tgt, try_, spend) {
     const st = E.songState(C, u, abId);
-    if (!st.playing) return try_(abId, tgt);
+    if (!st.playing) return u.auras.filter((a) => a.song).length < E.SONG_SLOTS && try_(abId, tgt); // a free slot only: songs are started in the order a bot wants them
     if (st.finale && spend && !st.inWindow) return try_(abId, tgt);
     const s = E.songOf(u, abId);
     if (s.planFor !== s.until) {
       const sk = b.skill || 0.5;
       s.planFor = s.until;
-      s.plan = Math.random() < 0.55 + 0.4 * sk ? rnd(0.15, Math.max(0.2, st.win - 0.1)) : Math.random() < 0.5 ? st.win + rnd(0.3, 1.5) : -1;
+      s.plan = Math.random() < 0.55 + 0.4 * sk ? rnd(0.55, Math.max(0.6, st.win - 0.1)) : Math.random() < 0.5 ? st.win + rnd(0.3, 1.5) : -1;
       s.patient = Math.random() < 0.3 + 0.7 * sk; // holds back a cast that would run past the beat
     }
     return s.plan >= 0 && st.left <= s.plan ? try_(abId, tgt) : false;
@@ -1219,14 +1238,14 @@
     const A = D.ABILITIES[abId]; if (!A || A.song) return false;
     if (alive(friends(C, u)).some((a) => a.hp / a.maxHp < 0.35)) return false;
     const t = Math.max(A.cast || 0, A.gcd === false ? 0 : 1.5);
-    return u.auras.some((s) => s.song && s.patient && s.plan >= 0 && s.until - C.t - t < Math.min(s.plan, 0.3) && s.until - C.t > s.plan);
+    return u.auras.some((s) => s.song && s.patient && s.plan >= 0 && s.until - C.t > s.plan && s.until - C.t - t < s.plan); // it would end after the moment the bot meant to tap
   }
   // how long a fighter still cannot move toward you: rooted, stunned or running in fear
   const holdLeft = (C, f) => Math.max(0, f.stunUntil - C.t || 0, f.fleeUntil - C.t || 0, ...f.auras.filter((a) => a.root).map((a) => a.until - C.t));
   // kiting: open the gap while a melee foe is held, up to `gap` metres, running at most `run` seconds (sim/brawl.js tunes them)
   const G_KITE = E.KITE = { gap: 16, run: 1.5, edge: 2, safeHeal: 0.7 }; // edge: how much faster (m/s) you must be for running to pay
   const runSpeed = (C, x) => (x.auras.some((a) => a.root) || x.stunUntil > C.t ? 0 : moveSpeed(x));
-  const SOLO_UP = { bard: ['marching_song', 'hearthsong', 'anthem_of_stone'], shaman: ['rockbiter_weapon', 'lightning_shield'] };
+  const SOLO_UP = { bard: ['hearthsong', 'anthem_of_stone'], shaman: ['rockbiter_weapon', 'lightning_shield'] };
   const soloFoe = (en) => { const ch = en.filter((x) => x.kind !== 'pet'); return ch.length === 1 && ch[0].cls && !ch[0].boss ? ch[0] : null; }; // pets do not count
   E.SOLO_HEAL_AT = 0.6; // a skilled bot alone against monsters heals itself below about 60% health, shield first (#4; 0.45 before)
   const soloFight = (C, u, en) => !!soloFoe(en) && alive(friends(C, u)).filter((x) => x.kind !== 'pet').length === 1;
@@ -1297,6 +1316,8 @@
       if ((rA.bloodFury || rA.berserk) || (rA.stompAll && en.length >= 2) || (hurt && (rA.cleanse || (rA.dropThreat && u.role !== 'tank'))) || (u.stunUntil > C.t && rA.freeOf)) { if (try_(rac)) return; }
     }
     const has = (id) => D.CLASSES[u.cls].abilities.includes(id) && D.ABILITIES[id].lvl <= u.level;
+    // a bard keeps its songs on the beat before anything else, kiting included: a song tap is instant (#250)
+    if (u.cls === 'bard') for (const s of u.auras.filter((a) => a.song)) if (botSong(C, u, b, s.ab, C.units[s.tgt], try_, false)) return;
     // a lit ability (a reaction, v10.4) first: it is free, instant or ready only for a few seconds; better players see it more
     if (Math.random() < 0.45 + 0.55 * (b.skill || 0.5)) for (const a of u.auras) if (a.proc) for (const l of (a.lit || a.proc.lights)) {
       if (!knows(u, l)) continue;
@@ -1334,7 +1355,10 @@
         if (low && low.hp / low.maxHp < thr && try_('soothing_chord', low)) return;
         if (tank && tank.hp / tank.maxHp < 0.9 && has('counterpoint') && !auraOf(tank, 'counterpoint') && try_('counterpoint', tank)) return;
         if (tank && tank.hp / tank.maxHp < 0.85 && has('verse_of_mending') && !auraOf(tank, 'verse_of_mending') && try_('verse_of_mending', tank)) return;
-        for (const s of ['marching_song', 'hearthsong', 'anthem_of_stone']) if (has(s) && !auraOf(u, s) && try_(s)) return;
+        if (has('marching_song') && botSong(C, u, b, 'marching_song', null, try_, hurt === 0 && en.some((e) => e.boss))) return; // the second song (#251)
+        if (has('cleansing_verse')) { const sick = allies.find((a) => a.auras.some((x) => x.dot != null && C.units[x.src] && C.units[x.src].side !== a.side)); if (sick && Math.random() < 0.5 * (b.skill || 0.5) && try_('cleansing_verse', sick)) return; }
+        if (has('intermission') && u.res / u.maxRes < 0.35 && try_('intermission')) return;
+        for (const s of ['hearthsong', 'anthem_of_stone']) if (has(s) && !auraOf(u, s) && try_(s)) return;
         if (en.length >= 3 && has('lullaby') && Math.random() < 0.3 * (b.skill || 0.5) && try_('lullaby')) return;
         if (!b.healOnly && u.res / u.maxRes > 0.7 && Math.random() < 0.4) { const f = focusTarget(C, u); if (f && has('dirge') && botSong(C, u, b, 'dirge', f, try_, true)) return; if (f) try_('dissonant_note', f); }
         return;
@@ -1497,8 +1521,16 @@
       if (has('sw_pain') && !auraOf(tgt, 'sw_pain') && try_('sw_pain', tgt)) return;
       try_('smite', tgt);
     } else if (u.cls === 'bard') { // a bard dealing damage (v10.9): the dirge on the target, the marching song, the sour note
-      if (has('marching_song') && !auraOf(u, 'marching_song') && try_('marching_song')) return;
-      if (has('dirge') && botSong(C, u, b, 'dirge', tgt, try_, true)) return; // on the beat (#250), its Finale when full
+      // two songs on the beat (#250, #251): Dirge, then the Ballad against a pack or the Marching Song
+      if (has('dirge') && botSong(C, u, b, 'dirge', tgt, try_, true)) return;
+      const packed = alive(foes(C, u)).filter((e) => e === tgt || !e.pos || !tgt.pos || E.dist(tgt, e) <= DIST.radius).length >= 3;
+      if (packed && has('ballad_of_blades') && botSong(C, u, b, 'ballad_of_blades', tgt, try_, true)) return;
+      if (has('marching_song') && botSong(C, u, b, 'marching_song', null, try_, tgt.boss && tgt.hp < tgt.maxHp * 0.3)) return;
+      if (has('echo') && u.lastFinale && try_('echo')) return;
+      if (has('intermission') && u.res / u.maxRes < 0.3 && try_('intermission')) return;
+      if (has('mocking_verse') && (tgt.boss || tgt.elite) && !auraOf(tgt, 'mocking_verse') && try_('mocking_verse', tgt)) return;
+      if (has('sharp_refrain') && try_('sharp_refrain', tgt)) return;
+      if (has('shatterchord') && try_('shatterchord', tgt)) return;
       try_('dissonant_note', tgt);
     }
   }
@@ -1541,6 +1573,7 @@
       // resources
       if (u.resType === 'energy') u.res = Math.min(100, u.res + 10 * dt);
       if (u.resType === 'mana' && (C.t - u.lastCastT >= 5 || u.auras.some((x) => x.castRegen))) u.res = Math.min(u.maxRes, u.res + ((13 + u.st.spi / 4) / 2) * dt);
+      { const mb = u.auras.find((x) => x.manaBack); if (mb && !u.cast) u.res = Math.min(u.maxRes, u.res + mb.manaBack * dt); } // Intermission: mana back while not casting
       // casting
       if (u.cast) {
         if (stunned(C, u)) { u.cast = null; continue; }

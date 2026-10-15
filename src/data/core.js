@@ -425,6 +425,7 @@
     dagger: { names: ['Dirk', 'Knife', 'Stiletto'], speed: 1.6, icon: 'dagger' },
     staff: { names: ['Staff', 'Quarterstaff', 'Walking Stick'], speed: 3, icon: 'staff' },
     bow: { names: ['Shortbow', 'Longbow', 'Recurve Bow'], speed: 2.6, icon: 'bow' },
+    instrument: { names: ['Lute', 'Songbox', 'Travelling Lute'], speed: 2, icon: 'reedsong_lute' }, // a bard's (#251): stats only; the kind played is the bard's choice
   };
 
   D.GEAR_SLOTS = ['weapon', 'ranged', 'chest', 'legs', 'feet', 'hands', 'wrist', 'waist', 'back', 'finger'];
