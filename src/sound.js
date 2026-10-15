@@ -136,48 +136,69 @@
     if (prefs[k + 'Vol'] === v) return;
     prefs[k + 'Vol'] = v; savePrefs(); apply(k);
   };
-  // ---------- the Bard's song music (#257): while you sing, the song is the music. One phrase per instrument, as long as
-  // the song, in layers (music_bard_<instrument>_<n>, audio/compose_bard.py); a layer joins with each verse. Each tap plays
-  // the phrase from the start, so its last bar always falls on the beat window; a missed beat lets it ring out on its
-  // last chord. Only the current instrument's layers stay decoded.
-  const LAYERS = { lute: 4, drum: 4, horn: 3 }, DUCK = 0.25;
-  SND.songCur = null; // { inst, src: [{ s, g }], start (audio time at phrase 0), rate, layers }
+  // ---------- the Bard's song music (#257): while you sing, the song is the music. One phrase per instrument, as long as a
+  // song round, on the songs' shared beat (audio/compose_bard.py): layers music_bard_<instrument>_<n>, one more per verse,
+  // and parts music_bard_<instrument>_<part>, one per song that is up. A beat landed schedules the next round to start on
+  // the beat itself, so the run into it always finishes; a missed beat lets the last chord ring out. The game calls
+  // SND.songTo with where the round is; this keeps what plays in step with it. Only one instrument's files stay decoded.
+  const LAYERS = { lute: 4, drum: 4, horn: 3 }, DUCK = 0.25, SLACK = 0.3;
+  SND.song = { cur: null, next: null }; // a round: { inst, rate, start (audio time of its 0), src: { name: { s, g } } }
   SND.hasSong = (inst) => !!LAYERS[inst] && (root.AUDIO_FILES || []).includes(`bard_${inst}_1`);
-  const songStems = (inst) => Array.from({ length: LAYERS[inst] }, (_, i) => `music_bard_${inst}_${i + 1}`);
-  function songFade(cur, secs) {
-    if (!cur) return;
-    const t = SND.ctx.currentTime;
-    for (const x of cur.src) { x.g.gain.cancelScheduledValues(t); x.g.gain.setTargetAtTime(0, t, secs / 3); try { x.s.stop(t + secs + 0.1); } catch (e) { } }
-  }
   const duck = (on) => { if (SND.zoneGain) SND.zoneGain.gain.setTargetAtTime(on ? DUCK : 1, SND.ctx.currentTime, on ? 0.15 : 0.8); };
-  // play the phrase from `pos` seconds in (the song's elapsed time), with `layers` layers, at the fight's speed
-  SND.song = function (inst, layers, pos, rate) {
-    if (!SND.ctx || !SND.hasSong(inst)) return;
-    for (const n in SND.bufs) if (n.startsWith('music_bard_') && !n.startsWith(`music_bard_${inst}_`)) delete SND.bufs[n];
-    const want = { inst, layers, pos: pos || 0, rate: rate || 1, at: SND.ctx.currentTime };
-    SND.songWant = want;
-    Promise.all(songStems(inst).map(load)).then((bufs) => {
-      if (SND.songWant !== want || bufs.some((b) => !b)) return;
-      songFade(SND.songCur, 0.06);
-      const t = SND.ctx.currentTime, pos0 = want.pos + (t - want.at) * want.rate; // time spent loading counts
-      const src = bufs.map((b, i) => {
-        const s = SND.ctx.createBufferSource(); s.buffer = b; s.playbackRate.value = want.rate;
-        const g = SND.ctx.createGain(); g.gain.value = i < layers ? 1 : 0;
-        s.connect(g); g.connect(SND.musicGain); s.start(t, Math.min(Math.max(0, pos0), b.duration - 0.05));
-        return { s, g };
-      });
-      SND.songCur = { inst, src, start: t - pos0 / want.rate, rate: want.rate, layers };
-      duck(true);
-    });
+  function stopRound(r, at, secs) {
+    if (!r) return;
+    for (const n in r.src) { const x = r.src[n]; x.g.gain.cancelScheduledValues(at); x.g.gain.setTargetAtTime(0, at, secs / 3); try { x.s.stop(at + secs + 0.1); } catch (e) { } }
+  }
+  // the files a round wants now: its layers and its songs' parts, each on (1) or off (0)
+  const wanted = (w) => { const o = {}; for (let i = 1; i <= LAYERS[w.inst]; i++) o[`bard_${w.inst}_${i}`] = i <= w.layers ? 1 : 0; for (const p of w.parts || []) o[`bard_${w.inst}_${p}`] = 1; return o; };
+  // start any wanted file the round is missing (it joins at the right place), and set every file's level
+  function fill(r, w) {
+    const t = SND.ctx.currentTime, want = wanted(w);
+    for (const n in want) {
+      const x = r.src[n];
+      if (x) { if (x.on !== want[n]) { x.on = want[n]; x.g.gain.setTargetAtTime(want[n], Math.max(t, r.start), 0.06); } continue; }
+      if (!want[n]) continue;
+      const b = SND.bufs['music_' + n]; if (!b) { load('music_' + n); continue; } // decoded on a later call
+      const when = Math.max(t, r.start), off = (when - r.start) * r.rate; if (off >= b.duration - 0.05) continue;
+      const s = SND.ctx.createBufferSource(); s.buffer = b; s.playbackRate.value = r.rate;
+      const g = SND.ctx.createGain(); g.gain.value = off > 0 ? 0.0001 : 1; s.connect(g); g.connect(SND.musicGain);
+      s.start(when, off); if (off > 0) g.gain.setTargetAtTime(1, when, 0.05); // joining part-way: a short fade in
+      r.src[n] = { s, g, on: 1 };
+    }
+    for (const n in r.src) if (!(n in want) && r.src[n].on) { r.src[n].on = 0; r.src[n].g.gain.setTargetAtTime(0, Math.max(t, r.start), 0.06); }
+  }
+  // w: { inst, layers, parts, pos, rate }. pos is how far into the round the songs are (seconds of song time); below 0,
+  // the beat was landed and the next round starts in -pos seconds.
+  SND.songTo = function (w) {
+    if (!SND.ctx || !SND.hasSong(w.inst)) return;
+    for (const n in SND.bufs) if (n.startsWith('music_bard_') && !n.startsWith(`music_bard_${w.inst}_`)) delete SND.bufs[n];
+    const t = SND.ctx.currentTime, S = SND.song;
+    if (!SND.bufs[`music_bard_${w.inst}_1`]) { load(`music_bard_${w.inst}_1`); return; } // the lead first, then the rest joins
+    if (S.next && t >= S.next.start) { S.cur = S.next; S.next = null; }
+    const same = (r, start) => r && r.inst === w.inst && r.rate === w.rate && Math.abs(r.start - start) < SLACK;
+    if (w.pos >= 0) {
+      const start = t - w.pos / w.rate;
+      if (S.next) { stopRound(S.next, t, 0.05); S.next = null; }
+      if (!same(S.cur, start)) { stopRound(S.cur, t, 0.06); S.cur = { inst: w.inst, rate: w.rate, start, src: {} }; }
+      fill(S.cur, w);
+    } else {
+      const start = t - w.pos / w.rate;
+      if (!same(S.next, start)) {
+        if (S.next) stopRound(S.next, t, 0.05);
+        S.next = { inst: w.inst, rate: w.rate, start, src: {} };
+        if (S.cur) stopRound(S.cur, start, 0.12); // the old round's ringing tail gives way to the new one on the beat
+      }
+      fill(S.next, w);
+    }
+    duck(true);
   };
-  // how many layers play (a Finale spends the verses: back to the melody alone, in place)
-  SND.songLayers = function (n) { const c = SND.songCur; if (!c) return; c.layers = n; c.src.forEach((x, i) => x.g.gain.setTargetAtTime(i < n ? 1 : 0, SND.ctx.currentTime, 0.08)); };
-  // where the phrase is now (seconds into it), or null
-  SND.songPos = () => (SND.songCur && SND.ctx ? (SND.ctx.currentTime - SND.songCur.start) * SND.songCur.rate : null);
-  // the song ran out: no tap, so the last chord rings out; the place's music comes back after it
-  SND.songOut = function () { const c = SND.songCur; SND.songWant = null; if (!c) return; SND.songCur = null; songFade(c, 2.2); setTimeout(() => { if (!SND.songCur) duck(false); }, 1600); };
-  // stop at once (the fight is over, the song was replaced by one we don't follow)
-  SND.songStop = function () { const c = SND.songCur; SND.songWant = null; if (!c) return; SND.songCur = null; songFade(c, 0.4); duck(false); };
+  // no song left: the round rings out on its last chord (or fades, when the fight ends), a round already lined up never starts, the place's music returns
+  SND.songOut = function () {
+    const S = SND.song; if (!SND.ctx || (!S.cur && !S.next)) return;
+    if (S.next) stopRound(S.next, SND.ctx.currentTime, 0.05);
+    stopRound(S.cur, SND.ctx.currentTime, 2.2); // after a missed beat only the tail is left; when a fight ends, a fade
+    S.cur = S.next = null; setTimeout(() => { if (!SND.song.cur) duck(false); }, 1600);
+  };
   SND.pause = function () { if (SND.ctx && SND.ctx.state === 'running') SND.ctx.suspend(); };
   SND.resume = function () { if (SND.ctx && SND.ctx.state === 'suspended') SND.ctx.resume(); };
 

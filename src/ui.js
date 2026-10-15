@@ -1665,7 +1665,8 @@
   }
   // ---------- the Bard's song sounds and music (#257). Sounds: a note in your instrument's voice when a song starts, higher
   // for each verse on the beat (the last verse a fifth up), a chord for the Finale, a muted note when a verse is lost.
-  // Music: the phrase of the song you last tapped (src/sound.js SND.song), one layer per verse, kept in time with it.
+  // Music: every song you sing keeps one beat (src/engine.js songJoin), so the music is one round on that beat
+  // (src/sound.js SND.songTo): one more layer per verse (the most verses of any song up), one part per song up.
   const songRate = (C) => (G.speed > 1 && !G.isPvp(C) ? G.speed : 1);
   const semis = (n) => Math.pow(2, n / 12);
   function songSound(e, C, u) {
@@ -1675,22 +1676,17 @@
     else if (e.what === 'beat') S_.play(note, { gap: 0, vol: 0.85, rate: semis(e.verses >= R.max ? 7 : [0, 2, 4][e.verses]) });
     else if (e.what === 'early' || (e.what === 'end' && !e.replaced)) S_.play('song_miss', { gap: 0.2, vol: 0.7 });
     else if (e.what === 'finale' || e.what === 'echo') for (const n of [0, 4, 7, 12]) S_.play(note, { gap: 0, vol: e.what === 'echo' ? 0.35 : 0.55, rate: semis(n) });
-    if (!S_.hasSong || !S_.hasSong(inst)) return;
-    if (e.what === 'start' || e.what === 'beat' || e.what === 'early') { ui.songAb = e.ab; S_.song(inst, 1 + e.verses, 0, songRate(C)); }
-    else if (e.what === 'finale' && e.ab === ui.songAb) S_.songLayers(1);
-    else if (e.what === 'end' && !e.replaced && e.ab === ui.songAb) {
-      const other = u.auras.find((a) => a.song && a.ab !== e.ab);
-      if (other) { ui.songAb = other.ab; S_.song(inst, 1 + other.verses, R.len - (other.until - C.t), songRate(C)); }
-      else { ui.songAb = null; S_.songOut(); }
-    }
   }
-  // the music follows the song's own timer: a slow frame, a speed change or a song picked up again puts it back in time
+  // where the songs are on their beat, every batch of fight events: the round playing ends on the nearest beat still to
+  // come; once every song has landed it, the next round is lined up to start on it (a position below 0)
   function songSync(C) {
-    const S_ = window.SND, u = G.pUnit; if (!S_ || !S_.songCur || !u || !ui.songAb) return;
-    const st = E.songState(C, u, ui.songAb); if (!st.playing) return;
-    const want = st.len - st.left, rate = songRate(C), at = S_.songPos();
-    if (S_.songCur.rate !== rate || at == null || Math.abs(at - want) > 0.3) S_.song(S_.songCur.inst, 1 + st.verses, want, rate);
-    else if (S_.songCur.layers !== 1 + st.verses) S_.songLayers(1 + st.verses);
+    const S_ = window.SND, u = G.pUnit; if (!S_ || !S_.songTo || !u) return;
+    const on = u.auras.filter((a) => a.song);
+    if (!on.length) { if (ui.singing) { ui.singing = false; S_.songOut(); } return; }
+    const inst = u.instrument || 'lute', R = E.rhythmOf(u), t = G.fightNow ? G.fightNow() : C.t;
+    const beat = Math.min(...on.map((a) => a.until));
+    S_.songTo({ inst, layers: 1 + Math.max(...on.map((a) => a.verses)), parts: on.map((a) => D.songPart(a.ab)), pos: R.len - (beat - t), rate: songRate(C) });
+    ui.singing = true;
   }
   // taps still landing from a combo when the last enemy dies must not pull the next one
   let fightEndAt = 0;
@@ -5245,7 +5241,7 @@
     G.on('runUpdate', () => { if (G.S && G.S.run && G.S.run.phase === 'rest') tip('run'); });
     G.on('levelup', (d) => { if (d.level === 2) tip('level'); if (d.level === 8) tip('dungeon'); if (d.level === D.TALENT_START) tip('talents'); });
     G.on('chat', () => { if (G.S && G.S.chat.some((m) => m.act && m.act.state === 'open' && !m.act.accepted)) tip('request'); });
-    G.on('fightEnd', (d) => { fightEndAt = performance.now(); ui.songAb = null; if (window.SND && SND.songOut) SND.songOut(); renderAll(); if (d.result === 'lose' && !G.S.run) banner('You died'); });
+    G.on('fightEnd', (d) => { fightEndAt = performance.now(); if (ui.singing) { ui.singing = false; if (window.SND && SND.songOut) SND.songOut(); } renderAll(); if (d.result === 'lose' && !G.S.run) banner('You died'); });
     G.on('runUpdate', renderAll);
     G.on('runTick', () => {});
     // a chapter that waits on a quest (x1 waits for Veshmira) plays as soon as that quest is turned in
