@@ -1,6 +1,7 @@
 // The Bard's proof (#254, docs/plans/2026-10-15-bard-playable-design.md "Proof"): its two own checks.
 //   Instruments: Drum, Lute and Horn within a few % of each other when played well (damage and healing).
 //   Skill matters: a Bard who misses beats does clearly worse than one who lands them.
+//   Healing at level 60: at most 10% more than the best other healer class in the same fight (#254).
 // A bot Bard with its role's talents, against one long-lived enemy (damage) or in a party of five whose tank a strong enemy hits
 // and whom an area attack hits every 6 sec (healing), for 90 sec; seeded runs, the mean and the spread. Not in the build yet (manual, like sim/talents.js).
 //   SEED=0 N=40 node sim/bard.js
@@ -13,9 +14,10 @@ const N = +(process.env.N || 40), SECS = 90, LEVELS = (process.env.L || '40,60')
 const INST = ['lute', 'drum', 'horn'];
 
 // one 90-sec fight; returns the bard's damage or healing produced per second
-function fight(role, L, instrument, skill) {
-  const tl = G.autoTalents('bard', role, L, 0);
-  const ch = { name: 'Bard', cls: 'bard', level: L, role, talents: tl, instrument, equip: G.botChar({ name: 'g', cls: 'bard', race: 'human', level: L, skill: 0.6, role }).equip };
+function fight(role, L, instrument, skill, cls, landed) {
+  cls = cls || 'bard';
+  const tl = G.autoTalents(cls, role, L, 0);
+  const ch = { name: 'Healer', cls, level: L, role, talents: tl, instrument: cls === 'bard' ? instrument : undefined, equip: G.botChar({ name: 'g', cls, race: 'human', level: L, skill: 0.6, role }).equip };
   const b = E.charUnit(ch, 'ally', 'bot', 0); b.bot = { skill, react: 0.3 };
   const allies = [b];
   let tank = null;
@@ -27,7 +29,8 @@ function fight(role, L, instrument, skill) {
       const d = E.charUnit(dc, 'ally', 'bot', 2 + i); d.bot = { skill: 0.7, react: 0.3 }; allies.push(d);
     });
   }
-  // healing: a boss-strength hitter on the tank (6x a mob's damage), so there is real healing to do
+  // healing: a boss-strength hitter on the tank (6x a mob's damage): every healer class falls short here, so it measures how
+  // much each can heal (in a fight one can carry, the healing that lands is capped by the damage taken)
   const mob = E.mobUnit('harvest_reaper', L, role === 'healer' ? { hp: 1, dmg: +(process.env.HIT || 6) } : null); mob.maxHp = mob.hp = 1e9;
   if (role !== 'healer') mob.dmg = mob.dmg.map(() => 0);
   const C = E.fight(allies, [mob], role === 'healer' ? {} : { soloUid: b.uid });
@@ -37,12 +40,12 @@ function fight(role, L, instrument, skill) {
     // healing: a party-wide hit every 6 sec (a boss's area attack: 10% of everyone's health, never the killing blow); at 20% every
     // healer class wipes and runs dry, so skill can't show
     if (role === 'healer' && Math.floor(C.t / 6) > Math.floor((C.t - 0.1) / 6)) for (const a of allies) if (a.hp > 0) a.hp = Math.max(1, a.hp - a.maxHp * +(process.env.AOE || 0.1));
-    for (const e of C.events.splice(0)) if (e.src === b.uid) { if (role === 'healer' ? e.type === 'heal' : e.type === 'dmg') out += e.amount + (e.over || 0); } // healing produced, overheal included: the output, whatever the incoming damage
+    for (const e of C.events.splice(0)) if (e.src === b.uid) { if (role === 'healer' ? e.type === 'heal' : e.type === 'dmg') out += e.amount + (landed ? 0 : e.over || 0); } // healing produced, overheal included: the output, whatever the incoming damage (landed: without overheal, to compare classes)
   }
   return out / Math.max(1, C.t);
 }
 const stat = (xs) => { const m = xs.reduce((a, x) => a + x, 0) / xs.length; return { m, sd: Math.sqrt(xs.reduce((a, x) => a + (x - m) * (x - m), 0) / xs.length) }; };
-const runs = (role, L, inst, skill) => stat(Array.from({ length: N }, () => fight(role, L, inst, skill)));
+const runs = (role, L, inst, skill, cls, landed) => stat(Array.from({ length: N }, () => fight(role, L, inst, skill, cls, landed)));
 
 let ok = true;
 const check = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!cond) ok = false; };
@@ -56,6 +59,12 @@ for (const role of ['dps', 'healer']) for (const L of LEVELS) {
   const low = runs(role, L, 'lute', 0.4);
   console.log(`${role} L${L} lute skill 0.4: ${low.m.toFixed(1)} ±${low.sd.toFixed(1)} (${((low.m / per.lute.m - 1) * 100).toFixed(1)}% vs skill 0.9)`);
   check(low.m <= per.lute.m * 0.9, `${role} L${L}: missing beats costs at least 10%`);
+  if (role === 'healer' && L === 60) { // party healing is the Bard's niche, but by a little: at most 10% over the best other healer here
+    const others = ['priest', 'paladin', 'druid', 'shaman'].map((c) => [c, runs('healer', L, null, 0.9, c, true).m]), best = Math.max(...others.map((x) => x[1]));
+    const bard = runs('healer', L, 'lute', 0.9, 'bard', true).m;
+    console.log(`healer L${L} healing landed/sec: bard ${bard.toFixed(1)} · ` + others.map(([c, m]) => `${c} ${m.toFixed(1)}`).join(' · '));
+    check(bard <= best * 1.1, `healer L${L}: the Bard heals at most 10% more than the best other healer`);
+  }
 }
 console.log(ok ? 'bard sim OK' : 'bard sim: a check failed');
 process.exitCode = ok ? 0 : 1;

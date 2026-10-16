@@ -730,7 +730,7 @@
   // at once; a third takes the place of the one started first. The instrument sets the rhythm (Lute until #251).
   E.RHYTHM = {
     lute: { len: 12, win: 2, max: 3, finale: 1 },
-    drum: { len: 8, win: 1.5, max: 3, finale: 0.8, dmg: 0.85 },
+    drum: { len: 8, win: 1.5, max: 3, finale: 0.8, dmg: 0.85, heal: 0.9 },
     horn: { len: 16, win: 3, max: 2, finale: 1.6, dmg: 1.15, heal: 0.75 },
   };
   // a song costs its mana each round, scaled by the round's length, so every instrument costs the same mana per second
