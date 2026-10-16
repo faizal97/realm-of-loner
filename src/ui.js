@@ -1392,13 +1392,13 @@
       const tgt = C.units[u.target];
       list.append(h('button', { class: 'row' + (u.dead ? ' off' : ''), onclick: () => { G.setTarget(u.uid); renderTarget(); markTargets(); } },
         h('div', { class: 'ic mob' }, img(u.kind === 'mob' ? mobArt(u.key) : art('portrait', looks(u.char)))),
-        h('div', { class: 't' }, h('b', null, h('span', { style: { color: conColor(u.level) } }, u.level + ' '), u.name), h('small', null, u.dead ? 'Dead' : (u.kind !== 'mob' ? `${(D.RACES[u.race] || {}).name || ''} ${D.CLASSES[u.cls].name} · ` : '') + (tgt ? 'Attacking ' + (tgt.kind === 'player' ? 'you' : tgt.name) : ''))),
+        h('div', { class: 't' }, h('b', null, h('span', { style: { color: conColor(u.level) } }, u.level + ' '), u.name), h('small', null, u.dead ? 'Dead' : (u.kind !== 'mob' ? `${(D.RACES[u.race] || {}).name || ''} ${D.CLASSES[u.cls].name} · ` : '') + (u.key === 'practice_target' ? 'Never strikes back' : tgt ? 'Attacking ' + (tgt.kind === 'player' ? 'you' : tgt.name) : ''))), // the Rehearsal's target (#256)
         h('div', { class: 'r tnum', 'data-hp': u.uid }, ''),
         h('div', { class: 'buffs rowbuffs', 'data-au': u.uid })));
     }
     joiningRow(C, list); // out questing too, where social pulls happen (#122)
     p.append(h('div', { class: 'sec-h' }, 'In combat', h('small', null, 'tap an enemy to target it')), list);
-    p.append(h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', onclick: () => G.flee() }, G.fight && (G.fight.kind === 'duel' || G.fight.kind === 'brawl') ? 'Yield' : 'Run away')));
+    p.append(h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', onclick: () => G.flee() }, G.fight && (G.fight.kind === 'duel' || G.fight.kind === 'brawl') ? 'Yield' : G.fight && G.fight.kind === 'rehearsal' ? 'Stop' : 'Run away')));
     tracker(p);
   }
   const MARK_SYM = { skull: '☠', cross: '✖' };
@@ -1662,6 +1662,7 @@
     const on = !!st && st.playing;
     btn.classList.toggle('singing', on); btn.classList.toggle('beat', on && st.inWindow); btn.classList.toggle('loaded', on && st.finale);
     if (on && st.finale && st.verses >= st.max) bardCard('finale');
+    btn.classList.toggle('teach', !!G.rehearsalNow()); // the Rehearsal points at the songs (#256)
     const sg = btn.querySelector('.song');
     if (sg && on) { const left = Math.max(0, st.left - (G.fightNow ? G.fightNow() - C.t : 0)); sg.style.setProperty('--left', Math.min(1, left / st.len)); sg.style.setProperty('--win', st.win / st.len); }
     const vs = btn.querySelector('.verses'), k = on ? st.max + ':' + st.verses : '';
@@ -1768,6 +1769,25 @@
 
   // "How Bards play" (#256): the song button's states drawn with the bar's own pieces (the .ab song string and verse
   // diamonds), one cycle playing on a loop, and the instruments read from E.RHYTHM, so a new instrument shows itself
+  // the Rehearsal (#256): its page in the Quest Log, and the step callout over the bar while it runs
+  function openRehearsal() {
+    openSheet('rehearsal', 'The Rehearsal', 'Level ' + G.REHEARSAL_LVL + ' · Bard training', (b) => {
+      b.append(h('p', null, 'A practice fight against a target that never strikes back. Each step is shown over your bar; go at your own pace. Stop any time and try again later.'),
+        h('h3', null, 'Steps'), h('ol', { class: 'reh-steps' }, ...G.REHEARSAL_STEPS.map((x) => h('li', null, x.text))),
+        h('h3', null, 'Reward'), h('p', { html: `${G.questXpFor({ lvl: G.REHEARSAL_LVL }).toLocaleString()} XP · ` + moneyHtml(G.questMoney(G.REHEARSAL_LVL), false, true) }));
+      const why = G.rehearseWhy();
+      b.append(h('div', { class: 'btn-row' }, h('button', Object.assign({ class: 'btn' + (why ? ' why' : '') }, why ? { 'aria-disabled': 'true' } : {}, { onclick: () => { const w = G.rehearse(); if (w) return toast(w); closeSheet(); } }), 'Rehearse'),
+        h('button', { class: 'btn alt', onclick: () => { closeSheet(); openBardHow(); } }, 'How Bards play')));
+      if (why) b.append(h('p', { class: 'ai-note' }, why));
+    });
+  }
+  function rehearsalCallout(R) {
+    if (ui.rehEl) { ui.rehEl.remove(); ui.rehEl = null; }
+    if (!R || R.done) return;
+    const st = G.REHEARSAL_STEPS[R.step];
+    ui.rehEl = h('div', { class: 'tip-card banner reh-card' }, h('div', { class: 'tip-t' }, h('b', { style: { color: 'var(--gold)' } }, `Step ${R.step + 1}/${G.REHEARSAL_STEPS.length} `), st.text, R.note ? h('div', { class: 'dim' }, R.note) : null));
+    (document.getElementById('app') || document.body).append(ui.rehEl);
+  }
   function bardDemo(st) { // st: { left 0-1, win 0-1, verses, max, beat, finale }
     const b = h('div', { class: 'ab singing' + (st.beat ? ' beat' : '') + (st.finale ? ' loaded' : '') }, img(abIcon('song_of_rest')),
       h('div', { class: 'song' }, h('i', { class: 'beatz' }), h('i', { class: 'str' })),
@@ -2639,7 +2659,9 @@
       const P = G.S.player;
       const qs = readyFirst(Object.keys(P.quests)), bs = G.myBounties();
       const sub = title && title.querySelector('small'); if (sub) sub.textContent = counts(); // fresh after a hand-in or Back
-      if (!qs.length && !bs.length) b.append(h('p', null, 'No quests. Look for a yellow ! or a Bounty Board in town.'));
+      if (G.rehearsalOpen()) b.append(h('button', { class: 'row', onclick: openRehearsal }, h('div', { class: 'ic' }, qmark('active')),
+        h('div', { class: 't' }, h('b', { style: { color: conColor(G.REHEARSAL_LVL) } }, `[${G.REHEARSAL_LVL}] The Rehearsal`), h('small', null, 'Bard training · a practice fight')), h('div', { class: 'r' }, '›'))); // #256
+      if (!qs.length && !bs.length && !G.rehearsalOpen()) b.append(h('p', null, 'No quests. Look for a yellow ! or a Bounty Board in town.'));
       if (bs.length) b.append(h('div', { class: 'sec-h' }, 'Quests', h('small', null, qs.length ? `${qs.length} of 20` : 'none yet: look for a yellow !')));
       for (const qid of qs) {
         const st = G.questState(qid);
@@ -4065,6 +4087,7 @@
       if (!L.length) { b.append(h('div', { class: 'people' }, 'No mail. Letters about your auctions arrive here.')); return; }
       const list = h('div', { class: 'list' });
       for (const m of L) {
+        if (m.kind === 'letter') { const row = h('button', { class: 'row', onclick: () => openLetter(m) }, h('div', { class: 'ic' }, img(abIcon('song_of_rest'))), h('div', { class: 't' }, h('b', null, m.title), h('small', null, `${m.from}, ${agoText(m.at)}`)), h('div', { class: 'r' }, '›')); if (fresh.has(m.id)) row.classList.add('mail-new'); list.append(row); continue; } // a letter (#256)
         const sub = (m.kind === 'sold' ? `Sold to ${m.buyer}, ` : m.taken ? 'Expired, taken, ' : 'Expired, waiting, ') + agoText(m.at);
         const right = m.kind === 'sold' ? G.moneyText((m.got || 0) + (m.dep || 0)) : G.mailWaiting(m) && here ? 'Take' : '';
         const row = itemRow(m.item, m.n || 1, right, () => openLetter(m), sub);
@@ -4075,6 +4098,9 @@
     });
   }
   function openLetter(m) {
+    if (m.kind === 'letter') return showDialog([h('h3', null, m.title), h('p', { class: 'dim' }, m.from), h('p', null, m.text),
+      h('div', { class: 'btn-row' }, G.rehearsalOpen() && m.title === 'The Rehearsal' ? h('button', { class: 'btn', onclick: () => { const w = G.rehearse(); if (w) return toast(w); closeDialog(); closeSheet(); } }, 'Rehearse') : null,
+        h('button', { class: 'btn alt', onclick: () => { G.mailDelete(m.id); closeDialog(); if (ui.sheetFn) ui.sheetFn(); } }, 'Delete'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Close'))], true);
     const rows = [h('h3', null, (m.kind === 'sold' ? 'Sold: ' : 'Expired: ') + m.item.name + ((m.n || 1) > 1 ? ` ×${m.n}` : ''))];
     if (m.kind === 'sold') rows.push(h('p', null, `Bought by ${m.buyer}, ${agoText(m.at)}.`),
       h('p', { html: 'Received: ' + moneyHtml(m.got || 0, false, true) + ' after the 5% cut' + (m.dep ? ', plus ' + moneyHtml(m.dep, false, true) + ' deposit back' : '') + '.' }));
@@ -4837,7 +4863,7 @@
   // the Bard's teaching cards (#256): once per character, at the moment each one helps, always shown (the first-hour tips
   // start off for older players, who roll the first Bards); each opens How Bards play. Numbers come from the data.
   function bardCard(key) {
-    const P = G.S && G.S.player; if (!P || P.cls !== 'bard') return;
+    const P = G.S && G.S.player; if (!P || P.cls !== 'bard' || G.rehearsalNow()) return; // the Rehearsal's own steps teach there
     P.bardSeen = P.bardSeen || {}; if (P.bardSeen[key]) return;
     const R = E.RHYTHM, L = R.lute, win = L.win / L.len, inst = (k) => { const a = D.ABILITIES['play_' + k], r = R[k]; return `${a.name.replace(/^Play the /, '')}: ${r.len} sec rounds, a ${r.win} sec beat, up to ${r.max} verses. Tap its button outside a fight to switch.`; };
     const C = {
@@ -5370,6 +5396,7 @@
     G.on('questReady', () => tip('questReady'));
     G.on('roll', () => tip('roll'));
     G.on('runUpdate', () => { if (G.S && G.S.run && G.S.run.phase === 'rest') tip('run'); });
+    G.on('rehearsal', (R) => rehearsalCallout(R)); G.on('fightStart', () => setTimeout(() => rehearsalCallout(G.rehearsalNow()), 50)); // #256
     G.on('levelup', (d) => { const l = d.learned || [], ks = [['marching_song', 'second'], ['play_drum', 'drum'], ['play_horn', 'horn']].filter(([a]) => l.includes(a)).map(([, k]) => k).concat(d.level === D.TALENT_START ? ['talents'] : []); ks.forEach((k, i) => whenCalm(() => setTimeout(() => bardCard(k), i * 15000))); }); // the Bard's teaching cards (#256)
     G.on('levelup', (d) => { if (d.level === 2) tip('level'); if (d.level === 8) tip('dungeon'); if (d.level === D.TALENT_START) tip('talents'); });
     G.on('chat', () => { if (G.S && G.S.chat.some((m) => m.act && m.act.state === 'open' && !m.act.accepted)) tip('request'); });

@@ -1761,7 +1761,21 @@
   function addKeys(list, keys) { var a = Array.isArray(list) ? list : []; keys.forEach(function (k) { if (a.indexOf(k) < 0) a.push(k); }); return a; }
 
   var LEGENDS = { lyveus: lyveusSprite, lyveus_hooded: lyveusHoodedSprite, widya: widyaSprite, harrowby: harrowbySprite };
-  var MOBS = { lord_cassius_marrow: cassiusMob, sal_brightbell: salMob };
+  // the Bard's Rehearsal target (#256): a straw sack on a wooden post and stand, painted with rings, a crossbar of straw
+  // arms; it never fights back
+  function practiceMob(c) {
+    var wood = '#8a5a2e', straw = '#d8b45a', sack = '#c9a46a', o = shadow(c, 64, 30);
+    o += P('M44,122 L64,104 L84,122', null, 0) + L('M44,121 L64,103 L84,121', OL, 9) + L('M44,121 L64,103 L84,121', wood, 5.5); // the stand
+    o += R(60, 40, 8, 66, c.lg([[0, lt(wood, 0.25)], [1, dk(wood, 0.25)]], 0, 0, 1, 0), 2.2); // the post
+    o += L('M30,50 L98,50', OL, 9) + L('M30,50 L98,50', wood, 5.5); // the crossbar
+    for (var i = 0; i < 2; i++) { var x = i ? 98 : 30, d = i ? 1 : -1; o += L('M' + x + ',50 l' + 7 * d + ',-5 M' + x + ',50 l' + 8 * d + ',1 M' + x + ',50 l' + 6 * d + ',6', dk(straw, 0.15), 2.6); }
+    o += E(64, 72, 25, 28, c.lg([[0, lt(sack, 0.25)], [0.6, sack], [1, dk(sack, 0.3)]], 0.2, 0, 0.8, 1), 2.4); // the straw sack
+    o += C(64, 72, 17, '#f1e6c8', 1.6) + C(64, 72, 11.5, '#b8322a', 1.4) + C(64, 72, 6, '#f1e6c8', 1.2) + C(64, 72, 2.4, '#b8322a', 0); // painted rings
+    o += L('M40,92 Q64,99 88,92', dk(sack, 0.35), 2.2) + L('M44,52 Q64,46 84,52', dk(sack, 0.35), 2.2); // rope bands
+    o += L('M60,44 l-6,-7 M64,44 l0,-9 M68,44 l6,-7', straw, 2.4); // straw at the top
+    return o;
+  }
+  var MOBS = { lord_cassius_marrow: cassiusMob, sal_brightbell: salMob, practice_target: practiceMob };
   var SCENES = { silverleaf_lodge: lodgeScene };
   var ACTORS = { lyveus: lyveusActor, vyn: vynActor, lyveus_hooded: lyveusHoodedActor, deathwing: deathwing, widya: widyaActor, harrowby: harrowbyActor };
   var STORY_SCENES = { silverleaf_burning: burningScene, caravan_road: caravanScene };

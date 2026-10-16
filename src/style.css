@@ -1045,3 +1045,7 @@ button.ev-fact { width: 100%; background: none; border: 0; border-bottom: 1px so
 .tip-card .tip-row { display: grid; grid-template-columns: 44px 1fr; gap: 10px; align-items: center; }
 .tip-card .tip-pic { width: 44px; height: 44px; border-radius: 3px; }
 .tip-card .ab.tip-pic { max-height: 44px; }
+/* the Rehearsal (#256): the step over the bar, and the song buttons it points at (a soft white pulse, unlike a reaction's gold) */
+.ab.teach::after { content: ''; position: absolute; inset: 0; z-index: 4; pointer-events: none; border-radius: inherit; box-shadow: inset 0 0 0 2px #e8f4ff; animation: litpulse 1s ease-in-out infinite alternate; }
+.reh-steps { margin: 4px 0 8px 20px; padding: 0; }
+.reh-steps li { margin: 4px 0; }

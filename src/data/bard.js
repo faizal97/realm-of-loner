@@ -88,6 +88,8 @@
   // song that names none gets one from what it does; a new part needs its layers in the composer.
   D.SONG_PARTS = ['high', 'low', 'march', 'riff'];
   D.songPart = (abId) => { const S = D.ABILITIES[abId].song; return S.part || (S.pulse === 'heal' ? 'high' : S.pulse === 'haste' ? 'march' : S.area ? 'riff' : 'low'); };
+  // the Rehearsal's practice target (#256): never in the world, never fights back; art in art_legends.js
+  D.MOBS.practice_target = { name: 'Practice Target', lvl: [1, 60], family: 'mechanical', drops: [] };
   D.TALENT_BOT.healer.bard = ['harmony', 'tempo'];
   D.TALENT_BOT.dps.bard = ['discord', 'harmony'];
 })(typeof window !== 'undefined' ? window : globalThis);

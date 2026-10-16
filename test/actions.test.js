@@ -16,7 +16,7 @@ const fromUi = (() => {
 })();
 
 // reads that a handler calls to decide or show something; no state changes, and covered by the actions that use them
-const NOT_ACTIONS = new Set(['isHealPick', 'canDiscard', 'canUseItem', 'characters', 'copyItem', 'displayName', 'effectOf', 'enemyTown', 'isUpgrade', 'knownProfIds',
+const NOT_ACTIONS = new Set(['rehearsalOpen', 'isHealPick', 'canDiscard', 'canUseItem', 'characters', 'copyItem', 'displayName', 'effectOf', 'enemyTown', 'isUpgrade', 'knownProfIds',
   'legendOn', 'lwHardOpen', 'moneyText', 'profs', 'rankName', 'role', 'travelSecs', 'treeSpent', 'usable',
   // these end or replace the character (the test world runs one): load, logout and wipeSave have their own test below
   'load', 'logout', 'wipeSave']);
@@ -100,6 +100,7 @@ const ACTIONS = {
   ahPost: () => { give('linen_cloth', 5); G.ahPost(G.S.player.bags.length - 1, 100); },
   ahBuy: () => { const l = (G.ahListings ? G.ahListings() : []) || []; G.ahBuy(l[0] ? l[0].id : 'none'); },
   mailTake: () => { G.mailSend({ kind: 'expired', item: G.genGear('chest', 10, 2), n: 1 }); G.mailTake(G.mail()[G.mail().length - 1].id); }, // the inbox (#258)
+  rehearse: () => G.rehearse(), // refused for this test's warrior: nothing to rehearse (#256)
   mailDelete: () => { G.mailSend({ kind: 'sold', item: G.genGear('chest', 10, 2), n: 1, buyer: 'x', got: 1 }); G.mailDelete(G.mail()[G.mail().length - 1].id); },
   ahCancel: () => { give('linen_cloth', 5); G.ahPost(G.S.player.bags.length - 1, 100); G.ahCancel(0); }, // Cancel shows once you have a listing
   joinGuild: () => G.joinGuild(0),

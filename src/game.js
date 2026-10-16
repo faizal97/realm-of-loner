@@ -174,6 +174,7 @@
     if (S.player.done && S.player.done.rr_gnoll_paws && S.player.visited && !S.player.visited.lakeshire) delete S.player.done.rr_gnoll_paws;
     // v3: stacks saved before a material changed slot (linen was junk) take the item's current slot and icon
     for (const b of (S.player.bags || []).concat(S.player.bank || [])) { const base = D.ITEMS[b.item.id]; if (base && base.slot === 'mat' && b.item.slot !== 'mat') { b.item.slot = 'mat'; b.item.icon = base.icon; } }
+    G.rehearsalLetter(); // a Bard already past level 4 gets the Rehearsal's letter once (#256)
     G.honorLooks(true); // rank looks a character already earned (Honor ranks, #57), without a message
     return G.catchUp();
   };
@@ -716,6 +717,7 @@
     const learned = D.CLASSES[P.cls].abilities.filter((a) => D.ABILITIES[a].lvl === P.level);
     for (const a of learned) sys(`You have learned a new ability: ${D.ABILITIES[a].name}.`);
     if (P.level >= D.TALENT_START) sys(`You have a new talent point. Open Hero → Talents to spend it.`);
+    if (P.level === G.REHEARSAL_LVL) G.rehearsalLetter(); // the Bard's Rehearsal (#256)
     emit('levelup', { level: P.level, learned });
     // the server notices
     const S = G.S;
@@ -1577,9 +1579,78 @@
   };
   G.setTarget = function (uid) { if (G.fight && G.pUnit) { const u = G.fight.units[uid]; if (u && !u.dead) { if (u.side === 'enemy') G.pUnit.target = uid; else { G.fight.allyTarget = uid; G.S.healPick = u.memberRef ? pickKey(u.memberRef) : null; G.S.healPickName = u.memberRef ? u.memberRef.name : null; } emit('target'); } } };
   G.toggleAuto = function () { if (G.pUnit) G.pUnit.auto = !G.pUnit.auto; };
+  // ---------- the Bard's Rehearsal (#256): at level 4 a letter from the trainers; from the Quest Log, a practice fight
+  // against a target that never fights back, in guided steps. It cannot be failed; stopping loses nothing.
+  G.REHEARSAL_LVL = 4;
+  G.REHEARSAL_STEPS = [
+    { key: 'start', text: 'Tap a song to start it.' },
+    { key: 'beat', text: 'Wait for the gold, then tap the song: a verse.' },
+    { key: 'early', text: 'Now tap the song before the gold: a verse is lost.' },
+    { key: 'finale', text: 'Fill every verse on the beat, then tap off the beat: the Finale.' },
+  ];
+  G.rehearsalOpen = () => { const P = G.S && G.S.player; return !!P && P.cls === 'bard' && P.level >= G.REHEARSAL_LVL && !P.rehearsed; };
+  G.rehearsalLetter = function () { // once per character, at level 4 (or on load for a Bard already past it)
+    const P = G.S.player; if (!G.rehearsalOpen() || P.rehearsalMail) return;
+    P.rehearsalMail = true;
+    const from = G.myFaction() === 'horde' ? 'The drum-speakers of Vazhrak' : 'The heralds of Kingsmere';
+    G.mailSend({ kind: 'letter', from, title: 'The Rehearsal', text: 'Every Bard learns the beat before a crowd hears it. When you have a quiet moment, rehearse: a practice target waits for you, and it never strikes back. Quest Log → The Rehearsal.' });
+  };
+  G.rehearseWhy = function () {
+    const S = G.S, P = S.player;
+    if (!G.rehearsalOpen()) return 'Nothing to rehearse.';
+    if (G.fight) return 'You are in combat.';
+    if (S.run || S.bg || P.travel || P.ghostUntil) return 'Not now.';
+    if (!D.CLASSES.bard.abilities.some((a) => D.ABILITIES[a].song && D.ABILITIES[a].lvl <= P.level)) return 'You know no songs yet.';
+    return null;
+  };
+  G.rehearse = function () {
+    const why = G.rehearseWhy(); if (why) return why;
+    const P = G.S.player;
+    stopActions();
+    const pu = E.charUnit(P, 'ally', 'player', now());
+    const mu = E.mobUnit('practice_target', P.level, { hp: 1, dmg: 0 });
+    mu.maxHp = mu.hp = 1e9; mu.dmg = [0, 0]; mu.swingT = 1e9; mu.dodge = 0; // a target: it never swings, never falls
+    G.pUnit = pu;
+    G.fight = E.fight([pu], [mu], { soloUid: pu.uid });
+    G.fight.kind = 'rehearsal'; G.fight.rehearsal = { step: 0 };
+    emit('fightStart', { fight: G.fight });
+    emit('rehearsal', { step: 0 });
+    return null;
+  };
+  G.rehearsalNow = () => (G.fight && G.fight.kind === 'rehearsal' ? G.fight.rehearsal : null);
+  function rehearsalStep(C, evs) {
+    const R = C.rehearsal, me = G.pUnit && G.pUnit.uid;
+    for (const e of evs) {
+      if (e.type !== 'song' || e.src !== me || R.done) continue;
+      const want = G.REHEARSAL_STEPS[R.step].key;
+      if (e.what === 'end' && !e.replaced) { R.note = 'The song ran out, and its verses with it. Start it again.'; if (R.step > 0 && !G.pUnit.auras.some((a) => a.song)) { R.step = 0; emit('rehearsal', R); } continue; }
+      const hit = (want === 'start' && e.what === 'start') || (want === 'beat' && e.what === 'beat' && !e.sync) || (want === 'early' && e.what === 'early') || (want === 'finale' && e.what === 'finale');
+      if (!hit) continue;
+      R.note = null;
+      if (R.step + 1 >= G.REHEARSAL_STEPS.length) { R.done = true; C.over = 'win'; } else R.step++;
+      emit('rehearsal', R);
+    }
+  }
+  function endRehearsal(C) {
+    const P = G.S.player, R = C.rehearsal;
+    E.writeBack(C, G.pUnit, now());
+    G.fight = null; G.pUnit = null;
+    if (R && R.done) {
+      P.rehearsed = true;
+      sys('The Rehearsal completed.');
+      const m = G.questMoney(G.REHEARSAL_LVL); P.money += m; sys(`Received ${G.moneyText(m)}.`);
+      G.gainXp(G.questXpFor({ lvl: G.REHEARSAL_LVL }), false);
+      emit('questDone', { qid: 'rehearsal', text: 'The Rehearsal complete' });
+    } else sys('Rehearsal stopped. Try again from the Quest Log.');
+    emit('fightEnd', { result: R && R.done ? 'win' : 'flee' });
+    emit('rehearsal', null);
+    emit('change'); G.save();
+  }
+
   G.flee = function () {
     const C = G.fight;
     if (C && (C.kind === 'duel' || C.kind === 'brawl')) { C.over = 'lose'; sys('You yield.'); return; } // yielding a duel (or a brawl round) counts as a loss
+    if (C && C.kind === 'rehearsal') { C.over = 'lose'; return; } // stopping a Rehearsal: nothing lost, try again later
     if (!C || (C.kind !== 'solo' && C.kind !== 'pvp')) return;
     if (Math.random() < (C.kind === 'pvp' ? 0.45 : 0.6)) {
       if (C.kind === 'pvp') { const f = G.S.flags; G.S.player.pvp = G.pvpStats(); G.S.player.pvp.escapes++; f.nextAmbush = now() + AMBUSH_GAP; }
@@ -4069,6 +4140,7 @@
           if (tb) partySay(tb, pick(['oops', 'my bad', 'extra pack sry', 'uh oh']));
           else B.post(S, 'party', null, 'extra pack!');
         }
+        if (C.kind === 'rehearsal' && C.events.length) rehearsalStep(C, C.events);
         if (C.events.length) { G.recapFeed(C, C.events); emit('combat', C.events); C.events.length = 0; }
         if (C.over) {
           // a wipe in a run, or your own death out in the world: the recap of who died and why (#192)
@@ -4077,7 +4149,7 @@
           }
           // a fight always ends (#121): if a step of its ending throws, the fight is still closed, so the error shows once
           // instead of the ending being retried every frame (paying the kill again each time) with the game stuck in it
-          try { if (C.kind === 'solo') endSolo(C); else if (C.kind === 'pvp') endPvp(C); else if (C.kind === 'duel') endDuel(C); else if (C.kind === 'bg') endBgFight(C); else if (C.kind === 'brawl') endBrawlFight(C); else endRunFight(C); }
+          try { if (C.kind === 'rehearsal') endRehearsal(C); else if (C.kind === 'solo') endSolo(C); else if (C.kind === 'pvp') endPvp(C); else if (C.kind === 'duel') endDuel(C); else if (C.kind === 'bg') endBgFight(C); else if (C.kind === 'brawl') endBrawlFight(C); else endRunFight(C); }
           finally { if (G.fight === C) { G.fight = null; G.pUnit = null; emit('fightEnd', { result: C.over }); } }
         }
       }
