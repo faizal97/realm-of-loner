@@ -982,7 +982,7 @@
     if (ab.freeOf) { u.stunUntil = 0; u.auras = u.auras.filter((a) => !a.slow); }
     if (ab.stunImmune) u.stunImmuneUntil = C.t + ab.stunImmune;
     // a stomp or a scream reaches the foes within 8 m (stage 4)
-    if (ab.stompAll) { for (const e of alive(foes(C, u))) if (!e.boss && (!e.pos || !u.pos || E.dist(u, e) <= (ab.radius || DIST.radius))) { e.stunUntil = C.t + ab.stompAll; if (ab.fear) { e.fleeUntil = C.t + ab.stompAll; e.fleeFrom = u.uid; } ev(C, { type: 'stun', tgt: e.uid, dur: ab.stompAll, fear: !!ab.fear }); } ev(C, { type: 'emote', uid: u.uid, text: `${u.name} stomps the ground!` }); }
+    if (ab.stompAll) { for (const e of alive(foes(C, u))) if (!e.boss && (!e.pos || !u.pos || E.dist(u, e) <= (ab.radius || DIST.radius))) { e.stunUntil = C.t + ab.stompAll; if (ab.fear) { e.fleeUntil = C.t + ab.stompAll; e.fleeFrom = u.uid; } ev(C, { type: 'stun', tgt: e.uid, dur: ab.stompAll, fear: !!ab.fear }); } if (ab.emote) ev(C, { type: 'emote', uid: u.uid, text: `${u.name} ${ab.emote}` }); } // only an ability that names its emote (War Stomp, #263)
     if (ab.cleanse) { const cw = ab.target === 'ally' && tgt ? tgt : u; cw.auras = cw.auras.filter((a) => !(a.dot != null && a.src !== cw.uid && (!C.units[a.src] || C.units[a.src].side !== cw.side))); } // an ally's too (Cleansing Verse, #251)
     if (ab.dropThreat) {
       const others = alive(friends(C, u)).filter((a) => a !== u);

@@ -318,7 +318,7 @@
     shadowmeld: { name: 'Shadow Fade', racial: true, lvl: 1, cost: 0, cd: 120, target: 'self', gcd: false, combatOnly: true, dropThreat: true, desc: 'Fade into the shadows: enemies lose track of you and all your threat is wiped. 2 min cooldown.' },
     blood_fury: { name: 'Blood Fury', racial: true, lvl: 1, cost: 0, cd: 120, target: 'self', gcd: false, combatOnly: true, bloodFury: true, desc: 'Attack power +25% for 15 sec. 2 min cooldown.' },
     berserking: { name: 'Berserking', racial: true, lvl: 1, cost: 0, cd: 180, target: 'self', gcd: false, combatOnly: true, berserk: true, desc: 'Attack and casting speed +10% to +30%, more when you are hurt. 10 sec. 3 min cooldown.' },
-    war_stomp: { name: 'War Stomp', racial: true, lvl: 1, cost: 0, cd: 120, target: 'self', gcd: false, combatOnly: true, stompAll: 2, desc: 'Stomps the ground, stunning nearby enemies for 2 sec. 2 min cooldown.' },
+    war_stomp: { name: 'War Stomp', emote: 'stomps the ground!', racial: true, lvl: 1, cost: 0, cd: 120, target: 'self', gcd: false, combatOnly: true, stompAll: 2, desc: 'Stomps the ground, stunning nearby enemies for 2 sec. 2 min cooldown.' },
     will_forsaken: { name: 'Will of the Reclaimed', racial: true, lvl: 1, cost: 0, cd: 120, target: 'self', gcd: false, combatOnly: true, freeOf: 'stun', stunImmune: 5, desc: 'Breaks free of stuns and slows, and ignores new stuns for 5 sec. 2 min cooldown.' },
   };
 
