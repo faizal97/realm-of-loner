@@ -730,11 +730,11 @@
   // at once; a third takes the place of the one started first. The instrument sets the rhythm (Lute until #251).
   E.RHYTHM = {
     lute: { len: 12, win: 2, max: 3, finale: 1 },
-    drum: { len: 8, win: 1.5, max: 3, finale: 0.8, dmg: 0.72 },
-    horn: { len: 16, win: 3, max: 2, finale: 1.6, dmg: 1.25 },
+    drum: { len: 8, win: 1.5, max: 3, finale: 0.8, dmg: 0.85, heal: 0.6 },
+    horn: { len: 16, win: 3, max: 2, finale: 1.6, dmg: 1.15, heal: 0.6 },
   };
   // a song costs its mana each round, scaled by the round's length, so every instrument costs the same mana per second
-  // (#254); dmg: how hard its damage songs pulse (the Drum softer, the Horn harder), measured by sim/bard.js
+  // (#254); dmg / heal: how hard its damage and healing songs pulse, measured by sim/bard.js
   E.BEAT_COST = 0.25; // a tap on a song already playing (on the beat or early) costs a quarter of starting it, so a lapse costs mana too (#254)
   E.VERSE_BONUS = 0.2; // each verse: +20% to the song's pulses
   E.SONG_SLOTS = 2;
@@ -763,7 +763,7 @@
     const ab = D.ABILITIES[abId], S = ab.song, tm = tmOf(u), L = u.level;
     const base = S.amt + (S.perLvl || 0) * L + (S.coef || 0) * u.st.sp;
     const tal = S.pulse === 'heal' ? (tm.hot[abId] || 0) : (tm.dot[abId] || 0);
-    const R = E.RHYTHM[u.instrument || 'lute'], inst = dmgSong(abId) && R.dmg ? R.dmg : 1;
+    const R = E.RHYTHM[u.instrument || 'lute'], inst = dmgSong(abId) ? R.dmg || 1 : healSong(abId) ? R.heal || 1 : 1;
     return base * inst * (1 + tal / 100) * (1 + E.VERSE_BONUS * verses);
   }
   function songTarget(C, u, s) {
