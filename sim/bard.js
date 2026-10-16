@@ -34,8 +34,9 @@ function fight(role, L, instrument, skill) {
   let out = 0;
   while (!C.over && C.t < SECS) {
     E.tick(C, 0.1);
-    // healing: a party-wide hit every 6 sec (a boss's area attack: 20% of everyone's health, never the killing blow)
-    if (role === 'healer' && Math.floor(C.t / 6) > Math.floor((C.t - 0.1) / 6)) for (const a of allies) if (a.hp > 0) a.hp = Math.max(1, a.hp - a.maxHp * +(process.env.AOE || 0.2));
+    // healing: a party-wide hit every 6 sec (a boss's area attack: 10% of everyone's health, never the killing blow); at 20% every
+    // healer class wipes and runs dry, so skill can't show
+    if (role === 'healer' && Math.floor(C.t / 6) > Math.floor((C.t - 0.1) / 6)) for (const a of allies) if (a.hp > 0) a.hp = Math.max(1, a.hp - a.maxHp * +(process.env.AOE || 0.1));
     for (const e of C.events.splice(0)) if (e.src === b.uid) { if (role === 'healer' ? e.type === 'heal' : e.type === 'dmg') out += e.amount + (e.over || 0); } // healing produced, overheal included: the output, whatever the incoming damage
   }
   return out / Math.max(1, C.t);
