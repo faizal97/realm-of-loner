@@ -147,8 +147,8 @@
     }
     // v5: v3.0–v4.2 reused three ids from earlier zones (Stoneharrow's quests 'poachers' and 'gnoll_paws', and its murloc
     // fins). They have their own ids now. A Stoneharrow-level Accord character's copies move to the new ids. Not
-    // 'gnoll_paws' any more (#260): it is Westfall's own Accord quest, so copying it marked Paws for Proof done for every
-    // Accord character who had done Westfall's, and stranded it in the log of anyone holding it; every save from before
+    // 'gnoll_paws' any more (#260): it is Longfield's own Accord quest, so copying it marked Paws for Proof done for every
+    // Accord character who had done Longfield's, and stranded it in the log of anyone holding it; every save from before
     // v5 has long since been moved.
     { const Pp = S.player, alliance = (D.RACES[Pp.race] || {}).faction !== 'horde';
       if (alliance && Pp.level >= 18) {
@@ -1588,6 +1588,14 @@
   // a buff shorter than a minute does nothing out of a fight (only buffs of 60 s or more are kept between fights), unless
   // the ability also heals: it is refused there and dimmed on the bar (#165)
   G.fightBuff = (abId) => { const ab = D.ABILITIES[abId]; return !!(ab && ((ab.buff && ab.buff.dur < 60) || ab.shield) && !ab.heal && !ab.hot); }; // a shield only lasts inside a fight too
+  // a bard's instrument button (#261): it shows the instrument played now; a tap moves to the next one learned
+  G.INSTRUMENTS = ['play_lute', 'play_drum', 'play_horn'];
+  G.instrumentAb = () => 'play_' + (G.S.player.instrument || 'lute');
+  G.nextInstrument = function () {
+    const P = G.S.player, known = G.INSTRUMENTS.filter((id) => P.level >= D.ABILITIES[id].lvl);
+    if (known.length < 2) return 'Lute: your only instrument. The Drum comes at level ' + D.ABILITIES.play_drum.lvl + '.';
+    return G.castOutOfCombat(known[(known.indexOf(G.instrumentAb()) + 1) % known.length]);
+  };
   G.castOutOfCombat = function (abId) {
     const P = G.S.player, ab = D.ABILITIES[abId];
     if (G.fight) return G.useAbility(abId);
