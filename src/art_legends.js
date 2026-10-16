@@ -1646,6 +1646,94 @@
       h += E(49, 17, 4.6, 9.8, '#3a2410', 1.8) + E(49, 17, 2.6, 6.6, '#1a0e04');
       o += G(h, 'translate(1,9) scale(0.84)') + ol('M50,8 Q55,17 50,27 M54,4 Q61,17 54,31', '#fff0c8', 1.4, 0.8);
       return iconWrap(c, ['#8a9a6c', '#10140a'], o + sparkle(12, 12, 2.4, '#ffffff'));
+    },
+    // Sharp Refrain (#261): a quick bright phrase, two notes darting forward on speed lines, a spark where they land
+    sharp_refrain: function (c) {
+      var o = iglow(c, 36, 30, 30, '#d8f0ff', 0.7);
+      o += ol('M4,30 L18,30 M6,38 L20,38 M8,46 L18,46', '#e8f6ff', 1.6, 0.85);
+      o += notePair(c, 22, 44, 1.15, '#e8f4ff');
+      o += rays(52, 20, 3, 11, 8, '#ffffff', 0.9, 0.2) + C(52, 20, 3.2, '#ffffff');
+      return iconWrap(c, ['#3aa0d8', '#04121e'], o + sparkle(12, 12, 2.2, '#ffffff'));
+    },
+    // Mocking Verse (#261): a jeering mask, its grin and narrowed eyes, a note on its brow; the target marked in red
+    mocking_verse: function (c) {
+      var o = iglow(c, 32, 34, 30, '#ffd8c0', 0.6);
+      var face = 'M14,20 C14,10 50,10 50,20 C50,40 42,54 32,54 C22,54 14,40 14,20 Z';
+      o += P(face, c.lg([[0, '#fff4e4'], [0.6, '#f0d4b0'], [1, '#c09468']], 0.2, 0, 0.8, 1), 2.2);
+      o += P('M19,24 L28,27 L19,29 Z', '#3a1a10', 1.2) + P('M45,24 L36,27 L45,29 Z', '#3a1a10', 1.2);
+      o += P('M20,36 C25,46 39,46 44,36 C38,40 26,40 20,36 Z', '#7a1420', 1.4) + L('M24,39 L40,39', '#ffffff', 1.2, 0.85);
+      o += note(c, 28, 18, 0.55, '#e83a3a');
+      o += ol('M6,52 L12,46 M58,52 L52,46', '#ff8a7a', 1.4, 0.8);
+      return iconWrap(c, ['#d8603a', '#200806'], o + sparkle(56, 10, 2.4, '#ffffff'));
+    },
+    // Ballad of Blades (#261): two daggers crossed in a ring of sound, notes riding the ring
+    ballad_of_blades: function (c) {
+      var o = iglow(c, 32, 32, 30, '#e8d0ff', 0.6);
+      o += ring(32, 32, 24, '#e8d8ff', 1.8, 0.55) + ring(32, 32, 17, '#e8d8ff', 1.4, 0.35);
+      var dag = function (rot) {
+        return G(P('M0,-20 L3,-6 L-3,-6 Z', c.lg([[0, '#ffffff'], [1, '#a8b0c8']], 0, 0, 1, 0), 1.6) + R(-6, -6, 12, 2.6, '#c89a40', 1.4) + R(-1.6, -3.4, 3.2, 8, '#6a3a1c', 1.4) + C(0, 5.6, 2, '#e8c060', 1.2), 'translate(32,35) rotate(' + rot + ') scale(1.4)');
+      };
+      o += dag(-38) + dag(38);
+      o += note(c, 8, 22, 0.5, '#f4e4ff') + note(c, 50, 54, 0.5, '#f4e4ff') + noteHead(c, 54, 16, 0.5, '#f4e4ff');
+      return iconWrap(c, ['#8a50c8', '#10061c'], o + sparkle(12, 52, 2.2, '#ffffff'));
+    },
+    // Shatterchord (#261): a chord of three stacked notes striking a stone, the stone splitting
+    shatterchord: function (c) {
+      var o = iglow(c, 30, 36, 30, '#c8d8ff', 0.6);
+      var st = 'M10,58 L14,40 L26,34 L44,36 L54,46 L52,58 Z';
+      o += P(st, c.lg([[0, '#c8c4bc'], [1, '#6a665e']], 0.2, 0, 0.8, 1), 2.2);
+      o += ol('M32,35 L28,44 L34,49 L30,58 M28,44 L18,48 M34,49 L46,52', '#fff0ff', 1.3, 0.95);
+      var x = 30, sx = x + 3.6, top = 6;
+      o += stem(sx, 30, top, 1, '#e8e0ff');
+      [30, 24.6, 19.2].forEach(function (y) { o += noteHead(c, x, y, 1, '#e8e0ff'); });
+      o += rays(31, 35, 4, 14, 10, '#ffffff', 0.55, 0.1);
+      return iconWrap(c, ['#4a5ab8', '#04061a'], o + sparkle(54, 12, 2.4, '#ffffff'));
+    },
+    // Cleansing Verse (#261): a clear drop with a note in it, a green poison drop breaking apart beside it
+    cleansing_verse: function (c) {
+      var o = iglow(c, 30, 32, 30, '#e0fff8', 0.7);
+      var drop = 'M28,8 C36,20 44,28 44,38 C44,48 37,54 28,54 C19,54 12,48 12,38 C12,28 20,20 28,8 Z';
+      o += P(drop, c.lg([[0, '#f4ffff'], [0.55, '#9ee8f0'], [1, '#3a9ab8']], 0.2, 0, 0.8, 1), 2.2);
+      o += F('M18,32 C18,26 22,22 24,20 C22,26 21,30 22,36 Z', '#ffffff', 0.7);
+      o += note(c, 26, 46, 0.75, '#2a6a88');
+      o += P('M50,40 C53,45 55,48 55,51 C55,54 53,56 50,56 C47,56 45,54 45,51 C45,48 47,45 50,40 Z', c.cel('#6ab83a'), 1.6, 0.85);
+      o += ol('M46,36 L42,32 M56,38 L59,33 M58,58 L61,61', '#c8f0a8', 1.2, 0.8);
+      return iconWrap(c, ['#38a8a0', '#02161a'], o + sparkle(52, 12, 2.4, '#ffffff'));
+    },
+    // Intermission (#261): the stage curtains drawn closed, a blue glow of mana gathering between them
+    intermission: function (c) {
+      var o = R(6, 6, 52, 6, '#c89a40', 1.6);
+      var cur = function (x0, x1, flip) {
+        var d = 'M' + x0 + ',10 L' + x1 + ',10 C' + (x1 + flip * 2) + ',30 ' + (x1 - flip * 4) + ',44 ' + (x1 + flip * 2) + ',58 L' + x0 + ',58 Z';
+        return P(d, c.lg([[0, '#d83a3a'], [1, '#7a1414']], flip > 0 ? 0 : 1, 0, flip > 0 ? 1 : 0, 0), 2.2) + L('M' + (x0 + flip * 8) + ',12 C' + (x0 + flip * 10) + ',30 ' + (x0 + flip * 6) + ',44 ' + (x0 + flip * 9) + ',56', '#5a0a0a', 1.4, 0.6);
+      };
+      o += iglow(c, 32, 34, 18, '#8ad0ff', 0.9) + C(32, 34, 5, '#e8f6ff', 1.2);
+      o += cur(6, 26, 1) + cur(58, 38, -1);
+      o += ol('M32,22 L32,18 M24,34 L20,34 M40,34 L44,34', '#c8ecff', 1.2, 0.8);
+      var val = 'M6,10 L58,10 L58,15';
+      for (var x = 58; x > 6; x -= 6.5) val += ' Q' + n(x - 3.25) + ',21 ' + n(x - 6.5) + ',15';
+      o += P(val + ' Z', c.lg([[0, '#e84a4a'], [1, '#8a1818']], 0, 0, 0, 1), 1.8) + R(6, 6, 52, 5, '#c89a40', 1.6);
+      o += P('M12,38 L20,36 L21,40 L13,42 Z', '#e8c060', 1.2) + P('M52,38 L44,36 L43,40 L51,42 Z', '#e8c060', 1.2);
+      return iconWrap(c, ['#5a2a6a', '#0c0412'], o + sparkle(32, 50, 2, '#e8f6ff'));
+    },
+    // Stage Fright (#261): a spotlight falls on a small figure whose eyes go wide; it bolts out of the light
+    stage_fright: function (c) {
+      var o = F('M24,2 L40,2 L56,58 L8,58 Z', '#fff8d8', 0.32) + E(32, 56, 22, 4, '#fff8d8', 0, 0.45);
+      o += R(24, 0, 16, 5, '#5a5a62', 1.4);
+      var fig = C(30, 34, 8, c.cel('#a8a090'), 1.8) + P('M24,40 C22,48 22,52 24,56 L36,56 C38,52 38,48 36,40 Z', c.cel('#8a8274'), 1.8);
+      fig += C(27, 33, 2.4, '#ffffff', 1) + C(33, 33, 2.4, '#ffffff', 1) + C(27, 33.4, 0.9, '#1a1a1a') + C(33, 33.4, 0.9, '#1a1a1a') + E(30, 38.4, 1.6, 1.2, '#3a1a1a');
+      o += G(fig, 'rotate(-10 30 46)');
+      o += ol('M44,32 L54,32 M46,40 L58,40 M44,48 L52,48', '#ffffff', 1.6, 0.8);
+      o += P('M16,16 L20,16 L19,27 L17,27 Z', '#ffe070', 1.2) + C(18, 31, 1.8, '#ffe070', 1.2);
+      return iconWrap(c, ['#4a4a7a', '#06060e'], o);
+    },
+    // Echo (#261): a finale's starburst and its note, repeated fainter behind it, rings fading outward
+    echo: function (c) {
+      var o = iglow(c, 26, 34, 28, '#fff0c8', 0.6);
+      o += G(rays(42, 26, 4, 14, 12, '#fff0c8', 0.6, 0) + note(c, 39, 32, 0.8, '#fff4dc'), '', 0.35);
+      o += rays(26, 36, 5, 18, 12, '#fff8e0', 0.8, 0.2) + note(c, 22, 44, 1.05, '#ffffff');
+      o += ring(26, 36, 24, '#fff0c8', 1.4, 0.35) + ring(42, 26, 18, '#fff0c8', 1.1, 0.2);
+      return iconWrap(c, ['#c8903a', '#1c0e04'], o + sparkle(54, 52, 2.2, '#ffffff'));
     }
   };
   Object.keys(WICONS).forEach(function (k) { ICONS[k] = WICONS[k]; });

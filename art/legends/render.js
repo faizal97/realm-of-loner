@@ -18,7 +18,7 @@ const SELF = 'art_legends.js';
 const SRC = read(SELF);
 
 const WIDYA_ICONS = ['legend_widya', 'soothing_chord', 'dissonant_note', 'song_of_rest', 'marching_song', 'lullaby', 'verse_of_mending', 'chorus_grove', 'counterpoint',
-  'hearthsong', 'crescendo', 'dirge', 'anthem_of_stone', 'encore', 'requiem', 'grand_finale', 'lake_reed', 'silver_lute_strings', 'heartwood_pegs', 'carved_lute_neck', 'lute_body', 'reedsong_lute', 'bard_drum', 'bard_horn'];
+  'hearthsong', 'crescendo', 'dirge', 'anthem_of_stone', 'encore', 'requiem', 'grand_finale', 'lake_reed', 'silver_lute_strings', 'heartwood_pegs', 'carved_lute_neck', 'lute_body', 'reedsong_lute', 'bard_drum', 'bard_horn', 'sharp_refrain', 'mocking_verse', 'ballad_of_blades', 'shatterchord', 'cleansing_verse', 'intermission', 'stage_fright', 'echo'];
 const NEW = { legends: ['lyveus', 'lyveus_hooded', 'widya', 'harrowby'], mobs: ['lord_cassius_marrow', 'sal_brightbell'], scenes: ['silverleaf_lodge'],
   icons: ['legend_lyveus', 'oathbound_strike', 'ancients_bulwark', 'silverleaf_aegis'].concat(WIDYA_ICONS),
   actors: ['lyveus', 'vyn', 'lyveus_hooded', 'deathwing', 'widya', 'harrowby'], storyScenes: ['silverleaf_burning', 'caravan_road'] };

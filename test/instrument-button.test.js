@@ -57,3 +57,10 @@ test('a fight adds no empty slots to the bar when the out-of-fight buttons fit i
   assert.deepStrictEqual(slots(false, ['a', 'step_back', 'eat', 'drink']), ['a', 'eat', 'drink']);
   assert.deepStrictEqual(slots(true, ['a', 'step_back', 'eat', 'drink']), ['a', 'step_back', null]);
 });
+
+// every Bard ability has its own icon (#261): eight of them borrowed another's (Sharp Refrain and Mocking Verse wore
+// Dissonant Note's, Ballad of Blades and Shatterchord Requiem's, ...), so two buttons on the bar looked the same
+test('no two Bard abilities share an icon, and each is drawn', () => {
+  const bard = Object.entries(D.ABILITIES).filter(([, a]) => a.cls === 'bard'), seen = {};
+  for (const [k, a] of bard) { const ic = a.icon || k; assert.ok(!seen[ic], `${k} and ${seen[ic]} share ${ic}`); seen[ic] = k; assert.ok(ART_ICON_KEYS().includes(ic), `${ic} is drawn`); }
+});
