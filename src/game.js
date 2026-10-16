@@ -147,8 +147,8 @@
     }
     // v5: v3.0–v4.2 reused three ids from earlier zones (Stoneharrow's quests 'poachers' and 'gnoll_paws', and its murloc
     // fins). They have their own ids now. A Stoneharrow-level Accord character's copies move to the new ids. Not
-    // 'gnoll_paws' any more (#260): it is Westfall's own Accord quest, so copying it marked Paws for Proof done for every
-    // Accord character who had done Westfall's, and stranded it in the log of anyone holding it; every save from before
+    // 'gnoll_paws' any more (#260): it is Longfield's own Accord quest, so copying it marked Paws for Proof done for every
+    // Accord character who had done Longfield's, and stranded it in the log of anyone holding it; every save from before
     // v5 has long since been moved.
     { const Pp = S.player, alliance = (D.RACES[Pp.race] || {}).faction !== 'horde';
       if (alliance && Pp.level >= 18) {
