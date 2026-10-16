@@ -610,7 +610,7 @@
   }
 
   // ------------------------------------------------------------- abilities
-  function abCost(ab, u) { if (ab.shapeshift && u.form) return 0; if (ab.id) { const la = litAura(u, ab.id); if (la && la.proc.free) return 0; } const base = (ab.cost || 0) + (ab.costPerLvl || 0) * ((u.level || E.levelOf(u)) - 1); const off = ab.id ? Math.min(90, abPct(tmOf(u).abilCost, ab.id)) : 0; const lm = (ab.heal || ab.hot) && fxOf(u, 'lavish_mend') ? 1 + D.EFFECTS.lavish_mend.mana : 1; const sc = ab.stackCost && ab.id ? auraOf(u, ab.id + '_stack') : null; const sk = ab.song && u.instrument && E.RHYTHM[u.instrument] ? E.RHYTHM[u.instrument].len / E.RHYTHM.lute.len : 1; return Math.round(base * sk * (1 - off / 100) * lm * (sc ? 1 + ab.stackCost.pct * sc.stacks / 100 : 1)); } /* stackCost: each recent cast makes the next dearer (Arcane Blast, #245) */ /* Lavish Mend: a healing spell costs more mana (#40) */
+  function abCost(ab, u) { if (ab.shapeshift && u.form) return 0; if (ab.id) { const la = litAura(u, ab.id); if (la && la.proc.free) return 0; } const base = (ab.cost || 0) + (ab.costPerLvl || 0) * ((u.level || E.levelOf(u)) - 1); const off = ab.id ? Math.min(90, abPct(tmOf(u).abilCost, ab.id)) : 0; const lm = (ab.heal || ab.hot) && fxOf(u, 'lavish_mend') ? 1 + D.EFFECTS.lavish_mend.mana : 1; const sc = ab.stackCost && ab.id ? auraOf(u, ab.id + '_stack') : null; const sk = (ab.song && u.instrument && E.RHYTHM[u.instrument] ? E.RHYTHM[u.instrument].len / E.RHYTHM.lute.len : 1) * (ab.song && u.auras && E.songOf(u, ab.id) ? E.BEAT_COST : 1); /* a song: its mana per round, by the round's length; a tap on a song already playing costs a quarter (#254) */ return Math.round(base * sk * (1 - off / 100) * lm * (sc ? 1 + ab.stackCost.pct * sc.stacks / 100 : 1)); } /* stackCost: each recent cast makes the next dearer (Arcane Blast, #245) */ /* Lavish Mend: a healing spell costs more mana (#40) */
   E.abCost = abCost;
 
   function spellRoll(src, tgt, C) {
@@ -735,6 +735,7 @@
   };
   // a song costs its mana each round, scaled by the round's length, so every instrument costs the same mana per second
   // (#254); dmg: how hard its damage songs pulse (the Drum softer, the Horn harder), measured by sim/bard.js
+  E.BEAT_COST = 0.25; // a tap on a song already playing (on the beat or early) costs a quarter of starting it, so a lapse costs mana too (#254)
   E.VERSE_BONUS = 0.2; // each verse: +20% to the song's pulses
   E.SONG_SLOTS = 2;
   // the instrument's rhythm, with the Tempo talents on it (#253): Practised Hands widens the beat, Fourth Verse adds a verse
