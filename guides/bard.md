@@ -58,19 +58,21 @@ Your first point comes at level 10 and you have 51 by level 60. A tree's second 
 
 ### How to play it
 At level 60 with no gear, on the Lute:
-- [[Song of Rest]] heals everyone in your party for 12 every 3 sec, 20 at 3 verses. A round at full verses heals a party of five for 396, for a 70 mana tap: about 6 health per mana. Starting it costs 281.
-- Its Finale at 3 verses heals everyone for 178 at once.
-- [[Chorus of the Grove]] (level 18) heals everyone for 171, about 2 health per mana in a party of five. 15 sec cooldown.
-- [[Counterpoint]] (level 22) absorbs 420 damage on one friend for 15 sec. 6 sec cooldown.
-- [[Verse of Mending]] (level 14) heals one friend for about 347 over 15 sec.
-- [[Crescendo]] (level 30) heals one friend for about 585, a 3 sec cast. [[Soothing Chord]] heals for about 306 in 1.8 sec.
+- [[Song of Rest]] heals everyone in your party for about 10 every 3 sec, 15 at 3 verses. A round at full verses heals a party of five for 304, for a 70 mana tap: about 4 health per mana. Starting it costs 281.
+- Its Finale at 3 verses heals everyone for 137 at once.
+- [[Chorus of the Grove]] (level 18) heals everyone for about 131, under 2 health per mana in a party of five. 15 sec cooldown.
+- [[Counterpoint]] (level 22) absorbs 520 damage on one friend for 15 sec. 6 sec cooldown.
+- [[Verse of Mending]] (level 14) heals one friend for 429 over 15 sec.
+- [[Crescendo]] (level 30) heals one friend for about 722, a 3 sec cast. [[Soothing Chord]] heals for about 377 in 1.8 sec.
+
+When only the tank is hurt, a healing song mostly heals people who don't need it. Keep the tank up with [[Counterpoint]], [[Verse of Mending]] and [[Soothing Chord]], and save the song's mana.
 
 Keep [[Marching Song]] (level 6) as your second song: your party attacks and casts about 8% faster, 12.5% at 3 verses. Its Finale gives three times that for 6 sec.
 
 ### When it goes wrong
 - A Finale is your fastest party heal. Keep a song at full verses for the moment the party needs it.
-- [[Standing Ovation]] (level 60): heals everyone for about 420 at once. 2 min cooldown.
-- [[Encore]] (level 50): heals everyone for about 386 over 12 sec. 3 min cooldown.
+- [[Standing Ovation]] (level 60): heals everyone for about 321 at once. 2 min cooldown.
+- [[Encore]] (level 50): heals everyone for about 295 over 12 sec. 3 min cooldown.
 - [[Intermission]] (level 20): 30% of your mana back over 8 sec while you are not casting. 3 min cooldown, no global cooldown.
 - [[Cleansing Verse]] (level 12) removes every poison, curse and other damage over time an enemy put on a friend.
 
