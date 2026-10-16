@@ -1762,7 +1762,44 @@
       h('div', { class: 'nm', style: { color: '#fff' } }, t.name),
       h('div', { class: 'flex dim' }, h('span', null, t.cost), h('span', null, t.cd)),
       h('div', { class: 'dim' }, t.cast),
-      h('div', { style: { color: '#ffd100' } }, t.d)), arrangeBtn()], true);
+      h('div', { style: { color: '#ffd100' } }, t.d)), D.ABILITIES[id] && (D.ABILITIES[id].song || D.ABILITIES[id].instrument) ? h('button', { class: 'btn wide', onclick: () => { closeDialog(); openBardHow(); } }, 'How Bards play') : null, arrangeBtn()], true);
+  }
+
+  // "How Bards play" (#256): the song button's states drawn with the bar's own pieces (the .ab song string and verse
+  // diamonds), one cycle playing on a loop, and the instruments read from E.RHYTHM, so a new instrument shows itself
+  function bardDemo(st) { // st: { left 0-1, win 0-1, verses, max, beat, finale }
+    const b = h('div', { class: 'ab singing' + (st.beat ? ' beat' : '') + (st.finale ? ' loaded' : '') }, img(abIcon('song_of_rest')),
+      h('div', { class: 'song' }, h('i', { class: 'beatz' }), h('i', { class: 'str' })),
+      h('div', { class: 'verses' }, ...Array.from({ length: st.max }, (_, i) => h('i', { class: i < st.verses ? 'on' : '' }))));
+    const sg = b.querySelector('.song'); sg.style.setProperty('--left', st.left); sg.style.setProperty('--win', st.win); // custom properties need setProperty
+    return b;
+  }
+  function openBardHow() {
+    openSheet('bardhow', 'How Bards play', 'Songs, beats and Finales', (body) => {
+      const R = E.RHYTHM.lute, win = R.win / R.len, pct = Math.round(E.VERSE_BONUS * 100);
+      const row = (demo, label, text) => h('div', { class: 'how-row' }, demo, h('div', null, h('b', null, label), h('p', null, text)));
+      body.append(h('h3', null, 'The song button'),
+        row(bardDemo({ left: 0.7, win, verses: 1, max: R.max }), 'Playing', 'The string along the bottom runs down as the song plays.'),
+        row(bardDemo({ left: win * 0.6, win, verses: 1, max: R.max, beat: true }), 'Beat', 'Gold: the beat is on. Tap now for a verse, and the song plays another round.'),
+        row(bardDemo({ left: 0.5, win, verses: 2, max: R.max }), 'Verses', `Each verse: +${pct}% to the song. Tap before the beat: −1 verse. The song runs out: all verses lost.`),
+        row(bardDemo({ left: 0.6, win, verses: R.max, max: R.max, finale: true }), 'Finale ready', 'Every verse gold. Tap off the beat: all verses at once in a burst, and the song plays on from none.'));
+      // one good cycle, on a loop: start, land three beats, play the Finale
+      const steps = [['Start the song', 0.95, 0, false, false], ['Wait for the gold', 0.35, 0, false, false], ['Tap on the beat: 1 verse', win * 0.5, 0, true, false],
+        ['Tap on the beat: 2 verses', win * 0.5, 1, true, false], ['Tap on the beat: 3 verses', win * 0.5, 2, true, false], ['Finale ready', 0.7, 3, false, true], ['Tap off the beat: the Finale', 0.6, 0, false, false]];
+      const cyc = h('div', { class: 'how-cycle' }), cap = h('b', null, ''), slot = h('div');
+      cyc.append(slot, cap);
+      let i = 0;
+      const show = () => { const [txt, left, v, beat, fin] = steps[i]; slot.replaceChildren(bardDemo({ left, win, verses: v, max: R.max, beat, finale: fin })); cap.textContent = `${i + 1}/${steps.length} · ${txt}`; };
+      show();
+      const tm = setInterval(() => { if (!cyc.isConnected) return clearInterval(tm); i = (i + 1) % steps.length; show(); }, 1400);
+      body.append(h('h3', null, 'One cycle'), cyc);
+      body.append(h('h3', null, 'Two songs'), h('p', null, `Up to ${E.SONG_SLOTS} songs play at once on one shared beat; a new song takes the place of the one started first. A tap on a playing song costs a quarter of its mana.`));
+      const inst = Object.values(D.ABILITIES).filter((a) => a.instrument && E.RHYTHM[a.instrument]).sort((a, b) => a.lvl - b.lvl);
+      body.append(h('h3', null, 'Instruments'), h('table', { class: 'how-tab tnum' },
+        h('tr', null, ...['', 'Round', 'Beat', 'Verses', 'Learned'].map((x) => h('th', null, x))),
+        ...inst.map((a) => { const r = E.RHYTHM[a.instrument]; return h('tr', null, h('td', null, a.name.replace(/^Play the /, '')), h('td', null, r.len + ' sec'), h('td', null, r.win + ' sec'), h('td', null, String(r.max)), h('td', null, 'Level ' + a.lvl)); })),
+        h('p', { class: 'dim' }, 'Long-press an instrument on your bar for its full rules.'));
+    });
   }
 
   // ============================================================ per-frame updates
@@ -5431,6 +5468,7 @@
     save: () => { G.save(); cloudAuto(true); friendsAway(true); if (window.SND) window.SND.pause(); },
     resume: () => { if (window.SND) window.SND.resume(); resume(); friendsAway(false); },
     back: () => { if (ui.dialog) closeDialog(); else if (ui.sheet) closeSheet(); },
+    bardHow: () => openBardHow(), // the How Bards play sheet (#256), also for the dev checks
   };
   const cloudAuto = (force) => { if (window.CLOUD && CLOUD.on()) CLOUD.maybeBackup(force); };
   // Friends: what changed goes out (gathered, once a minute), and the online dot follows the game being on screen

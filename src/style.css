@@ -1033,3 +1033,11 @@ button.ev-fact { width: 100%; background: none; border: 0; border-bottom: 1px so
 .row .ic.sealed { overflow: visible; position: relative; }
 .row .ic.sealed img:first-child { border-radius: 3px; }
 .row .ic.sealed img.seal { width: 18px; height: 18px; right: -6px; bottom: -6px; object-fit: contain; }
+/* How Bards play (#256): demo song buttons beside their label */
+.sheet-bardhow .how-row { display: grid; grid-template-columns: 52px 1fr; gap: 12px; align-items: center; margin: 10px 0; }
+.sheet-bardhow .how-row .ab, .sheet-bardhow .how-cycle .ab { width: 52px; }
+.sheet-bardhow .how-row p { margin: 2px 0 0; color: var(--muted); }
+.sheet-bardhow .how-cycle { display: grid; grid-template-columns: 52px 1fr; gap: 12px; align-items: center; margin: 10px 0; }
+.sheet-bardhow .how-tab { width: 100%; border-collapse: collapse; margin: 6px 0; }
+.sheet-bardhow .how-tab th { text-align: left; color: var(--muted); font-weight: 400; padding: 4px 6px 4px 0; }
+.sheet-bardhow .how-tab td { padding: 5px 6px 5px 0; border-top: 1px solid var(--edge); }
