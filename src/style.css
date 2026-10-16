@@ -458,6 +458,11 @@ img { max-width: 100%; display: block; }
 .uf-namerow { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
 .uf-namerow .uf-name { flex: 1; min-width: 0; }
 .pmoney { flex: none; }
+/* the inbox envelope beside the gold (#258): a gold dot while anything is unread */
+.pmail { flex: none; position: relative; display: inline-flex; align-items: center; padding: 2px 3px; margin-left: 4px; background: none; border: 0; cursor: pointer; opacity: 0.75; }
+.pmail.unread { opacity: 1; }
+.pmail.unread::after { content: ''; position: absolute; top: -1px; right: -2px; width: 7px; height: 7px; border-radius: 50%; background: #ffd100; box-shadow: 0 0 0 1.5px #1a1208; }
+.list .row.mail-new b::after { content: 'new'; margin-left: 6px; font: 700 10px var(--body); color: #ffd100; }
 .pmoney .money { font: 700 12px var(--body); color: #f1e6cf; }
 .moneyfloat { position: absolute; right: 0; top: 17px; z-index: 3; pointer-events: none; padding: 0 5px; border-radius: 3px; background: rgba(0,0,0,.78); font: 800 12px/16px var(--body); color: #ffd84a; white-space: nowrap; animation: moneyin 1.6s ease-out forwards; }
 @keyframes moneyin { 0% { transform: translateY(-4px); opacity: 0; } 12% { opacity: 1; } 75% { opacity: 1; } 100% { transform: translateY(8px); opacity: 0; } }

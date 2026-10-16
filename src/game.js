@@ -1771,23 +1771,68 @@
     if (G.bagsFull()) return toast('Inventory is full.');
     S.ah.mine.splice(i, 1); G.addItem(a.item, a.n || 1); sys(`You cancelled your auction of ${a.item.name}.${a.deposit ? ` The deposit of ${G.moneyText(a.deposit)} is kept by the house.` : ''}`); emit('change');
   };
-  function ahTick() {
+  const ahTick = G.ahTick = function () {
     const S = G.S; if (!S.ah || !S.ah.mine.length) return;
-    const t = now(), P = S.player;
+    const t = now(), P = S.player, sold = [];
     for (const a of S.ah.mine.slice()) {
       if (a.sellAt && t >= a.sellAt) {
         const got = Math.round(a.price * (1 - AH_CUT)), dep = a.deposit || 0;
         P.money += got + dep; S.ah.mine = S.ah.mine.filter((x) => x !== a);
         const buyer = pick(S.bots); loot(`Auction sold: ${B.link(a.item.name, a.item.q)} to ${buyer.name}, ${G.moneyText(got)} after the 5% cut${dep ? ` (+${G.moneyText(dep)} deposit)` : ''}.`);
+        G.mailSend({ kind: 'sold', at: Math.min(t, a.sellAt), item: a.item, n: a.n || 1, buyer: buyer.name, got, dep }); // a receipt (#258): the gold is already here
+        sold.push({ name: a.item.name, got: got + dep });
         emit('lootGain', { money: got });
       } else if (t >= a.expires) {
         S.ah.mine = S.ah.mine.filter((x) => x !== a);
         const lost = a.deposit ? ` The deposit of ${G.moneyText(a.deposit)} is lost.` : '';
-        if (!G.bagsFull()) { P.bags.push({ item: a.item, n: a.n || 1 }); sys(`Your auction of ${a.item.name} expired. It is back in your bags.${lost}`); }
-        else { P.bank = P.bank || []; P.bank.push({ item: a.item, n: a.n || 1 }); sys(`Auction expired: ${a.item.name}. Bags full: sent to your bank.${lost}`); }
+        G.mailSend({ kind: 'expired', at: Math.min(t, a.expires), item: a.item, n: a.n || 1, dep: a.deposit || 0 }); // the item waits in the mail (#258)
+        sys(`Your auction of ${a.item.name} expired. It is in your mail: take it at any town's mailbox.${lost}`);
       }
     }
-  }
+    if (sold.length === 1) emit('info', `Sold: ${sold[0].name}, ${G.moneyText(sold[0].got)}`);
+    else if (sold.length) emit('info', `${sold.length} auctions sold: ${G.moneyText(sold.reduce((a, x) => a + x.got, 0))}`);
+  };
+  // ---------- the inbox (#258, docs/plans/2026-10-16-inbox-design.md): letters about your auctions. A sale is a receipt
+  // (its gold arrived with the sale); an expired auction's item waits in its letter until taken at a mailbox, in any town.
+  // The newest MAIL_KEEP letters are kept; past that the oldest read letters with no item waiting go first.
+  G.MAIL_KEEP = 50;
+  G.mail = () => G.S.mail || (G.S.mail = []);
+  G.mailWaiting = (m) => !!m.item && m.kind === 'expired' && !m.taken; // an item still to take
+  G.mailSend = function (m) {
+    const L = G.mail(); G.S.mailNext = (G.S.mailNext || 0) + 1;
+    L.push(Object.assign({ id: G.S.mailNext, at: now(), read: false }, m));
+    L.sort((a, b) => a.at - b.at);
+    while (L.length > G.MAIL_KEEP) {
+      const k = L.findIndex((x) => x.read && !G.mailWaiting(x)), k2 = k >= 0 ? k : L.findIndex((x) => !G.mailWaiting(x));
+      if (k2 < 0) break; // every letter holds an item: none is ever thrown away
+      L.splice(k2, 1);
+    }
+    emit('mail');
+  };
+  G.mailUnread = () => G.mail().filter((m) => !m.read).length;
+  G.mailRead = function (id) { const m = G.mail().find((x) => x.id === id); if (m && !m.read) { m.read = true; emit('mail'); } };
+  G.mailReadAll = function () { let n = 0; for (const m of G.mail()) if (!m.read) { m.read = true; n++; } if (n) emit('mail'); };
+  // a mailbox stands in every town: any safe place with an inn, and every place in a capital
+  G.mailboxAt = (placeId) => { const p = D.PLACES[placeId]; return !!(p && p.safe && (p.inn || p.city)); };
+  G.mailboxHere = () => G.mailboxAt(G.S.player.place) && !G.S.player.travel && !G.fight && !G.S.run;
+  // why an item can't be taken now, or null
+  G.mailTakeWhy = function (m) {
+    if (!m || !G.mailWaiting(m)) return 'Nothing to take.';
+    if (!G.mailboxHere()) return 'Take it at a mailbox, in any town.';
+    if (G.slotsShort([[m.item, m.n || 1]])) return 'Your bags are full.';
+    return null;
+  };
+  G.mailTake = function (id) {
+    const m = G.mail().find((x) => x.id === id), why = G.mailTakeWhy(m); if (why) return toast(why);
+    G.addItem(m.item, m.n || 1); m.taken = true; m.read = true;
+    emit('info', `Taken: ${m.item.name}`); emit('change'); emit('mail');
+    return null;
+  };
+  G.mailDelete = function (id) {
+    const L = G.mail(), i = L.findIndex((x) => x.id === id); if (i < 0) return null;
+    if (G.mailWaiting(L[i])) return toast('Take the item first.');
+    L.splice(i, 1); emit('mail'); return null;
+  };
   // ============================================================ professions (v3): gathering, crafting, bags, consumables
   // P.prof = { mining: { skill, max, known: [rare recipe ids] } }. Two primary professions. Data in data/professions.js.
   G.bagCap = function () { const P = G.S.player; return 16 + (P.bagsEq || []).reduce((a, b) => a + (b.bag || 0), 0); };

@@ -99,6 +99,8 @@ const ACTIONS = {
   fishStart: () => G.fishStart(true),
   ahPost: () => { give('linen_cloth', 5); G.ahPost(G.S.player.bags.length - 1, 100); },
   ahBuy: () => { const l = (G.ahListings ? G.ahListings() : []) || []; G.ahBuy(l[0] ? l[0].id : 'none'); },
+  mailTake: () => { G.mailSend({ kind: 'expired', item: G.genGear('chest', 10, 2), n: 1 }); G.mailTake(G.mail()[G.mail().length - 1].id); }, // the inbox (#258)
+  mailDelete: () => { G.mailSend({ kind: 'sold', item: G.genGear('chest', 10, 2), n: 1, buyer: 'x', got: 1 }); G.mailDelete(G.mail()[G.mail().length - 1].id); },
   ahCancel: () => { give('linen_cloth', 5); G.ahPost(G.S.player.bags.length - 1, 100); G.ahCancel(0); }, // Cancel shows once you have a listing
   joinGuild: () => G.joinGuild(0),
   declineGuild: () => G.declineGuild(1),

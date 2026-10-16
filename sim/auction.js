@@ -24,9 +24,11 @@ function flipDay(level, repost, buyBelow) {
       if (l.price / (G.ahValue(l.item) * (l.n || 1)) > buyBelow) break;
       G.ahBuy(l.id);
     }
+    for (const m of G.mail()) if (G.mailWaiting(m)) { G.addItem(m.item, m.n || 1); m.taken = true; } // an expired auction comes back by mail (#258): collected at the town's mailbox
     for (let i = P.bags.length - 1; i >= 0; i--) { const b = P.bags[i]; if (S.ah.mine.length >= 8) break; if (G.ahTrade(b.item)) G.ahPost(i, Math.round(G.ahValue(b.item) * b.n * repost)); }
     t += 30 * 60000; G.update(1);
   }
+  for (const m of G.mail()) if (G.mailWaiting(m)) { G.addItem(m.item, m.n || 1); m.taken = true; } // still in the mail is still held
   // what is still held counts at what it fetches if sold off now (0.8x always sells), after the cut
   const held = S.ah.mine.concat(P.bags.filter((b) => G.ahTrade(b.item))).reduce((a, x) => a + G.ahValue(x.item) * (x.n || 1) * 0.8 * 0.95, 0);
   return (P.money - m0 + held) / GOLD;

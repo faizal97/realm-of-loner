@@ -331,7 +331,7 @@
   function renderAll() {
     if (!G.S) return;
     applyRunMode();
-    renderFrames(); renderScene(); renderPanel(); renderBar(); renderChat(); renderNavDots(); renderRolls();
+    renderFrames(); mailDot(); renderScene(); renderPanel(); renderBar(); renderChat(); renderNavDots(); renderRolls();
     if (ui.sheet && ui.sheetFn) ui.sheetFn();
     evLantern(); // the festival lantern (v10.13)
   }
@@ -345,7 +345,7 @@
       h('div', { class: 'portrait tap', role: 'button', 'aria-label': 'Open Hero', onclick: () => openHero() }, h('div', { class: 'pclip' }, img(art('portrait', looks(P)))), h('span', { class: 'lvl tnum', id: 'pf-lvl' }, P.level)),
       h('div', { class: 'uf-body' },
         // one line: the name, then (with no target) Rested / In queue, then the buffs (#65: the header is 64 px)
-        h('div', { class: 'uf-namerow' }, h('div', { class: 'uf-name cls-' + P.cls, role: 'button', onclick: (e) => { e.stopPropagation(); toast(G.displayName(), true); } }, G.displayName()), /* shortened with "…" when long; a tap shows it in full (#62) */ (els.pMoney = h('span', { class: 'pmoney' })), (els.pChips = h('span', { class: 'uf-chips' })), (els.pBuffs = h('div', { class: 'buffs' }))),
+        h('div', { class: 'uf-namerow' }, h('div', { class: 'uf-name cls-' + P.cls, role: 'button', onclick: (e) => { e.stopPropagation(); toast(G.displayName(), true); } }, G.displayName()), /* shortened with "…" when long; a tap shows it in full (#62) */ (els.pMoney = h('span', { class: 'pmoney' })), (els.pMail = h('button', { class: 'pmail', 'aria-label': 'Mail', onclick: (e) => { e.stopPropagation(); openMail(); } , html: MAIL_SVG })), /* the inbox (#258) */ (els.pChips = h('span', { class: 'uf-chips' })), (els.pBuffs = h('div', { class: 'buffs' }))),
         (els.pHp = barEl('hp')), (els.pRes = barEl(D.CLASSES[P.cls].resource)),
         (els.pXp = h('button', { class: 'bar xp xpmain', 'aria-label': 'Experience', onclick: xpDetail }, h('i', { class: 'rest' }), h('i', { class: 'fill' }), h('b', { class: 'tnum' })))));
     els.tf = h('div', { class: 'uf target' });
@@ -3984,6 +3984,43 @@
     });
   }
 
+  // ---------- the inbox (#258): letters about your auctions, read anywhere; an expired auction's item is taken at a
+  // town mailbox. The envelope by the gold has a dot while anything is unread; opening the inbox reads them all.
+  const MAIL_SVG = '<svg viewBox="0 0 20 14" width="18" height="13" aria-hidden="true"><rect x="1" y="1" width="18" height="12" rx="1.5" fill="#d8c8a4" stroke="#3a2a14" stroke-width="1.4"/><path d="M1.6,1.8 L10,8 L18.4,1.8" fill="none" stroke="#3a2a14" stroke-width="1.4"/></svg>';
+  function mailDot() { if (els.pMail && G.S) els.pMail.classList.toggle('unread', G.mailUnread() > 0); }
+  function openMail() {
+    const fresh = new Set(G.mail().filter((m) => !m.read).map((m) => m.id));
+    G.mailReadAll();
+    openSheet('mail', 'Mail', ' ', (b, title) => { // ' ': the subtitle is set below, as it changes
+      const L = G.mail().slice().reverse(), here = G.mailboxHere(), waiting = L.filter(G.mailWaiting).length;
+      title.querySelector('small').textContent = here ? 'A mailbox is here' : waiting ? 'Items are taken at a mailbox, in any town' : `${L.length} of ${G.MAIL_KEEP} letters`;
+      if (!L.length) { b.append(h('div', { class: 'people' }, 'No mail. Letters about your auctions arrive here.')); return; }
+      const list = h('div', { class: 'list' });
+      for (const m of L) {
+        const sub = (m.kind === 'sold' ? `Sold to ${m.buyer}, ` : m.taken ? 'Expired, taken, ' : 'Expired, waiting, ') + agoText(m.at);
+        const right = m.kind === 'sold' ? G.moneyText((m.got || 0) + (m.dep || 0)) : G.mailWaiting(m) && here ? 'Take' : '';
+        const row = itemRow(m.item, m.n || 1, right, () => openLetter(m), sub);
+        if (fresh.has(m.id)) row.classList.add('mail-new');
+        list.append(row);
+      }
+      b.append(list);
+    });
+  }
+  function openLetter(m) {
+    const rows = [h('h3', null, (m.kind === 'sold' ? 'Sold: ' : 'Expired: ') + m.item.name + ((m.n || 1) > 1 ? ` ×${m.n}` : ''))];
+    if (m.kind === 'sold') rows.push(h('p', null, `Bought by ${m.buyer}, ${agoText(m.at)}.`),
+      h('p', { html: 'Received: ' + moneyHtml(m.got || 0, false, true) + ' after the 5% cut' + (m.dep ? ', plus ' + moneyHtml(m.dep, false, true) + ' deposit back' : '') + '.' }));
+    else rows.push(h('p', null, `Nobody bought it in a day. ${m.dep ? `The deposit of ${G.moneyText(m.dep)} was kept. ` : ''}${m.taken ? 'You took it back.' : 'It waits here until you take it.'}`));
+    const btns = h('div', { class: 'btn-row' });
+    if (G.mailWaiting(m)) {
+      const why = G.mailTakeWhy(m);
+      btns.append(h('button', Object.assign({ class: 'btn' + (why ? ' why' : '') }, why ? { 'aria-disabled': 'true' } : {}, { onclick: () => { if (why) return toast(why); G.mailTake(m.id); closeDialog(); if (ui.sheetFn) ui.sheetFn(); } }), 'Take'));
+      if (why) rows.push(h('p', { class: 'ai-note' }, why));
+    } else btns.append(h('button', { class: 'btn alt', onclick: () => { G.mailDelete(m.id); closeDialog(); if (ui.sheetFn) ui.sheetFn(); } }, 'Delete'));
+    btns.append(h('button', { class: 'btn alt', onclick: closeDialog }, 'Close'));
+    showDialog(rows.concat(btns), true);
+  }
+
   // ---------- cloud save (cloud.js): an optional copy of every character in the player's own Google Drive
   const agoText = (ms) => (!ms ? 'never' : Date.now() - ms < 90000 ? 'just now' : fmtTime(Date.now() - ms).trim() + ' ago');
   const devName = (d) => (d === 'phone' ? 'your phone' : 'the browser');
@@ -5295,7 +5332,8 @@
     }, true);
     G.on('chat', renderChat);
     G.on('toast', (t) => toast(t));
-    G.on('info', (t) => toast(t, true)); // yellow: worth knowing, not a refusal (#178)
+    G.on('info', (t) => toast(t, true));
+    G.on('mail', mailDot); // yellow: worth knowing, not a refusal (#178)
     G.on('infoToast', (t) => toast(t, true)); // yellow: a note, not an error (#193)
     G.on('error', (t) => toast(t));
     G.on('pop', (q) => { renderNavDots(); showPop(q); });
