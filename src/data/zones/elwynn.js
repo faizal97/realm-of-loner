@@ -131,9 +131,9 @@
     stormwind_gate: { music: 'kingsmere', name: 'Hall of Banners', zone: 'Kingsmere', region: 'elwynn', scene: 'stormwind_gate', lvl: [1, 60], safe: true, city: true, mobs: [], pool: 0, npcs: [], links: { goldshire: 25, stormwind: 8 } },
     stormwind: { music: 'kingsmere', name: 'Market Ward', zone: 'Kingsmere', region: 'elwynn', scene: 'stormwind', lvl: [1, 60], safe: true, inn: true, city: true, mobs: [], pool: 0, npcs: ['allison', 'mentor_alliance', 'thurman'], vendor: 'allison', gearVendor: 'thurman',
       links: { stormwind_gate: 8, stormwind_bank: 6, ironforge: 40 }, via: { ironforge: 'Underrail' } },
-    stormwind_bank: { music: 'kingsmere', name: 'Bank and Auction House', zone: 'Kingsmere', region: 'elwynn', scene: 'stormwind_bank', lvl: [1, 60], safe: true, city: true, mobs: [], pool: 0, npcs: ['banker_alliance', 'auctioneer_alliance'], links: { stormwind: 6 } },
+    stormwind_bank: { music: 'kingsmere', name: 'Bank and Auction House', zone: 'Kingsmere', region: 'elwynn', scene: 'stormwind_bank', lvl: [1, 60], safe: true, city: true, mobs: [], pool: 0, npcs: ['banker_alliance', 'auctioneer_alliance', 'edda_marlow'], vendor: 'edda_marlow', links: { stormwind: 6 } }, // a merchant beside the bank, as in every other capital
   });
   Object.assign(D.NPCS, {
-    allison: { name: 'Innkeeper Rosalind', title: 'Innkeeper' }, thurman: { name: 'Oswin Ferrell', title: 'Weaponsmith' },
+    allison: { name: 'Innkeeper Rosalind', title: 'Innkeeper' }, edda_marlow: { name: 'Edda Marlow', title: 'General Goods' }, thurman: { name: 'Oswin Ferrell', title: 'Weaponsmith' },
   });
 })(typeof window !== 'undefined' ? window : globalThis);

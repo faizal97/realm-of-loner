@@ -541,7 +541,7 @@
     if (npc === 'grosk' || npc === 'gryshka') return ['tough_bread', 'horde_bread', 'spring_water', 'ice_milk'].map(G.copyItem);
     if (npc === 'moodan' || npc === 'kien') return ['tough_bread', 'spring_water'].map(G.copyItem);
     if (npc === 'kauth' || npc === 'pala') return ['tough_bread', 'mulgore_bread', 'spring_water', 'ice_milk'].map(G.copyItem);
-    if (npc === 'allison') return ['tough_bread', 'fresh_bread', 'moist_cornbread', 'mutton_chop', 'spring_water', 'ice_milk', 'melon_juice', 'sweet_nectar'].map(G.copyItem);
+    if (npc === 'allison' || npc === 'edda_marlow') return ['tough_bread', 'fresh_bread', 'moist_cornbread', 'mutton_chop', 'spring_water', 'ice_milk', 'melon_juice', 'sweet_nectar'].map(G.copyItem);
     if (npc === 'heather' || npc === 'boorand') return ['fresh_bread', 'moist_cornbread', 'mutton_chop', 'ice_milk', 'melon_juice', 'sweet_nectar'].map(G.copyItem);
     if (npc === 'brianna' || npc === 'jayka') return ['moist_cornbread', 'mutton_chop', 'wild_hog_shank', 'melon_juice', 'sweet_nectar', 'morning_glory_dew'].map(G.copyItem);
     if (npc === 'quartermaster_hudson' || npc === 'quartermaster_lauren' || npc === 'innkeeper_everlook' || npc === 'quartermaster_brenn' || npc === 'trader_gikkix') return ['cured_ham_steak', 'sweet_roll_60', 'morning_glory_60', 'spring_water_60'].map(G.copyItem);
