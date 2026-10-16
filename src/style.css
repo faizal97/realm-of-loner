@@ -1041,3 +1041,7 @@ button.ev-fact { width: 100%; background: none; border: 0; border-bottom: 1px so
 .sheet-bardhow .how-tab { width: 100%; border-collapse: collapse; margin: 6px 0; }
 .sheet-bardhow .how-tab th { text-align: left; color: var(--muted); font-weight: 400; padding: 4px 6px 4px 0; }
 .sheet-bardhow .how-tab td { padding: 5px 6px 5px 0; border-top: 1px solid var(--edge); }
+/* a Bard teaching card (#256): a small picture beside the words */
+.tip-card .tip-row { display: grid; grid-template-columns: 44px 1fr; gap: 10px; align-items: center; }
+.tip-card .tip-pic { width: 44px; height: 44px; border-radius: 3px; }
+.tip-card .ab.tip-pic { max-height: 44px; }

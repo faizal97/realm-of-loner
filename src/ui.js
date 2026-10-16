@@ -798,7 +798,7 @@
     for (const e of evs) {
       const tgt = C.units[e.tgt], src = C.units[e.src];
       const onAlly = tgt && tgt.side === 'ally';
-      if (e.type === 'song' && src && src.kind === 'player') songSound(e, C, src);
+      if (e.type === 'song' && src && src.kind === 'player') { songSound(e, C, src); if (e.what === 'end' && !e.replaced && !C.over) bardCard('lapse'); }
       const meInvolved = (src && src.kind === 'player') || (tgt && tgt.kind === 'player');
       if (S_ && meInvolved) {
         if (e.type === 'dmg') S_.play(e.school === 'nature' ? 'arcane' : e.school && e.school !== 'physical' ? e.school : e.crit ? 'crit' : 'hit', { vol: tgt && tgt.kind === 'player' ? 0.75 : 1 });
@@ -1661,6 +1661,7 @@
   function songButton(btn, st, C) {
     const on = !!st && st.playing;
     btn.classList.toggle('singing', on); btn.classList.toggle('beat', on && st.inWindow); btn.classList.toggle('loaded', on && st.finale);
+    if (on && st.finale && st.verses >= st.max) bardCard('finale');
     const sg = btn.querySelector('.song');
     if (sg && on) { const left = Math.max(0, st.left - (G.fightNow ? G.fightNow() - C.t : 0)); sg.style.setProperty('--left', Math.min(1, left / st.len)); sg.style.setProperty('--win', st.win / st.len); }
     const vs = btn.querySelector('.verses'), k = on ? st.max + ':' + st.verses : '';
@@ -4833,6 +4834,28 @@
   const saveTips = (s) => { try { localStorage.setItem(TIP_KEY, JSON.stringify(s)); } catch (e) { } };
   // a class reaction explained the first time it happens for this character (v10.4). Shown even with tips off:
   // a glowing button alone is easy to miss.
+  // the Bard's teaching cards (#256): once per character, at the moment each one helps, always shown (the first-hour tips
+  // start off for older players, who roll the first Bards); each opens How Bards play. Numbers come from the data.
+  function bardCard(key) {
+    const P = G.S && G.S.player; if (!P || P.cls !== 'bard') return;
+    P.bardSeen = P.bardSeen || {}; if (P.bardSeen[key]) return;
+    const R = E.RHYTHM, L = R.lute, win = L.win / L.len, inst = (k) => { const a = D.ABILITIES['play_' + k], r = R[k]; return `${a.name.replace(/^Play the /, '')}: ${r.len} sec rounds, a ${r.win} sec beat, up to ${r.max} verses. Tap its button outside a fight to switch.`; };
+    const C = {
+      finale: ['Finale ready', 'Every verse is gold. Tap the song off the beat to play them all at once in a burst.', () => bardDemo({ left: 0.6, win, verses: L.max, max: L.max, finale: true })],
+      lapse: ['Song ran out', 'A song that runs out loses its verses. Tap it on the gold beat to keep it playing.', () => bardDemo({ left: 0.02, win, verses: 0, max: L.max })],
+      second: ['Two songs', `Up to ${E.SONG_SLOTS} songs play at once, on one shared beat. A new song takes the place of the one started first.`, () => img(abIcon('marching_song'))],
+      drum: ['New instrument', inst('drum'), () => img(abIcon('play_drum'))],
+      horn: ['New instrument', inst('horn'), () => img(abIcon('play_horn'))],
+      talents: ['Bard talents', 'Bard talents change how songs work: Hero → Abilities → Talents.', () => img(abIcon('song_of_rest'))],
+    }[key];
+    if (!C) return;
+    P.bardSeen[key] = 1; G.save();
+    const pic = C[2](); pic.classList.add('tip-pic');
+    const el = h('div', { class: 'tip-card bard-card' }, h('div', { class: 'tip-row' }, pic, h('div', { class: 'tip-t' }, h('b', { style: { color: 'var(--gold)' } }, C[0] + ' '), C[1])),
+      h('div', { class: 'tip-b' }, h('button', { class: 'chip', onclick: () => { el.remove(); openBardHow(); } }, 'How Bards play'), h('button', { class: 'chip gold', onclick: () => el.remove() }, 'Got it')));
+    (document.getElementById('app') || document.body).append(el);
+    setTimeout(() => el.remove(), 14000);
+  }
   function reactionCard(pr) {
     const P = G.S.player, key = pr.aura || pr.on[0]; P.procSeen = P.procSeen || {};
     if (P.procSeen[key]) return;
@@ -5347,6 +5370,7 @@
     G.on('questReady', () => tip('questReady'));
     G.on('roll', () => tip('roll'));
     G.on('runUpdate', () => { if (G.S && G.S.run && G.S.run.phase === 'rest') tip('run'); });
+    G.on('levelup', (d) => { const l = d.learned || [], ks = [['marching_song', 'second'], ['play_drum', 'drum'], ['play_horn', 'horn']].filter(([a]) => l.includes(a)).map(([, k]) => k).concat(d.level === D.TALENT_START ? ['talents'] : []); ks.forEach((k, i) => whenCalm(() => setTimeout(() => bardCard(k), i * 15000))); }); // the Bard's teaching cards (#256)
     G.on('levelup', (d) => { if (d.level === 2) tip('level'); if (d.level === 8) tip('dungeon'); if (d.level === D.TALENT_START) tip('talents'); });
     G.on('chat', () => { if (G.S && G.S.chat.some((m) => m.act && m.act.state === 'open' && !m.act.accepted)) tip('request'); });
     G.on('fightEnd', (d) => { fightEndAt = performance.now(); if (ui.singing) { ui.singing = false; if (window.SND && SND.songOut) SND.songOut(); } renderAll(); if (d.result === 'lose' && !G.S.run) banner('You died'); });
@@ -5468,7 +5492,8 @@
     save: () => { G.save(); cloudAuto(true); friendsAway(true); if (window.SND) window.SND.pause(); },
     resume: () => { if (window.SND) window.SND.resume(); resume(); friendsAway(false); },
     back: () => { if (ui.dialog) closeDialog(); else if (ui.sheet) closeSheet(); },
-    bardHow: () => openBardHow(), // the How Bards play sheet (#256), also for the dev checks
+    bardHow: () => openBardHow(), // the How Bards play sheet and the teaching cards (#256), also for the dev checks
+    bardCard: (k) => bardCard(k),
   };
   const cloudAuto = (force) => { if (window.CLOUD && CLOUD.on()) CLOUD.maybeBackup(force); };
   // Friends: what changed goes out (gathered, once a minute), and the online dot follows the game being on screen
