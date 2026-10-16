@@ -41,3 +41,19 @@ function ART_ICON_KEYS() {
   const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'art_legends.js'), 'utf8');
   return [...src.matchAll(/^ {4}([a-z_]+): function \(c\)/gm)].map((m) => m[1]);
 }
+
+// the bar keeps its size in and out of a fight (#66): out of a fight Eat, Drink and the instrument sit in fight-only
+// slots; a fight added one empty slot for each of them as well, a row of empty buttons once there were three (#261)
+test('a fight adds no empty slots to the bar when the out-of-fight buttons fit in fight-only slots', () => {
+  const ui = fs.readFileSync(path.join(__dirname, '..', 'src', 'ui.js'), 'utf8');
+  const i = ui.indexOf('  function barSlots() {'), src = ui.slice(i, ui.indexOf('\n  }\n', i) + 4);
+  const AB = { a: {}, b: {}, s1: { combatOnly: true }, s2: { combatOnly: true }, s3: { combatOnly: true }, play_lute: { instrument: 'lute' } };
+  const slots = (fight, base) => new Function('G', 'D', 'barArrange', 'barPool', src + '; return barSlots();')(
+    { S: { player: { bags: [] } }, racial: () => null, fight }, { ABILITIES: AB }, () => base, () => base);
+  const base = ['a', 's1', 'play_lute', 'b', 's2', 's3', 'step_back', 'eat', 'drink'];
+  assert.deepStrictEqual(slots(false, base), ['a', 'play_lute', 'b', 'eat', 'drink', null]);
+  assert.deepStrictEqual(slots(true, base), ['a', 's1', 'b', 's2', 's3', 'step_back']);
+  // more out-of-fight buttons than fight-only slots: the extra ones go at the end, an empty slot in a fight
+  assert.deepStrictEqual(slots(false, ['a', 'step_back', 'eat', 'drink']), ['a', 'eat', 'drink']);
+  assert.deepStrictEqual(slots(true, ['a', 'step_back', 'eat', 'drink']), ['a', 'step_back', null]);
+});

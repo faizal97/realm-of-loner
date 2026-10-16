@@ -1530,10 +1530,10 @@
     let k = 0;
     for (const id of base) {
       if (peaceOnly(id)) continue;
-      if (fightOnly(id)) slots.push(G.fight ? (id === r && G.pUnit && G.pUnit.form ? null : id) : (po[k++] || null)); // the racial waits out a form
+      if (fightOnly(id)) slots.push(G.fight ? (id === r && G.pUnit && G.pUnit.form ? null : id) : po[k] || null), k++; // the racial waits out a form
       else slots.push(id);
     }
-    for (; k < po.length; k++) slots.push(G.fight ? null : po[k]); // more of them than fight-only slots (one hid Step Back): at the end, either way
+    for (; k < po.length; k++) slots.push(G.fight ? null : po[k]); // more of them than fight-only slots (one hid Step Back): at the end, either way (#261: k counts fight-only slots in a fight too, so a fight adds no empty ones)
     return slots;
   }
   // the player's own bar layout, per character and saved with it: P.barOrder (ids in order) and P.barHide.
