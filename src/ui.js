@@ -96,7 +96,9 @@
   const looks = (c) => { const s = c.bot || c; const o = { cls: c.cls, race: s.race || c.race || 'human', skin: s.skin || 0, hair: s.hair || 0, gender: s.gender || 'm' }; const g = G.gearLooks(c); if (g) o.gear = g; return o; };
   // 'Dwarf Warlock': race and class of any character (player, bot, group member)
   const raceClass = (c) => { const r = D.RACES[(c && (c.race || (c.bot && c.bot.race))) || 'human']; return `${r ? r.name : ''} ${D.CLASSES[c.cls].name}`.trim(); };
-  const abIcon = (id) => art('icon', (D.ABILITIES[id] && D.ABILITIES[id].icon) || id);
+  // a bard's instrument is one button (play_lute's place on the bar) that shows and explains the instrument now played
+  const barAb = (id) => (D.ABILITIES[id] && D.ABILITIES[id].instrument && G.instrumentAb ? G.instrumentAb() : id);
+  const abIcon = (id) => { id = barAb(id); return art('icon', (D.ABILITIES[id] && D.ABILITIES[id].icon) || id); };
   // ---------- buffs and debuffs with time left, for any unit (or the player out of combat)
   const AURA_ALIAS = { momentum: 'rapid_fire', weakened_soul: 'pw_shield', seal: 'seal_righteousness', stoneskin: 'stoneskin_totem', rockbiter: 'rockbiter_weapon', chilled: 'frost_armor', bear: 'bear_form', fireball_burn: 'fireball', stun: 'hammer_justice', searing_totem: 'searing_totem' };
   const AURA_NAME = { momentum: 'Momentum', weakened_soul: 'Weakened Soul', chilled: 'Chilled', stun: 'Stunned', fireball_burn: 'Burning', seal: 'Seal' };
@@ -1522,7 +1524,7 @@
     const P = G.S.player, r = G.racial();
     const pot = P.bags.some((b) => b.item.slot === 'potion');
     const base = barArrange(barPool()).filter((id) => id !== 'potion' || pot);
-    const peaceOnly = (id) => id === 'eat' || id === 'drink';
+    const peaceOnly = (id) => id === 'eat' || id === 'drink' || !!(D.ABILITIES[id] && D.ABILITIES[id].instrument); // instruments change only outside a fight
     const fightOnly = (id) => id === 'step_back' || id === 'taunt' || id === r || !!(D.ABILITIES[id] && D.ABILITIES[id].combatOnly);
     const po = base.filter(peaceOnly), slots = [];
     let k = 0;
@@ -1538,7 +1540,7 @@
   // Anything not in the order yet (a newly learned ability) goes at the end, in the default order.
   function barPool() {
     const P = G.S.player, C = D.CLASSES[P.cls], r = G.racial();
-    return [...new Set(G.knownAbilities().concat(['step_back'], r ? [r] : [], ['eat'], C.resource === 'mana' ? ['drink'] : [], ['potion']))];
+    return [...new Set(G.knownAbilities().filter((id) => !D.ABILITIES[id].instrument || id === 'play_lute').concat(['step_back'], r ? [r] : [], ['eat'], C.resource === 'mana' ? ['drink'] : [], ['potion']))];
   }
   function barArrange(list) {
     const P = G.S.player, o = P.barOrder || [], hide = P.barHide || [];
@@ -1552,7 +1554,7 @@
       const pool = barPool(), shown = barArrange(pool), hidden = pool.filter((id) => (P.barHide || []).includes(id));
       if (pick != null && pick >= shown.length) pick = null;
       const changed = () => { pick = null; G.save(); renderBar(); ui.sheetFn(); };
-      const tile = (id, fn, cls) => h('button', { class: 'ab' + (cls || ''), 'aria-label': D.ABILITIES[id].name, onclick: fn }, img(abIcon(id)),
+      const tile = (id, fn, cls) => h('button', { class: 'ab' + (cls || ''), 'aria-label': D.ABILITIES[barAb(id)].name, onclick: fn }, img(abIcon(id)),
         D.ABILITIES[id].combatOnly || id === 'taunt' || id === r ? h('span', { class: 'ab-tag' }, '⚔') : null);
       const grid = h('div', { class: 'actionbar bar-edit', style: { gridTemplateColumns: 'repeat(7, 1fr)' } });
       let dragged = false;
@@ -1636,7 +1638,7 @@
       const id = slots[i];
       if (!id) { const e = h('div', { class: 'ab empty' }); let t = null; e.addEventListener('pointerdown', () => { t = setTimeout(() => abilityTip(null), 450); }); e.addEventListener('pointerup', () => clearTimeout(t)); e.addEventListener('pointerleave', () => clearTimeout(t)); bar.append(e); continue; }
       const ab = D.ABILITIES[id];
-      const btn = h('button', { class: 'ab', 'aria-label': ab.name }, img(abIcon(id)), h('div', { class: 'cd' }), h('div', { class: 'cdt tnum' }));
+      const btn = h('button', { class: 'ab', 'aria-label': D.ABILITIES[barAb(id)].name }, img(abIcon(id)), h('div', { class: 'cd' }), h('div', { class: 'cdt tnum' }));
       if (ab.song) btn.append(h('div', { class: 'song' }, h('i', { class: 'beatz' }), h('i', { class: 'str' })), h('div', { class: 'verses' })); // a bard's song (#252)
       if (id === 'eat' || id === 'drink' || id === 'potion') {
         const n = G.S.player.bags.filter((b) => b.item.slot === (id === 'eat' ? 'food' : id === 'potion' ? 'potion' : 'drink')).reduce((a, b) => a + b.n, 0);
@@ -1696,6 +1698,7 @@
     const blocked = G.barBlock(id); if (blocked) return toast(blocked); // on the road or dead: say why (#167)
     if (id === 'eat') return G.consume('food');
     if (id === 'drink') return G.consume('drink');
+    if (D.ABILITIES[id] && D.ABILITIES[id].instrument) { const why = G.nextInstrument(); if (why) toast(why); return; } // the next instrument learned
     if (id === 'potion') return G.usePotion(G.pUnit ? (G.pUnit.hp / G.pUnit.maxHp < 0.6 || !G.bestPotion('mana') ? null : 'mana') : null);
     if (G.fight) {
       if (id === 'attack') { G.toggleAuto(); return; }
@@ -1752,6 +1755,7 @@
     const simple = { attack: 'Attack: turns auto-attack on or off.', potion: 'Potion: drinks your best healing potion (or a mana potion when your health is fine). Works in combat; 2 min cooldown.',
       eat: `Eat: restores health over ${G.EAT_SECS} sec.`, drink: `Drink: restores mana over ${G.DRINK_SECS} sec.` };
     if (!id || simple[id]) return showDialog([h('p', null, id ? simple[id] : 'An empty slot: a fight-only ability shows here in a fight, or nothing yet.'), arrangeBtn()], true);
+    id = barAb(id);
     const t = abilityText(id);
     showDialog([h('div', { class: 'tooltip' },
       h('div', { class: 'nm', style: { color: '#fff' } }, t.name),

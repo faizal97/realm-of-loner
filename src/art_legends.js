@@ -1624,6 +1624,28 @@
       o += G(lute(c, 44), 'translate(27,41) rotate(40) scale(0.72)');
       o += leaf(c, 50, 50, 130, 0.55, '#8ad05a') + leaf(c, 12, 16, -40, 0.5, '#a8e068');
       return iconWrap(c, ['#78ac6c', '#0c1a0a'], o + sparkle(48, 10, 3, '#ffffff') + sparkle(12, 40, 2.2, '#ffffff'));
+    },
+    // the Bard's Drum (#261): a laced hand drum, wooden goblet body, pale hide, a beat ringing off it
+    bard_drum: function (c) {
+      var o = iglow(c, 32, 30, 30, '#ffe0b0', 0.6) + E(32, 58, 14, 2.6, '#000', 0, 0.3);
+      var body = 'M14,22 L50,22 C50,32 42,36 38,42 L40,57 L24,57 L26,42 C22,36 14,32 14,22 Z';
+      o += P(body, c.lg([[0, '#d08848'], [0.55, '#9a5426'], [1, '#5a2c10']], 0, 0, 1, 0), 2.2);
+      o += CG(ol('M16,24 L24,40 L32,24 L40,40 L48,24', '#f0dcb0', 1.1) + F('M38,20 L52,20 L52,60 L40,60 Z', '#000000', 0.18), c.clip(body));
+      o += P('M23,52 L41,52 L41,55 L23,55 Z', c.cel('#e8c060'), 1.4);
+      o += E(32, 22, 18, 5.6, c.lg([[0, '#fff8e8'], [1, '#d8c49a']]), 2.2) + E(32, 22, 11, 3.2, '#ffffff', 0, 0.35);
+      o += ol('M8,12 Q4,18 8,24 M56,12 Q60,18 56,24', '#fff0c8', 1.4, 0.85) + ol('M12,6 Q6,14 12,22', '#fff0c8', 1, 0.5);
+      return iconWrap(c, ['#c08a4c', '#1e0e06'], o + sparkle(52, 8, 2.4, '#ffffff'));
+    },
+    // the Bard's Horn (#261): a curled war horn banded in brass, its call spreading from the bell
+    bard_horn: function (c) {
+      var o = iglow(c, 30, 34, 30, '#fff0c8', 0.55), h = '';
+      var horn = 'M10,48 C10,30 24,18 40,16 L46,8 C52,14 54,20 52,26 L44,24 C30,26 20,34 18,48 Z';
+      h += P(horn, c.lg([[0, '#fff4dc'], [0.5, '#e0c898'], [1, '#9a7a4a']], 0, 0, 1, 1), 2.2);
+      h += CG(F('M10,40 L22,40 L22,52 L10,52 Z', '#5a3a1a', 0.35) + L('M16,30 L24,36 M26,22 L32,28', '#b0905a', 1, 0.7), c.clip(horn));
+      h += P('M15.6,37 L24.4,40.6 L22.6,44 L13.8,41 Z', c.cel('#e8b848'), 1.3) + P('M32,19.4 L36.2,25.4 L32.6,26.8 L28.6,21 Z', c.cel('#e8b848'), 1.3);
+      h += E(49, 17, 4.6, 9.8, '#3a2410', 1.8) + E(49, 17, 2.6, 6.6, '#1a0e04');
+      o += G(h, 'translate(1,9) scale(0.84)') + ol('M50,8 Q55,17 50,27 M54,4 Q61,17 54,31', '#fff0c8', 1.4, 0.8);
+      return iconWrap(c, ['#8a9a6c', '#10140a'], o + sparkle(12, 12, 2.4, '#ffffff'));
     }
   };
   Object.keys(WICONS).forEach(function (k) { ICONS[k] = WICONS[k]; });
