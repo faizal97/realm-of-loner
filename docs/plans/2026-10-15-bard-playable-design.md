@@ -91,8 +91,11 @@ Names are drafts until `node tools/lorekeeper.js` passes them. Numbers are start
 
 ### 9. Talents: three trees, two branches each
 Each tree has a **songs branch** and an **instrument branch**. Tier 1 is small numbers; tiers 2 and 3 change rules;
-tier 3 is a one-rank keystone per branch. Each tree holds about **26 points**, so the 51 points at 60 fill about two
-trees, never all three: the pairing is the build.
+tier 3 is a one-rank keystone per branch, and **a tree's two keystones are either/or** (decided 2026-10-16, #253): each
+tree holds 5 + 3 + 5 + 3 + 1 = 17 points, so the 51 points at 60 fill every tier 1 and 2 talent and three keystone
+choices, one per tree. (The first draft said about 26 points a tree to fill two trees; its talents only add up to 18, so
+at 60 a Bard would have owned almost everything, as every other class does.) Taut Strings, written as "instrument shot
++10%", became Arcane damage +2% per rank: an instrument gives stats only (#251), it has no shot.
 
 **Battle Hymn (damage)**
 
