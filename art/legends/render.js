@@ -322,7 +322,7 @@ const POS_EN = [{ r: 3, b: 4, w: 30 }, { r: 26, b: 15, w: 23 }, { r: 6, b: 28, w
   const al = ui.match(/const POS_ALLY = (\[[^\n]+\]);/), en = ui.match(/const POS_EN = (\[[^\n]+\]);/);
   if (!al || JSON.stringify(eval(al[1])) !== JSON.stringify(POS_ALLY)) bad('onscene: POS_ALLY in ui.js changed, update the copy here');
   if (!en || JSON.stringify(eval(en[1])) !== JSON.stringify(POS_EN)) bad('onscene: POS_EN in ui.js changed, update the copy here');
-  if (!/if \(u\.boss && i === 0\) pos\.w = 36;/.test(ui)) bad('onscene: boss width rule in ui.js changed');
+  if (!/if \(u\.boss && i === 0\) pos\.w = [^;\n]*: 36;/.test(ui)) bad('onscene: boss width rule in ui.js changed'); // a world boss is wider (46); an ordinary boss, drawn here, is 36
   if (!/spriteEl\(art\('hero', looks\(P\)\), \{ l: 4, b: 5, w: 26 \}/.test(ui)) notes.push('onscene: the town hero slot in ui.js changed');
 }
 function spr(pos, svg, flip) {
