@@ -42,3 +42,12 @@ test('guides: a broken link stops the build, an old guide fails --check', () => 
   assert.strictEqual(run(['--check']), '', 'a player guide out of date warns on its page but does not stop a release');
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+// a guide for a class not out yet (the Bard) is left off the live site, and checked as the dev build shows it, so its
+// links already resolve on the release that shows the class
+test('guides: a class not out yet waits for its release, its links still checked', () => {
+  const root = path.join(__dirname, '..');
+  const run = (env) => execFileSync('node', [path.join(root, 'tools/build_guide.js'), '--check'], { cwd: root, encoding: 'utf8', env: Object.assign({}, process.env, env) });
+  const n = (out) => +out.match(/guides: (\d+)/)[1];
+  assert.strictEqual(n(run({ AZ_DEV: '1' })), n(run({ AZ_DEV: '' })) + 1);
+});

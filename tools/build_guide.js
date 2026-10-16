@@ -8,6 +8,7 @@ const ROOT = path.join(__dirname, '..');
 // what players have, not unreleased work); the guides, the page and the tools are always this checkout's
 const DATA = process.env.DATA_ROOT || ROOT;
 globalThis.localStorage = { getItem() { return null; }, setItem() {}, removeItem() {} };
+if (process.env.AZ_DEV) globalThis.AZ_DEV = {}; // as the dev build: classes not out yet are shown, so their guides are checked too
 require(path.join(DATA, 'src/data.js')); require(path.join(DATA, 'src/engine.js')); require(path.join(DATA, 'src/bots.js')); require(path.join(DATA, 'src/game.js'));
 const { D, E, G } = globalThis;
 const OUT = path.join(ROOT, 'dist/guide');
@@ -426,6 +427,7 @@ for (const f of fs.existsSync(gdir) ? fs.readdirSync(gdir).filter((x) => x.endsW
   const meta = file.meta;
   const cls = meta.class;
   if (!D.CLASSES[cls] || !meta.written || !meta.checked || !meta.by) { guideErrors.push(`${f}: needs class (a class id), by (official or a name), written and checked`); continue; }
+  if (!SHOWN(cls)) continue; // a class not out yet (the Bard): its guide waits for the release that shows the class
   const official = meta.by === 'official', id = f.replace(/\.md$/, '');
   const { intro, tabs, errors } = GF.parse(file.body, resolve);
   for (const e of errors) guideErrors.push(`${f}: ${e}`);
