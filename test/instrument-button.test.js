@@ -32,7 +32,7 @@ test('the bar has one instrument button, out of a fight only, with the instrumen
   const ui = fs.readFileSync(path.join(__dirname, '..', 'src', 'ui.js'), 'utf8');
   assert.match(ui, /G\.knownAbilities\(\)\.filter\(\(id\) => !D\.ABILITIES\[id\]\.instrument \|\| id === 'play_lute'\)/);
   assert.match(ui, /const peaceOnly = \(id\) => [^\n]*\.instrument/);
-  assert.match(ui, /const abIcon = \(id\) => \{ id = barAb\(id\);/);
+  assert.match(ui, /const barIcon = \(id\) => abIcon\(barAb\(id\)\);/); assert.match(ui, /img\(barIcon\(id\)\), h\('div', \{ class: 'cd' \}\)/);
   for (const id of G.INSTRUMENTS) assert.ok(ART_ICON_KEYS().includes(D.ABILITIES[id].icon), id + ' has its own icon');
   assert.strictEqual(new Set(G.INSTRUMENTS.map((id) => D.ABILITIES[id].icon)).size, 3);
 });

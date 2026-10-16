@@ -98,7 +98,8 @@
   const raceClass = (c) => { const r = D.RACES[(c && (c.race || (c.bot && c.bot.race))) || 'human']; return `${r ? r.name : ''} ${D.CLASSES[c.cls].name}`.trim(); };
   // a bard's instrument is one button (play_lute's place on the bar) that shows and explains the instrument now played
   const barAb = (id) => (D.ABILITIES[id] && D.ABILITIES[id].instrument && G.instrumentAb ? G.instrumentAb() : id);
-  const abIcon = (id) => { id = barAb(id); return art('icon', (D.ABILITIES[id] && D.ABILITIES[id].icon) || id); };
+  const abIcon = (id) => art('icon', (D.ABILITIES[id] && D.ABILITIES[id].icon) || id);
+  const barIcon = (id) => abIcon(barAb(id)); // on the action bar only: elsewhere each instrument shows its own
   // ---------- buffs and debuffs with time left, for any unit (or the player out of combat)
   const AURA_ALIAS = { momentum: 'rapid_fire', weakened_soul: 'pw_shield', seal: 'seal_righteousness', stoneskin: 'stoneskin_totem', rockbiter: 'rockbiter_weapon', chilled: 'frost_armor', bear: 'bear_form', fireball_burn: 'fireball', stun: 'hammer_justice', searing_totem: 'searing_totem' };
   const AURA_NAME = { momentum: 'Momentum', weakened_soul: 'Weakened Soul', chilled: 'Chilled', stun: 'Stunned', fireball_burn: 'Burning', seal: 'Seal' };
@@ -1554,7 +1555,7 @@
       const pool = barPool(), shown = barArrange(pool), hidden = pool.filter((id) => (P.barHide || []).includes(id));
       if (pick != null && pick >= shown.length) pick = null;
       const changed = () => { pick = null; G.save(); renderBar(); ui.sheetFn(); };
-      const tile = (id, fn, cls) => h('button', { class: 'ab' + (cls || ''), 'aria-label': D.ABILITIES[barAb(id)].name, onclick: fn }, img(abIcon(id)),
+      const tile = (id, fn, cls) => h('button', { class: 'ab' + (cls || ''), 'aria-label': D.ABILITIES[barAb(id)].name, onclick: fn }, img(barIcon(id)),
         D.ABILITIES[id].combatOnly || id === 'taunt' || id === r ? h('span', { class: 'ab-tag' }, '⚔') : null);
       const grid = h('div', { class: 'actionbar bar-edit', style: { gridTemplateColumns: 'repeat(7, 1fr)' } });
       let dragged = false;
@@ -1638,7 +1639,7 @@
       const id = slots[i];
       if (!id) { const e = h('div', { class: 'ab empty' }); let t = null; e.addEventListener('pointerdown', () => { t = setTimeout(() => abilityTip(null), 450); }); e.addEventListener('pointerup', () => clearTimeout(t)); e.addEventListener('pointerleave', () => clearTimeout(t)); bar.append(e); continue; }
       const ab = D.ABILITIES[id];
-      const btn = h('button', { class: 'ab', 'aria-label': D.ABILITIES[barAb(id)].name }, img(abIcon(id)), h('div', { class: 'cd' }), h('div', { class: 'cdt tnum' }));
+      const btn = h('button', { class: 'ab', 'aria-label': D.ABILITIES[barAb(id)].name }, img(barIcon(id)), h('div', { class: 'cd' }), h('div', { class: 'cdt tnum' }));
       if (ab.song) btn.append(h('div', { class: 'song' }, h('i', { class: 'beatz' }), h('i', { class: 'str' })), h('div', { class: 'verses' })); // a bard's song (#252)
       if (id === 'eat' || id === 'drink' || id === 'potion') {
         const n = G.S.player.bags.filter((b) => b.item.slot === (id === 'eat' ? 'food' : id === 'potion' ? 'potion' : 'drink')).reduce((a, b) => a + b.n, 0);
@@ -3747,6 +3748,7 @@
       for (const tree of trees) tabs.append(h('button', { class: 'chip' + (tree.id === ui.talentTree ? ' gold' : ''), onclick: () => { ui.talentTree = tree.id; ui.sheetFn(); } }, img(abIcon(tree.icon)), ' ', tree.name, h('small', null, String(G.treeSpent(P, tree.id)))));
       b.append(tabs);
       const tree = trees.find((t) => t.id === ui.talentTree), spent = G.treeSpent(P, tree.id);
+      if (tree.talents.some((t) => t.branch)) { talentBranches(b, P, tree, spent); return; }
       for (const tier of [1, 2, 3]) {
         const need = D.TALENT_TIER_POINTS[tier], open = spent >= need;
         b.append(h('div', { class: 'sec-h' }, `Tier ${tier}`, h('small', null, open ? (tier > 1 ? 'open' : '') : `needs ${need} points in ${tree.name} (${spent}/${need})`)));
@@ -3762,10 +3764,38 @@
         }
         b.append(list);
       }
-      const cost = G.respecCost();
-      b.append(h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', disabled: !tp.spent, onclick: () => showDialog([h('h3', null, 'Reset talents?'), h('p', null, `All ${tp.spent} points come back to spend again. ${cost ? `This costs ${G.moneyText(cost)}.` : 'The first reset is free.'}`),
-        h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { closeDialog(); G.resetTalents(); ui.sheetFn(); } }, 'Reset'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Cancel'))], true) }, cost ? `Reset (${G.moneyText(cost)})` : 'Reset (free)')));
+      talentReset(b, tp);
     });
+  }
+  const learnRow = (t) => () => { const why = G.canLearnTalent(G.S.player, t.id); if (why) return toast(why); G.learnTalent(t.id); ui.sheetFn(); if (window.SND) window.SND.play('quest_accept', { vol: 0.5 }); };
+  // a tree in two branches (the Bard's, #253): Songs, then Instrument, each in tier order. A locked row says what opens it;
+  // a keystone names the one it is either/or with
+  const BRANCH = { songs: ['Songs', 'what your songs do'], instrument: ['Instrument', 'what your beat does'] };
+  function talentBranches(b, P, tree, spent) {
+    for (const br of ['songs', 'instrument']) {
+      const ts = tree.talents.filter((t) => t.branch === br).sort((x, y) => x.tier - y.tier);
+      b.append(h('div', { class: 'sec-h' }, BRANCH[br][0], h('small', null, BRANCH[br][1])));
+      const list = h('div', { class: 'list talents' });
+      for (const t of ts) {
+        const r = (P.talents || {})[t.id] || 0, need = D.TALENT_TIER_POINTS[t.tier], open = spent >= need, rival = G.talentRival(P, t, tree);
+        const pair = tree.pickOne === t.tier ? tree.talents.find((x) => x !== t && x.tier === t.tier) : null;
+        const note = !open ? `Opens at ${need} points in ${tree.name} (${spent}/${need})` : rival ? `You chose ${rival.name}: one per tree` : pair && !r ? `Keystone: this or ${pair.name}, one per tree` : null;
+        list.append(h('button', { class: 'row talent' + (r ? ' has' : '') + (!open || rival ? ' off' : '') + (r >= t.ranks ? ' max' : ''), onclick: learnRow(t) },
+          h('div', { class: 'ic' }, img(abIcon(t.icon))),
+          h('div', { class: 't' }, h('b', null, t.name),
+            h('small', { style: { whiteSpace: 'normal' } }, r ? talentText(t, r) : talentText(t, 1)),
+            r && r < t.ranks ? h('small', { class: 'next', style: { whiteSpace: 'normal' } }, 'Next rank: ' + talentText(t, r + 1)) : null,
+            note ? h('small', { class: 'lock', style: { whiteSpace: 'normal' } }, note) : null),
+          h('div', { class: 'r tnum rank' }, `${r}/${t.ranks}`)));
+      }
+      b.append(list);
+    }
+    talentReset(b, G.talentPoints(P));
+  }
+  function talentReset(b, tp) {
+    const cost = G.respecCost();
+    b.append(h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', disabled: !tp.spent, onclick: () => showDialog([h('h3', null, 'Reset talents?'), h('p', null, `All ${tp.spent} points come back to spend again. ${cost ? `This costs ${G.moneyText(cost)}.` : 'The first reset is free.'}`),
+        h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { closeDialog(); G.resetTalents(); ui.sheetFn(); } }, 'Reset'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Cancel'))], true) }, cost ? `Reset (${G.moneyText(cost)})` : 'Reset (free)')));
   }
   // ---------- Friends (friends.js): real players, added by friend code. Social → Friends. The live view (fw) runs
   // while Friends is on; the tab and the Social dot read it.

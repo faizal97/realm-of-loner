@@ -45,30 +45,36 @@
   B('requiem', { name: 'Requiem', lvl: 56, cost: 140, costPerLvl: 4, cd: 10, target: 'aoe', dmg: { base: [60, 70], perLvl: 3, coef: 0.25, school: 'arcane' }, desc: 'A song for the fallen strikes all nearby enemies for {b} Arcane damage. 10 sec cooldown.' });
   B('grand_finale', { name: 'Standing Ovation', lvl: 60, cost: 250, cd: 120, target: 'party', heal: { base: [220, 260], perLvl: 6, coef: 0.5 }, desc: 'The last and loudest chord heals everyone in your party for {h}. 2 min cooldown.' });
 
-  // three trees of five, like every class (talents.js explains the effect types)
-  const t = (id, tier, ranks, name, icon, desc, ...fx) => ({ id, tier, ranks, name, icon, desc, fx });
+  // three trees, each a songs branch and an instrument branch (#253, docs/plans/2026-10-15-bard-playable-design.md §9):
+  // tier 1 small numbers, tiers 2 and 3 change how the songs work ('rule' effects, read by the song code in engine.js),
+  // tier 3 a one-point keystone per branch, and a tree's two keystones are either/or (pickOne): 17 points a tree, 51 at 60
+  const t = (branch, id, tier, ranks, name, icon, desc, ...fx) => ({ id, tier, ranks, name, icon, desc, fx, branch });
   const f = (k, v, x) => Object.assign({ k, v }, x || {});
+  const rule = (name, v) => f('rule', v, { rule: name });
   D.TALENTS.bard = [
-    { id: 'harmony', name: 'Harmony', icon: 'song_of_rest', talents: [
-      t('resonance', 1, 5, 'Resonance', 'soothing_chord', 'Your healing is increased by {v}%.', f('heal', 2)),
-      t('long_rest', 1, 3, 'Long Rest', 'song_of_rest', 'Song of Rest and Verse of Mending heal {v}% more per tick.', f('hot', 5, { ab: ['song_of_rest', 'verse_of_mending'] })),
-      t('quick_fingers', 2, 5, 'Quick Fingers', 'crescendo', 'Crescendo casts {v} sec faster.', f('abilCast', 0.1, { ab: ['crescendo'] })),
-      t('full_chorus', 2, 3, 'Full Chorus', 'chorus_grove', 'Chorus of the Grove and Standing Ovation heal {v}% more.', f('abilHeal', 6, { ab: ['chorus_grove', 'grand_finale'] })),
-      t('perfect_pitch', 3, 1, 'Perfect Pitch', 'encore', '+{v}% spell critical strike chance, and 3% more healing.', f('spellCrit', 3), f('heal', 3)),
+    { id: 'discord', name: 'Battle Hymn', icon: 'dissonant_note', pickOne: 3, talents: [
+      t('songs', 'rousing_verses', 1, 5, 'Rousing Verses', 'dirge', 'Your damage songs and their Finales deal {v}% more.', f('dot', 4, { ab: ['dirge', 'ballad_of_blades'] })),
+      t('songs', 'lingering_dirge', 2, 3, 'Lingering Dirge', 'dirge', 'Your damage Finales leave a Dirge on each enemy they hit: {v}% chance, 9 sec.', rule('lingeringDirge', 34)),
+      t('songs', 'showstopper', 3, 1, 'Showstopper', 'shatterchord', 'After a damage Finale, your next Shatterchord is instant.', rule('showstopper', 1)),
+      t('instrument', 'taut_strings', 1, 5, 'Taut Strings', 'reedsong_lute', 'Your Arcane damage is increased by {v}%.', f('school', 2, { school: 'arcane' })),
+      t('instrument', 'drumbeat', 2, 3, 'Drumbeat', 'bard_drum', 'Each beat you land on a damage song also strikes its target for {v}% of a pulse.', rule('drumbeat', 25)),
+      t('instrument', 'syncopation', 3, 1, 'Syncopation', 'ballad_of_blades', 'A beat landed on one song adds a verse to your other songs too. Once every 10 sec.', rule('syncopation', 10)),
     ] },
-    { id: 'tempo', name: 'Tempo', icon: 'marching_song', talents: [
-      t('steady_beat', 1, 5, 'Steady Beat', 'marching_song', 'Marching Song is {v}% stronger.', f('buff', 6, { ab: ['marching_song'] })),
-      t('light_step', 1, 5, 'Light Step', 'hearthsong', '+{v}% chance to dodge.', f('dodge', 1)),
-      t('warm_hearth', 2, 3, 'Warm Hearth', 'hearthsong', 'Hearthsong and Anthem of Stone are {v}% stronger.', f('buff', 10, { ab: ['hearthsong', 'anthem_of_stone'] })),
-      t('open_throat', 2, 5, 'Open Throat', 'soothing_chord', 'Your songs cost {v}% less mana.', f('abilCost', 2, { ab: ['*'] })),
-      t('cadence', 3, 1, 'Cadence', 'counterpoint', 'Counterpoint absorbs {v}% more.', f('shield', 20, { ab: ['counterpoint'] })),
+    { id: 'harmony', name: 'Harmony', icon: 'song_of_rest', pickOne: 3, talents: [
+      t('songs', 'soothing_voice', 1, 5, 'Soothing Voice', 'song_of_rest', 'Your healing songs and their Finales heal {v}% more.', f('hot', 4, { ab: ['song_of_rest'] })),
+      t('songs', 'rising_finale', 2, 3, 'Rising Finale', 'grand_finale', 'Your healing Finales heal up to {v}% more the more hurt your party is.', rule('risingFinale', 15)),
+      t('songs', 'rescue_note', 3, 1, 'Rescue Note', 'verse_of_mending', 'When an ally drops under 25% health, your next healing Finale is ready at any verse. Once every 30 sec.', rule('rescueNote', 30)),
+      t('instrument', 'resonance', 1, 5, 'Resonance', 'soothing_chord', 'Each beat you land gives back {v}% of your mana.', rule('beatMana', 1)),
+      t('instrument', 'heartstrings', 2, 3, 'Heartstrings', 'hearthsong', 'Each beat you land heals your most hurt ally for {v}% of a Song of Rest pulse.', rule('heartstrings', 30)),
+      t('instrument', 'sustain', 3, 1, 'Sustain', 'intermission', 'A song about to run out holds on {v} sec more, all of it on the beat. Once per song.', rule('sustain', 3)),
     ] },
-    { id: 'discord', name: 'Battle Hymn', icon: 'dissonant_note', talents: [
-      t('sharp_notes', 1, 5, 'Sharp Notes', 'dissonant_note', 'Dissonant Note deals {v}% more damage.', f('abilDmg', 4, { ab: ['dissonant_note'] })),
-      t('grating_voice', 1, 5, 'Grating Voice', 'requiem', 'Your Arcane damage is increased by {v}%.', f('school', 2, { school: 'arcane' })),
-      t('slow_dirge', 2, 3, 'Slow Dirge', 'dirge', 'Dirge deals {v}% more damage.', f('dot', 8, { ab: ['dirge'] })),
-      t('deep_lullaby', 2, 3, 'Deep Lullaby', 'lullaby', 'Lullaby comes back {v} sec sooner.', f('abilCd', 4, { ab: ['lullaby'] })),
-      t('last_note', 3, 1, 'Last Note', 'requiem', 'Requiem deals {v}% more damage, and +2% spell critical strike chance.', f('abilDmg', 20, { ab: ['requiem'] }), f('spellCrit', 2)),
+    { id: 'tempo', name: 'Tempo', icon: 'marching_song', pickOne: 3, talents: [
+      t('songs', 'rallying_cadence', 1, 5, 'Rallying Cadence', 'marching_song', 'Marching Song, Hearthsong and Anthem of Stone are {v}% stronger.', f('dot', 4, { ab: ['marching_song'] }), f('buff', 4, { ab: ['hearthsong', 'anthem_of_stone'] })),
+      t('songs', 'second_wind', 2, 3, 'Second Wind', 'encore', "Marching Song's Finale gives your party {v}% of their mana, rage or energy.", rule('secondWind', 10)),
+      t('songs', 'medley', 3, 1, 'Medley', 'chorus_grove', 'Keep three songs at once instead of two.', rule('medley', 1)),
+      t('instrument', 'practised_hands', 1, 5, 'Practised Hands', 'counterpoint', 'The beat lasts {v} sec longer.', rule('beatWin', 0.1)),
+      t('instrument', 'fourth_verse', 2, 1, 'Fourth Verse', 'crescendo', 'Your songs hold one more verse, and their Finales grow with it.', rule('fourthVerse', 1)),
+      t('instrument', 'perfect_pitch', 3, 1, 'Perfect Pitch', 'echo', 'A beat landed in its last {v} sec adds two verses.', rule('perfectPitch', 0.5)),
     ] },
   ];
   // on test builds only (/dev/ and betas, the same rule as G.testBuild) every race can pick the Bard so it can be tried

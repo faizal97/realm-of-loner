@@ -117,7 +117,8 @@ test('Echo replays the last Finale at half strength', () => {
   const { C, u } = bardFight(60);
   const t = C.enemies[0];
   G.useAbility('dirge');
-  for (let v = 1; v <= 3; v++) { until(C, () => E.songState(C, u, 'dirge').inWindow); freeGcd(C, u); G.useAbility('dirge'); }
+  // up to the verse limit, talents included (Fourth Verse, #253)
+  for (let v = 1; v <= E.songState(C, u, 'dirge').max; v++) { until(C, () => E.songState(C, u, 'dirge').inWindow); freeGcd(C, u); G.useAbility('dirge'); }
   freeGcd(C, u); let hp = t.hp; G.useAbility('dirge'); const fin = hp - t.hp;
   freeGcd(C, u); hp = t.hp; assert.strictEqual(G.useAbility('echo'), null); const echo = hp - t.hp;
   assert.ok(fin > 0 && Math.abs(echo / fin - 0.5) < 0.15, `Finale ${Math.round(fin)}, Echo ${Math.round(echo)}`);

@@ -639,6 +639,7 @@ img { max-width: 100%; display: block; }
 .row.talent.has .rank { color: #5fd46a; } .row.talent.max .rank { color: #ffd84a; }
 .row.talent.has { border-color: #3f7f3f; } .row.talent.max { border-color: #b08a2a; }
 .row.talent .next { color: #9fd6ff; }
+.row.talent .lock { color: #d8b878; } /* what opens a locked talent, or the keystone it is either/or with (#253) */
 .pill { font: 700 12px var(--body); color: var(--muted); }
 .pill.ready { color: #1a1206; background: #ffd84a; padding: 3px 8px; border-radius: 10px; }
 

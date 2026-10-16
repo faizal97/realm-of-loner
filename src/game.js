@@ -140,6 +140,13 @@
       };
       walk(S, 0);
     }
+    // a talent no longer in its class's trees (the Bard's first trees, #253) gives its points back; so does a second
+    // keystone where a tree allows one (pickOne)
+    if (S.player.talents && D.TALENTS[S.player.cls]) {
+      const T = S.player.talents;
+      for (const k of Object.keys(T)) if (!G.talentInfo(S.player.cls, k)) delete T[k];
+      for (const tree of D.TALENTS[S.player.cls]) if (tree.pickOne) tree.talents.filter((x) => x.tier === tree.pickOne && T[x.id]).slice(1).forEach((x) => delete T[x.id]);
+    }
     // v9.8: the isle is closed until Veshmira dies; anyone who already reached it keeps access
     if (!S.flags.stormBroken) {
       const onIsle = Object.keys(S.player.visited || {}).concat(Object.keys(S.player.done), Object.keys(S.player.quests)).some((k) => (D.PLACES[k] && STORM_REGIONS.has(D.PLACES[k].region)) || /^(x_to_|tw_|sr_|ar_|tp_|tc_)/.test(k));
@@ -615,6 +622,7 @@
     if (G.talentPoints(char).free <= 0) return char.level < D.TALENT_START ? `Talents start at level ${D.TALENT_START}` : 'No talent points left';
     const need = D.TALENT_TIER_POINTS[info.t.tier];
     if (G.treeSpent(char, info.tree.id) < need) return `Needs ${need} points in ${info.tree.name}`;
+    const other = G.talentRival(char, info.t, info.tree); if (other) return `You chose ${other.name}: one per tree`;
     return null;
   };
   G.learnTalent = function (id) {
@@ -656,7 +664,9 @@
     }
     return char.talents;
   };
-  G.canLearnTalentFree = (char, t, tree) => ((char.talents[t.id] || 0) < t.ranks) && G.treeSpent(char, tree.id) >= D.TALENT_TIER_POINTS[t.tier];
+  G.canLearnTalentFree = (char, t, tree) => ((char.talents[t.id] || 0) < t.ranks) && G.treeSpent(char, tree.id) >= D.TALENT_TIER_POINTS[t.tier] && !G.talentRival(char, t, tree);
+  // a tree whose keystones are either/or (pickOne: their tier, the Bard's, #253): the other one already learned, or null
+  G.talentRival = (char, t, tree) => (tree.pickOne && t.tier === tree.pickOne ? tree.talents.find((x) => x !== t && x.tier === t.tier && ((char.talents || {})[x.id] || 0) > 0) || null : null);
   G.knownAbilities = function () {
     const P = G.S.player;
     const C = D.CLASSES[P.cls];
