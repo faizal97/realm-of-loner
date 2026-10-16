@@ -146,10 +146,13 @@
       if (onIsle) S.flags.stormBroken = true;
     }
     // v5: v3.0–v4.2 reused three ids from earlier zones (Stoneharrow's quests 'poachers' and 'gnoll_paws', and its murloc
-    // fins). They have their own ids now. A Stoneharrow-level Accord character's copies move to the new ids.
+    // fins). They have their own ids now. A Stoneharrow-level Accord character's copies move to the new ids. Not
+    // 'gnoll_paws' any more (#260): it is Westfall's own Accord quest, so copying it marked Paws for Proof done for every
+    // Accord character who had done Westfall's, and stranded it in the log of anyone holding it; every save from before
+    // v5 has long since been moved.
     { const Pp = S.player, alliance = (D.RACES[Pp.race] || {}).faction !== 'horde';
       if (alliance && Pp.level >= 18) {
-        for (const [o, nw] of [['poachers', 'rr_poachers'], ['gnoll_paws', 'rr_gnoll_paws']]) {
+        for (const [o, nw] of [['poachers', 'rr_poachers']]) {
           if (Pp.quests && Pp.quests[o] && !Pp.quests[nw]) { Pp.quests[nw] = Pp.quests[o]; delete Pp.quests[o]; }
           if (Pp.done && Pp.done[o] && Pp.level >= 20) Pp.done[nw] = true;
         }
@@ -157,6 +160,11 @@
       }
       if (Pp.done && Pp.done.poachers && alliance) delete Pp.done.poachers; // the Accord never had Greensward's quest
     }
+    // a quest in the log and marked done at once is in the log (#260): it can be turned in or abandoned again
+    for (const q in S.player.quests || {}) if (S.player.done && S.player.done[q]) delete S.player.done[q];
+    // and Paws for Proof marked done by that migration for someone who has never been to Longbridge, where it is given
+    // and handed in, was never done: it can be picked up again
+    if (S.player.done && S.player.done.rr_gnoll_paws && S.player.visited && !S.player.visited.lakeshire) delete S.player.done.rr_gnoll_paws;
     // v3: stacks saved before a material changed slot (linen was junk) take the item's current slot and icon
     for (const b of (S.player.bags || []).concat(S.player.bank || [])) { const base = D.ITEMS[b.item.id]; if (base && base.slot === 'mat' && b.item.slot !== 'mat') { b.item.slot = 'mat'; b.item.icon = base.icon; } }
     G.honorLooks(true); // rank looks a character already earned (Honor ranks, #57), without a message
