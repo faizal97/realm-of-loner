@@ -610,7 +610,7 @@
   }
 
   // ------------------------------------------------------------- abilities
-  function abCost(ab, u) { if (ab.shapeshift && u.form) return 0; if (ab.id) { const la = litAura(u, ab.id); if (la && la.proc.free) return 0; } const base = (ab.cost || 0) + (ab.costPerLvl || 0) * ((u.level || E.levelOf(u)) - 1); const off = ab.id ? Math.min(90, abPct(tmOf(u).abilCost, ab.id)) : 0; const lm = (ab.heal || ab.hot) && fxOf(u, 'lavish_mend') ? 1 + D.EFFECTS.lavish_mend.mana : 1; const sc = ab.stackCost && ab.id ? auraOf(u, ab.id + '_stack') : null; return Math.round(base * (1 - off / 100) * lm * (sc ? 1 + ab.stackCost.pct * sc.stacks / 100 : 1)); } /* stackCost: each recent cast makes the next dearer (Arcane Blast, #245) */ /* Lavish Mend: a healing spell costs more mana (#40) */
+  function abCost(ab, u) { if (ab.shapeshift && u.form) return 0; if (ab.id) { const la = litAura(u, ab.id); if (la && la.proc.free) return 0; } const base = (ab.cost || 0) + (ab.costPerLvl || 0) * ((u.level || E.levelOf(u)) - 1); const off = ab.id ? Math.min(90, abPct(tmOf(u).abilCost, ab.id)) : 0; const lm = (ab.heal || ab.hot) && fxOf(u, 'lavish_mend') ? 1 + D.EFFECTS.lavish_mend.mana : 1; const sc = ab.stackCost && ab.id ? auraOf(u, ab.id + '_stack') : null; const sk = ab.song && u.instrument && E.RHYTHM[u.instrument] ? E.RHYTHM[u.instrument].len / E.RHYTHM.lute.len : 1; return Math.round(base * sk * (1 - off / 100) * lm * (sc ? 1 + ab.stackCost.pct * sc.stacks / 100 : 1)); } /* stackCost: each recent cast makes the next dearer (Arcane Blast, #245) */ /* Lavish Mend: a healing spell costs more mana (#40) */
   E.abCost = abCost;
 
   function spellRoll(src, tgt, C) {
@@ -730,9 +730,11 @@
   // at once; a third takes the place of the one started first. The instrument sets the rhythm (Lute until #251).
   E.RHYTHM = {
     lute: { len: 12, win: 2, max: 3, finale: 1 },
-    drum: { len: 8, win: 1.5, max: 3, finale: 1 },
-    horn: { len: 16, win: 3, max: 2, finale: 1.6 },
+    drum: { len: 8, win: 1.5, max: 3, finale: 0.8, dmg: 0.72 },
+    horn: { len: 16, win: 3, max: 2, finale: 1.6, dmg: 1.25 },
   };
+  // a song costs its mana each round, scaled by the round's length, so every instrument costs the same mana per second
+  // (#254); dmg: how hard its damage songs pulse (the Drum softer, the Horn harder), measured by sim/bard.js
   E.VERSE_BONUS = 0.2; // each verse: +20% to the song's pulses
   E.SONG_SLOTS = 2;
   // the instrument's rhythm, with the Tempo talents on it (#253): Practised Hands widens the beat, Fourth Verse adds a verse
@@ -760,7 +762,8 @@
     const ab = D.ABILITIES[abId], S = ab.song, tm = tmOf(u), L = u.level;
     const base = S.amt + (S.perLvl || 0) * L + (S.coef || 0) * u.st.sp;
     const tal = S.pulse === 'heal' ? (tm.hot[abId] || 0) : (tm.dot[abId] || 0);
-    return base * (1 + tal / 100) * (1 + E.VERSE_BONUS * verses);
+    const R = E.RHYTHM[u.instrument || 'lute'], inst = dmgSong(abId) && R.dmg ? R.dmg : 1;
+    return base * inst * (1 + tal / 100) * (1 + E.VERSE_BONUS * verses);
   }
   function songTarget(C, u, s) {
     const t = C.units[s.tgt]; if (t && !t.dead && t.side !== u.side) return t;
