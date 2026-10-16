@@ -837,12 +837,15 @@
     ev(C, { type: 'song', src: u.uid, ab: abId, what: onBeat ? 'beat' : 'early', verses: s.verses });
   }
   // what landing a beat does with the instrument-branch talents (#253)
+  // A per-beat effect is sized for the Lute's 12-sec round and scales with the round's length (#254): a Drum beat
+  // (8 sec) gives two-thirds, a Horn beat (16 sec) a third more, so each talent is worth the same per second.
   function songBeat(C, u, s, ru) {
-    if (ru.beatMana && u.resType === 'mana') u.res = Math.min(u.maxRes, u.res + u.maxRes * ru.beatMana / 100); // Resonance
-    if (ru.drumbeat && dmgSong(s.ab)) { const t = songTarget(C, u, s); if (t) dealDamage(C, u, t, songPulse(C, u, s.ab, s.verses) * ru.drumbeat / 100, { school: D.ABILITIES[s.ab].song.school, ab: s.ab, fx: 'drumbeat' }); } // Drumbeat
+    const k = E.rhythmOf(u).len / E.RHYTHM.lute.len;
+    if (ru.beatMana && u.resType === 'mana') u.res = Math.min(u.maxRes, u.res + u.maxRes * ru.beatMana * k / 100); // Resonance
+    if (ru.drumbeat && dmgSong(s.ab)) { const t = songTarget(C, u, s); if (t) dealDamage(C, u, t, songPulse(C, u, s.ab, s.verses) * ru.drumbeat * k / 100, { school: D.ABILITIES[s.ab].song.school, ab: s.ab, fx: 'drumbeat' }); } // Drumbeat
     if (ru.heartstrings && D.ABILITIES.song_of_rest) { // Heartstrings: the most hurt ally
       const w = songParty(C, u).filter((a) => a.hp < a.maxHp).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
-      if (w) heal(C, u, w, songPulse(C, u, 'song_of_rest', 0) * ru.heartstrings / 100, { ab: 'song_of_rest' });
+      if (w) heal(C, u, w, songPulse(C, u, 'song_of_rest', 0) * ru.heartstrings * k / 100, { ab: 'song_of_rest' });
     }
     if (ru.syncopation && C.t - (u.syncAt != null ? u.syncAt : -1e9) >= ru.syncopation) { // Syncopation: the other songs gain a verse
       const R = E.rhythmOf(u), others = u.auras.filter((a) => a.song && a !== s && a.verses < R.max);
