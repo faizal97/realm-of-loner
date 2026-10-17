@@ -41,7 +41,7 @@
   // ------------------------------------------------------------- population
   B.makeBot = function (id, used, opts) {
     opts = opts || {};
-    const cls = pick(['warrior', 'warrior', 'mage', 'mage', 'priest', 'rogue', 'rogue', 'priest', 'paladin', 'paladin', 'warlock', 'warlock', 'hunter', 'hunter', 'druid', 'druid', 'shaman', 'shaman']);
+    const cls = pick(['warrior', 'warrior', 'mage', 'mage', 'priest', 'rogue', 'rogue', 'priest', 'paladin', 'paladin', 'warlock', 'warlock', 'hunter', 'hunter', 'druid', 'druid', 'shaman', 'shaman', 'bard', 'bard']); // the Bard since #255
     const styleR = Math.random();
     const style = styleR < 0.5 ? 'casual' : styleR < 0.85 ? 'regular' : 'tryhard';
     return {

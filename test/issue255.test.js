@@ -1,5 +1,5 @@
-// The Bard on test builds only (#255): a dev build lets every race pick it so it can be tried before it ships; a live
-// build keeps it hidden (test/issue251.test.js checks that half, issue255-beta.test.js the beta). Each test file runs in its own process.
+// The Bard on a dev build (#255): every race can pick it, as on a live build (test/issue251.test.js) and a beta
+// (issue255-beta.test.js). Each test file runs in its own process.
 'use strict';
 globalThis.AZ_DEV = { sha: 'test000' };
 const test = require('node:test');

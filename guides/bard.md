@@ -95,9 +95,9 @@ Then Tempo: **Practised Hands** widens the beat, **Fourth Verse** adds a verse, 
 ### How to play it
 At level 60 with no gear, on the Lute:
 1. [[Mocking Verse]] (level 44) on the target: your whole party deals 8% more damage to it for 15 sec.
-2. [[Dirge]]: 59 Shadow damage every 3 sec, 95 at 3 verses. Its Finale at 3 verses deals 428.
-3. [[Ballad of Blades]]: 41 Arcane damage every 3 sec to the target and every enemy near it, 66 at 3 verses.
-4. Between beats: [[Sharp Refrain]] (about 166, instant, 6 sec cooldown), then [[Shatterchord]] (about 437, a 2.5 sec cast) on an enemy that will live through it.
+2. [[Dirge]]: 45 Shadow damage every 3 sec, 71 at 3 verses. Its Finale at 3 verses deals 321.
+3. [[Ballad of Blades]]: 31 Arcane damage every 3 sec to the target and every enemy near it, 50 at 3 verses.
+4. Between beats: [[Sharp Refrain]] (about 216, instant, 6 sec cooldown), then [[Shatterchord]] (about 568, a 2.5 sec cast) on an enemy that will live through it.
 
 Watch the beat while you cast: a 2.5 sec cast started just before the beat runs past it.
 
