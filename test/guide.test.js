@@ -22,6 +22,7 @@ test('the database builds and every link resolves', () => {
     if (pages[k].g) for (const b of [...pages[k].g.intro, ...pages[k].g.tabs.flatMap((t) => t.b)]) walk(b.c, k);
   }
   assert.deepStrictEqual(bad, []);
+  assert.ok(pages['guide/bard'], 'the official Bard guide is on the site (#255: the Bard is out)');
   for (const kind in DB.lists) for (const id of DB.lists[kind]) assert.ok(pages[kind + '/' + id], `${kind}/${id} listed`);
   // the game's own names only (Accord and Krugar, never the old ones), as build.py checks the game page
   const ip = execFileSync('node', [path.join(root, 'tools/ipcheck.js'), '--dist', path.join(root, 'dist/guide/index.html')], { cwd: root, encoding: 'utf8' });
@@ -43,11 +44,3 @@ test('guides: a broken link stops the build, an old guide fails --check', () => 
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
-// a guide for a class not out yet is left off the live site (tools/build_guide.js); the Bard is out (#255), so its guide
-// is on the live site as on the dev build
-test('guides: the Bard guide is on the live site', () => {
-  const root = path.join(__dirname, '..');
-  const run = (env) => execFileSync('node', [path.join(root, 'tools/build_guide.js'), '--check'], { cwd: root, encoding: 'utf8', env: Object.assign({}, process.env, env) });
-  const n = (out) => +out.match(/guides: (\d+)/)[1];
-  assert.strictEqual(n(run({ AZ_DEV: '' })), n(run({ AZ_DEV: '1' })));
-});
