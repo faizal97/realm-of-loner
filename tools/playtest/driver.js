@@ -110,7 +110,7 @@ async function tap(q, o = {}) {
   const sent = [send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...pt }),
     send('Input.dispatchMouseEvent', { type: 'mousePressed', ...pt, button: 'left', clickCount: 1 }),
     send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...pt, button: 'left', clickCount: 1 })];
-  await step(o.wait != null ? o.wait * 1000 : 400);
+  await step(o.wait != null ? o.wait * 1000 : 1200); // sheets slide in: let them land
   await Promise.race([Promise.all(sent), sleep(3000)]);
   const after = await js('window.__pt.sig()');
   log(`tap ${q} "${info.label}"${before === after ? ' (no change)' : ''}`);
@@ -147,7 +147,7 @@ async function check() {
   const errs = events.splice(0).map((m) => ({ k: 'error', m }));
   const all = [...errs, ...r];
   log(`check: ${all.length ? all.map((x) => x.k).join(',') : 'clean'}`);
-  return all.length ? all.map((x) => `- [${x.k}] ${x.m}`).join('\n') : 'clean: no errors, bad text, overflow, small targets or spoilers on this screen';
+  return all.length ? all.map((x) => `- [${x.k}] ${x.m}${x.ex ? ' (e.g. ' + x.ex + ')' : ''}`).join('\n') : 'clean: no errors, bad text, overflow, small targets or spoilers on this screen';
 }
 
 async function shot(scale = 0.5, file) {
@@ -175,6 +175,50 @@ async function scroll(dir = 'down', q) {
   return look();
 }
 
+// autoplay until a level, an amount of game time, or something that needs a human: one decision, then the clock runs.
+// The checks run every game minute and every new finding is kept; the result is a summary, not a transcript.
+async function autoplay(o = {}) {
+  await ensureLib();
+  const toLvl = o.level || 0, maxSec = (o.minutes || 60) * 60, t0 = vtime;
+  const acts = [], found = new Map();
+  let reason = 'time', lastCheck = vtime, last = '', rep = 0;
+  const lv0 = await js('G.S && G.S.player ? G.S.player.level : 0');
+  await js('window.__ptFrameMs = 200'); // 5 frames a game second is plenty for the game's 0.1 s fight steps (each frame catches up)
+  while ((vtime - t0) / 1000 < maxSec) {
+    let r;
+    try { r = await js(`window.__pt.autoStep(${JSON.stringify(o)})`); } catch (e) { reason = 'page error in autoplay: ' + e.message.slice(0, 200); break; }
+    if (!r) { reason = 'no answer'; break; }
+    if (r.stop) { reason = r.stop; break; }
+    if (r.act !== last) { if (rep > 1) acts.push(`   (×${rep})`); acts.push(r.act); last = r.act; rep = 1; } else rep++;
+    if (acts.length > 400) acts.splice(0, 100);
+    await step((r.wait || 1) * 1000);
+    if (vtime - lastCheck >= 60000) {
+      lastCheck = vtime;
+      // one entry per finding, whatever its numbers (a name's width changes as it scrolls)
+      for (const x of await js('window.__pt.check()')) { const key = x.k + x.m.replace(/\d+/g, '#'); if (!found.has(key)) found.set(key, { ...x, at: await js('G.S.player.level') }); }
+      for (const m of events.splice(0)) if (!found.has('error' + m)) found.set('error' + m, { k: 'error', m, at: '?' });
+    }
+    if (toLvl && (await js('G.S && G.S.player ? G.S.player.level : 0')) >= toLvl) { reason = `reached level ${toLvl}`; break; }
+  }
+  for (const m of events.splice(0)) found.set('error' + m, { k: 'error', m, at: '?' });
+  await js('window.__ptFrameMs = 50');
+  const st = await js('JSON.stringify(window.__ptStats || {})').then(JSON.parse);
+  const lv = await js('G.S && G.S.player ? G.S.player.level : 0');
+  const mins = (vtime - t0) / 60000;
+  log(`autoplay ${mins.toFixed(1)} game min, level ${lv0} → ${lv} (${reason})`);
+  const out = [
+    `autoplay: ${mins.toFixed(1)} game minutes, level ${lv0} → ${lv}, stopped: ${reason}`,
+    `fights ${st.fights || 0} (won ${st.won || 0}, died ${st.deaths || 0}), ${st.fights ? (st.secs / Math.max(1, st.won + st.deaths)).toFixed(1) : 0} s a fight · quests turned in ${st.quests || 0} · resting ${Math.round((st.restSecs || 0) / 60)} min · upgrades worn ${st.equipped || 0} · bags nearly full ${st.bagsFull || 0}×`,
+    st.beats || st.early || st.finales ? `songs: ${st.beats} beats landed, ${st.early} early taps, ${st.finales} Finales` : '',
+    found.size ? 'findings:\n' + [...found.values()].map((x) => `- [${x.k}] (lv ${x.at}) ${x.m}${x.ex ? ' (e.g. ' + x.ex + ')' : ''}`).join('\n') : 'findings: none',
+    st.tips && st.tips.length ? 'tips seen: ' + st.tips.length : '',
+    st.scenes && st.scenes.length ? 'cutscenes skipped: ' + st.scenes.join(' | ') : '',
+    st.notes && st.notes.length ? 'notes:\n- ' + [...new Set(st.notes)].slice(-8).join('\n- ') : '',
+    'last actions:\n' + acts.slice(-14).join('\n'),
+  ].filter(Boolean);
+  return out.join('\n') + '\n---\n' + await look();
+}
+
 function stop() { try { ws && ws.close(); } catch (e) {} try { chrome && chrome.kill(); } catch (e) {} try { server && server.close(); } catch (e) {} ws = chrome = server = null; return 'stopped'; }
 
-module.exports = { start, look, tap, advance, check, shot, evaluate, scroll, stop, journal: () => journal.join('\n') };
+module.exports = { start, look, tap, advance, check, shot, evaluate, scroll, autoplay, stop, journal: () => journal.join('\n') };

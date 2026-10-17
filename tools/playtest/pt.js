@@ -29,6 +29,7 @@ if (cmd === 'serve') {
   if (cmd === 'advance') { a.seconds = +rest[0]; if (rest[1]) a.until = rest[1]; }
   if (cmd === 'scroll') { a.dir = rest[0] || 'down'; if (rest[1]) a.target = rest[1]; }
   if (cmd === 'eval') a.js = rest.join(' ');
+  if (cmd === 'autoplay') for (const r of rest) { const [k, v] = r.split('='); a[k] = isNaN(+v) ? (v === 'true' ? true : v) : +v; } // autoplay level=5 minutes=30 role=healer
   if (cmd === 'shot') { if (rest[0]) a.scale = +rest[0]; if (rest[1]) a.file = rest[1]; }
   const req = http.request({ host: '127.0.0.1', port: PORT, method: 'POST', path: '/' }, (res) => { let s = ''; res.on('data', (d) => (s += d)); res.on('end', () => console.log(s)); });
   req.on('error', () => { console.log('no daemon: run  node tools/playtest/pt.js serve  first'); process.exit(1); });

@@ -11,6 +11,11 @@ exports.hook = `(() => {
     if (TAP.has(type) && this && this.nodeType === 1) this.__ptTap = true;
     return add.call(this, type, fn, opt);
   };
+  // frames from the virtual clock: headless Chrome stamps animation frames with real time, so on virtual time the game
+  // would see almost no time pass. A timer obeys the virtual clock; __ptFrameMs sets the frame rate (autoplay lowers it)
+  window.__ptFrameMs = 50;
+  window.requestAnimationFrame = (cb) => setTimeout(() => cb(performance.now()), window.__ptFrameMs);
+  window.cancelAnimationFrame = (id) => clearTimeout(id);
   window.__ptErrors = [];
   addEventListener('error', (e) => window.__ptErrors.push('error: ' + (e.message || e.type) + (e.filename ? ' @' + e.filename.split('/').pop() + ':' + e.lineno : '')));
   addEventListener('unhandledrejection', (e) => window.__ptErrors.push('promise: ' + String(e.reason && (e.reason.stack || e.reason.message) || e.reason).slice(0, 300)));
@@ -42,7 +47,14 @@ exports.lib = `(() => {
     // its own words, without the words of controls nested inside it
     let t = el.innerText || el.value || ''; for (const d of el.querySelectorAll('*')) if (tappable(d) && d.innerText) t = t.replace(d.innerText, ' ');
     t = txt(t);
-    return t || el.getAttribute('aria-label') || el.getAttribute('title') || (el.querySelector('img,svg') ? '(icon' + (el.className ? ' .' + String(el.className).split(' ')[0] : '') + ')' : '(' + el.tagName.toLowerCase() + ')');
+    // a bag slot is only an icon: name it from the bag it shows (the grid's children are the bag in order)
+    if (!t && el.classList && el.classList.contains('slot') && el.parentElement && el.parentElement.classList.contains('bags')) {
+      const b = G.S.player.bags[[...el.parentElement.children].indexOf(el)];
+      if (b) return 'bag: ' + b.item.name + (b.n > 1 ? ' x' + b.n : '');
+    }
+    const al = el.getAttribute && el.getAttribute('aria-label');
+    if (al && t && !t.includes(al)) return al + ' (' + t + ')'; // a count or timer on an icon button: name first
+    return t || al || el.getAttribute('title') || (el.querySelector('img,svg') ? '(icon' + (el.className ? ' .' + String(el.className).split(' ')[0] : '') + ')' : '(' + el.tagName.toLowerCase() + ')');
   };
   // the screen as text: on-screen controls a finger can reach get an id; covered ones are left out (another layer is
   // on top of them); readable text blocks in reading order; long runs of the same kind of item are shortened
@@ -61,10 +73,14 @@ exports.lib = `(() => {
         if (!rc.top) { covered++; continue; }
         const id = 'e' + (els.length + 1); els.push(el);
         const r = el.getBoundingClientRect();
-        let l = label(el); if (l.length > 90) l = l.slice(0, 87) + '…';
+        // a big tappable layer (a sheet that stops taps going through) is read in full, a control is kept short
+        const big = r.width * r.height > innerWidth * innerHeight * 0.25;
+        let l = label(el); const max = big ? 900 : 90; if (l.length > max) l = l.slice(0, max - 3) + '…';
         const flags = [];
         if (el.disabled || el.classList.contains('disabled') || el.getAttribute('aria-disabled') === 'true') flags.push('disabled');
         if (/\\b(on|active|sel|selected|cur)\\b/.test(el.className)) flags.push('selected');
+        // an ability button's state classes (singing, beat, loaded, lit, teach, cd …) say what the button shows
+        if (el.classList.contains('ab')) for (const c of el.classList) if (c !== 'ab') flags.push(c);
         lines.push({ y: r.top, x: r.left, s: '[' + id + '] ' + l + (flags.length ? ' {' + flags.join(',') + '}' : '') , par: el.parentElement, kind: 'tap', cls: el.className });
         continue;
       }
@@ -74,7 +90,8 @@ exports.lib = `(() => {
       if (/^(SCRIPT|STYLE|NOSCRIPT|TITLE)$/.test(el.tagName) || el.closest('svg')) continue;
       if (!vis(el)) continue;
       const rc = reach(el); if (!rc.on) continue;
-      if (!rc.top && !opts.all) continue;
+      // a banner that lets taps through (pointer-events: none) is still on top for the eye
+      if (!rc.top && !opts.all && getComputedStyle(el).pointerEvents !== 'none') continue;
       const r = el.getBoundingClientRect();
       lines.push({ y: r.top, x: r.left, s: own, par: el.parentElement, kind: 'text', el });
     }
@@ -122,7 +139,7 @@ exports.lib = `(() => {
       const r = el.getBoundingClientRect();
       if (tappable(el) && !tapAncestor(el.parentElement)) {
         const rc = reach(el);
-        if (rc.on && rc.top && (r.width < 32 || r.height < 28)) small.push(label(el).slice(0, 30) + ' ' + Math.round(r.width) + 'x' + Math.round(r.height));
+        if (rc.on && rc.top && (r.width < 32 || r.height < 28)) { const kind = el.tagName.toLowerCase() + (el.classList && el.classList[0] ? '.' + el.classList[0] : ''); if (!small.some((x) => x.kind === kind)) small.push({ kind, ex: label(el).slice(0, 30) + ' ' + Math.round(r.width) + 'x' + Math.round(r.height) }); }
       }
       if (r.right > innerWidth + 2 && r.left < innerWidth && getComputedStyle(el).position !== 'fixed') {
         let clipped = false; for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) { const s = getComputedStyle(p); if (/(hidden|auto|scroll|clip)/.test(s.overflowX)) { clipped = true; break; } }
@@ -133,7 +150,7 @@ exports.lib = `(() => {
       if (el.scrollWidth > el.clientWidth + 2 && s.overflowX === 'hidden' && s.textOverflow !== 'ellipsis' && txt(el.innerText).length && el.children.length === 0) clip.push(txt(el.innerText).slice(0, 40));
       if (el.scrollHeight > el.clientHeight + 2 && s.overflowY === 'hidden' && el.children.length === 0 && txt(el.innerText).length > 0 && s.webkitLineClamp === 'none') clip.push(txt(el.innerText).slice(0, 40) + ' (height)');
     }
-    if (small.length) out.push({ k: 'small-tap', m: small.length + ' tap targets under 32x28 px: ' + small.slice(0, 6).join('; ') });
+    if (small.length) out.push({ k: 'small-tap', m: 'tap targets under 32x28 px: ' + small.map((x) => x.kind).join(', '), ex: small.map((x) => x.ex).join('; ') });
     if (off.length) out.push({ k: 'off-screen', m: off.slice(0, 4).join('; ') });
     if (clip.length) out.push({ k: 'clipped-text', m: [...new Set(clip)].slice(0, 5).join('; ') });
     // the player's numbers stay in range
@@ -144,7 +161,7 @@ exports.lib = `(() => {
       if (P.money < 0 || !Number.isFinite(P.money)) out.push({ k: 'state', m: 'money ' + P.money });
       if (!Number.isFinite(P.xp)) out.push({ k: 'state', m: 'xp ' + P.xp });
       // spoilers: every visible line the story may not name yet at this level
-      if (G.nameable) { const sp = text.split('\\n').map(txt).filter((l) => l && !G.nameable(l, 1)); if (sp.length) out.push({ k: 'spoiler', m: sp.slice(0, 3).join(' | ') }); }
+      if (G.nameable) { const sp = text.split('\\n').map(txt).filter((l) => l && !G.nameable(l, G.S.player.level)); if (sp.length) out.push({ k: 'spoiler', m: sp.slice(0, 3).join(' | ') }); }
     }
     return out;
   }
@@ -153,7 +170,124 @@ exports.lib = `(() => {
   function target(q) {
     const els = window.__ptEls || [];
     const m = /^e(\\d+)$/.exec(q); if (m) return els[+m[1] - 1] || null;
-    const re = new RegExp(q, 'i'); return els.find((e) => re.test(label(e))) || null;
+    // exact label first, then one that starts with it, then any match
+    const lq = q.toLowerCase(), L = els.map((e) => [e, label(e).toLowerCase()]);
+    const hit = L.find(([, l]) => l === lq) || L.find(([, l]) => l.startsWith(lq)) || L.find(([, l]) => new RegExp(q, 'i').test(l));
+    return hit ? hit[0] : null;
   }
-  window.__pt = { src: SRC, look, state, check, sig, target, label, reach, vis };
+  // autoplay: one decision per call, the way a steady player would level. Quests first (turn in, take, do the nearest
+  // objective), else grind at the level. In a fight the bots' brain plays the player's unit. Anything it can't decide
+  // (a dialog, a new screen) is returned as a stop, for a human look. Stats gather in window.__ptStats.
+  const S0 = () => window.__ptStats || (window.__ptStats = { fights: 0, won: 0, deaths: 0, secs: 0, dmgTaken: 0, beats: 0, early: 0, finales: 0, quests: 0, levels: [], tips: [], notes: [], stuck: {} });
+  const npcPlace = (npc) => Object.keys(D.PLACES).find((k) => (D.PLACES[k].npcs || []).includes(npc));
+  const solo = (Q) => !Q.group && !Q.dungeon && !Q.raid;
+  function autoStep(o) {
+    const G = window.G, E = window.E, st = S0();
+    if (!G || !G.S || !G.S.player) return { stop: 'not in the world' };
+    const P = G.S.player;
+    // layers a player must answer: tips are read and closed, everything else stops autoplay
+    const tip = [...document.querySelectorAll('button')].find((b) => /^Got it$/.test(b.textContent.trim()) && vis(b) && reach(b).top);
+    if (tip) { const box = tip.closest('div'); st.tips.push(txt(box && box.parentElement ? box.parentElement.innerText : '').slice(0, 160)); tip.click(); return { act: 'closed a tip' }; }
+    // a story cutscene is skipped (Skip, then Tap again to skip) and its title kept
+    const cs = document.querySelector('.cs'); const sk = cs && vis(cs) && cs.querySelector('.cs-skip');
+    if (sk) { const t = txt((cs.querySelector('.cs-title, h1, h2, b') || cs).innerText).slice(0, 60); if (!st.scenes) st.scenes = []; if (st.scenes[st.scenes.length - 1] !== t) st.scenes.push(t); sk.click(); return { act: 'skipping a cutscene', wait: 0.5 }; }
+    const modal = [...document.querySelectorAll('.dialog, .cs, .sheet')].find((e) => vis(e));
+    // an invitation (guild, group, duel, trade) is declined and noted: autoplay keeps to its own path
+    const no = modal && [...modal.querySelectorAll('button')].find((b) => /^(Decline|Not now|Later|No thanks)$/i.test(b.textContent.trim()) && vis(b));
+    if (no && !o.stopOnInvites) { st.notes.push('L' + P.level + ': declined: ' + txt(modal.innerText).slice(0, 90)); no.click(); return { act: 'declined an invitation' }; }
+    // a group the player queued for is ready: go in (that is why they queued)
+    const enter = modal && G.S.queue && [...modal.querySelectorAll('button')].find((b) => /^Enter$/.test(b.textContent.trim()) && vis(b));
+    if (enter) { st.notes.push('L' + P.level + ': entered a queued group: ' + txt(modal.innerText).slice(0, 90)); enter.click(); return { act: 'entered the group', wait: 2 }; }
+    // the death recap is read and closed: the cause goes in the notes
+    const close = modal && /^You died/.test(txt(modal.innerText)) && [...modal.querySelectorAll('button')].find((b) => /^Close$/.test(b.textContent.trim()) && vis(b));
+    if (close) { st.notes.push('L' + P.level + ': ' + txt(modal.innerText).replace(/Close$/, '').slice(0, 200)); close.click(); return { act: 'read the death recap' }; }
+    if (modal && !o.ignoreModal) return { stop: 'a screen opened: ' + txt(modal.innerText).slice(0, 300) };
+    if (P.ghostUntil) { if (st.inFight) { st.secs += (Date.now() - st.inFight.t0) / 1000; st.deaths++; st.inFight = null; } return { act: 'dead, waiting', wait: 5 }; }
+    // the whole route, leg by leg, as the travel screen's Go does; false when the trip didn't start
+    const go = (dest) => { G.travelRoute(dest); return !!P.travel; };
+    const C = G.fight, u = G.pUnit;
+    if (C && u) {
+      if (!st.inFight) { st.inFight = { t0: Date.now(), foes: Object.values(C.units).filter((x) => x.side !== u.side).map((x) => x.name + ' ' + (x.level || '')).join(', ') }; st.fights++; }
+      st.inFight.ct = C.t;
+      // what the player's unit did this fight: casts by ability, damage by source (kept for the last fight)
+      const F = st.inFight; F.by = F.by || {}; F.seen = F.seen || 0;
+      // the game drains C.events every frame into its recap feed: read them there
+      if (!G.__ptFeed) { const f = G.recapFeed; G.__ptFeed = []; G.recapFeed = function (C2, evs) { G.__ptFeed.push(...evs); return f.apply(this, arguments); }; }
+      for (const e of G.__ptFeed.splice(0)) {
+        if (!e || e.src !== u.uid) continue;
+        if (e.type === 'song') { if (e.what === 'beat' && !e.sync) st.beats++; if (e.what === 'early') st.early++; if (e.what === 'finale') st.finales++; }
+        if (/^(dmg|heal|castStart|ability|stepFail|queueFail|song)$/.test(e.type)) { const k = e.type + ':' + (e.ab || '') + (e.what ? ':' + e.what : '') + (e.why ? ':' + e.why : ''); F.by[k] = (F.by[k] || 0) + (e.type === 'dmg' || e.type === 'heal' ? e.amount : 1); }
+      }
+      u.bot = u.bot || { skill: o.skill || 0.85, react: 0.45 }; u.role = o.role || (G.S.run || G.S.bg ? G.role() : 'dps'); // in a group the queued role; solo dps, as the levelling sim plays it (with no role the brain heals)
+      E.botThink(C, u);
+      return { act: 'fighting', wait: 0.25 };
+    }
+    if (st.inFight) { (st.log = st.log || []).push({ wall: +((Date.now() - st.inFight.t0) / 1000).toFixed(1), ct: +(st.inFight.ct || 0).toFixed(1), foes: st.inFight.foes, dead: !!P.ghostUntil, by: st.inFight.by }); if (st.log.length > 40) st.log.shift(); st.secs += (Date.now() - st.inFight.t0) / 1000; if (P.ghostUntil) st.deaths++; else st.won++; st.inFight = null; }
+    if (P.travel) return { act: 'travelling', wait: 5 };
+    // in a dungeon, raid or battleground the group moves on by itself between pulls: wait for the next one
+    if (G.S.run || G.S.bg) { st.runs = st.runs || {}; return { act: 'in a run, between pulls', wait: 1 }; }
+    // gear and bags, as a tidy player would: wear upgrades, sell grey junk, and when the bags are nearly full sell the
+    // gear that is no upgrade (cheapest first). Counted, so a run says how often bags got in the way.
+    for (let i = 0; i < P.bags.length; i++) { const it = P.bags[i].item; if (G.markedUpgrade(it) && typeof G.equip(i) !== 'string') { st.equipped = (st.equipped || 0) + 1; return { act: 'equipped ' + it.name }; } }
+    // bags: wear a bag that adds room, and buy Small Brown Pouches at a vendor while slots are free and money allows
+    for (let i = 0; i < P.bags.length; i++) { const it = P.bags[i].item; if (it.slot === 'bag' && ((P.bagsEq || []).length < D.BAG_SLOTS || (P.bagsEq || []).some((x) => x.bag < it.bag))) { G.useItem(i); st.bagsWorn = (st.bagsWorn || 0) + 1; return { act: 'wore ' + it.name + ' (' + G.bagCap() + ' slots)' }; } }
+    const pl0 = D.PLACES[P.place];
+    if (pl0 && pl0.vendor && (P.bagsEq || []).length < D.BAG_SLOTS && P.money >= 2500 * 4 && P.bags.length < G.bagCap() && !P.bags.some((b) => b.item.slot === 'bag')) { G.buy(G.copyItem('small_pouch'), 1); if (P.bags.some((b) => b.item.slot === 'bag')) return { act: 'bought a Small Brown Pouch' }; }
+    if (P.bags.length >= G.bagCap() - 2) {
+      st.bagsFull = (st.bagsFull || 0) + 1; G.sellJunk();
+      // with no profession to use them, full stacks of materials past the first go to the vendor
+      const mats = P.bags.map((b, i) => [b, i]).filter(([b]) => b.item.slot === 'mat');
+      const extra = mats.find(([b, i]) => mats.some(([c, j]) => j < i && c.item.id === b.item.id));
+      if (extra && !extra[0].item.noSell) { G.sell(extra[1]); return { act: 'sold a spare stack of ' + extra[0].item.name }; }
+      if (P.bags.length >= G.bagCap() - 2) {
+        const gear = P.bags.map((b, i) => [b, i]).filter(([b]) => D.GEAR_SLOTS.includes(b.item.slot) && !G.isUpgrade(b.item) && !b.item.noSell).sort((a, b) => (a[0].item.sell || 0) - (b[0].item.sell || 0));
+        if (gear.length) { G.sell(gear[0][1]); return { act: 'sold ' + gear[0][0].item.name }; }
+        st.notes.push('L' + P.level + ': bags full of things autoplay will not sell');
+      }
+    }
+    // talents: spend any free points the way the game's own picks would
+    if (G.talentPoints(P).free > 0) { P.talents = G.autoTalents(P.cls, o.role || 'dps', P.level, 0); st.notes.push('L' + P.level + ': talent points were free, spent with autoTalents'); }
+    // rest below half health or a quarter mana
+    if (o.rest !== false && (P.hp != null || P.res != null)) { const m = E.charUnit(P, 'ally', 'player', 0); if ((P.hp != null && P.hp < m.maxHp * 0.6) || (P.res != null && m.resType === 'mana' && P.res < m.maxRes * 0.4)) { st.restSecs = (st.restSecs || 0) + 5; return { act: 'resting', wait: 5 }; } }
+    // 1. turn in what is complete, where its NPC stands
+    for (const qid in P.quests) if (G.questState(qid) === 'complete') {
+      const Q = D.QUESTS[qid], at = npcPlace(Q.turnin);
+      if (at && at !== P.place) { if (!go(at)) return { stop: 'could not travel to ' + at }; return { act: 'to ' + at + ' to turn in ' + Q.name }; }
+      const before = P.level; G.turnIn(qid, 0); if (!P.quests[qid]) { st.quests++; return { act: 'turned in ' + Q.name }; }
+      st.stuck[qid] = (st.stuck[qid] || 0) + 1; if (st.stuck[qid] > 3) return { stop: 'cannot turn in ' + Q.name + ' (bags full?)' };
+    }
+    // 2. take every solo quest offered here
+    const here = D.PLACES[P.place] || {};
+    for (const npc of here.npcs || []) for (const { qid, st: s } of G.npcQuests(npc)) if (s === 'available' && solo(D.QUESTS[qid]) && Object.keys(P.quests).length < 20) { G.accept(qid); if (P.quests[qid]) return { act: 'took ' + D.QUESTS[qid].name }; }
+    // 3. the nearest open objective
+    const objs = G.openObjectives().filter(({ qid }) => solo(D.QUESTS[qid]) && (st.stuck[qid] || 0) < 40);
+    for (const { qid, o: ob } of objs) {
+      if (ob.type === 'visit') { if (ob.place !== P.place) { if (!go(ob.place)) return { stop: 'could not travel to ' + ob.place }; return { act: 'to ' + ob.place + ' (explore)' }; } continue; }
+      // an item picked up in a place (Collecting ... at a gather spot)
+      const gat = ob.type === 'collect' && Object.keys(D.PLACES).filter((k) => D.PLACES[k].gather && D.PLACES[k].gather.item === ob.item && G.canReach(P.place, k));
+      if (gat && gat.length) {
+        if (!gat.includes(P.place)) { if (!go(gat[0])) return { stop: 'could not travel to ' + gat[0] }; return { act: 'to ' + gat[0] + ' to collect for ' + D.QUESTS[qid].name }; }
+        if (!P.casting) G.gather(); if (P.casting) return { act: 'gathering for ' + D.QUESTS[qid].name, wait: 3.2 };
+      }
+      const want = ob.type === 'kill' ? [ob.mob] : (G.questMobs ? [...G.questMobs()] : []);
+      const hasMob = (k) => (D.PLACES[k].mobs || []).some((m) => want.includes(m[0])) || Object.keys(D.PLACES[k].named || {}).some((m) => want.includes(m)); // named spawns too
+      const live = G.placeMobs().find((m) => want.includes(m.key) && m.state === 'alive');
+      if (live) { G.engage(live.id); if (G.fight) return { act: 'attacked ' + D.MOBS[live.key].name + ' for ' + D.QUESTS[qid].name }; }
+      const at = Object.keys(D.PLACES).find((k) => k !== P.place && hasMob(k) && G.canReach(P.place, k));
+      if (at && !hasMob(P.place)) { if (!go(at)) return { stop: 'could not travel to ' + at }; return { act: 'to ' + at + ' for ' + D.QUESTS[qid].name }; }
+      if (live === undefined && hasMob(P.place)) { st.stuck[qid] = (st.stuck[qid] || 0) + 1; return { act: 'waiting for a respawn', wait: 3 }; }
+    }
+    // 4. a quest giver elsewhere with something to offer, nearest first
+    const givers = [];
+    for (const qid in D.QUESTS) { const Q = D.QUESTS[qid]; if (!solo(Q) || G.questState(qid) !== 'available' || (Q.lvl || 1) > P.level + 1) continue; const at = npcPlace(Q.giver); if (at && at !== P.place && G.canReach(P.place, at)) givers.push(at); }
+    // quests far below the player (left behind) don't count against the 8 it carries
+    if (givers.length && Object.keys(P.quests).filter((q) => (D.QUESTS[q].lvl || 1) >= P.level - 8).length < 8) { const r = givers.map((k) => [k, (G.route(P.place, k) || {}).secs || 1e9]).sort((a, b) => a[1] - b[1])[0]; if (!go(r[0])) return { stop: 'could not travel to ' + r[0] }; return { act: 'to ' + r[0] + ' for new quests' }; }
+    // 5. grind here at the level, or go where the level is
+    const fit = G.placeMobs().filter((m) => m.state === 'alive' && Math.abs(m.level - P.level) <= 2 && !D.MOBS[m.key].elite);
+    if (fit.length) { G.engage(fit[0].id); if (G.fight) return { act: 'grinding ' + D.MOBS[fit[0].key].name }; }
+    const spot = Object.keys(D.PLACES).find((k) => { const p = D.PLACES[k]; return p.lvl && p.lvl[0] <= P.level && p.lvl[1] >= P.level && (p.mobs || []).length && !p.safe && G.canReach(P.place, k); });
+    if (spot && spot !== P.place) { if (!go(spot)) return { stop: 'could not travel to ' + spot }; return { act: 'to ' + spot + ' to grind' }; }
+    return { act: 'idle', wait: 3 };
+  }
+  window.__pt = { src: SRC, autoStep, look, state, check, sig, target, label, reach, vis };
 })();`;

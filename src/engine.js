@@ -1365,6 +1365,7 @@
     if (hp > 0.5 && roll()) for (const id of k.buffs) if (has(id) && !u.soloBuffed[id] && !auraOf(u, id)) { u.soloBuffed[id] = 1; if (try_(id)) return true; }
     return false;
   }
+  E.botThink = (C, u) => botThink(C, u); // the playtest's autoplay plays the player's own unit with the bots' brain (tools/playtest)
   function botThink(C, u) {
     if (u.stepIn) return; // walking in to use a close attack (#245)
     if (u.dead || u.cast) return;
