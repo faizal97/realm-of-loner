@@ -32,7 +32,7 @@
   A('ar_codex', { name: 'The Codex of Tides', lvl: 60, giver: 'admiral_vane', turnin: 'admiral_vane', dungeon: 'sunken_archive', text: 'Lorekeeper Nerathil keeps a codex that charts every current around the isle. With it, my ships stop sinking.',
     objs: [{ type: 'collect', item: 'codex_of_tides', n: 1 }], reward: { choice: ['fam_back_rare60'] } });
   Object.assign(D.DUNGEONS, {
-    sunken_archive: { music: 'sunken_archive', name: 'The Sunken Archive', minLvl: 60, par: 303, trialPar: 480, size: 5, trashMult: { hp: 2.2, dmg: 2.2 }, bossMult: { hp: 10, dmg: 4.3 }, pulls: [
+    sunken_archive: { music: 'sunken_archive', name: 'The Sunken Archive', minLvl: 60, par: 303, trialPar: 480, size: 5, trashMult: { hp: 2.2, dmg: 3.6 }, bossMult: { hp: 10, dmg: 7.1 }, trial: { trashMult: { hp: 2.2, dmg: 2.2 }, bossMult: { hp: 10, dmg: 4.3 } }, pulls: [ // damage raised to the level-60 dungeon target (#215: a fitted player wipes in 10-20% of runs); Trials keep the numbers they were tuned on
       { scene: 'archive_stacks', label: 'The flooded stacks', mobs: ['archive_wardkeeper', 'inkbound_wisp'] },
       { scene: 'archive_stacks', label: 'Curator Ellaris', mobs: ['curator_ellaris'], boss: true },
       { scene: 'archive_hall', label: 'The reading hall', mobs: ['drowned_scholar', 'drowned_scholar', 'archive_wardkeeper'] },

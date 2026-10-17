@@ -39,3 +39,13 @@ test("Veshmira breathes on the whole raid on Normal and hotter on Hard; never in
   assert.ok(h.some((x) => (x.kind || 'adds') === 'adds'), 'Hard keeps the brood');
   assert.strictEqual(G.normalExtra('molten_core', 'ragnaros'), null, 'other Normal bosses have no extra');
 });
+
+test('level-60 dungeons hit harder; their Trials keep their numbers', () => {
+  const was = { scholomance: 4.1, stratholme: 4.3, shalzua_temple: 4.3, sunken_archive: 4.3 };
+  for (const k in was) {
+    const Dg = D.DUNGEONS[k];
+    assert.deepStrictEqual([Dg.trial.trashMult.dmg, Dg.trial.bossMult.dmg], [2.2, was[k]], `${k}: Trial numbers unchanged`);
+    assert.ok(Dg.trashMult.dmg > 2.2 && Dg.bossMult.dmg > was[k], `${k}: Normal raised`);
+    assert.strictEqual(G.runBase(Dg, false, 5), Dg.trial, `${k}: a Trial starts from them`);
+  }
+});

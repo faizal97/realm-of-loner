@@ -46,7 +46,7 @@
   H('sc_barov_h', { name: 'The Varga Family Fortune', lvl: 59, giver: 'argent_officer_h', turnin: 'argent_officer_h', dungeon: 'scholomance', text: 'Lord Anton Varga carries the deed to Castle Ardmore. Take it back from the dead.',
     objs: [{ type: 'collect', item: 'barov_deed', n: 1 }], reward: { choice: ['fam_waist60'] } });
   Object.assign(D.DUNGEONS, {
-    scholomance: { music: 'blackcloister', name: 'The Blackcloister', minLvl: 57, par: 483, trialPar: 630, size: 5, trashMult: { hp: 2.2, dmg: 2.2 }, bossMult: { hp: 10, dmg: 4.1 }, pulls: [
+    scholomance: { music: 'blackcloister', name: 'The Blackcloister', minLvl: 57, par: 483, trialPar: 630, size: 5, trashMult: { hp: 2.2, dmg: 3.1 }, bossMult: { hp: 10, dmg: 5.7 }, trial: { trashMult: { hp: 2.2, dmg: 2.2 }, bossMult: { hp: 10, dmg: 4.1 } }, pulls: [ // damage raised to the level-60 dungeon target (#215: a fitted player wipes in 10-20% of runs); Trials keep the numbers they were tuned on
       { scene: 'scholo_hall', label: 'The reliquary', mobs: ['scholomance_acolyte', 'scholomance_acolyte'] },
       { scene: 'scholo_hall', label: 'Skreel the Herald', mobs: ['kirtonos_the_herald'], boss: true },
       { scene: 'scholo_hall', label: 'Mirela Varga', mobs: ['jandice_barov'], boss: true },
