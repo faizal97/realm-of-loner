@@ -15,7 +15,7 @@ test('a raid run starts from Normal, Hard or its Trial numbers', () => {
     if (Dg.hard) assert.strictEqual(G.runBase(Dg, true, 0), Dg.hard, k);
     assert.strictEqual(G.runBase(Dg, false, 5), Dg.trial || Dg, k);
   }
-  const Dg5 = D.DUNGEONS.deadmines; // a dungeon with no Trial numbers of its own: its Trials start from Normal, as before
+  const Dg5 = D.DUNGEONS.ragefire; // a dungeon with no Trial numbers of its own: its Trials start from Normal, as before
   assert.strictEqual(G.runBase(Dg5, false, 5), Dg5);
 });
 
@@ -47,5 +47,13 @@ test('level-60 dungeons hit harder; their Trials keep their numbers', () => {
     assert.deepStrictEqual([Dg.trial.trashMult.dmg, Dg.trial.bossMult.dmg], [2.2, was[k]], `${k}: Trial numbers unchanged`);
     assert.ok(Dg.trashMult.dmg > 2.2 && Dg.bossMult.dmg > was[k], `${k}: Normal raised`);
     assert.strictEqual(G.runBase(Dg, false, 5), Dg.trial, `${k}: a Trial starts from them`);
+  }
+});
+
+test('dungeons that were too hard for a fitted player hit softer; their Trials keep their numbers', () => {
+  for (const k of ['deadmines', 'wailing_caverns', 'stockade', 'gnomeregan', 'maraudon', 'sm_cathedral']) {
+    const Dg = D.DUNGEONS[k];
+    assert.deepStrictEqual([Dg.trial.trashMult.dmg, Dg.trial.bossMult.dmg], [2.2, 4.8], `${k}: Trial numbers unchanged`);
+    assert.ok(Dg.trashMult.dmg < 2.2 && Dg.bossMult.dmg < 4.8, `${k}: Normal lowered`);
   }
 });

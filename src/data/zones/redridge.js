@@ -191,7 +191,7 @@
 
   // group finder: Kingsmere Gaol and the open-world elite
   Object.assign(D.DUNGEONS, {
-    stockade: { music: 'kingsmere_gaol', name: 'Kingsmere Gaol', minLvl: 22, par: 418, trialPar: 480, size: 5, trashMult: { hp: 2.2, dmg: 2.2 }, bossMult: { hp: 10, dmg: 4.8 }, pulls: [
+    stockade: { music: 'kingsmere_gaol', name: 'Kingsmere Gaol', minLvl: 22, par: 418, trialPar: 480, size: 5, trashMult: { hp: 2.2, dmg: 1.76 }, bossMult: { hp: 10, dmg: 3.84 }, trial: { trashMult: { hp: 2.2, dmg: 2.2 }, bossMult: { hp: 10, dmg: 4.8 } }, /* damage lowered to the dungeon target (#215: a fitted player wiped in 18-49% of runs, target 5-15%); Trials keep the numbers they were tuned on */ pulls: [
       { scene: 'the_stockade', label: 'Cell block', mobs: ['defias_convict', 'defias_inmate'] },
       { scene: 'the_stockade', label: 'Cell block', mobs: ['defias_insurgent', 'defias_convict'] },
       { scene: 'the_stockade', label: 'Ulgrak the Butcher', mobs: ['targorr'], boss: true },

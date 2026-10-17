@@ -45,7 +45,7 @@
   });
 
   Object.assign(D.DUNGEONS, {
-    gnomeregan: { music: 'gearhollow', name: 'Gearhollow', minLvl: 29, par: 390, trialPar: 420, size: 5, trashMult: { hp: 2.2, dmg: 2.2 }, bossMult: { hp: 10, dmg: 4.8 }, pulls: [
+    gnomeregan: { music: 'gearhollow', name: 'Gearhollow', minLvl: 29, par: 390, trialPar: 420, size: 5, trashMult: { hp: 2.2, dmg: 1.98 }, bossMult: { hp: 10, dmg: 4.32 }, trial: { trashMult: { hp: 2.2, dmg: 2.2 }, bossMult: { hp: 10, dmg: 4.8 } }, /* damage lowered to the dungeon target (#215: a fitted player wiped in 18-49% of runs, target 5-15%); Trials keep the numbers they were tuned on */ pulls: [
       { scene: 'gnomeregan_halls', label: 'The outer halls', mobs: ['irradiated_pillager', 'gnomeregan_leper'] },
       { scene: 'gnomeregan_halls', label: 'Gruzz', mobs: ['grubbis'], boss: true },
       { scene: 'gnomeregan_halls', label: 'The dormitory', mobs: ['gnomeregan_leper', 'gnomeregan_leper', 'dark_iron_agent'] },
