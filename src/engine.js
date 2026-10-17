@@ -1132,7 +1132,7 @@
   // the tank's defensive against a hit on the target ('guard'), an interrupt or a stun against a heal ('cut'). Answered:
   // avoided. Missed: TELE.miss x the hit, but only for a unit that has the answer (one that doesn't know it yet takes the
   // hit as before). TELE.on lists the mechanics switched on (each measured before it was, sim/difficulty.js TELE=): a special's kind, 'x:<mob>' for a boss's extra, '*' for all.
-  const TELE = E.TELE = { on: new Set(['whirl']), cast: 2.5, hardCast: 2, miss: 2.5, healMiss: 1.5 };
+  const TELE = E.TELE = { on: new Set(['whirl', 'molten', 'arugal']), cast: 2.5, hardCast: 2, miss: 2.5, healMiss: 1.5 };
   let teleSeq = 0;
   const teleOn = (key, spec) => !!(spec && spec.on) || TELE.on.has('*') || TELE.on.has(key); // spec.on: switched on in the data (`tele: true` on a boss extra)
   E.teleAnswer = (t) => (t.who === 'cast' ? 'cut' : t.who === 'target' ? 'guard' : 'step');
