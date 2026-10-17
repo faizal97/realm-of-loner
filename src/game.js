@@ -716,7 +716,7 @@
     sys(`Congratulations, you have reached level ${P.level}!`);
     const learned = D.CLASSES[P.cls].abilities.filter((a) => D.ABILITIES[a].lvl === P.level);
     for (const a of learned) sys(`You have learned a new ability: ${D.ABILITIES[a].name}.`);
-    if (P.level >= D.TALENT_START) sys(`You have a new talent point. Open Hero → Talents to spend it.`);
+    if (P.level >= D.TALENT_START) { const m = B.post(G.S, 'system', null, `You have a new talent point. Open Hero → Talents to spend it.`); if (m) m.go = 'talents'; emit('chat'); } // a tap on the line opens Talents (#273)
     if (P.level === G.REHEARSAL_LVL) G.rehearsalLetter(); // the Bard's Rehearsal (#256)
     emit('levelup', { level: P.level, learned });
     // the server notices

@@ -864,7 +864,7 @@
     else if (m.ch === 'monster') pre = m.from ? `${esc(m.from)} says: ` : '';
     else if (m.from) pre = `${ch.label ? '[' + ch.label + '] ' : ''}${name}: `;
     const open = m.act && m.act.state === 'open';
-    const tap = open || !!m.act || (m.from && !m.me && m.ch !== 'combat') || /\[\[\d\|/.test(m.text);
+    const tap = open || !!m.act || !!m.go || (m.from && !m.me && m.ch !== 'combat') || /\[\[\d\|/.test(m.text);
     // a request shows its time left at the right end, where the one-line strip clips the text first, never the time;
     // an expired one stays, in the muted colour, with "expired" there (#166)
     const left = window.SOC && SOC.timeLeft ? SOC.timeLeft(m.act) : null;
@@ -4628,6 +4628,7 @@
     return out;
   }
   function msgDialog(m) {
+    if (m.go === 'talents') return openTalents(); // a system line that points somewhere goes there (#273)
     // a nudge or goodbye ("still up for it?") opens the request it belongs to
     if (m.ref && !m.act) { const orig = G.S.chat.find((x) => x.id === m.ref); if (orig) m = orig; }
     const a = m.act;
