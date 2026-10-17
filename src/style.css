@@ -889,7 +889,12 @@ svg.sym { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: 
 .frames .uf-namerow { align-items: center; gap: 4px; }
 .frames .uf-name { font-size: 12.5px; }
 .frames .uf.target .uf-name .rc { display: inline; margin-left: 5px; }
-.frames .uf-namerow .buffs { margin: 0 0 0 auto; height: 16px; flex-wrap: nowrap; overflow: hidden; flex: 0 1 auto; min-width: 0; }
+.frames .uf-namerow .buffs { margin: -6px 0; height: 28px; align-items: center; justify-content: flex-end; flex-wrap: nowrap; overflow: hidden; flex: 1 1 0; min-width: 0; cursor: pointer; }
+/* the name keeps its room: buffs take only what is left and fold into "+N" (#270); the strip is one 28 px tap that
+   lists them all, its 14 px chips are not targets of their own (#272) */
+.frames .uf-namerow .uf-name { flex: 0 1 auto; min-width: 48px; }
+.frames .uf-namerow .buffs .au { pointer-events: none; }
+.frames:not(.solo) .pmoney { display: none; } /* with a target the row is about 130 px: gold waits until the fight ends */
 .frames .uf-body > .buffs { height: 16px; margin-top: 0; }
 .frames .buffs .au { width: 14px; }
 .frames .buffs .au img { width: 14px; height: 14px; border-width: 1px; }
@@ -1049,3 +1054,10 @@ button.ev-fact { width: 100%; background: none; border: 0; border-bottom: 1px so
 .ab.teach::after { content: ''; position: absolute; inset: 0; z-index: 4; pointer-events: none; border-radius: inherit; box-shadow: inset 0 0 0 2px #e8f4ff; animation: litpulse 1s ease-in-out infinite alternate; }
 .reh-steps { margin: 4px 0 8px 20px; padding: 0; }
 .reh-steps li { margin: 4px 0; }
+
+/* thumb-sized tap areas, the look unchanged (#272) */
+.uf-namerow .uf-name { padding: 8px 0; margin: -8px 0; }
+.pmail::before { content: ''; position: absolute; inset: -6px -4px; }
+.bar.xpmain { overflow: visible; } /* its fills stop at 100% */
+.bar.xpmain::before { content: ''; position: absolute; inset: -8px 0; }
+.frames .bar.xpmain::before { inset: -6px 0 -18px; }

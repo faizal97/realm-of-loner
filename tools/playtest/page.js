@@ -139,7 +139,10 @@ exports.lib = `(() => {
       const r = el.getBoundingClientRect();
       if (tappable(el) && !tapAncestor(el.parentElement)) {
         const rc = reach(el);
-        if (rc.on && rc.top && (r.width < 32 || r.height < 28)) { const kind = el.tagName.toLowerCase() + (el.classList && el.classList[0] ? '.' + el.classList[0] : ''); if (!small.some((x) => x.kind === kind)) small.push({ kind, ex: label(el).slice(0, 30) + ' ' + Math.round(r.width) + 'x' + Math.round(r.height) }); }
+        // an invisible ::before/::after with a negative inset is part of the tap area (a thumb-sized hit box)
+        let w = r.width, hh = r.height;
+        for (const ps of ['::before', '::after']) { const q = getComputedStyle(el, ps); if (q.content === 'none' || q.position !== 'absolute') continue; const n = (v) => Math.max(0, -(parseFloat(v) || 0)); w = Math.max(w, r.width + n(q.left) + n(q.right)); hh = Math.max(hh, r.height + n(q.top) + n(q.bottom)); }
+        if (rc.on && rc.top && (w < 32 || hh < 28)) { const kind = el.tagName.toLowerCase() + (el.classList && el.classList[0] ? '.' + el.classList[0] : ''); if (!small.some((x) => x.kind === kind)) small.push({ kind, ex: label(el).slice(0, 30) + ' ' + Math.round(r.width) + 'x' + Math.round(r.height) }); }
       }
       if (r.right > innerWidth + 2 && r.left < innerWidth && getComputedStyle(el).position !== 'fixed') {
         let clipped = false; for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) { const s = getComputedStyle(p); if (/(hidden|auto|scroll|clip)/.test(s.overflowX)) { clipped = true; break; } }
