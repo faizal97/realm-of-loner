@@ -2,7 +2,7 @@
 class: paladin
 by: official
 written: 10.11.0
-checked: 10.13.0
+checked: 10.14.0
 ---
 A Paladin fights in melee with holy spells on top, and in a group fills two roles: healer or tank. You choose the role each time you join a group; your gear stays the same. Paladins wear mail, use a mace, sword or axe, and run on mana.
 

@@ -2,7 +2,7 @@
 class: priest
 by: official
 written: 10.11.0
-checked: 10.13.0
+checked: 10.14.0
 ---
 A Priest heals or deals Shadow damage, and chooses the role each time it joins a group. On your own you fight with Holy and Shadow spells and heal yourself between hits. Priests wear cloth, use a mace or a staff, and cast with mana.
 

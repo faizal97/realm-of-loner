@@ -2,7 +2,7 @@
 class: warlock
 by: official
 written: 10.11.0
-checked: 10.13.0
+checked: 10.14.0
 ---
 A Warlock deals damage, mostly with curses and burns that keep hurting while you cast the next spell, and fights with a demon at its side. It fills one role: damage. You wear cloth, use a staff, dagger or sword, and spend mana, which [[Life Tap]] refills from your health.
 

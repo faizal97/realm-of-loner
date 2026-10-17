@@ -2,7 +2,7 @@
 class: rogue
 by: official
 written: 10.11.0
-checked: 10.13.0
+checked: 10.14.0
 ---
 A Rogue fights in melee: quick strikes build combo points, then a finisher spends them. You can only fill the damage role. Rogues wear leather and use one dagger or sword, and run on energy: 100 at most, full at the start of every fight, refilling 10 per second.
 
