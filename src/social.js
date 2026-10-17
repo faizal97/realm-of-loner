@@ -68,6 +68,8 @@
     if (r1 > r0) { post('guild', guildOfficer(), pick([`congrats on ${RANKS[r1].name} rank!`, `promoted you to ${RANKS[r1].name}, well earned`, `${RANKS[r1].name} now, nice work`, `everyone say gz, new ${RANKS[r1].name}!`])); G.toast(`Guild rank: ${RANKS[r1].name}. ${RANKS[r1].perk ? 'New perk: ' + RANKS[r1].perk + '.' : ''}`, true); }
   }
   SOC.addStanding = addStanding;
+  SOC.GROUP_LEVELS = 3; // a sim player who asks you to group is at most this many levels from yours
+  SOC.makeWhisper = () => makeWhisper(); // for tests
   const guildOfficer = () => { const P = G.S.player; const info = SOC.guildInfo(P.guild); return info.officer || onlineMate() || pick(G.S.bots); };
   const onlineMate = (not) => { const S = G.S, d = new Date(); const m = S.bots.filter((b) => b.guild === S.player.guild && B.isOnline(b, d) && b.id !== not); return m.length ? pick(m) : null; };
 
@@ -292,7 +294,10 @@
       ['help_kill', huntTarget() ? 2 : 0], ['quest_team', qt ? 3 : 0], ['wtb', sellable().length ? 2 : 0], ['wts', P.level >= 6 ? 1 : 0],
       ['swap', sellable().some((b) => b.n >= 5) && P.level >= 8 ? 1 : 0], ['where', 1], ['guild_invite', P.guild < 0 && (state().invites || 0) < 6 ? 1 : 0],
       ['carry', carryActs().length ? 2 : 0], ['craft_order', ct ? 2 : 0], ['duel', P.level >= 10 ? 1 : 0], ['ask_gear', P.equip.weapon ? 1 : 0], ['ask_spec', P.level >= 12 ? 1 : 0]]);
-    const b = pick(myBots()); if (!b) return;
+    // asking you to group (a kill or a quest) comes from someone within 3 levels of you: a level 4 at your level 31's side
+    // dies to the first pull (a player's report)
+    const groups = kind === 'help_kill' || kind === 'quest_team';
+    const b = pick(groups ? myBots().filter((x) => Math.abs(x.level - P.level) <= SOC.GROUP_LEVELS) : myBots()); if (!b) return;
     const W = (text, act) => post('whisper', b, text, Object.assign({ whisper: true, bot: b.id }, act));
     if (kind === 'help_kill') {
       const h = huntTarget(); const M = D.MOBS[h.mob]; const pay = Math.round(M.lvl[1] * 12 * h.n + 50); const at = D.PLACES[h.place].name;
