@@ -1057,6 +1057,8 @@
     const hitRow = (every, first, x, who, school, hard) => out.push({ name: who === 'all' ? 'Group hit' : who === 'random' ? 'Random hit' : 'Heavy hit', when: `Every ${every} sec (first at ${first} sec)`, what: `${who === 'all' ? 'hits everyone in your group' : who === 'random' ? 'hits one group member at random' : 'hits its target'} for ${hit(x)}${school ? ' ' + school : ''} damage.`, hard });
     const healRow = (every, first, x, hard) => out.push({ name: 'Heals itself', when: `Every ${every} sec (first at ${first} sec)`, what: `heals for ${Math.round(x * 100)}% of its health (${Math.round(u.maxHp * x)}).`, hard });
     if (S.mult) hitRow(S.every, SPECIAL_FIRST, S.mult, S.who, S.school, false);
+    if (S.mult && teleOn(sp.kind)) teleRow(out[out.length - 1], SPECIAL_NAME[sp.kind], S.who === 'target' ? 'guard' : 'step', false);
+    if (S.heal && teleOn(sp.kind)) teleRow(out[out.length - 1], SPECIAL_NAME[sp.kind], 'cut', true);
     if (S.heal) healRow(S.every, SPECIAL_FIRST, S.heal, false);
     if (S.adds) {
       const byMob = {};
@@ -1077,6 +1079,7 @@
     }
     return out;
   };
+  const SPECIAL_NAME = { slam: 'Crushing Slam', hogger: 'Lunge', whirl: 'Whirling Blades', molten: 'Molten Splash', cook: 'Hearty Meal', arugal: 'Shadow Lance' }; // the casts' names, as mech() names them
   // a telegraphed mechanic's row (#179): its cast's name, and its answer
   E.TELE_ANSWER = { step: 'Step Back', guard: 'a defensive', cut: 'an interrupt or a stun' };
   function teleRow(r, name, ans, heal) {
@@ -1128,8 +1131,8 @@
   // TELE.cast sec, then it lands. One answer per kind: Step Back out of a group hit or a hit on a random member ('step'),
   // the tank's defensive against a hit on the target ('guard'), an interrupt or a stun against a heal ('cut'). Answered:
   // avoided. Missed: TELE.miss x the hit, but only for a unit that has the answer (one that doesn't know it yet takes the
-  // hit as before). TELE.on lists the mechanics switched on: a special's kind, 'x:<mob>' for a boss's extra, '*' for all.
-  const TELE = E.TELE = { on: new Set(), cast: 2.5, hardCast: 2, miss: 2.5, healMiss: 1.5 };
+  // hit as before). TELE.on lists the mechanics switched on (each measured before it was, sim/difficulty.js TELE=): a special's kind, 'x:<mob>' for a boss's extra, '*' for all.
+  const TELE = E.TELE = { on: new Set(['whirl']), cast: 2.5, hardCast: 2, miss: 2.5, healMiss: 1.5 };
   let teleSeq = 0;
   const teleOn = (key, spec) => !!(spec && spec.on) || TELE.on.has('*') || TELE.on.has(key); // spec.on: switched on in the data (`tele: true` on a boss extra)
   E.teleAnswer = (t) => (t.who === 'cast' ? 'cut' : t.who === 'target' ? 'guard' : 'step');
