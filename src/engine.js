@@ -1290,9 +1290,15 @@
   // a bot plays a song on the beat (#250): it starts it, then once per beat window decides by its skill whether it lands
   // the beat (renews somewhere inside the window), comes in early (a verse lost) or lets the song run out (all lost);
   // with spend set it plays the Finale once the verses are full
-  function botSong(C, u, b, abId, tgt, try_, spend) {
+  function botSong(C, u, b, abId, tgt, try_, spend, drop) {
     const st = E.songState(C, u, abId);
-    if (!st.playing) return u.auras.filter((a) => a.song).length < E.songSlots(u) && try_(abId, tgt); // a free slot only: songs are started in the order a bot wants them
+    if (!st.playing) {
+      if (u.auras.filter((a) => a.song).length < E.songSlots(u)) return try_(abId, tgt); // a free slot: songs are started in the order a bot wants them
+      const d = drop && E.songOf(u, drop); if (!d) return false; // slots full: only a song the bot may give up (drop) makes room
+      const was = d.began; d.began = -Infinity; // playSong replaces the oldest song: make it this one
+      if (try_(abId, tgt)) return true;
+      d.began = was; return false;
+    }
     if (st.finale && spend && !st.inWindow) return try_(abId, tgt);
     const s = E.songOf(u, abId);
     const sk = b.skill || 0.5, onBeat = () => rnd(0.55, Math.max(0.6, st.win - 0.1));
@@ -1426,7 +1432,7 @@
         if (low2 >= 3 && has('grand_finale') && try_('grand_finale')) return;
         if (low2 >= 2 && has('chorus_grove') && try_('chorus_grove')) return;
         if (hurt >= 3 && has('encore') && try_('encore')) return;
-        if (has('song_of_rest') && (hurt >= 1 || E.songOf(u, 'song_of_rest')) && botSong(C, u, b, 'song_of_rest', null, try_, low2 >= 2)) return; // the song on the beat (#250); its Finale when two are low
+        if (has('song_of_rest') && (hurt >= 1 || E.songOf(u, 'song_of_rest')) && botSong(C, u, b, 'song_of_rest', null, try_, low2 >= 2, 'dirge')) return; // the song on the beat (#250); its Finale when two are low; it takes Dirge's slot (#267)
         if (low && low.hp / low.maxHp < 0.4 && has('crescendo') && low.hp / low.maxHp > 0.2 && try_('crescendo', low)) return;
         if (low && low.hp / low.maxHp < thr && try_('soothing_chord', low)) return;
         if (tank && tank.hp / tank.maxHp < 0.9 && has('counterpoint') && !auraOf(tank, 'counterpoint') && try_('counterpoint', tank)) return;
