@@ -659,7 +659,7 @@
     if (P.travel) sc.append(h('div', { class: 'castbar', id: 'travelbar', style: { bottom: G.mounted() ? '74%' : '40%' } }, h('i'), h('b', null, 'Traveling to ' + D.PLACES[P.travel.to].name)));
     if (P.ghostUntil) sc.append(h('div', { class: 'overlay-msg' }, h('div', null, h('h3', null, 'You are dead'), h('p', { id: 'ghost-t' }, 'Running back to your body...'))));
     if (S.run && S.run.phase === 'wipe') sc.append(h('div', { class: 'overlay-msg' }, h('div', null, h('h3', null, 'Party defeated'), h('p', null, 'Running back from the graveyard...'))));
-    if (S.run && S.run.phase === 'done') sc.append(h('div', { class: 'overlay-msg', style: { background: 'rgba(0,0,0,.25)' } }, h('div', null, h('h3', null, S.run.name + ' cleared'), h('p', null, 'Leave the group when you are ready.'))));
+    if (S.run && S.run.phase === 'done') sc.append(h('div', { class: 'overlay-msg', style: { background: 'rgba(0,0,0,.25)' } }, h('div', null, h('h3', null, S.run.name + ' cleared'), h('p', null, 'Leave the group when you are ready.'), h('button', { class: 'btn alt', style: { marginTop: '10px', pointerEvents: 'auto' }, onclick: (e) => { e.stopPropagation(); confirmLeaveGroup(); } }, 'Leave group')))); // on the scene, where it can't sit under a tall party list and action bar (#274)
     els.cast = h('div', { class: 'castbar', hidden: true }, h('i'), h('b'));
     sc.append(els.cast);
     fitBelowStrip(sc);
