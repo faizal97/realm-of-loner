@@ -20,6 +20,10 @@
     'Bubblehearth', 'Gankalot', 'Noobslayer', 'Manadrinker', 'Pumpkinpie', 'Kobolddad', 'Coinpurse', 'Muffinz', 'Sneakysneak', 'Holyguacamole',
     'Lanternlol', 'Ledgerbff', 'Chargeyy', 'Fireballz', 'Shieldbro', 'Stabwound', 'Renewbie', 'Smitehappens', 'Backstabber', 'Polymorphine',
     'Budidps', 'Asepheals', 'Ucoktank', 'Kakashiii', 'Mamangmage', 'Jokowarrior', 'Tehpucuk', 'Nasgorheal', 'Satebandit', 'Kopisusu'];
+  // names the syllables can build that belong to someone else's world (#275); test/bot-names.test.js lists every
+  // name the syllables can make and checks it against this and tools/rename_v10.json
+  const NAME_BLOCK = new Set(['Mordor', 'Moria', 'Gondor', 'Rohan', 'Arwen', 'Elrond', 'Isildur', 'Elendil', 'Sauron', 'Morgoth', 'Gandalf', 'Gimli', 'Thorin', 'Erebor', 'Arnor', 'Lorien']);
+  B.NAME_PARTS = { a: SYL_A, b: SYL_B, end: ['a', 'e', 'i'] }; B.NAME_BLOCK = NAME_BLOCK;
   B.makeName = function (used) {
     for (let i = 0; i < 50; i++) {
       let n;
@@ -27,7 +31,7 @@
       else n = pick(SYL_A) + pick(SYL_B) + (chance(0.15) ? pick(['a', 'e', 'i']) : '');
       n = n.charAt(0).toUpperCase() + n.slice(1).toLowerCase();
       if (n.length > 12) n = n.slice(0, 12);
-      if (!used.has(n)) { used.add(n); return n; }
+      if (!used.has(n) && !NAME_BLOCK.has(n)) { used.add(n); return n; }
     }
     return 'Alt' + Math.floor(Math.random() * 9999);
   };
