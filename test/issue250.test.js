@@ -59,7 +59,7 @@ test('pulses grow with verses; the Finale spends them all in one burst', () => {
   for (let v = 1; v <= R().max; v++) { until(C, () => E.songState(C, u, 'dirge').inWindow); freeGcd(C, u); G.useAbility('dirge'); }
   const n = pulseDmg().length; until(C, () => pulseDmg().length > n);
   const full = pulseDmg()[pulseDmg().length - 1];
-  assert.ok(Math.abs(full / first - (1 + E.VERSE_BONUS * R().max)) < 0.02, `a full-verse pulse is ${(full / first).toFixed(2)}x the first`);
+  assert.ok(Math.abs(full - first * (1 + E.VERSE_BONUS * R().max)) <= 1.5, `a full-verse pulse is ${(full / first).toFixed(2)}x the first`); // within damage's rounding to whole points
   assert.ok(E.songState(C, u, 'dirge').finale);
   // on the beat at full verses: stays full
   until(C, () => E.songState(C, u, 'dirge').inWindow); freeGcd(C, u); G.useAbility('dirge');
