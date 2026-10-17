@@ -7,19 +7,24 @@ require('../src/data.js'); require('../src/engine.js'); require('../src/bots.js'
 const { G, D, E } = globalThis;
 let bad = 0, n = 0; const ok = (c, m) => { n++; if (!c) { bad++; console.log('FAIL ' + m); } };
 const CLASSES = Object.keys(D.CLASSES).filter((c) => !D.CLASSES[c].hidden);
+// a song class (the Bard) has no D.PROCS: its reactions are its songs. A beat to land is lit on the button, a full song
+// lights the Finale, and its capstones light a button (Showstopper, Rescue Note) or change the beat (Medley, Perfect Pitch)
+const SONGS = (cls) => D.CLASSES[cls].abilities.some((a) => D.ABILITIES[a] && D.ABILITIES[a].song);
 const mobFor = (L) => Object.keys(D.MOBS).find((k) => { const M = D.MOBS[k]; return !M.boss && !M.elite && !M.named && !M.special && !M.hpMult && !M.dmgMult && M.lvl && M.lvl[0] <= L && M.lvl[1] >= L && M.family === 'beast'; }); // a plain beast
 function fight(cls, L, opts) {
+  opts = opts || {};
   G.newGame({ name: 'R', cls, race: cls === 'shaman' || cls === 'hunter' ? 'orc' : 'human' }); const P = G.S.player; P.level = L; P.hp = null; P.res = null; // full health and mana at the new level
   if (L >= 4) for (const slot of D.GEAR_SLOTS) { if (slot === 'ranged' && !D.CLASSES[cls].ranged) continue; const it = G.genGear(slot, L, 2, slot === 'weapon' ? { wtype: D.CLASSES[cls].weapons[0] } : { atype: D.CLASSES[cls].armorType }); if (G.canUseItem(it, cls)) P.equip[slot] = it; } // quest greens, like a real player
   const u = E.charUnit(P, 'ally', 'bot', Date.now()); u.bot = { skill: 0.75, react: 0.45 }; u.role = 'dps';
-  const m = E.mobUnit(mobFor(L), L, opts && opts.long ? { hp: 2.5, dmg: 1 } : null); // long: a tougher fight, like an elite or a dungeon pull
+  const m = E.mobUnit(mobFor(L), L, opts.long ? { hp: opts.hp || 2.5, dmg: 1 } : null); // long: a tougher fight, like an elite or a dungeon pull
   const C = E.fight([u], [m], {});
   const used = new Set(); let procs = 0, litUses = 0;
   for (let i = 0; i < 1200 && !C.over; i++) {
     E.tick(C, 0.1);
     for (const e of C.events) {
       if (e.src !== u.uid) continue;
-      if (e.type === 'proc') procs++;
+      if (e.type === 'proc' || (e.type === 'song' && e.what === 'beat')) procs++;
+      if (e.type === 'song' && e.what === 'finale') opts.finales = (opts.finales || 0) + 1;
       if (e.type === 'ability') { used.add(e.ab); if (opts && opts.lit && opts.lit.has(e.ab)) litUses++; }
     }
     C.events.length = 0;
@@ -61,6 +66,10 @@ function fight(cls, L, opts) {
 
 // ---- second reactions: they start at their level, and happen in mid-game fights
 for (const cls of CLASSES) {
+  if (SONGS(cls)) { // the Finale: a song kept on the beat to full verses, in a long mid-game fight
+    let fin = 0; for (let i = 0; i < 4; i++) { const o = { long: true, hp: 8 }; fight(cls, 20, o); fin += o.finales || 0; }
+    ok(fin > 0, `${cls}: its Finale happens in mid-game fights (${fin} in 4)`); continue;
+  }
   const mid = (D.PROCS[cls] || []).find((p) => p.minLvl);
   ok(!!mid, `${cls}: has a second, mid-game reaction`);
   if (!mid) continue;
@@ -78,6 +87,10 @@ for (const cls of CLASSES) {
 {
   let caps = 0;
   for (const cls of CLASSES) for (const tr of D.TALENTS[cls]) {
+    if (SONGS(cls)) { // every capstone changes the songs: one of each pair lights a button or the beat
+      const rules = tr.talents.filter((t) => t.tier === 3).flatMap((t) => (t.fx || []).filter((f) => f.k === 'rule').map((f) => f.rule));
+      ok(rules.length >= 2, `${cls} ${tr.id}: both capstones change the songs (${rules.join(', ')})`); caps++; continue;
+    }
     const cap = tr.talents.find((t) => t.tier === 3), pr = (D.PROCS[cls] || []).find((p) => p.talent === cap.id);
     ok(!!pr, `${cls} ${tr.id}: the capstone ${cap.name} brings a reaction`); if (!pr) continue; caps++;
     G.newGame({ name: 'Cap', cls, race: cls === 'shaman' || cls === 'hunter' ? 'orc' : 'human' }); const P = G.S.player; P.level = 60;
