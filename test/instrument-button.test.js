@@ -38,8 +38,9 @@ test('the bar has one instrument button, out of a fight only, with the instrumen
 });
 
 function ART_ICON_KEYS() {
-  const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'art_legends.js'), 'utf8');
-  return [...src.matchAll(/^ {4}([a-z_]+): function \(c\)/gm)].map((m) => m[1]);
+  // the Bard's icons live in art_legends.js, its interrupt in art_icons14.js (#179)
+  return ['art_legends.js', 'art_icons14.js'].flatMap((f) => [...fs.readFileSync(path.join(__dirname, '..', 'src', f), 'utf8')
+    .matchAll(/^ {4}([a-z_]+): function \(c\)/gm)].map((m) => m[1]));
 }
 
 // the bar keeps its size in and out of a fight (#66): out of a fight Eat, Drink and the instrument sit in fight-only

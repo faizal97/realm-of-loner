@@ -41,7 +41,7 @@
   H('dw_onyxia_h', { name: 'The Brood Mother', lvl: 60, giver: 'warlord_durnak', turnin: 'warlord_durnak', dungeon: 'onyxias_lair', pre: ['dw_h_lair'], text: 'The dragon is in her cave. Her storm sits on the sea like a lid, and it will not lift while she breathes. The High Chief wants that sea open. Bring me her head, and take nine warriors with you.',
     objs: [{ type: 'collect', item: 'onyxia_head', n: 1 }], reward: { choice: ['fam_back_rare60'] } });
 
-  const BREATH = (mult) => ({ kind: 'hit', every: 25, mult, who: 'all', school: 'fire', text: 'Veshmira rears back and breathes fire over the cavern!' });
+  const BREATH = (mult) => ({ kind: 'hit', name: 'Searing Breath', every: 25, mult, who: 'all', school: 'fire', text: 'Veshmira rears back and breathes fire over the cavern!' });
   Object.assign(D.DUNGEONS, {
     onyxias_lair: { name: "Veshmira's Lair", raid: true, music: 'veshmira', minLvl: 60, par: 188, trialPar: 330, size: 10, trashMult: { hp: 5, dmg: 2.6 }, bossMult: { hp: 30, dmg: 9.4 }, pulls: [
       { scene: 'lair_tunnel', label: 'The entry tunnel', mobs: ['onyxian_warder', 'onyxian_warder'] },

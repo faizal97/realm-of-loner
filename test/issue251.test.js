@@ -21,13 +21,13 @@ const until = (C, fn) => { for (let i = 0; i < 400 && !fn(); i++) { if (G.pUnit)
 const freeGcd = (C, u) => until(C, () => u.gcdUntil <= C.t && !u.cast);
 const songs = (C, u) => C.events.filter((e) => e.type === 'song' && e.src === u.uid);
 
-test('the kit: daggers and staves, 23 abilities plus three instruments, Standing Ovation', () => {
+test('the kit: daggers and staves, 24 abilities (Sour Note, the interrupt every class has since #179) plus three instruments, Standing Ovation', () => {
   const B = D.CLASSES.bard;
   assert.deepStrictEqual(B.weapons, ['dagger', 'staff']);
   assert.deepStrictEqual(B.roles, ['healer', 'dps']);
   assert.ok(!B.hidden, 'pickable on a live build (#255)');
   for (const r in D.RACES) assert.ok(D.RACES[r].classes.includes('bard'), `${r}: can be a Bard`);
-  assert.strictEqual(B.abilities.filter((id) => !D.ABILITIES[id].instrument).length, 23);
+  assert.strictEqual(B.abilities.filter((id) => !D.ABILITIES[id].instrument).length, 24);
   assert.strictEqual(D.ABILITIES.grand_finale.name, 'Standing Ovation');
   for (const id of ['song_of_rest', 'dirge', 'marching_song', 'ballad_of_blades']) assert.ok(D.ABILITIES[id].song, `${id} is a song`);
   for (const id of ['hearthsong', 'anthem_of_stone']) assert.ok(D.ABILITIES[id].buff && !D.ABILITIES[id].song, `${id} stays a buff`);
