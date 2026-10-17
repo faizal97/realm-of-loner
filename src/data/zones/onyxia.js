@@ -41,6 +41,7 @@
   H('dw_onyxia_h', { name: 'The Brood Mother', lvl: 60, giver: 'warlord_durnak', turnin: 'warlord_durnak', dungeon: 'onyxias_lair', pre: ['dw_h_lair'], text: 'The dragon is in her cave. Her storm sits on the sea like a lid, and it will not lift while she breathes. The High Chief wants that sea open. Bring me her head, and take nine warriors with you.',
     objs: [{ type: 'collect', item: 'onyxia_head', n: 1 }], reward: { choice: ['fam_back_rare60'] } });
 
+  const BREATH = (mult) => ({ kind: 'hit', every: 25, mult, who: 'all', school: 'fire', text: 'Veshmira rears back and breathes fire over the cavern!' });
   Object.assign(D.DUNGEONS, {
     onyxias_lair: { name: "Veshmira's Lair", raid: true, music: 'veshmira', minLvl: 60, par: 188, trialPar: 330, size: 10, trashMult: { hp: 5, dmg: 2.6 }, bossMult: { hp: 30, dmg: 9.4 }, pulls: [
       { scene: 'lair_tunnel', label: 'The entry tunnel', mobs: ['onyxian_warder', 'onyxian_warder'] },
@@ -50,8 +51,11 @@
     ],
     // Hard (v10.7): opens after a Normal clear. Stronger enemies (tuned by sim/hardraid.js: a group near the ceiling
     // wipes about 2-3 times on a first clear) and one extra mechanic per boss: her last phase calls the rest of the brood
-    hard: { trashMult: { hp: 6.8, dmg: 3.45 }, bossMult: { hp: 44, dmg: 13.5 },
-      extra: { onyxia: [{ kind: 'adds', at: 0.25, mob: 'onyxian_whelp', n: 3, lvl: 0, text: 'Veshmira shrieks, and the rest of the brood pours out of the nests!' }] } } },
+    hard: { trashMult: { hp: 5.1, dmg: 2.65 }, bossMult: { hp: 31, dmg: 9.5 }, // #215: just above Normal; with the breath, more made Hard unwinnable
+      extra: { onyxia: [BREATH(1.35), { kind: 'adds', at: 0.25, mob: 'onyxian_whelp', n: 3, lvl: 0, text: 'Veshmira shrieks, and the rest of the brood pours out of the nests!' }] } },
+    // Normal: her breath over the whole raid (#215). Without it the fight tested only the tank: no damage number made a group
+    // wipe on Normal without making Hard impossible
+    extra: { onyxia: [Object.assign(BREATH(1.35), { hard: false })] } },
   });
   Object.assign(D.ACTIVITIES, {
     onyxias_lair: { name: "Veshmira's Lair", dungeon: 'onyxias_lair', where: 'onyxias_lair_gate', size: 10, minLvl: 60, maxLvl: 60, desc: 'Raid in Saltmarsh. 10 players. Both factions.' },

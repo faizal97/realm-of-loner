@@ -85,7 +85,7 @@
     objs: [{ type: 'collect', item: 'firelord_essence', n: 1 }], reward: { choice: ['fam_back_rare60'] } });
 
   Object.assign(D.DUNGEONS, {
-    molten_core: { name: 'The Magma Throne', raid: true, music: 'magma', minLvl: 60, par: 580, trialPar: 720, size: 10, trashMult: { hp: 3.3, dmg: 2.2 }, bossMult: { hp: 17, dmg: 7.2 }, pulls: [
+    molten_core: { name: 'The Magma Throne', raid: true, music: 'magma', minLvl: 60, par: 580, trialPar: 720, size: 10, trashMult: { hp: 3.3, dmg: 3.7 }, bossMult: { hp: 17, dmg: 12.2 }, trial: { trashMult: { hp: 3.3, dmg: 2.2 }, bossMult: { hp: 17, dmg: 7.2 } }, pulls: [ // Normal and Hard damage raised (#215: sim/difficulty.js, a fitted player wipes in 20-35% of runs); Trials keep the numbers they were tuned on
       { scene: 'mc_caverns', label: 'The lava caverns', mobs: ['core_hound', 'core_hound', 'core_surger'] },
       { scene: 'mc_caverns', label: 'Molten giants', mobs: ['molten_giant', 'molten_giant'] },
       { scene: 'mc_caverns', label: 'Cinderhound', mobs: ['magmadar'], boss: true },
@@ -101,7 +101,7 @@
       { scene: 'mc_lake', label: 'Vulcarn', mobs: ['ragnaros'], boss: true },
     ],
     // Hard (v10.7): opens after a Normal clear; stronger enemies (tuned by sim/hardraid.js) and one extra mechanic per boss
-    hard: { trashMult: { hp: 4.5, dmg: 2.9 }, bossMult: { hp: 25, dmg: 10.4 }, extra: {
+    hard: { trashMult: { hp: 3.6, dmg: 3.9 }, bossMult: { hp: 18.7, dmg: 12.8 }, extra: {
       magmadar: [{ kind: 'enrage', at: 0.3, mult: 1.3, text: 'Cinderhound goes into a frenzy!' }],
       garr: [{ kind: 'adds', at: 0.5, mob: 'firesworn', n: 2, lvl: 0, text: 'Stonecore pulls two more Firesworn out of the rock!' }],
       baron_geddon: [{ kind: 'hit', every: 15, mult: 0.5, who: 'all', school: 'fire', text: 'Baron Ashfall bursts into a ring of fire!' }],

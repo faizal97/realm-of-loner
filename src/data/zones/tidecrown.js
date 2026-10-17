@@ -54,7 +54,7 @@
   H('tc_deepmother_h', { name: 'The Deepmother', lvl: 60, giver: 'hexxer_mazu', turnin: 'hexxer_mazu', dungeon: 'tidecrown_citadel', pre: ['tc_crown_h'], text: "Shal'zua's spirit is not free. The thing under the citadel ate her. Mazu wants its heart.",
     objs: [{ type: 'collect', item: 'deepmother_heart', n: 1 }], reward: { choice: ['fam_back_rare60'] } });
   Object.assign(D.DUNGEONS, {
-    tidecrown_citadel: { name: 'The Tidecrown Citadel', raid: true, music: 'tidecrown', minLvl: 60, par: 506, trialPar: 660, size: 10, trashMult: { hp: 4.4, dmg: 2.6 }, bossMult: { hp: 22, dmg: 7.4 }, pulls: [
+    tidecrown_citadel: { name: 'The Tidecrown Citadel', raid: true, music: 'tidecrown', minLvl: 60, par: 506, trialPar: 660, size: 10, trashMult: { hp: 4.4, dmg: 4.4 }, bossMult: { hp: 22, dmg: 12.6 }, trial: { trashMult: { hp: 4.4, dmg: 2.6 }, bossMult: { hp: 22, dmg: 7.4 } }, pulls: [ // Normal and Hard damage raised (#215: sim/difficulty.js, a fitted player wipes in 20-35% of runs); Trials keep the numbers they were tuned on
       { scene: 'citadel_court', label: 'The drowned courtyard', mobs: ['tidecrown_guard', 'tidecrown_guard', 'tidecrown_tidecaller'] },
       { scene: 'citadel_court', label: 'Commander Serathis', mobs: ['commander_serathis'], boss: true },
       { scene: 'citadel_court', label: 'The Hall of Tides', mobs: ['tidecrown_tidecaller', 'tidecrown_guard', 'abyssal_spawn'] },
@@ -66,7 +66,7 @@
       { scene: 'citadel_abyss', label: "Nal'veshra the Deepmother", mobs: ['nalveshra'], boss: true },
     ],
     // Hard (v10.7): opens after a Normal clear; stronger enemies (tuned by sim/hardraid.js) and one extra mechanic per boss
-    hard: { trashMult: { hp: 5.7, dmg: 3.3 }, bossMult: { hp: 30, dmg: 9.8 }, extra: {
+    hard: { trashMult: { hp: 4.8, dmg: 4.6 }, bossMult: { hp: 24.2, dmg: 13.2 }, extra: {
       commander_serathis: [{ kind: 'hit', every: 14, mult: 0.45, who: 'all', school: 'frost', text: 'Serathis calls a wave over the courtyard!' }],
       tide_twin_myrel: [{ kind: 'heal', every: 18, heal: 0.03, text: 'The rising tide mends Myrel!' }],
       tide_twin_sorin: [{ kind: 'enrage', at: 0.3, mult: 1.3, text: 'Sorin fights harder as the tide falls!' }],

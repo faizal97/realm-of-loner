@@ -4392,7 +4392,7 @@
         for (const key of om) { const O = T.OMENS[key]; b.append(h('div', { class: 'row' }, h('div', { class: 'ic' }, img(abIcon(O.icon))), h('div', { class: 't' }, h('b', null, O.name), h('small', { style: { whiteSpace: 'normal' } }, O.rule)))); }
       }
       // every pull, with the numbers you will meet (a Trial's at the level picked, Omens included)
-      const tm = (hard ? Dg.hard.trashMult : Dg && Dg.trashMult) || { hp: 1, dmg: 1 }, bmu = (hard ? Dg.hard.bossMult : Dg && Dg.bossMult) || { hp: 1, dmg: 1 };
+      const Bs = Dg ? G.runBase(Dg, hard, trial) : {}, tm = Bs.trashMult || { hp: 1, dmg: 1 }, bmu = Bs.bossMult || { hp: 1, dmg: 1 };
       const trash = { hp: (tm.hp || 1) * f, dmg: (tm.dmg || 1) * f }, boss = { hp: (bmu.hp || 1) * f * (om.includes('hardened') ? T.OMENS.hardened.hp : 1), dmg: (bmu.dmg || 1) * f }; // (Guarded and Enraging change fights, not numbers)
       b.append(h('div', { class: 'sec-h' }, 'Pulls', h('small', null, `${pulls.length} in order${om.includes('swarming') ? ' · each +1 enemy (Swarming)' : ''}`)));
       const list = h('div', { class: 'list' });
@@ -4404,7 +4404,7 @@
         const drops = bm && bm.loot && !trial ? bm.loot.filter((id) => D.ITEMS[id]) : [];
         // a boss row stays short: its numbers and one line of what the card holds; the card has the rest (v10.7)
         const bkeys = [...new Set(p.mobs.filter((m) => D.MOBS[m].boss || m === A.boss))];
-        const unitOf = (key) => { const M = D.MOBS[key], u = E.mobUnit(key, mobLvl || (M.lvl ? M.lvl[1] : A.maxLvl), M.boss ? boss : trash); if (hard) u.hardX = G.hardExtra(act, key); else if (A.extra && A.extra[key]) u.hardX = A.extra[key]; return u; };
+        const unitOf = (key) => { const M = D.MOBS[key], u = E.mobUnit(key, mobLvl || (M.lvl ? M.lvl[1] : A.maxLvl), M.boss ? boss : trash); if (hard) u.hardX = G.hardExtra(act, key); else if (!trial && A.dungeon && G.normalExtra(act, key)) u.hardX = G.normalExtra(act, key); else if (A.extra && A.extra[key]) u.hardX = A.extra[key]; return u; };
         const abil = bkeys.flatMap((key) => E.specialRows(unitOf(key))), nHard = abil.filter((r) => r.hard).length;
         const summary = bkeys.length ? [abil.length ? `${abil.length} ${abil.length === 1 ? 'ability' : 'abilities'}` : 'no special abilities', nHard ? `${nHard} Hard` : '', drops.length ? `${drops.length} drops${drops.some((id) => D.ITEMS[id].effect) ? `, ${drops.filter((id) => D.ITEMS[id].effect).length} with an Effect` : ''}` : '', 'tap for details'].filter(Boolean).join(' · ') : null;
         list.append(h(bkeys.length ? 'button' : 'div', { class: 'row', onclick: bkeys.length ? () => openBossCard({ act, label: p.label || bm.name, keys: bkeys, unitOf, hard, drops }) : null }, h('div', { class: 'ic mob' }, img(mobArt(bk || p.mobs[0]))),

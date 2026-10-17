@@ -3387,6 +3387,8 @@
     const left = G.raidLooksLeft(act);
     if (left.length && G.collectLook(D.ITEMS[left[0]])) loot(`Featured raid: new look ${B.link(D.ITEMS[left[0]].name, D.ITEMS[left[0]].q)}.`);
   }
+  // a Normal raid boss's own extra mechanic (#215: Veshmira's breath), shown and fought like Hard's; a Trial has none
+  G.normalExtra = function (act, boss) { const Dg = D.DUNGEONS[D.ACTIVITIES[act].dungeon], x = Dg && Dg.extra && Dg.extra[boss]; return x ? x.map((e) => Object.assign({}, e)) : null; };
   G.hardExtra = function (act, boss) { const Dg = D.DUNGEONS[D.ACTIVITIES[act].dungeon], x = Dg && Dg.hard && Dg.hard.extra && Dg.hard.extra[boss]; return x ? x.map((e) => Object.assign({}, e)) : null; };
   G.hardCopy = function (id) {
     const it = G.copyItem(id), inf = G.upgradeInfo(it);
@@ -3575,13 +3577,16 @@
   G.declinePop = function () { G.S.queue = null; sys('You declined the group.'); emit('change'); };
 
   // ============================================================ runs (dungeon / hogger)
+  // the numbers a run's enemies start from: a Trial's own (a raid keeps the numbers its Trials were tuned on, #215), else
+  // Hard's, else Normal's
+  G.runBase = (Dg, hard, trial) => (trial && Dg.trial) || (hard && Dg.hard) || Dg;
   function startRun(act, trial, hard) {
     const S = G.S, A = D.ACTIVITIES[act];
     let pulls, mult = null, bossMult = null, name = A.name;
     if (A.dungeon) {
       const Dg = D.DUNGEONS[A.dungeon];
-      pulls = Dg.pulls; mult = Dg.trashMult; bossMult = Dg.bossMult;
-      if (hard && Dg.hard) { mult = Dg.hard.trashMult; bossMult = Dg.hard.bossMult; name += ' · Hard'; } else hard = false;
+      const Bs = G.runBase(Dg, hard, trial); pulls = Dg.pulls; mult = Bs.trashMult; bossMult = Bs.bossMult;
+      if (hard && Dg.hard) name += ' · Hard'; else hard = false;
     } else if (A.event) { // a festival run (v10.13): its own pulls, fought at your level, with its own Hard
       pulls = A.pulls; mult = A.trashMult; bossMult = A.bossMult;
       if (hard && A.hard) { mult = A.hard.trashMult; bossMult = A.hard.bossMult; name += ' · Hard'; } else hard = false;
@@ -3635,7 +3640,7 @@
       const M = D.MOBS[k];
       const u = E.mobUnit(k, R.mobLevel || null, M.boss ? mult : (R.mult || { hp: 1, dmg: 1 }));
       if (marks[i]) u.mark = marks[i];
-      const hx = R.hard && G.hardExtra(R.act, k); if (hx) u.hardX = hx; // Hard: the boss's extra mechanic
+      const hx = R.hard ? G.hardExtra(R.act, k) : !R.trial && G.normalExtra(R.act, k); if (hx) u.hardX = hx; // the boss's extra mechanic: Hard's, or a Normal raid's own
       const XA = D.ACTIVITIES[R.act], xs = R.hard && XA.hardExtra ? XA.hardExtra : XA.extra; // a festival boss has its own Hard set
       const wx = xs && xs[k]; if (wx) u.hardX = wx.map((e) => Object.assign({}, e)); // a world boss's mechanics
       return u;

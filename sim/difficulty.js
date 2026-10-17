@@ -10,6 +10,7 @@
 //   bot AI skill 0.85; masher = the player presses ONE button (the class's first damaging ability, or its first heal for a healer)
 //   and nothing else; undergeared = white gear ten levels below the activity; baddraw = every bot in the group at skill 0.2 (gear
 //   unchanged). Default: today's player (bot gear, skill 0.7). All four are done in the sim, with no engine hook.
+//   SCALE=1.2,1.2 multiplies the Normal trash and boss damage (and hp: SCALE=td,bd,th,bh) of the activities in ACTS.
 //   HARD=1 queues a raid on Hard (needs a Normal clear first: the sim records one); JSON=1 prints the raw rows.
 //   Lanternwake's run (v10.13): ACTS=ev_snuffed_road DATE=2026-10-28T19:00 LVOFF=5|25|50 (levels 15, 35, 60).
 require('./_seed.js');
@@ -24,6 +25,11 @@ const PROFILE = process.env.PROFILE || 'today';
 const N = +(process.env.N || 8), CLS = (process.env.CLASSES || 'mage,warrior,priest').split(','), LVOFF = +(process.env.LVOFF || 0), HARD = !!process.env.HARD, BLUE = process.env.GEAR === 'blue';
 const SKIP = (k) => D.ACTIVITIES[k].worldBoss || !(D.ACTIVITIES[k].dungeon ? D.DUNGEONS[D.ACTIVITIES[k].dungeon].pulls.length : (D.ACTIVITIES[k].pulls || []).length);
 const ACTS = (process.env.ACTS ? process.env.ACTS.split(',') : Object.keys(D.ACTIVITIES).filter((k) => !SKIP(k)));
+// SCALE="trash dmg,boss dmg[,trash hp,boss hp]" multiplies the Normal multipliers of every activity in ACTS (#215: searching for
+// the step that meets the targets without editing the data)
+// XMULT=0.5 sets the strength of every Normal boss extra hit (a share of the boss's hit) in ACTS (#215: Veshmira's breath)
+if (process.env.XMULT) for (const k of ACTS) { const o = D.DUNGEONS[D.ACTIVITIES[k].dungeon] || {}; for (const b in o.extra || {}) for (const x of o.extra[b]) if ((x.kind || 'adds') === 'hit') x.mult = +process.env.XMULT; }
+if (process.env.SCALE) { const [td, bd, th = 1, bh = 1] = process.env.SCALE.split(',').map(Number); for (const k of ACTS) { const o = D.ACTIVITIES[k].dungeon ? D.DUNGEONS[D.ACTIVITIES[k].dungeon] : D.ACTIVITIES[k]; o.trashMult = { hp: (o.trashMult || { hp: 1 }).hp * th, dmg: (o.trashMult || { dmg: 1 }).dmg * td }; o.bossMult = { hp: (o.bossMult || { hp: 1 }).hp * bh, dmg: (o.bossMult || { dmg: 1 }).dmg * bd }; } }
 if (PROFILE === 'masher') {
   const use = globalThis.E.use, one = {};
   const pick = (cls, role) => one[cls + role] || (one[cls + role] = D.CLASSES[cls].abilities.find((id) => { const A = D.ABILITIES[id]; return A && !A.form && !A.shapeshift && !A.opener && !A.finisher && !A.taunt && (role === 'healer' ? (A.heal && A.target === 'ally') : (A.target === 'enemy' && A.dmg && !A.cd)); }) || null);
