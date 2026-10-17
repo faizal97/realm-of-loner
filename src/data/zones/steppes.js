@@ -22,7 +22,7 @@
     blackrock_battlemaster: { name: 'Cinderpeak Battlemaster', lvl: [53, 54], family: 'humanoid', hpMult: 1.15, drops: [['thieves_coin', 0.55], ['linen_cloth', 0.3]], qdrops: [['blackrock_signet', 0.5]], aggro: 'For Vale!' },
     blackrock_flamecaller: { name: 'Cinderpeak Flamecaller', lvl: [54, 55], family: 'humanoid', drops: [['thieves_coin', 0.55], ['linen_cloth', 0.35]], qdrops: [['flamecaller_tome', 0.45], ['blackrock_signet', 0.3]], aggro: 'Burn in the fires of Cinderpeak!' },
     black_broodling: { name: 'Black Broodling', lvl: [53, 54], family: 'dragonkin', drops: [['ruined_pelt', 0.2]], qdrops: [['broodling_essence', 0.55]] },
-    black_dragonspawn: { name: 'Black Dragonspawn', lvl: [54, 55], family: 'dragonkin', hpMult: 1.25, drops: [['thieves_coin', 0.5]], qdrops: [['dragonspawn_scale', 0.5]], aggro: 'The master will feast on your bones!' },
+    black_dragonspawn: { name: 'Black Dragonspawn', lvl: [54, 55], family: 'dragonkin', hpMult: 1.25, drops: [['thieves_coin', 0.5]], qdrops: [['dragonspawn_scale', 0.5]], aggro: 'The whelps will feast on your bones!' },
     flamekin_spitter: { name: 'Emberling Spitter', lvl: [52, 53], family: 'elemental', drops: [['trogg_stone', 0.3]], qdrops: [['flamekin_ember', 0.55]] },
     blazing_elemental: { name: 'Blazing Elemental', lvl: [53, 54], family: 'elemental', hpMult: 1.15, drops: [['trogg_stone', 0.3]], qdrops: [['flamekin_ember', 0.4]] },
     gorlash: { name: 'Old Smokejaw', lvl: [54, 54], family: 'dragonkin', named: true, hpMult: 2.2, dmgMult: 1.35, drops: [['gorlash_cloak', 0.35], ['thieves_coin', 1]], qdrops: [['gorlash_horn', 1]] },

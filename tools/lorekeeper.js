@@ -72,6 +72,11 @@ for (const [q, t] of Object.entries(D.QUEST_STORY || {})) { const Q = D.QUESTS[q
 const placeLvl = {};
 for (const [k, p] of Object.entries(D.PLACES)) for (const n of p.npcs || []) placeLvl[n] = Math.min(placeLvl[n] || 99, (p.lvl || [1])[0]);
 for (const [k, N] of Object.entries(D.NPCS)) { add(`npc ${k}`, placeLvl[k] || 1, N.name, { title: true }); add(`npc ${k}`, placeLvl[k] || 1, N.title, { title: true }); }
+// a mob's aggro line is said in combat (engine.js), as the chat shows it (with the speaker), heard from the lowest
+// level of a place it lives in, as NPCs are (#271)
+const mobLvl = {};
+for (const p of Object.values(D.PLACES)) for (const [m] of p.mobs || []) mobLvl[m] = Math.min(mobLvl[m] || 99, (p.lvl || [1])[0]);
+for (const [k, M] of Object.entries(D.MOBS)) if (M.aggro) add(`mob ${k} aggro`, mobLvl[k] || (M.lvl || [1])[0], `${M.name} says: ${M.aggro}`, { spoilerOnly: true }); // spoilers only: growls and murloc noises aren't names
 for (const [k, A] of Object.entries(D.ACTIVITIES)) { add(`activity ${k}`, A.minLvl, A.name, { title: true }); add(`activity ${k}`, A.minLvl, A.desc); }
 // the Trophies screen is open at any level (#54): every plaque not yet taken, as G.trophyLabel words it, at level 1 and
 // just below each Reveals level (where a name may first be allowed)
@@ -135,6 +140,7 @@ if (SELF) {
   add('selftest hood', 17, 'The stranger, Lyveus, wants a word.');
   // a plaque worded without the level check (as if taken), and a game copy of Reveals that lost a row
   const wi = G.trophyList().find((x) => x.key === 'warden_ithrael'); if (wi) add('selftest trophy', 1, plaqueText(wi, 1, true), { title: true });
+  add('selftest aggro', 54, 'Black Dragonspawn says: The master will feast on your bones!', { spoilerOnly: true }); // a mob's aggro line as the chat shows it (#271)
   add('selftest chat', 10, 'anyone for The Tidecrown Citadel? lf healer', { spoilerOnly: true }); // a bot line the chat check would have stopped
   add('selftest codex', 1, G.effectSources('brittle_crown_signet', 60).join('. '), { title: true }); // a source worded for level 60, read at 1
   { const t = D.TITLES.find((x) => x.id === 'tidecrown'); if (t) { const lb = G.titleLabel(t, 1, true, 'Sweep'); add('selftest titles', 1, `${lb.name}. ${lb.how}`, { title: true }); } } // as if earned
@@ -192,7 +198,7 @@ for (const [w, srcs] of unknown) {
 
 if (SELF) {
   const all = problems.concat(warnings).join('\n');
-  const want = [['spoiler', /SPOILER  selftest spoiler /], ['trophy plaque', /SPOILER  selftest trophy /], ['codex source', /SPOILER  selftest codex /], ['chat line', /SPOILER  selftest chat /], ['titles screen', /SPOILER  selftest titles /], ['reveals copy', /REVEALS  src\/data\/reveals\.js differs/], ['hale', /SPOILER  selftest spoiler2/], ['faction', /FACTION  selftest/], ['typo Blackwell', /"Blackwel".*did you mean "Blackwell"/], ['typo Carrow', /"Carow".*did you mean "Carrow"/], ['unknown name', /"Zorbulax"/], ['hooded stranger', /SPOILER  selftest hood/]];
+  const want = [['spoiler', /SPOILER  selftest spoiler /], ['trophy plaque', /SPOILER  selftest trophy /], ['codex source', /SPOILER  selftest codex /], ['chat line', /SPOILER  selftest chat /], ['mob aggro line', /SPOILER  selftest aggro /], ['titles screen', /SPOILER  selftest titles /], ['reveals copy', /REVEALS  src\/data\/reveals\.js differs/], ['hale', /SPOILER  selftest spoiler2/], ['faction', /FACTION  selftest/], ['typo Blackwell', /"Blackwel".*did you mean "Blackwell"/], ['typo Carrow', /"Carow".*did you mean "Carrow"/], ['unknown name', /"Zorbulax"/], ['hooded stranger', /SPOILER  selftest hood/]];
   let bad = 0; for (const [k, re] of want) { const ok = re.test(all); if (!ok) bad++; console.log(`${ok ? 'caught' : 'MISSED'}  ${k}`); }
   process.exit(bad ? 1 : 0);
 }
