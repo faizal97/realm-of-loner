@@ -46,7 +46,7 @@ for (const act of raids) {
       check(n === 1, `${act} ${b}: heals once in ${x.every * 1.2} sec (${n})`);
     } else {
       let n = 0;
-      for (let i = 0; i < Math.round(x.every * 10 * 1.2); i++) { me.hp = me.maxHp; E.tick(C, 0.1); n += C.events.filter((e) => e.type === 'dmg' && e.src === u.uid && e.ab === 'hard_' + (x.school || 'hit')).length; C.events.length = 0; }
+      for (let i = 0; i < Math.round(x.every * 10 * 1.2); i++) { me.hp = me.maxHp; E.tick(C, 0.1); n += C.events.filter((e) => (e.type === 'dmg' && e.src === u.uid && e.ab === 'hard_' + (x.school || 'hit')) || (e.type === 'tele' && e.what === 'dodge' && e.src === u.uid)).length; C.events.length = 0; } // a telegraphed hit the unit answered counts too (#179)
       check(n >= 1 && n <= (x.who === 'all' ? C.allies.length : 1), `${act} ${b}: the timed hit lands once in ${x.every * 1.2} sec (${n})`);
     }
   }

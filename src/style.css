@@ -137,6 +137,18 @@ img { max-width: 100%; display: block; }
 .castbar i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(#ffe38a, #d8a023); }
 .castbar b { position: absolute; inset: 0; font: 700 11px/13px var(--body); text-align: center; color: #fff; text-shadow: 0 1px 1px #000; }
 .castbar.channel i { background: linear-gradient(#b3f28a, #4fa323); }
+/* telegraphs (#179): a boss's red cast bar over its name and in the target frame, the answer's icon on its left */
+.tbar { position: relative; display: flex; align-items: stretch; width: 112px; height: 16px; margin: 0 auto 3px; background: #1a0604; border: 1px solid #000; box-shadow: 0 0 0 1px #6a1a10, 0 0 10px rgba(255, 80, 30, .55); }
+.tbar[hidden] { display: none; }
+.tbar .tb-ic { flex: none; width: 20px; height: 20px; margin: -3px 0 0 -3px; border: 1px solid #ffb070; background: #000; box-shadow: 0 0 0 1px #000, 0 0 6px rgba(255, 120, 50, .8); z-index: 1; }
+.tbar .tb-ic img { display: block; width: 100%; height: 100%; transform: none; animation: none; }
+.tbar i { position: absolute; left: 17px; top: 0; bottom: 0; background: linear-gradient(#ffb070, #e8401c 55%, #a01a0c); max-width: calc(100% - 17px); }
+.tbar b { position: absolute; left: 17px; right: 0; top: 0; bottom: 0; font: 700 10px/16px var(--body); text-align: center; color: #fff; text-shadow: 0 1px 1px #000, 0 0 2px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tbar.small { width: auto; height: 12px; margin: 3px 0 0; box-shadow: 0 0 0 1px #6a1a10; }
+.tbar.small .tb-ic { width: 12px; height: 12px; margin: 0; border: 0; box-shadow: none; }
+.tbar.small i, .tbar.small b { left: 13px; }
+.tbar.small i { max-width: calc(100% - 13px); }
+.tbar.small b { font-size: 9px; line-height: 12px; }
 .overlay-msg { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; background: rgba(0,0,0,.55); z-index: 200; padding-inline: 16px; }
 .overlay-msg h3 { margin: 0; font: 24px/1.1 var(--display); color: var(--gold); text-shadow: 0 2px 3px #000; }
 .overlay-msg p { margin: 6px 0 0; font-weight: 700; text-shadow: 0 1px 2px #000; }
@@ -351,6 +363,10 @@ img { max-width: 100%; display: block; }
 /* a reaction lit this ability (v10.4): a gold pulse you cannot miss (a fill over the icon, since a glow gets clipped) */
 .ab.lit { outline: 3px solid #ffd84a; outline-offset: -1px; transform: scale(1.06); z-index: 2; }
 .ab.lit::before { content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none; border-radius: inherit; background: radial-gradient(circle, rgba(255, 236, 140, .55) 0%, rgba(255, 190, 40, .25) 60%, transparent 100%); animation: litpulse .7s ease-in-out infinite alternate; }
+.ab.tele { outline: 3px solid #ff5a2a; outline-offset: -1px; transform: scale(1.08); z-index: 3; }
+.ab.tele::before { content: ''; position: absolute; inset: 0; z-index: 4; pointer-events: none; border-radius: inherit; background: radial-gradient(circle, rgba(255, 150, 70, .25) 20%, rgba(255, 90, 30, .8) 100%); box-shadow: inset 0 0 16px 6px rgba(255, 120, 40, 1); animation: telepulse .35s ease-in-out infinite alternate; }
+@keyframes telepulse { from { opacity: .4; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .ab.tele::before { animation: none; } }
 /* a bard's song (#252): teal while it plays; the string at the bottom drains toward the gold beat zone at its left end;
    gold ring = the beat is on, tap now (steady, unlike a reaction's pulse); diamonds = verses, all gold = Finale ready */
 .ab .song { display: none; position: absolute; left: 4px; right: 4px; bottom: 3px; height: 4px; z-index: 3; pointer-events: none; border-radius: 2px; background: rgba(0, 0, 0, .65); box-shadow: 0 0 0 1px rgba(0, 0, 0, .8); }

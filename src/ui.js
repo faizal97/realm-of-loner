@@ -397,6 +397,7 @@
       h('div', { class: 'uf-name', style: { textAlign: 'right', color: isMob ? '#ff5b4b' : u.kind === 'pet' ? '#9fd6ff' : 'var(--c-' + u.cls + ')' } }, u.name, !isMob && u.kind !== 'pet' && u.char ? h('small', { class: 'rc' }, raceClass(u.char)) : null),
       ...botFxLine(u),
       (els.tHp = barEl('hp')),
+      isMob ? (els.tTele = teleBar('small')) : (els.tTele = null),
       (els.tCp = h('div', { class: 'cps' })),
       (els.tBuffs = h('div', { class: 'buffs tbuffs' }))), port);
   }
@@ -587,7 +588,7 @@
       C.enemies.forEach((u, i) => {
         const pos = Object.assign({}, POS_EN[i] || POS_EN[4]);
         if (u.boss && i === 0) pos.w = S.run && (D.ACTIVITIES[S.run.act] || {}).worldBoss ? 46 : 36; // a world boss towers over the raid
-        const np = h('div', { class: 'np' }, h('span', { class: 'mk' }, ''), h('span', { style: { color: conColor(u.level) } }, u.boss ? '' : u.level + ' '), h('span', { style: { color: '#ff6a5a' } }, u.name), h('div', { class: 'hpb' }, h('i')));
+        const np = h('div', { class: 'np' }, teleBar(), h('span', { class: 'mk' }, ''), h('span', { style: { color: conColor(u.level) } }, u.boss ? '' : u.level + ' '), h('span', { style: { color: '#ff6a5a' } }, u.name), h('div', { class: 'hpb' }, h('i')));
         const isChar = u.kind !== 'mob';
         const el = spriteEl(isChar ? art('hero', looks(u.char)) : mobArt(u.key), isChar ? Object.assign(pos, { w: Math.min(pos.w, 26) }) : pos, 'idle' + (isChar ? ' flip' : '') + (u.dead ? ' dead' : ''), np);
         el.addEventListener('click', () => { G.setTarget(u.uid); renderTarget(); markTargets(); });
@@ -816,6 +817,9 @@
       // bosses (v10.8): a low gong before a special or a call for help, a roar when they frenzy
       if (S_ && e.type === 'emote' && C.units[e.uid] && C.units[e.uid].boss && C.units[e.uid].side === 'enemy') S_.play('warn', { gap: 1.2, vol: 0.7 });
       if (S_ && e.type === 'fx' && e.kind === 'enrage') S_.play('enrage', { gap: 1, vol: 0.8 });
+      if (e.type === 'tele' && e.what === 'start' && G.pUnit && E.teleFor(C, G.pUnit).some((x) => x.m.uid === e.src)) { if (S_) S_.play('warn', { gap: 0.5, vol: 1 }); teleCard(e.ans); } // a red bar you can answer (#179)
+      if (e.type === 'tele' && e.what === 'dodge' && tgt && tgt.kind === 'player') fct(e.tgt, 'Avoided', 'small');
+      if (e.type === 'tele' && e.what === 'cut') fct(e.src, 'Interrupted', 'small');
       if (e.type === 'dmg') {
         const school = e.school && e.school !== 'physical' ? e.school : '';
         const mine = src && src.kind === 'player';
@@ -1923,6 +1927,7 @@
       const t = C.units[tid];
       if (t && els.tHp) setBar(els.tHp, t.hp, t.maxHp, Math.round((t.hp / t.maxHp) * 100) + '%');
       if (els.tDist) paintDist(els.tDist, G.pUnit, t);
+      if (els.tTele) paintTele(els.tTele, C, t);
       if (t && els.tBuffs) paintAuras(els.tBuffs, auraList(t, true), 8);
       document.querySelectorAll('[data-au]').forEach((d) => { const u = C.units[d.dataset.au]; if (u) paintAuras(d, u.dead ? [] : auraList(u), 6); });
       if (els.tCp) {
@@ -1937,6 +1942,7 @@
         const hp = el.querySelector('.hpb i');
         if (hp) hp.style.width = Math.max(0, (u.hp / u.maxHp) * 100) + '%';
         el.classList.toggle('casting', !!u.cast);
+        if (u.side === 'enemy') paintTele(el.querySelector('.tbar'), C, u);
         const mk = el.querySelector('.np .mk'); if (mk) { const sym = MARK_SYM[u.mark] || ''; setSym(mk, sym ? sym + ' ' : ''); }
         if (u.dead && !el.classList.contains('dead')) el.classList.add('dead');
         placeSprite(C, u, el, scale);
@@ -1989,6 +1995,8 @@
     }
     // action bar cooldowns
     if (els.abs) {
+      const teleIds = new Set(); // the answers to a red bar now (#179): those buttons glow
+      if (C && G.pUnit && !G.pUnit.dead) for (const x of E.teleFor(C, G.pUnit)) for (const id of E.answersOf(G.pUnit, x.ans)) teleIds.add(id);
       for (const id in els.abs) {
         const btn = els.abs[id];
         let p = 1, left = 0, nores = false, on = false;
@@ -2015,6 +2023,7 @@
         btn.classList.toggle('on', on);
         const u2 = C && G.pUnit, lit = !!u2 && (E.lit(u2, id) || (u2.cp >= 5 && ((D.PROCS || {})[u2.cls] || []).some((pr) => pr.on.includes('cp5') && pr.lights.includes(id))));
         btn.classList.toggle('lit', lit); // a reaction lit this ability (v10.4)
+        btn.classList.toggle('tele', teleIds.has(id) && !(left > 0)); // it answers a red bar now and is ready (#179)
         btn.classList.toggle('queued', !!u2 && !!u2.queued && u2.queued.ab === id); // waiting to fire when the cast ends (#249)
         if ((D.ABILITIES[id] || {}).song) songButton(btn, C && u2 ? E.songState(C, u2, id) : null, C);
         btn.classList.toggle('unlit', (!lit && !!(D.ABILITIES[id] || {}).needAura) || (!C && G.fightBuff(id)) || !!G.barBlock(id)); // on the road or dead the bar dims as #165's buffs do, cooldowns still sweeping (#167); usable only while lit (Overpower): grey until then (v10.8); a short buff out of a fight (#165)
@@ -4884,6 +4893,35 @@
     const pic = C[2](); pic.classList.add('tip-pic');
     const el = h('div', { class: 'tip-card bard-card' }, h('div', { class: 'tip-row' }, pic, h('div', { class: 'tip-t' }, h('b', { style: { color: 'var(--gold)' } }, C[0] + ' '), C[1])),
       h('div', { class: 'tip-b' }, h('button', { class: 'chip', onclick: () => { el.remove(); openBardHow(); } }, 'How Bards play'), h('button', { class: 'chip gold', onclick: () => el.remove() }, 'Got it')));
+    (document.getElementById('app') || document.body).append(el);
+    setTimeout(() => el.remove(), 14000);
+  }
+  // telegraphs (#179): a boss's red bar over its head and in the target frame, with the answer's icon on its left (your
+  // own interrupt or defensive, or Step Back); the bar fills as the cast runs, and lands when it is full
+  function teleBar(cls) { return h('div', { class: 'tbar' + (cls ? ' ' + cls : ''), hidden: true }, h('span', { class: 'tb-ic' }), h('i'), h('b')); }
+  function teleIconId(ans) {
+    const u = G.pUnit, have = u ? E.answersOf(u, ans) : [];
+    return have[0] || (ans === 'step' ? 'step_back' : ans === 'cut' ? D.INTERRUPTS[G.S.player.cls] : 'shield_wall');
+  }
+  function paintTele(bar, C, u) {
+    if (!bar) return;
+    const t = u && !u.dead && u.tele;
+    if (!t) { if (!bar.hidden) { bar.hidden = true; bar.dataset.id = ''; } return; }
+    if (bar.dataset.id != t.id) {
+      bar.dataset.id = t.id; bar.hidden = false;
+      const ic = bar.querySelector('.tb-ic'); ic.innerHTML = ''; ic.append(img(abIcon(teleIconId(E.teleAnswer(t)))));
+      bar.querySelector('b').textContent = t.name;
+    }
+    bar.querySelector('i').style.width = Math.min(100, ((C.t - t.start) / (t.until - t.start)) * 100) + '%';
+  }
+  // the first red bar a character sees: what it is and what to press, once
+  function teleCard(ans) {
+    const P = G.S.player; if (P.teleSeen) return;
+    P.teleSeen = 1; G.save();
+    const pic = img(abIcon(teleIconId(ans))); pic.classList.add('tip-pic');
+    const el = h('div', { class: 'tip-card' }, h('div', { class: 'tip-row' }, pic, h('div', { class: 'tip-t' }, h('b', { style: { color: '#ff7a52' } }, 'Red bar! '),
+      'A red bar is an attack you can answer. Press the glowing button before it fills.')),
+      h('div', { class: 'tip-b' }, h('button', { class: 'chip gold', onclick: () => el.remove() }, 'Got it')));
     (document.getElementById('app') || document.body).append(el);
     setTimeout(() => el.remove(), 14000);
   }

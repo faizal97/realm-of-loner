@@ -18,4 +18,6 @@
     D.CLASSES[cls].abilities.push(id); D.INTERRUPTS[cls] = id;
   }
   for (const id of ['shield_wall', 'divine_protection', 'holy_shield', 'barkskin']) D.ABILITIES[id].defensive = true;
+  // a bear tank answers too: Step Back, Thornlash and Barkskin work in Bear Form (one is never punished for an answer it can't press)
+  for (const id of ['step_back', 'thornlash', 'barkskin']) D.ABILITIES[id].anyForm = true;
 })(typeof window !== 'undefined' ? window : globalThis);

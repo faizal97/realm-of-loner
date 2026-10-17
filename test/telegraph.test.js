@@ -115,3 +115,42 @@ test('a skilled bot answers a group hit on its own', () => {
   assert.strictEqual(teleDmg(C, b), 0, 'the bot stepped back');
   assert.ok(teleDmg(C, u) > 0, 'the player who did nothing was hit');
 });
+
+test('Veshmira\'s Searing Breath is telegraphed in the data, on Normal and Hard', () => {
+  const Dg = D.DUNGEONS.onyxias_lair;
+  for (const x of [Dg.extra.onyxia[0], Dg.hard.extra.onyxia[0]]) assert.deepStrictEqual([x.name, x.tele, x.who], ['Searing Breath', true, 'all']);
+  const { C, m } = fight(20, 'mage', Object.assign({}, Dg.extra.onyxia[0], { every: 4 }), false); // E.TELE.on empty: the data switches it on
+  startOf(C);
+  assert.strictEqual(m.tele.name, 'Searing Breath');
+  assert.ok(Math.abs(m.tele.until - m.tele.start - E.TELE.cast) < 1e-9, 'Normal casts for 2.5 sec');
+});
+
+test('the boss card names the telegraph and its answer', () => {
+  const u = E.mobUnit('onyxia', 63); u.hardX = D.DUNGEONS.onyxias_lair.extra.onyxia;
+  const r = E.specialRows(u).find((x) => x.tele);
+  assert.strictEqual(r.name, 'Searing Breath');
+  assert.match(r.what, /Red bar first: Step Back avoids it; missed, it hits 2\.5x\./);
+});
+
+test('a bear tank can answer: Step Back, Thornlash and Barkskin work in Bear Form', () => {
+  for (const id of ['step_back', 'thornlash', 'barkskin']) assert.ok(D.ABILITIES[id].anyForm, id);
+});
+
+test('the screen shows the red bars you should answer, and drops one once answered', () => {
+  const { C, u } = fight(20, 'mage', BREATH);
+  startOf(C);
+  assert.deepStrictEqual(E.teleFor(C, u).map((x) => x.ans), ['step']);
+  E.use(C, u, 'step_back');
+  assert.deepStrictEqual(E.teleFor(C, u), []);
+});
+
+test('the death recap names the telegraph and the answer that was missed', () => {
+  const { C, u, m } = fight(20, 'mage', Object.assign({}, BREATH, { mult: 400 }));
+  u.maxHp = u.hp = 500; m.dmg = [1, 1]; // its melee can't kill: the missed breath does
+  G.recapFeed(C, C.events.splice(0));
+  for (let i = 0; i < 100 && !u.dead; i++) { E.tick(C, 0.1); G.recapFeed(C, C.events.splice(0)); }
+  const d = C.recap.deaths.find((x) => x.uid === u.uid);
+  assert.ok(d, 'died');
+  assert.match(d.by, /Test Breath$/);
+  assert.match(G.recapText(d).facts, /^no Step Back · /);
+});

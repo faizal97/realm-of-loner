@@ -4068,9 +4068,11 @@
   const RECAP_S = 5, RECAP_LOW_MANA = 0.15;
   const RECAP_LABEL = { slam: 'slam', hogger: 'lunge', whirl: 'whirling blades', molten: 'molten metal' };
   const fmtN = (n) => Math.round(n).toLocaleString('en-US');
+  const RECAP_MISSED = { step: 'no Step Back', guard: 'no defensive', cut: 'not interrupted' }; // a telegraph in the last 5 s whose answer you had (#179)
   const roleOf = (u) => u.role || (u.kind === 'player' ? G.role() : null);
   function blowName(C, e) {
     const by = C.units[e.src], who = by ? `${by.name}'s ` : '', special = by && by.kind === 'mob' && (RECAP_LABEL[e.ab] || /^hard_/.test(e.ab || ''));
+    if (e.tele) return who + e.tele; // a telegraphed mechanic by its cast's name (#179)
     const A = !special && e.ab && D.ABILITIES[e.ab]; // a creature's special shares ids with abilities ('slam')
     if (A) return A.name;
     if (!e.ab) return `${who}melee hit`;
@@ -4096,11 +4098,11 @@
     const R = C.recap = C.recap || { ring: {}, deaths: [] };
     const ally = (u) => u && u.side === 'ally' && (u.kind === 'player' || u.kind === 'bot');
     for (const e of evs) {
-      if ((e.type === 'dmg' || e.type === 'heal') && ally(C.units[e.tgt])) (R.ring[e.tgt] = R.ring[e.tgt] || []).push({ t: e.t != null ? e.t : C.t, type: e.type, amount: e.amount || 0, src: e.src, ab: e.ab, melee: e.melee });
+      if ((e.type === 'dmg' || e.type === 'heal') && ally(C.units[e.tgt])) (R.ring[e.tgt] = R.ring[e.tgt] || []).push({ t: e.t != null ? e.t : C.t, type: e.type, amount: e.amount || 0, src: e.src, ab: e.ab, melee: e.melee, tele: e.tele, teleMiss: e.teleMiss });
       else if (e.type === 'die' && ally(C.units[e.uid])) {
         const u = C.units[e.uid], t = e.t != null ? e.t : C.t, ring = (R.ring[u.uid] || []).filter((x) => x.t >= t - RECAP_S);
         const hits = ring.filter((x) => x.type === 'dmg'), heals = ring.filter((x) => x.type === 'heal'), kb = hits[hits.length - 1];
-        R.deaths.push({ uid: u.uid, name: u.name, cls: u.cls, t, by: kb ? blowName(C, kb) : null, blow: kb ? kb.amount : 0,
+        R.deaths.push({ uid: u.uid, name: u.name, cls: u.cls, t, by: kb ? blowName(C, kb) : null, blow: kb ? kb.amount : 0, missed: (hits.find((x) => x.teleMiss) || {}).teleMiss || null,
           took: hits.reduce((a, x) => a + x.amount, 0), heal: heals.length ? t - heals[heals.length - 1].t : null, healer: healerFact(C, u) });
       }
     }
@@ -4108,7 +4110,7 @@
   };
   G.recapText = (d) => ({
     head: d.by ? `died to ${d.by} (${fmtN(d.blow)})` : 'died',
-    facts: [`took ${fmtN(d.took)} in 5 s`, d.heal != null ? `last heal ${d.heal.toFixed(1)} s before` : 'no heal in 5 s', d.healer].filter(Boolean).join(' · '),
+    facts: [d.missed ? RECAP_MISSED[d.missed] : null, `took ${fmtN(d.took)} in 5 s`, d.heal != null ? `last heal ${d.heal.toFixed(1)} s before` : 'no heal in 5 s', d.healer].filter(Boolean).join(' · '),
   });
   G.recap = null;
   G.on('fightStart', () => { G.recap = null; }); // until the next pull

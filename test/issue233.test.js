@@ -34,7 +34,7 @@ test('the bar in Bear Form has every bear ability the Druid knows', () => {
 
 test('a level 20 bear only gets what it has learned', () => {
   bearFight(20);
-  assert.deepStrictEqual(G.knownAbilities().slice().sort(), ['bear_form', 'growl', 'maul', 'swipe']);
+  assert.deepStrictEqual(G.knownAbilities().slice().sort(), ['bear_form', 'growl', 'maul', 'swipe', 'thornlash']); // Thornlash, the Druid's interrupt, works in Bear Form (#179)
 });
 
 test('a bot bear tank uses Swipe on a pack, and Barkskin and Frenzied Regeneration when hurt', () => {

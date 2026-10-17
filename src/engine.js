@@ -466,7 +466,7 @@
     }
     // cast pushback
     if (tgt.cast && !tgt.cast.channel && dmg > 0 && tgt.cast.pushed < 2) { tgt.cast.end += 0.35; tgt.cast.pushed++; }
-    ev(C, { type: 'dmg', src: src.uid, tgt: tgt.uid, amount: dmg, absorbed, crit: !!o.crit, school: o.school || 'physical', ab: o.ab || null, melee: !!o.melee, tick: !!o.tick, fx: o.fx || null, effect: o.effect || null, tele: o.tele || null }); // melee/tick/fx: hints for the combat effects (ui.js); tele: the telegraph it came from (#179)
+    ev(C, { type: 'dmg', src: src.uid, tgt: tgt.uid, amount: dmg, absorbed, crit: !!o.crit, school: o.school || 'physical', ab: o.ab || null, melee: !!o.melee, tick: !!o.tick, fx: o.fx || null, effect: o.effect || null, tele: o.tele || null, teleMiss: o.teleMiss || null }); // melee/tick/fx: hints for the combat effects (ui.js); tele: the telegraph it came from, teleMiss: the answer the target had and missed (#179)
     if (tgt.hp <= 0) kill(C, tgt, src);
     // item effects on this hit (v10.10)
     if (!o.effect) {
@@ -1073,9 +1073,17 @@
       else if (kind === 'enrage') out.push({ name: 'Frenzy', when: `Below ${Math.round(x.at * 100)}% health`, what: `hits ${Math.round((x.mult - 1) * 100)}% harder.`, hard: hd });
       else if (kind === 'heal') healRow(x.every, x.every / 2, x.heal, hd);
       else hitRow(x.every, x.every / 2, x.mult, x.who, x.school, hd);
+      if ((kind === 'heal' || kind === 'hit') && (x.tele || teleOn('x:' + u.key))) teleRow(out[out.length - 1], x.name, kind === 'heal' ? 'cut' : x.who === 'all' || x.who === 'random' ? 'step' : 'guard', kind === 'heal');
     }
     return out;
   };
+  // a telegraphed mechanic's row (#179): its cast's name, and its answer
+  E.TELE_ANSWER = { step: 'Step Back', guard: 'a defensive', cut: 'an interrupt or a stun' };
+  function teleRow(r, name, ans, heal) {
+    if (name) r.name = name;
+    r.tele = ans;
+    r.what += ` Red bar first: ${E.TELE_ANSWER[ans]} ${heal ? 'stops it' : 'avoids it'}; missed, it ${heal ? 'heals' : 'hits'} ${heal ? TELE.healMiss : TELE.miss}x.`;
+  }
   const lc = (t) => t.charAt(0).toLowerCase() + t.slice(1), uc = (t) => t.charAt(0).toUpperCase() + t.slice(1);
   E.specialFacts = (u) => E.specialRows(u).map((r) => (r.hard ? 'Hard: ' + lc(r.when) : r.when) + ': ' + r.what);
   E.ucFirst = uc;
@@ -1098,12 +1106,12 @@
       if (x.t > 0) continue;
       x.t = x.every;
       const cast = x.hard !== false ? TELE.hardCast : TELE.cast, key = 'x:' + m.key; // Hard casts are quicker
-      if (kind === 'heal') { mech(C, m, key, { name: x.name || 'Mend', who: 'cast', heal: x.heal, text: x.text, cast }); continue; }
+      if (kind === 'heal') { mech(C, m, key, { name: x.name || 'Mend', who: 'cast', heal: x.heal, text: x.text, cast, on: x.tele }); continue; }
       const allies = alive(C.allies), tgt = C.units[m.target];
       const v = x.who === 'all' ? null : x.who === 'random' ? allies[rint(0, allies.length - 1)] : tgt && !tgt.dead ? tgt : null;
       if (x.who !== 'all' && !v) continue;
       const S = x.school ? uc(x.school) : '';
-      mech(C, m, key, { name: x.name || (x.who === 'all' ? (S ? S + ' Wave' : 'Sweep') : x.who === 'random' ? (S ? S + ' Lash' : 'Lash') : 'Crushing Blow'), who: x.who === 'all' ? 'all' : x.who === 'random' ? 'random' : 'target', victim: v ? v.uid : null, mult: x.mult, school: x.school || 'physical', ab: 'hard_' + (x.school || 'hit'), text: x.text, cast });
+      mech(C, m, key, { name: x.name || (x.who === 'all' ? (S ? S + ' Wave' : 'Sweep') : x.who === 'random' ? (S ? S + ' Lash' : 'Lash') : 'Crushing Blow'), who: x.who === 'all' ? 'all' : x.who === 'random' ? 'random' : 'target', victim: v ? v.uid : null, mult: x.mult, school: x.school || 'physical', ab: 'hard_' + (x.school || 'hit'), text: x.text, cast, on: x.tele });
     }
   }
   // a mob's name for more than one (v10.8): `plural` on the mob if set, else the head noun of "X of Y" takes the ending
@@ -1123,13 +1131,13 @@
   // hit as before). TELE.on lists the mechanics switched on: a special's kind, 'x:<mob>' for a boss's extra, '*' for all.
   const TELE = E.TELE = { on: new Set(), cast: 2.5, hardCast: 2, miss: 2.5, healMiss: 1.5 };
   let teleSeq = 0;
-  const teleOn = (key) => TELE.on.has('*') || TELE.on.has(key);
+  const teleOn = (key, spec) => !!(spec && spec.on) || TELE.on.has('*') || TELE.on.has(key); // spec.on: switched on in the data (`tele: true` on a boss extra)
   E.teleAnswer = (t) => (t.who === 'cast' ? 'cut' : t.who === 'target' ? 'guard' : 'step');
   // the abilities a unit answers with (known ones, cooldown or not)
   E.answersOf = (u, ans) => (!u.cls ? [] : ans === 'step' ? ['step_back'] : D.CLASSES[u.cls].abilities.filter((id) => knows(u, id) && (ans === 'guard' ? D.ABILITIES[id].defensive : D.ABILITIES[id].interrupt || D.ABILITIES[id].stun)));
   // spec: { name, who: all|random|target|cast, victim, mult, school, ab, heal, text, cast }; key: what TELE.on names
   function mech(C, m, key, spec) {
-    if (!teleOn(key)) { if (spec.text) ev(C, { type: 'emote', uid: m.uid, text: spec.text }); return land(C, m, spec); }
+    if (!teleOn(key, spec)) { if (spec.text) ev(C, { type: 'emote', uid: m.uid, text: spec.text }); return land(C, m, spec); }
     if (m.tele) return; // one telegraph at a time: a mechanic due while another is cast is skipped this round
     const t = m.tele = Object.assign({}, spec, { tele: true, id: ++teleSeq, start: C.t, until: C.t + (spec.cast || TELE.cast), done: new Set() });
     if (t.text) ev(C, { type: 'emote', uid: m.uid, text: t.text });
@@ -1140,14 +1148,18 @@
     const tgt = C.units[m.target], v = t.victim && C.units[t.victim];
     const who = t.who === 'all' ? alive(C.allies) : [v || (t.who === 'target' ? tgt : null)].filter((a) => a && !a.dead);
     for (const a of who) {
-      let x = t.mult;
+      let x = t.mult, missed = null;
       if (t.tele) {
         if (t.done.has(a.uid) || (t.who === 'target' && a.auras.some((x2) => D.ABILITIES[x2.id] && D.ABILITIES[x2.id].defensive))) { ev(C, { type: 'tele', src: m.uid, what: 'dodge', tgt: a.uid, name: t.name }); continue; }
-        if (E.answersOf(a, E.teleAnswer(t)).length) x *= TELE.miss;
+        if (E.answersOf(a, E.teleAnswer(t)).length) { x *= TELE.miss; missed = E.teleAnswer(t); }
       }
-      dealDamage(C, m, a, rnd(m.dmg[0], m.dmg[1]) * x, { school: t.school || 'physical', ab: t.ab, tele: t.tele ? t.name : undefined });
+      dealDamage(C, m, a, rnd(m.dmg[0], m.dmg[1]) * x, { school: t.school || 'physical', ab: t.ab, tele: t.tele ? t.name : undefined, teleMiss: missed });
     }
   }
+  // the telegraphs a unit should answer now (the screen's red bars and glowing buttons): a cast anyone may cut, a group
+  // hit, or a hit aimed at this unit, not yet answered by it
+  E.teleFor = (C, u) => alive(foes(C, u)).filter((m) => m.tele && !m.tele.done.has(u.uid) && (m.tele.who === 'cast' || m.tele.who === 'all' || m.tele.victim === u.uid || (m.tele.who === 'target' && m.target === u.uid)))
+    .map((m) => ({ m, t: m.tele, ans: E.teleAnswer(m.tele) }));
   function teleTick(C, m) {
     const t = m.tele;
     if (m.dead) { m.tele = null; return; }
@@ -1170,7 +1182,7 @@
       const ans = E.teleAnswer(t);
       if (ans !== 'cut' && t.who !== 'all' && t.victim !== u.uid) continue;
       const d = u.teleMind || (u.teleMind = {}), s = b.skill == null ? 0.5 : b.skill;
-      if (d.id !== t.id) { d.id = t.id; d.go = Math.random() < (ans === 'cut' ? 0.6 * s : 0.2 + 0.8 * s); d.at = t.start + 0.4 + (1 - s) * 1.2; }
+      if (d.id !== t.id) { d.id = t.id; d.go = Math.random() < (ans === 'cut' ? 0.6 * s : 0.7 + 0.3 * s); d.at = t.start + 0.4 + (1 - s) * 1.2; } // skill 0.6 (an average draw) answers 4 in 5
       if (!d.go || C.t < d.at || C.t >= t.until) continue;
       for (const id of E.answersOf(u, ans)) if (E.use(C, u, id, ans === 'cut' ? m.uid : undefined) === null) { d.go = false; return true; }
     }
