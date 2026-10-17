@@ -31,6 +31,9 @@ const HOURS = +process.argv[2] || 4, LEVELS = (process.argv[3] || '10,15,20,25,4
 const CLASSES = Object.keys(D.CLASSES).filter((c) => !D.CLASSES[c].hidden); // players can't make a hidden class (the Bard)
 if (process.env.CLASSES) CLASSES.splice(0, CLASSES.length, ...process.env.CLASSES.split(',')); // e.g. CLASSES=priest for a candidate run of one class; its % then reads against that subset only
 const step = (secs) => { G.update(secs); t += secs * 1000; };
+// Finales the player plays (#266): a song class's line also says how many an hour
+let FIN = 0;
+{ const rf = G.recapFeed; G.recapFeed = function (C, evs) { for (const e of evs) if (e.type === 'song' && e.what === 'finale' && G.pUnit && e.src === G.pUnit.uid) FIN++; return rf.apply(this, arguments); }; }
 // a wild place where this level fights: monsters around the level, no town
 const normal = (k) => D.MOBS[k] && !D.MOBS[k].named && !D.MOBS[k].elite && !D.MOBS[k].boss;
 const placeFor = (L) => Object.keys(D.PLACES).filter((k) => { const p = D.PLACES[k]; return p.lvl && !p.safe && !p.city && (p.mobs || []).length && p.mobs.every(([m]) => normal(m)) && p.lvl[0] <= L && p.lvl[1] >= L; }).sort((a, b) => Math.abs((D.PLACES[a].lvl[0] + D.PLACES[a].lvl[1]) / 2 - L) - Math.abs((D.PLACES[b].lvl[0] + D.PLACES[b].lvl[1]) / 2 - L))[0];
@@ -56,7 +59,7 @@ function hour(cls, L) {
   if (cls === 'warlock') P.pet = { type: L >= D.PETS.voidwalker.lvl ? 'voidwalker' : 'imp', name: 'Pet', hp: null };
   if (cls === 'hunter') { const b = L >= D.PETS.beast.lvl && Object.keys(D.MOBS).filter((k) => D.MOBS[k].family === 'beast' && !D.MOBS[k].named && !D.MOBS[k].elite && !D.MOBS[k].boss && D.MOBS[k].lvl[0] <= L).sort((a, c) => D.MOBS[c].lvl[0] - D.MOBS[a].lvl[0])[0]; P.pet = b ? { type: 'beast', mob: b, name: D.MOBS[b].name, hp: null } : null; }
   const food = Object.values(D.ITEMS).filter((i) => i.slot === 'food' && i.cost && (i.lvl || 1) <= L).sort((a, b) => (b.lvl || 1) - (a.lvl || 1))[0], drink = Object.values(D.ITEMS).filter((i) => i.slot === 'drink' && i.cost && (i.lvl || 1) <= L).sort((a, b) => (b.lvl || 1) - (a.lvl || 1))[0];
-  let xp = 0, deaths = 0, kills = 0, resting = false, maxN = 0; const end = t + 3600e3, tm = { fight: 0, rest: 0, dead: 0, other: 0 }, size = {}, pack = PACK ? packSize(cls, L) : 1;
+  const fin0 = FIN; let xp = 0, deaths = 0, kills = 0, resting = false, maxN = 0; const end = t + 3600e3, tm = { fight: 0, rest: 0, dead: 0, other: 0 }, size = {}, pack = PACK ? packSize(cls, L) : 1;
   while (t < end) {
     if (food && G.countItem(food.id) < 5) G.addItem(G.copyItem(food.id), 20); if (drink && G.countItem(drink.id) < 5) G.addItem(G.copyItem(drink.id), 20);
     if (P.ghostUntil) { tm.dead += 1; step(1); continue; }
@@ -76,16 +79,16 @@ function hour(cls, L) {
     G.engage(m.id); if (!G.fight) { step(1); continue; }
     if (pack > 1) { for (const o of G.placeMobs().filter((x) => x.state === 'alive' && x.key === m.key && x !== m).slice(0, pack - 1)) { o.state = 'fight'; const ou = globalThis.E.mobUnit(o.key, o.level); ou.inst = o; globalThis.E.addEnemy(G.fight, ou); } if (PACKAI === 'spread') G.fight.opts.killOrder = 'spread'; }
   }
-  return { xp, deaths, kills, tm, size };
+  return { xp, deaths, kills, tm, size, fin: FIN - fin0 };
 }
 let bad = 0;
 for (const L of LEVELS) {
-  const rows = CLASSES.map((cls) => { let xp = 0, deaths = 0, kills = 0; const T = { fight: 0, rest: 0, dead: 0, other: 0 }; const Z = {}; for (let h = 0; h < HOURS; h++) { const r = hour(cls, L); xp += r.xp; deaths += r.deaths; kills += r.kills; for (const k in T) T[k] += r.tm[k]; for (const n in r.size) { const z = Z[n] = Z[n] || { n: 0, d: 0 }; z.n += r.size[n].n; z.d += r.size[n].d; } } return { cls, Z, xph: xp / HOURS, deaths: deaths / HOURS, kills: kills / HOURS, T }; });
+  const rows = CLASSES.map((cls) => { let xp = 0, deaths = 0, kills = 0, fin = 0; const T = { fight: 0, rest: 0, dead: 0, other: 0 }; const Z = {}; for (let h = 0; h < HOURS; h++) { const r = hour(cls, L); fin += r.fin; xp += r.xp; deaths += r.deaths; kills += r.kills; for (const k in T) T[k] += r.tm[k]; for (const n in r.size) { const z = Z[n] = Z[n] || { n: 0, d: 0 }; z.n += r.size[n].n; z.d += r.size[n].d; } } return { cls, Z, xph: xp / HOURS, deaths: deaths / HOURS, kills: kills / HOURS, T, fin: fin / HOURS }; });
   const avg = rows.reduce((a, r) => a + r.xph, 0) / rows.length;
   console.log(`level ${L} (${placeFor(L)}): class average ${Math.round(avg)} XP an hour`);
   for (const r of rows.sort((a, b) => b.xph - a.xph)) { const d = (r.xph / avg - 1) * 100, out = Math.abs(d) > BAND; if (out) bad++;
     const all = r.T.fight + r.T.rest + r.T.dead + r.T.other || 1, sh = (x) => `${Math.round((x / all) * 100)}%`;
-    console.log(`  ${r.cls.padEnd(8)} ${String(Math.round(r.xph)).padStart(7)} XP/h ${d >= 0 ? '+' : ''}${d.toFixed(0)}%${out ? '  outside ±' + BAND + '%' : ''} · ${r.kills.toFixed(0)} kills, ${r.deaths.toFixed(1)} deaths an hour · ${(r.T.fight / Math.max(1, r.kills * HOURS)).toFixed(1)} s a kill · fight ${sh(r.T.fight)} rest ${sh(r.T.rest)} dead ${sh(r.T.dead)} between ${sh(r.T.other)}`);
+    console.log(`  ${r.cls.padEnd(8)} ${String(Math.round(r.xph)).padStart(7)} XP/h ${d >= 0 ? '+' : ''}${d.toFixed(0)}%${out ? '  outside ±' + BAND + '%' : ''} · ${r.kills.toFixed(0)} kills, ${r.deaths.toFixed(1)} deaths an hour · ${(r.T.fight / Math.max(1, r.kills * HOURS)).toFixed(1)} s a kill · fight ${sh(r.T.fight)} rest ${sh(r.T.rest)} dead ${sh(r.T.dead)} between ${sh(r.T.other)}${r.fin ? ` · ${r.fin.toFixed(1)} Finales an hour` : ''}`);
     if (FIGHTS) console.log(`             fights by creatures in them: ${Object.keys(r.Z).sort().map((n) => `${n}: ${r.Z[n].n} (${r.Z[n].d} deaths)`).join(' · ')}${PACK ? ` · pack ${packSize(r.cls, L)}` : ''}`); }
 }
 console.log(bad ? `${bad} class-levels outside ±${BAND}% (a report for the game designer, not a gate yet)` : `every class within ±${BAND}%`);

@@ -2812,7 +2812,7 @@
     const foe = G.brawlOpponent(); if (!foe) return;
     // the other duels of the round first, so their results stand when yours ends
     br.pending = brawlPairs(br).map(([a, b]) => (a.you || b.you ? null : { a: a.name, b: b.name, winner: brawlAuto(a, b) })); // one per pair, yours null
-    stopActions(); P.hp = null; P.res = null; P.cds = null; // a fresh round: full health, cooldowns ready (like the foe)
+    stopActions(); P.hp = null; P.res = null; P.cds = null; P.songs = null; // a fresh round: full health, cooldowns ready, no song carried in (like the foe)
     const pu = E.charUnit(P, 'ally', 'player', now()); G.pUnit = pu;
     G.fight = E.fight([pu], brawlUnits(foe, 'enemy'), { soloUid: pu.uid, puller: pu, apart: G.DUEL_APART }); // no pet: one fighter each
     G.fight.kind = 'brawl'; G.fight.brawl = { foe: foe.name, round: br.round };

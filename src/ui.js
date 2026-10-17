@@ -106,6 +106,7 @@
   const DEBUFF_IDS = new Set(['weakened_soul', 'hunters_mark', 'chilled', 'stun']);
   function auraInfo(a, u) {
     if (a.proc) return { id: a.id, icon: (a.lit || a.proc.lights)[0], name: a.proc.name, debuff: false }; // a reaction's light (v10.4)
+    if (a.song && D.ABILITIES[a.ab]) { const ab = D.ABILITIES[a.ab]; return { id: a.id, icon: ab.icon, name: ab.name + (a.verses ? ` (${a.verses} verse${a.verses > 1 ? 's' : ''})` : ''), debuff: false }; } // a Bard's song, by its name (it read "song:dirge")
     let base = a.id.replace(/_slow$/, '');
     if (a.id === 'rockbiter' && a.sealSchool === 'fire') base = 'flametongue_weapon';
     const ab = D.ABILITIES[AURA_ALIAS[base] || base];
@@ -138,6 +139,8 @@
       if (u.rally) out.push({ id: 'rally', icon: 'rallying_cry', name: 'Rallied', debuff: false, left: Infinity, raw: { id: 'rally', n: u.rally }, unit: u });
     } else if (!C && G.S) {
       for (const a of (G.S.player.auras || [])) { const left = (a.until - Date.now()) / 1000; if (left > 0) out.push(Object.assign(auraInfo(a, null), { left, raw: a })); }
+      // a song still in its round between fights: it plays on into the next one, verses and all (#266)
+      for (const sg of (G.S.player.songs || [])) { const left = (sg.until - Date.now()) / 1000, raw = { id: 'song:' + sg.ab, song: true, ab: sg.ab, verses: sg.verses }; if (left > 0 && D.ABILITIES[sg.ab]) out.push(Object.assign(auraInfo(raw, null), { left, raw })); }
     }
     for (const a of out) a.rank = auraRank(a, mine);
     return out.sort((x, y) => (x.rank - y.rank) || (x.left - y.left));
@@ -1803,7 +1806,8 @@
         row(bardDemo({ left: 0.7, win, verses: 1, max: R.max }), 'Playing', 'The string along the bottom runs down as the song plays.'),
         row(bardDemo({ left: win * 0.6, win, verses: 1, max: R.max, beat: true }), 'Beat', 'Gold: the beat is on. Tap now for a verse, and the song plays another round.'),
         row(bardDemo({ left: 0.5, win, verses: 2, max: R.max }), 'Verses', `Each verse: +${pct}% to the song. Tap before the beat: −1 verse. The song runs out: all verses lost.`),
-        row(bardDemo({ left: 0.6, win, verses: R.max, max: R.max, finale: true }), 'Finale ready', 'Every verse gold. Tap off the beat: all verses at once in a burst, and the song plays on from none.'));
+        row(bardDemo({ left: 0.6, win, verses: R.max, max: R.max, finale: true }), 'Finale ready', 'Every verse gold. Tap off the beat: all verses at once in a burst, and the song plays on from none.'),
+        row(bardDemo({ left: 0.4, win, verses: 2, max: R.max }), 'Between fights', 'A song still in its round plays on into your next fight, verses and all. Pull the next one before it runs out.')); // (#266)
       // one good cycle, on a loop: start, land three beats, play the Finale
       const steps = [['Start the song', 0.95, 0, false, false], ['Wait for the gold', 0.35, 0, false, false], ['Tap on the beat: 1 verse', win * 0.5, 0, true, false],
         ['Tap on the beat: 2 verses', win * 0.5, 1, true, false], ['Tap on the beat: 3 verses', win * 0.5, 2, true, false], ['Finale ready', 0.7, 3, false, true], ['Tap off the beat: the Finale', 0.6, 0, false, false]];

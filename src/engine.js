@@ -232,6 +232,14 @@
       const left = (a.until - nowMs) / 1000;
       if (left > 0) u.auras.push({ id: a.id, until: left, stats: a.stats, src: null, persistent: true, seal: a.seal, sealSchool: a.sealSchool, thorns: a.thorns, name: a.name, icon: a.icon, keep: a.keep });
     }
+    // a song still in its round when the next fight starts plays on, verses and all (#266): chained pulls build to a
+    // Finale. Its round ran on in real time (epoch ms in char.songs), so the beat may be on the moment the fight opens
+    for (const sg of (char.songs || [])) {
+      const left = (sg.until - nowMs) / 1000, ab = D.ABILITIES[sg.ab];
+      if (left <= 0 || !ab || !ab.song) continue;
+      const R = E.rhythmOf(u), every = ab.song.every;
+      u.auras.push({ id: 'song:' + sg.ab, song: true, ab: sg.ab, src: u.uid, began: left - R.len, until: left, verses: Math.min(sg.verses || 0, R.max), every, next: (left % every) || every, tgt: null, carried: true });
+    }
     // cooldowns run on in real time between fights (epoch ms in char.cds; a fight's clock starts at 0)
     for (const id in (char.cds || {})) { const left = (char.cds[id] - nowMs) / 1000; if (left > 0) u.cds[id] = left; }
     u.legend = char.legend || null;
@@ -1725,6 +1733,8 @@
     const cds = {};
     for (const id in u.cds) if (u.cds[id] > C.t) cds[id] = Math.round(nowMs + (u.cds[id] - C.t) * 1000);
     if (Object.keys(cds).length) ch.cds = cds; else delete ch.cds;
+    const songs = u.dead ? [] : u.auras.filter((a) => a.song && !a.held && a.until > C.t).map((a) => ({ ab: a.ab, verses: a.verses, until: Math.round(nowMs + (a.until - C.t) * 1000) })); // (#266)
+    if (songs.length) ch.songs = songs; else delete ch.songs;
     ch.auras = u.auras.filter((a) => a.persistent && a.until > C.t).map((a) => ({ id: a.id, stats: a.stats, until: nowMs + (a.until - C.t) * 1000, seal: a.seal, sealSchool: a.sealSchool, thorns: a.thorns, name: a.name, icon: a.icon, keep: a.keep }));
   };
 
