@@ -242,6 +242,10 @@ test('a boss\'s own slam: its name and emote, its style, and its own numbers ove
   const plain = E.busterOf({ key: 'rattlegore', name: 'Bonecrunch', special: { kind: 'slam' } });
   assert.deepStrictEqual([plain.style, plain.name, plain.text], ['crush', 'Crushing Slam', 'Bonecrunch slams the ground!']);
   assert.strictEqual(E.busterOf({ key: 'king_mosh', name: 'King Stomp', special: { kind: 'hogger' } }).name, 'Lunge');
+  const col = { key: 'coralheart_colossus', name: 'Coralheart Colossus', special: { kind: 'slam' } };
+  assert.strictEqual(E.busterOf(col).nums.floor, 2, 'Normal numbers off Hard');
+  assert.strictEqual(E.busterOf(Object.assign({ onHard: true }, col)).nums.floor, 1, 'its Hard numbers on Hard');
+  assert.strictEqual(E.busterOf(Object.assign({ onHard: true }, col)).nums.size, 4, 'numbers it has no Hard value for stay');
 });
 
 test('the slam\'s bar and boss card use the boss\'s style', () => {
