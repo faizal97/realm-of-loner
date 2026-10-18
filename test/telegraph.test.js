@@ -157,7 +157,7 @@ test('the death recap names the telegraph and the answer that was missed', () =>
 });
 
 test('the kinds switched on in the game, each measured first (sim/difficulty.js TELE=)', () => {
-  assert.deepStrictEqual(ON, ['whirl', 'molten', 'arugal', 'slam', 'hogger']);
+  assert.deepStrictEqual(ON, ['whirl', 'molten', 'arugal', 'slam', 'hogger', 'cook']);
   E.TELE.on.clear(); for (const k of ON) E.TELE.on.add(k); // the earlier tests switched kinds on and off
   const u = E.mobUnit('taragaman', 20);
   assert.match(E.specialRows(u)[0].name + ': ' + E.specialRows(u)[0].what, /^Whirling Blades: .*Red bar first: Step Back avoids it/);
