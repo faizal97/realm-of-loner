@@ -218,13 +218,13 @@ test('the boss card explains the team\'s answers to a slam', () => {
   const k = Object.keys(D.MOBS).find((x) => D.MOBS[x].special === 'slam' && !D.MOBS[x].buster); // a plain slam
   const r = E.specialRows(E.mobUnit(k, 30))[0];
   assert.strictEqual(r.name, 'Crushing Slam');
-  assert.match(r.what, /the tank's defensive avoids it; a shield or quick heal on the tank takes 1x off, each interrupt or stun 0\.5x \(2 at most\); unanswered it hits 2\.5x\./);
+  assert.match(r.what, /the tank's defensive avoids it; a shield or quick heal on the tank takes 1x off, each interrupt or stun 0\.5x \(2 at most\); unanswered it hits 2x\./);
 });
 
 // slam styles (#179): each boss's slam has its own name and one of three styles' numbers, which the boss's data can override
-test('slam styles: crush is the plain numbers, heavy starts at 3x with 3 kicks, quick at 2x with 1 kick and a short bar', () => {
+test('slam styles: crush starts at 2x, heavy starts at 3x with 3 kicks, quick at 2x with 1 kick and a short bar', () => {
   const t = (n) => Object.assign({ kicks: new Set(), mended: false }, n);
-  assert.strictEqual(E.teleSize(t(E.BUSTER.crush)), 2.5);
+  assert.strictEqual(E.teleSize(t(E.BUSTER.crush)), 2, 'crush starts at 2x');
   const h = t(E.BUSTER.heavy); assert.strictEqual(E.teleSize(h), 3);
   h.kicks.add(1); h.kicks.add(2); h.kicks.add(3); h.kicks.add(4); assert.strictEqual(E.teleSize(h), 1.5, 'three kicks count, the fourth does not');
   const q = t(E.BUSTER.quick); q.kicks.add(1); q.kicks.add(2); assert.strictEqual(E.teleSize(q), 1.5, 'one kick counts');

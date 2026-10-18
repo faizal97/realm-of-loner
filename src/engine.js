@@ -1156,9 +1156,10 @@
   E.teleSize = (t) => Math.max(E.teleNum(t, 'floor'), E.teleNum(t, 'size') - (t.mended ? E.teleNum(t, 'mend') : 0) - (t.braced ? t.brace : 0) - E.teleNum(t, 'kick') * Math.min(E.teleNum(t, 'kickCap'), t.kicks ? t.kicks.size : 0));
   // A tank buster's style (#179): each boss's slam has its own name (D.MOBS[key].buster: { style, name, text }) and one of
   // these styles' numbers. crush is TELE's own numbers. size: unanswered; mend: a shield or quick heal takes off; kick: each
-  // interrupt or stun takes off; kickCap: kicks that count; floor: never smaller; cast: the bar's length (sec); brace: set,
+  // interrupt or stun takes off; kickCap: kicks that count; floor: never smaller (crush starts at 2x: 2.5x made good groups
+  // below 60 wipe more, 14 -> 20%); cast: the bar's length (sec); brace: set,
   // the tank's defensive takes this much off instead of avoiding the slam (raid bosses: a full raid would avoid too many).
-  E.BUSTER = { crush: {}, heavy: { size: 3, kickCap: 3, cast: 3 }, quick: { size: 2, kickCap: 1, cast: 1.5 } };
+  E.BUSTER = { crush: { size: 2 }, heavy: { size: 3, kickCap: 3, cast: 3 }, quick: { size: 2, kickCap: 1, cast: 1.5 } };
   const TELE_KEY = { size: null, mend: 'mend', kick: 'kick', kickCap: 'kicks', floor: 'floor', cast: 'cast', brace: null };
   E.teleNum = (t, k) => (t && t[k] != null ? t[k] : k === 'size' ? TELE.missOf.guard || TELE.miss : TELE[TELE_KEY[k]]);
   // the tank has a defensive up, or used one during the bar: the slam will be avoided (the screen turns its bar steel)
