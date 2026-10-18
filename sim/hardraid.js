@@ -17,6 +17,8 @@ G.trialRating = () => RATING;
 // HARD="boss hp,boss dmg,trash hp,trash dmg" tries other numbers (for tuning)
 if (process.env.HARD) { const [bh, bd, th, td] = process.env.HARD.split(',').map(Number); Object.assign(D.DUNGEONS[D.ACTIVITIES[ACT].dungeon].hard, { bossMult: { hp: bh, dmg: bd }, trashMult: { hp: th, dmg: td } }); }
 const ONLY_HARD = !!process.env.HARD;
+// TELE=x:baron_geddon,slam switches on telegraphs by kind ('x:<mob>' for a boss extra), as in sim/difficulty.js (#179)
+if (process.env.TELE) for (const k of process.env.TELE.split(',')) globalThis.E.TELE.on.add(k);
 function run(hard, cls) {
   G.newGame({ name: 'Hr', cls, race: 'human' }); const S = G.S, P = S.player; P.level = 60; S.flags.warModeAsked = true;
   P.talents = G.autoTalents(cls, 'dps', 60, 0); P.role = 'dps'; gear(P);

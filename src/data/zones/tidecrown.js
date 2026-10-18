@@ -67,12 +67,12 @@
     ],
     // Hard (v10.7): opens after a Normal clear; stronger enemies (tuned by sim/hardraid.js) and one extra mechanic per boss
     hard: { trashMult: { hp: 4.8, dmg: 4.6 }, bossMult: { hp: 24.2, dmg: 13.2 }, extra: {
-      commander_serathis: [{ kind: 'hit', every: 14, mult: 0.45, who: 'all', school: 'frost', text: 'Serathis calls a wave over the courtyard!' }],
-      tide_twin_myrel: [{ kind: 'heal', every: 18, heal: 0.03, text: 'The rising tide mends Myrel!' }],
+      commander_serathis: [{ kind: 'hit', name: 'Courtyard Wave', every: 14, mult: 0.45, who: 'all', school: 'frost', text: 'Serathis raises a wave over the courtyard!' }],
+      tide_twin_myrel: [{ kind: 'heal', name: 'Rising Tide', every: 18, heal: 0.03, text: 'The rising tide gathers around Myrel!' }],
       tide_twin_sorin: [{ kind: 'enrage', at: 0.3, mult: 1.3, text: 'Sorin fights harder as the tide falls!' }],
       coralheart_colossus: [{ kind: 'adds', at: 0.5, mob: 'abyssal_spawn', n: 2, lvl: 0, text: 'Two spawn of the deep crawl out of the Colossus!' }],
       prince_aeldran: [{ kind: 'enrage', at: 0.3, mult: 1.25, text: 'Aeldran fights with ten thousand years of grief!' }],
-      nalveshra: [{ kind: 'hit', every: 12, mult: 1, who: 'random', school: 'shadow', text: 'A tendril reaches up from the deep!' }],
+      nalveshra: [{ kind: 'hit', name: 'Deep Tendril', every: 12, mult: 1, who: 'random', school: 'shadow', text: 'A tendril rises from the deep!' }],
     } } },
   });
   Object.assign(D.ACTIVITIES, {
