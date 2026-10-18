@@ -313,3 +313,17 @@ test('each healing boss casts its own heal, warned in its own words, never anoth
   assert.ok(!/Fairbanks|Theka/.test(Object.values(D.MOBS).map((M) => M.specialText || '').join(' ')), 'no old names');
   E.TELE.on.clear(); for (const k of ON) E.TELE.on.add(k);
 });
+
+test('Hard raid extras warn with a red bar and hit harder when missed (#179)', () => {
+  const seen = [];
+  for (const [act, boss] of [['molten_core', 'baron_geddon'], ['molten_core', 'golemagg'], ['molten_core', 'sulfuron_harbinger'], ['tidecrown_citadel', 'commander_serathis'], ['tidecrown_citadel', 'tide_twin_myrel'], ['tidecrown_citadel', 'nalveshra']]) {
+    const x = G.hardExtra(act, boss).find((e) => e.kind === 'hit' || e.kind === 'heal');
+    assert.ok(x.tele, `${boss}: ${x.name} has a red bar`);
+    assert.strictEqual(x.miss, x.kind === 'heal' ? 2.5 : 4, `${boss}: ${x.name}'s size when missed`);
+    const u = Object.assign(E.mobUnit(boss, 60), { hardX: G.hardExtra(act, boss) });
+    const row = E.specialRows(u).find((r) => r.name === x.name);
+    assert.match(row.what, new RegExp(`missed, it ${x.kind === 'heal' ? 'heals' : 'hits'} ${x.miss}x`), `${boss}: the boss card says so`);
+    seen.push(x.name);
+  }
+  assert.deepStrictEqual(seen, ['Ring of Fire', 'Lava Bath', 'Brimstone Ball', 'Courtyard Wave', 'Rising Tide', 'Deep Tendril']);
+});

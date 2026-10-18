@@ -104,9 +104,9 @@
     hard: { trashMult: { hp: 3.6, dmg: 3.9 }, bossMult: { hp: 18.7, dmg: 12.8 }, extra: {
       magmadar: [{ kind: 'enrage', at: 0.3, mult: 1.3, text: 'Cinderhound goes into a frenzy!' }],
       garr: [{ kind: 'adds', at: 0.5, mob: 'firesworn', n: 2, lvl: 0, text: 'Stonecore pulls two more Firesworn out of the rock!' }],
-      baron_geddon: [{ kind: 'hit', name: 'Ring of Fire', every: 15, mult: 0.5, who: 'all', school: 'fire', text: 'Baron Ashfall gathers a ring of fire!' }],
-      golemagg: [{ kind: 'heal', name: 'Lava Bath', every: 20, heal: 0.04, text: 'Magmahulk sinks toward the lava!' }],
-      sulfuron_harbinger: [{ kind: 'hit', name: 'Brimstone Ball', every: 12, mult: 1, who: 'random', school: 'fire', text: 'Brimstone Harbinger raises a ball of brimstone!' }],
+      baron_geddon: [{ kind: 'hit', tele: true, miss: 4, name: 'Ring of Fire', every: 15, mult: 0.5, who: 'all', school: 'fire', text: 'Baron Ashfall gathers a ring of fire!' }],
+      golemagg: [{ kind: 'heal', tele: true, miss: 2.5, name: 'Lava Bath', every: 20, heal: 0.04, text: 'Magmahulk sinks toward the lava!' }],
+      sulfuron_harbinger: [{ kind: 'hit', tele: true, miss: 4, name: 'Brimstone Ball', every: 12, mult: 1, who: 'random', school: 'fire', text: 'Brimstone Harbinger raises a ball of brimstone!' }],
       majordomo_executus: [{ kind: 'adds', at: 0.5, mob: 'flamewaker_healer', n: 1, lvl: 0, text: 'Steward Cindral calls another healer to his side!' }],
       ragnaros: [{ kind: 'adds', at: 0.25, mob: 'son_of_flame', n: 2, lvl: 0, text: 'Vulcarn roars, and two more Sons of Flame rise from the lava!' }],
     } } },
