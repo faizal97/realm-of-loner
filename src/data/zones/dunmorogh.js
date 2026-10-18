@@ -35,7 +35,7 @@
     ice_claw_bear: { name: 'Ice Claw Bear', lvl: [8, 9], family: 'beast', hpMult: 1.15, drops: [['bear_hide', 0.4]], qdrops: [['ice_bear_pelt', 0.55]] },
     snow_leopard: { name: 'Snow Leopard', lvl: [8, 9], family: 'beast', drops: [['ruined_pelt', 0.4]] },
     leper_gnome: { name: 'Leper Gnome', lvl: [8, 10], family: 'humanoid', drops: [['linen_cloth', 0.4], ['thieves_coin', 0.3]], qdrops: [['restab_cog', 0.6]], aggro: 'Gearhollow will be ours again!' },
-    vagash: { name: 'Snowfang', lvl: [11, 11], family: 'beast', elite: true, named: true, hpMult: 5.2, dmgMult: 2.5, drops: [['bear_hide', 1]], qdrops: [['vagash_fang', 1]], special: 'hogger', loot: ['vagash_claw'] },
+    vagash: { name: 'Snowfang', lvl: [11, 11], family: 'beast', elite: true, named: true, hpMult: 5.2, dmgMult: 2.5, drops: [['bear_hide', 1]], qdrops: [['vagash_fang', 1]], special: 'hogger', buster: { style: 'quick', name: 'Savage Maul', text: 'Snowfang rears up to maul!' }, loot: ['vagash_claw'] },
   });
 
   // places

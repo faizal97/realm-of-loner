@@ -4,6 +4,7 @@ const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.join(__dirname, '..');
 globalThis.localStorage = { getItem() { return null; }, setItem() {} };
 require(path.join(ROOT, 'src/data.js'));
+const BUSTER = (require(path.join(ROOT, 'src/engine.js')), globalThis.E.BUSTER); // the slam styles (#179)
 const D = globalThis.D;
 const errors = [], warn = [];
 const err = (m) => errors.push(m);
@@ -35,6 +36,12 @@ for (const [k, p] of Object.entries(D.PLACES)) {
   for (const r of ['vendor', 'gearVendor']) if (p[r] && !(p.npcs || []).includes(p[r])) err(`place ${k}: ${r} '${p[r]}' is not in its npcs`);
 }
 for (const [k, m] of Object.entries(D.MOBS)) {
+  if (m.buster) { // a boss's slam (#179): a known style, numbers that make sense, on a boss that slams
+    if (!(m.special === 'slam' || m.special === 'hogger')) err(`mob ${k}: buster on a mob whose special is not slam or hogger`);
+    if (m.buster.style && !BUSTER[m.buster.style]) err(`mob ${k}: buster style '${m.buster.style}' is not one of ${Object.keys(BUSTER).join(', ')}`);
+    for (const f of ['size', 'mend', 'kick', 'kickCap', 'floor', 'cast']) if (m.buster[f] != null && !(m.buster[f] >= 0)) err(`mob ${k}: buster ${f} must be a number`);
+    if (m.buster.kickCap != null && !(Number.isInteger(m.buster.kickCap) && m.buster.kickCap <= 3)) err(`mob ${k}: buster kickCap must be 0-3 (the bar shows 3 diamonds)`);
+  }
   for (const [id] of (m.drops || []).concat(m.qdrops || [])) if (!has('ITEMS', id)) err(`mob ${k}: drops unknown item '${id}'`);
   for (const id of m.loot || []) if (!has('ITEMS', id)) err(`mob ${k}: loot unknown item '${id}'`);
   if (mobArt.size && !mobArt.has(m.sprite || k)) err(`mob ${k}: no art for '${m.sprite || k}'`);

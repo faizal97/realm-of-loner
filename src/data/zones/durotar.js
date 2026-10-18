@@ -46,7 +46,7 @@
     ragefire_trogg: { name: 'Smokepit Cavekin', lvl: [10, 11], family: 'humanoid', drops: [['trogg_stone', 0.5], ['linen_cloth', 0.4]] },
     searing_blade_cultist: { name: 'Hollow Eye Cultist', ranged: 'shadow', lvl: [10, 11], family: 'humanoid', drops: [['linen_cloth', 0.5], ['thieves_coin', 0.3]] },
     earthborer: { name: 'Earthborer', lvl: [10, 11], family: 'beast', drops: [['ruined_pelt', 0.3]] },
-    oggleflint: { name: 'Skagg', lvl: [11, 11], family: 'humanoid', boss: true, special: 'slam', aggro: 'Grrrr! Skagg smash!', loot: ['oggleflint_mace', 'bazzalan_belt'] },
+    oggleflint: { name: 'Skagg', lvl: [11, 11], family: 'humanoid', boss: true, special: 'slam', buster: { style: 'crush', name: 'Skagg Smash', text: 'Skagg lifts his club high!' }, aggro: 'Grrrr! Skagg smash!', loot: ['oggleflint_mace', 'bazzalan_belt'] },
     taragaman: { name: 'Bazzak the Hungerer', lvl: [12, 12], family: 'demon', boss: true, special: 'whirl', aggro: 'They call me the Hungerer. Soon you will see why!', loot: ['cursed_felblade', 'subterranean_cape'], qdrops: [['taragaman_heart', 1]] },
     jergosh: { name: 'Varrok the Invoker', lvl: [12, 12], family: 'humanoid', boss: true, special: 'molten', aggro: 'The Hollow Eye will burn you!', loot: ['robe_evocation', 'chanting_blade'] },
     bazzalan: { name: 'Ulzan', lvl: [12, 12], family: 'demon', boss: true, special: 'cook', aggro: 'You dare trespass here?', loot: ['bazzalan_belt', 'chanting_blade', 'cursed_felblade'] },

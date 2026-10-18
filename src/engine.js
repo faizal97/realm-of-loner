@@ -1058,7 +1058,7 @@
     const hitRow = (every, first, x, who, school, hard) => out.push({ name: who === 'all' ? 'Group hit' : who === 'random' ? 'Random hit' : 'Heavy hit', when: `Every ${every} sec (first at ${first} sec)`, what: `${who === 'all' ? 'hits everyone in your group' : who === 'random' ? 'hits one group member at random' : 'hits its target'} for ${hit(x)}${school ? ' ' + school : ''} damage.`, hard });
     const healRow = (every, first, x, hard) => out.push({ name: 'Heals itself', when: `Every ${every} sec (first at ${first} sec)`, what: `heals for ${Math.round(x * 100)}% of its health (${Math.round(u.maxHp * x)}).`, hard });
     if (S.mult) hitRow(S.every, SPECIAL_FIRST, S.mult, S.who, S.school, false);
-    if (S.mult && teleOn(sp.kind)) teleRow(out[out.length - 1], SPECIAL_NAME[sp.kind], S.who === 'target' ? 'guard' : 'step', false);
+    if (S.mult && teleOn(sp.kind)) { const bu = S.who === 'target' ? E.busterOf(u) : null; teleRow(out[out.length - 1], bu ? bu.name : SPECIAL_NAME[sp.kind], S.who === 'target' ? 'guard' : 'step', false, bu && bu.nums); }
     if (S.heal && teleOn(sp.kind)) teleRow(out[out.length - 1], SPECIAL_NAME[sp.kind], 'cut', true);
     if (S.heal) healRow(S.every, SPECIAL_FIRST, S.heal, false);
     if (S.adds) {
@@ -1076,17 +1076,23 @@
       else if (kind === 'enrage') out.push({ name: 'Frenzy', when: `Below ${Math.round(x.at * 100)}% health`, what: `hits ${Math.round((x.mult - 1) * 100)}% harder.`, hard: hd });
       else if (kind === 'heal') healRow(x.every, x.every / 2, x.heal, hd);
       else hitRow(x.every, x.every / 2, x.mult, x.who, x.school, hd);
-      if ((kind === 'heal' || kind === 'hit') && (x.tele || teleOn('x:' + u.key))) teleRow(out[out.length - 1], x.name, kind === 'heal' ? 'cut' : x.who === 'all' || x.who === 'random' ? 'step' : 'guard', kind === 'heal');
+      if ((kind === 'heal' || kind === 'hit') && (x.tele || teleOn('x:' + u.key))) teleRow(out[out.length - 1], x.name, kind === 'heal' ? 'cut' : x.who === 'all' || x.who === 'random' ? 'step' : 'guard', kind === 'heal', x);
     }
     return out;
+  };
+  // a boss's slam (#179): its name, emote and style, from its data (D.MOBS[key].buster) or the kind's defaults
+  E.busterOf = (u) => {
+    const b = (u && D.MOBS[u.key] && D.MOBS[u.key].buster) || {}, lunge = u && u.special && u.special.kind === 'hogger';
+    const nums = Object.assign({}, E.BUSTER[b.style || 'crush']); for (const k of Object.keys(TELE_KEY)) if (b[k] != null) nums[k] = b[k]; // a boss's own numbers win over its style's
+    return { style: b.style || 'crush', nums, name: b.name || (lunge ? 'Lunge' : 'Crushing Slam'), text: b.text || `${u ? u.name : 'It'} ${lunge ? 'lunges' : 'slams the ground'}!` };
   };
   const SPECIAL_NAME = { slam: 'Crushing Slam', hogger: 'Lunge', whirl: 'Whirling Blades', molten: 'Molten Splash', cook: 'Hearty Meal', arugal: 'Shadow Lance' }; // the casts' names, as mech() names them
   // a telegraphed mechanic's row (#179): its cast's name, and its answer
   E.TELE_ANSWER = { step: 'Step Back', guard: 'a defensive', cut: 'an interrupt or a stun' };
-  function teleRow(r, name, ans, heal) {
+  function teleRow(r, name, ans, heal, n) { // n: the slam's own numbers (its style and overrides), else TELE's
     if (name) r.name = name;
     r.tele = ans;
-    if (ans === 'guard') r.what += ` Red bar first: the tank's defensive avoids it; a shield or quick heal on the tank takes ${TELE.mend}x off, each interrupt or stun ${TELE.kick}x (${TELE.kicks} at most); unanswered it hits ${TELE.missOf.guard || TELE.miss}x.`;
+    if (ans === 'guard') { const k = E.teleNum(n, 'kickCap'); r.what += ` Red bar first: the tank's defensive avoids it; a shield or quick heal on the tank takes ${E.teleNum(n, 'mend')}x off, ${k === 1 ? 'one interrupt or stun' : 'each interrupt or stun'} ${E.teleNum(n, 'kick')}x${k === 1 ? '' : ` (${k} at most)`}; unanswered it hits ${E.teleNum(n, 'size')}x.`; }
     else r.what += ` Red bar first: ${E.TELE_ANSWER[ans]} ${heal ? 'stops it' : 'avoids it'}; missed, it ${heal ? 'heals' : 'hits'} ${heal ? TELE.healMiss : TELE.missOf[ans] || TELE.miss}x.`;
   }
   const lc = (t) => t.charAt(0).toLowerCase() + t.slice(1), uc = (t) => t.charAt(0).toUpperCase() + t.slice(1);
@@ -1147,7 +1153,13 @@
   E.isMend = isMend;
   E.answersOf = (u, ans) => (!u.cls ? [] : ans === 'step' ? ['step_back'] : D.CLASSES[u.cls].abilities.filter((id) => knows(u, id) && (ans === 'guard' ? D.ABILITIES[id].defensive : ans === 'mend' ? isMend(D.ABILITIES[id]) : D.ABILITIES[id].interrupt || D.ABILITIES[id].stun)));
   // a slam on the tank (#179): its size now, from what the team has done during the bar
-  E.teleSize = (t) => Math.max(TELE.floor, (TELE.missOf.guard || TELE.miss) - (t.mended ? TELE.mend : 0) - TELE.kick * Math.min(TELE.kicks, t.kicks ? t.kicks.size : 0));
+  E.teleSize = (t) => Math.max(E.teleNum(t, 'floor'), E.teleNum(t, 'size') - (t.mended ? E.teleNum(t, 'mend') : 0) - E.teleNum(t, 'kick') * Math.min(E.teleNum(t, 'kickCap'), t.kicks ? t.kicks.size : 0));
+  // A tank buster's style (#179): each boss's slam has its own name (D.MOBS[key].buster: { style, name, text }) and one of
+  // these styles' numbers. crush is TELE's own numbers. size: unanswered; mend: a shield or quick heal takes off; kick: each
+  // interrupt or stun takes off; kickCap: kicks that count; floor: never smaller; cast: the bar's length (sec).
+  E.BUSTER = { crush: {}, heavy: { size: 3, kickCap: 3, cast: 3 }, quick: { size: 2, kickCap: 1, cast: 1.5 } };
+  const TELE_KEY = { size: null, mend: 'mend', kick: 'kick', kickCap: 'kicks', floor: 'floor', cast: 'cast' };
+  E.teleNum = (t, k) => (t && t[k] != null ? t[k] : k === 'size' ? TELE.missOf.guard || TELE.miss : TELE[TELE_KEY[k]]);
   // the tank has a defensive up, or used one during the bar: the slam will be avoided (the screen turns its bar steel)
   E.teleBlocked = (C, t) => { const v = C.units[t.victim]; return !!v && (t.done.has(v.uid) || v.auras.some((a) => D.ABILITIES[a.id] && D.ABILITIES[a.id].defensive)); };
   // can anyone in the group answer a slam (the tank's defensive, a mend, a kick)? A group with none takes the plain hit
@@ -1183,7 +1195,7 @@
       const t = m.tele; if (!t || t.done.has(u.uid)) continue;
       if (t.who === 'target' && t.victim !== u.uid) {
         if (!t.mended && E.answersOf(u, 'mend').length) out.push({ m, t, ans: 'mend' });
-        if (!t.kicks.has(u.uid) && t.kicks.size < TELE.kicks && E.answersOf(u, 'cut').length) out.push({ m, t, ans: 'kick' });
+        if (!t.kicks.has(u.uid) && t.kicks.size < E.teleNum(t, 'kickCap') && E.answersOf(u, 'cut').length) out.push({ m, t, ans: 'kick' });
       } else if (t.who === 'cast' || t.who === 'all' || t.victim === u.uid) out.push({ m, t, ans: E.teleAnswer(t) });
     }
     return out;
@@ -1198,11 +1210,11 @@
   function cutCast(C, u, m) {
     const t = m.tele; if (!t) return;
     if (t.who === 'cast') { ev(C, { type: 'tele', src: m.uid, what: 'cut', by: u.uid, name: t.name }); m.tele = null; }
-    else if (t.who === 'target' && !t.kicks.has(u.uid) && t.kicks.size < TELE.kicks) { t.kicks.add(u.uid); ev(C, { type: 'tele', src: m.uid, what: 'kick', by: u.uid, name: t.name, size: E.teleSize(t) }); } // a kick weakens a slam, up to TELE.kicks
+    else if (t.who === 'target' && !t.kicks.has(u.uid) && t.kicks.size < E.teleNum(t, 'kickCap')) { t.kicks.add(u.uid); ev(C, { type: 'tele', src: m.uid, what: 'kick', by: u.uid, name: t.name, size: E.teleSize(t), off: E.teleNum(t, 'kick') }); } // a kick weakens a slam, up to its kickCap
     else if (t.who === 'target') ev(C, { type: 'tele', src: m.uid, what: 'kickfull', by: u.uid, name: t.name }); // a kick after the slam's kicks were full
   }
   function mendTele(C, v) {
-    for (const m of alive(foes(C, v))) { const t = m.tele; if (t && t.who === 'target' && t.victim === v.uid && !t.mended) { t.mended = true; ev(C, { type: 'tele', src: m.uid, what: 'mend', tgt: v.uid, name: t.name, size: E.teleSize(t) }); } }
+    for (const m of alive(foes(C, v))) { const t = m.tele; if (t && t.who === 'target' && t.victim === v.uid && !t.mended) { t.mended = true; ev(C, { type: 'tele', src: m.uid, what: 'mend', tgt: v.uid, name: t.name, size: E.teleSize(t), off: E.teleNum(t, 'mend') }); } }
   }
   function answerTele(C, u, ans) {
     for (const m of alive(foes(C, u))) { const t = m.tele; if (t && E.teleAnswer(t) === ans && (t.who === 'all' || t.victim === u.uid)) { t.done.add(u.uid); if (ans === 'guard') ev(C, { type: 'tele', src: m.uid, what: 'block', tgt: u.uid, name: t.name }); } }
@@ -1216,7 +1228,7 @@
       // a slam on someone else: a healer guards the tank with a mend, the others kick (#179)
       const ans = t.who === 'target' && t.victim !== u.uid ? ((u.role || D.CLASSES[u.cls].role) === 'healer' ? 'mend' : 'kick') : E.teleAnswer(t);
       if (ans === 'mend' && t.mended) continue;
-      if (ans === 'kick' && (t.kicks.has(u.uid) || t.kicks.size >= TELE.kicks)) continue;
+      if (ans === 'kick' && (t.kicks.has(u.uid) || t.kicks.size >= E.teleNum(t, 'kickCap'))) continue;
       if (ans !== 'cut' && ans !== 'mend' && ans !== 'kick' && t.who !== 'all' && t.victim !== u.uid) continue;
       const d = u.teleMind || (u.teleMind = {}), s = b.skill == null ? 0.5 : b.skill;
       if (d.id !== t.id) { d.id = t.id; d.go = Math.random() < (ans === 'cut' || ans === 'kick' ? 0.6 * s : 0.7 + 0.3 * s); d.at = t.start + 0.4 + (1 - s) * 1.2; } // skill 0.6 (an average draw) answers 4 in 5
@@ -1293,7 +1305,8 @@
     if (sp.t > 0) return;
     if (sp.kind === 'slam' || sp.kind === 'hogger') {
       const Ss = SPECIALS[sp.kind]; sp.t = Ss.every;
-      if (tgt && !tgt.dead) mech(C, m, sp.kind, { name: sp.kind === 'hogger' ? 'Lunge' : 'Crushing Slam', who: 'target', victim: tgt.uid, mult: Ss.mult, school: 'physical', ab: 'slam', text: sp.text || (sp.kind === 'hogger' ? `${m.name} lunges!` : `${m.name} slams the ground!`) });
+      const bu = E.busterOf(m);
+      if (tgt && !tgt.dead) mech(C, m, sp.kind, Object.assign({}, bu.nums, { name: bu.name, who: 'target', victim: tgt.uid, mult: Ss.mult, school: 'physical', ab: 'slam', text: sp.text || bu.text }));
     } else if (sp.kind === 'whirl') {
       sp.t = SPECIALS.whirl.every;
       mech(C, m, 'whirl', { name: 'Whirling Blades', who: 'all', mult: SPECIALS.whirl.mult, school: 'physical', ab: 'whirl', text: sp.text || `${m.name === 'Big Chopper' ? 'Big Chopper' : 'The Shredder'} whirls its saw blades!` });

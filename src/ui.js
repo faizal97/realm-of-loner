@@ -843,8 +843,8 @@
       if (e.type === 'tele' && e.what === 'dodge' && tgt && tgt.kind === 'player') fct(e.tgt, 'Avoided', 'small');
       if (e.type === 'tele' && e.what === 'cut') fct(e.src, 'Interrupted', 'small');
       // a slam on the tank (#179): each answer says what it did, where it happened
-      if (e.type === 'tele' && e.what === 'kick') fct(e.by, `Kicked −${E.TELE.kick}x`, 'small');
-      if (e.type === 'tele' && e.what === 'mend') fct(e.tgt, `Guarded −${E.TELE.mend}x`, 'heal small');
+      if (e.type === 'tele' && e.what === 'kick') fct(e.by, `Kicked −${e.off}x`, 'small');
+      if (e.type === 'tele' && e.what === 'mend') fct(e.tgt, `Guarded −${e.off}x`, 'heal small');
       if (e.type === 'tele' && e.what === 'block') fct(e.tgt, 'Blocked', 'small');
       if (e.type === 'tele' && e.what === 'kickfull' && C.units[e.by] && C.units[e.by].kind === 'player') fct(e.by, 'Kicks full', 'small');
       if (e.type === 'dmg') {
@@ -4926,8 +4926,8 @@
   }
   // telegraphs (#179): a boss's red bar over its head and in the target frame, with the answer's icon on its left (your
   // own interrupt or defensive, or Step Back); the bar fills as the cast runs, and lands when it is full
-  // a slam on the tank (#179) also shows who has answered: a plus for the mend, two diamonds for the kicks; a steel bar once the tank's defensive is up
-  function teleBar(cls) { return h('div', { class: 'tbar' + (cls ? ' ' + cls : ''), hidden: true }, h('span', { class: 'tb-ic' }), h('i'), h('b'), h('span', { class: 'tb-pips', hidden: true }, h('i', { class: 'pm' }), h('i', { class: 'pk' }), h('i', { class: 'pk' }))); }
+  // a slam on the tank (#179) also shows who has answered: a plus for the mend, a diamond for each kick that counts (1-3, by the boss's style); a steel bar once the tank's defensive is up
+  function teleBar(cls) { return h('div', { class: 'tbar' + (cls ? ' ' + cls : ''), hidden: true }, h('span', { class: 'tb-ic' }), h('i'), h('b'), h('span', { class: 'tb-pips', hidden: true }, h('i', { class: 'pm' }), h('i', { class: 'pk' }), h('i', { class: 'pk' }), h('i', { class: 'pk' }))); }
   function teleIconId(ans) {
     const u = G.pUnit, have = u ? E.answersOf(u, ans === 'kick' ? 'cut' : ans) : [];
     return have[0] || (ans === 'step' ? 'step_back' : ans === 'cut' || ans === 'kick' ? D.INTERRUPTS[G.S.player.cls] : 'shield_wall');
@@ -4947,11 +4947,11 @@
     if (nb.textContent !== name) { nb.textContent = name; if (team && bar.dataset.sz && +bar.dataset.sz > size) { bar.classList.remove('drop'); void bar.offsetWidth; bar.classList.add('drop'); setTimeout(() => bar.classList.remove('drop'), 500); } }
     bar.dataset.sz = size;
     bar.classList.toggle('blocked', blocked);
-    if (team) bar.style.setProperty('--heat', String(Math.max(0, Math.min(1, (2.5 - size) / 2)))); // 0 at 2.5x (ember red) .. 1 at 0.5x (amber)
+    if (team) { const top = E.teleNum(t, 'size'), lo = E.teleNum(t, 'floor'); bar.style.setProperty('--heat', String(top > lo ? Math.max(0, Math.min(1, (top - size) / (top - lo))) : 0)); } // 0 unanswered (ember red) .. 1 at its floor (amber)
     const pips = bar.querySelector('.tb-pips');
     if (pips) {
       pips.hidden = !team || blocked;
-      if (team) { pips.querySelector('.pm').classList.toggle('on', !!t.mended); pips.querySelectorAll('.pk').forEach((k, i) => k.classList.toggle('on', i < t.kicks.size)); pips.classList.toggle('full', t.kicks.size >= E.TELE.kicks); }
+      if (team) { pips.querySelector('.pm').classList.toggle('on', !!t.mended); const cap = E.teleNum(t, 'kickCap'); pips.querySelectorAll('.pk').forEach((k, i) => { k.hidden = i >= cap; k.classList.toggle('on', i < t.kicks.size); }); pips.classList.toggle('full', t.kicks.size >= cap); }
     }
     bar.querySelector('i').style.width = Math.min(100, ((C.t - t.start) / (t.until - t.start)) * 100) + '%';
   }

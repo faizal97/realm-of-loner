@@ -168,7 +168,7 @@ img { max-width: 100%; display: block; }
 .tbar.blocked { box-shadow: 0 0 0 1px #2a4a6a, 0 0 10px rgba(120, 180, 255, .6); }
 .tbar.blocked i { background: linear-gradient(#e8f4ff, #8fb8e0 55%, #4a6a8e); }
 .tb-pips { position: absolute; left: 20px; top: calc(100% + 3px); display: flex; gap: 5px; align-items: center; }
-.tb-pips[hidden] { display: none; }
+.tb-pips[hidden], .tb-pips i[hidden] { display: none; }
 .tbar:has(.tb-pips:not([hidden])) { margin-bottom: 15px; } /* room for the pips, so they never sit on the name */
 .tbar.small:has(.tb-pips:not([hidden])) { margin-bottom: 0; }
 .tb-pips i { position: static; display: block; width: 8px; height: 8px; background: #2a0c08; border: 1px solid #000; box-shadow: 0 0 0 1px #6a1a10; max-width: none; }
