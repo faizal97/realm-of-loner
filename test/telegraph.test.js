@@ -327,3 +327,16 @@ test('Hard raid extras warn with a red bar and hit harder when missed (#179)', (
   }
   assert.deepStrictEqual(seen, ['Ring of Fire', 'Lava Bath', 'Brimstone Ball', 'Courtyard Wave', 'Rising Tide', 'Deep Tendril']);
 });
+
+test('open-world casters cast a named spell from level 10, outside dungeons and raids (#179)', () => {
+  const was = new Set(E.TELE.on); E.TELE.on.add('spell');
+  try {
+    assert.deepStrictEqual(E.spellOf(E.mobUnit('thistlefur_shaman', 25)), { school: 'nature', name: 'Thorn Blast' });
+    assert.strictEqual(E.spellOf(Object.assign(E.mobUnit('thistlefur_shaman', 25), { inRun: true })), null, 'not in a dungeon or raid');
+    assert.strictEqual(E.spellOf(E.mobUnit('thistlefur_shaman', 9)), null, 'not below level 10');
+    const archer = Object.entries(D.MOBS).find(([, m]) => m.ranged === 'physical' && !m.boss)[0];
+    assert.strictEqual(E.spellOf(E.mobUnit(archer, 30)), null, 'an archer has no spell');
+    assert.match(E.specialFacts(E.mobUnit('thistlefur_shaman', 25))[0], /Thorn Blast|interrupt or a stun stops it; missed, it hits 2x/);
+  } finally { E.TELE.on.clear(); for (const k of was) E.TELE.on.add(k); }
+  assert.strictEqual(E.spellOf(E.mobUnit('thistlefur_shaman', 25)), null, 'switched off, no spell');
+});

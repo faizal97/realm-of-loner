@@ -17,6 +17,7 @@ if (process.env.HEALAT) globalThis.E.SOLO_HEAL_AT = +process.env.HEALAT;
 if (process.env.PETDMG) globalThis.E.SOLO_PET_DMG = +process.env.PETDMG; // the Hunter's beast alone against monsters
 if (process.env.SOCIAL) G.SOCIAL.high = +process.env.SOCIAL; // #214: the social pull rate from creature level 20, to compare
 // #214, design-mindset §7: SKILL=0.3 plays like a button-masher (default 0.8, a skilled player); UNDERGEAR=n wears the gear of n levels lower
+if (process.env.TELE) for (const k of process.env.TELE.split(',')) globalThis.E.TELE.on.add(k); // TELE=spell: open-world caster spells (#179)
 const SKILL = +(process.env.SKILL || 0.8), UNDERGEAR = +(process.env.UNDERGEAR || 0);
 // Pack pulls (#139, not in the game yet): PACK=1 lets a class that knows an area attack (a damaging 'aoe' ability) pull a
 // pack of the creature it attacks: 2 below level 20, 3 from 20, 4 from 40 (PACKS=2,3,4 sets them), as many as are alive

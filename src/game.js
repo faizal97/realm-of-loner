@@ -3640,6 +3640,7 @@
       const M = D.MOBS[k];
       const u = E.mobUnit(k, R.mobLevel || null, M.boss ? mult : (R.mult || { hp: 1, dmg: 1 }));
       if (marks[i]) u.mark = marks[i];
+      u.inRun = true; // a dungeon or raid's mob: open-world caster spells stay outside (#179)
       if (R.hard) u.onHard = true; // a Hard run: a boss's slam can have Hard numbers (#179)
       const hx = R.hard ? G.hardExtra(R.act, k) : !R.trial && G.normalExtra(R.act, k); if (hx) u.hardX = hx; // the boss's extra mechanic: Hard's, or a Normal raid's own
       const XA = D.ACTIVITIES[R.act], xs = R.hard && XA.hardExtra ? XA.hardExtra : XA.extra; // a festival boss has its own Hard set

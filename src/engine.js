@@ -1053,7 +1053,8 @@
   // A boss's mechanics as rows for the boss card (v10.7): { name, when, what, hard }, with this unit's numbers.
   // name says the kind in plain words, when is the timer or health mark, what is the effect. specialFacts joins them.
   E.specialRows = function (u) {
-    const sp = u && u.special, S = (sp && SPECIALS[sp.kind]) || {}, out = []; if (!sp && !(u && u.hardX)) return out;
+    const sp = u && u.special, S = (sp && SPECIALS[sp.kind]) || {}, out = [], ow = E.spellOf(u); if (!sp && !(u && u.hardX) && !ow) return out;
+    if (ow) { out.push({ name: ow.name, when: `Every ${SPELL.every} sec (first at ${SPELL.first[0]}–${SPELL.first[1]} sec)`, what: `A spell at its target for ${Math.round(u.dmg[0])}–${Math.round(u.dmg[1])} ${ow.school} damage.` }); teleRow(out[out.length - 1], null, 'cut', false, { miss: SPELL.miss }); }
     const hit = (x) => `${Math.round(u.dmg[0] * x)}–${Math.round(u.dmg[1] * x)}`;
     const hitRow = (every, first, x, who, school, hard) => out.push({ name: who === 'all' ? 'Group hit' : who === 'random' ? 'Random hit' : 'Heavy hit', when: `Every ${every} sec (first at ${first} sec)`, what: `${who === 'all' ? 'hits everyone in your group' : who === 'random' ? 'hits one group member at random' : 'hits its target'} for ${hit(x)}${school ? ' ' + school : ''} damage.`, hard });
     const healRow = (every, first, x, hard) => out.push({ name: 'Heals itself', when: `Every ${every} sec (first at ${first} sec)`, what: `heals for ${Math.round(x * 100)}% of its health (${Math.round(u.maxHp * x)}).`, hard });
@@ -1095,7 +1096,7 @@
     if (name) r.name = name;
     r.tele = ans;
     if (ans === 'guard') { const k = E.teleNum(n, 'kickCap'); r.what += ` Red bar first: the tank's defensive ${E.teleNum(n, 'brace') != null ? `takes ${E.teleNum(n, 'brace')}x off` : 'avoids it'}; a shield or quick heal on the tank takes ${E.teleNum(n, 'mend')}x off${k === 0 ? ' (it can\'t be interrupted)' : `, ${k === 1 ? 'one interrupt or stun' : 'each interrupt or stun'} ${E.teleNum(n, 'kick')}x${k === 1 ? '' : ` (${k} at most)`}`}; unanswered it hits ${E.teleNum(n, 'size')}x${E.teleNum(n, 'floor') >= 1 ? `, never under ${E.teleNum(n, 'floor')}x` : ''}.`; }
-    else r.what += ` Red bar first: ${E.TELE_ANSWER[ans]} ${heal ? 'stops it' : 'avoids it'}; missed, it ${heal ? 'heals' : 'hits'} ${(n && n.miss) || (heal ? TELE.healMiss : TELE.missOf[ans] || TELE.miss)}x.`;
+    else r.what += ` Red bar first: ${E.TELE_ANSWER[ans]} ${heal || ans === 'cut' ? 'stops it' : 'avoids it'}; missed, it ${heal ? 'heals' : 'hits'} ${(n && n.miss) || (heal ? TELE.healMiss : TELE.missOf[ans] || TELE.miss)}x.`;
   }
   const lc = (t) => t.charAt(0).toLowerCase() + t.slice(1), uc = (t) => t.charAt(0).toUpperCase() + t.slice(1);
   E.specialFacts = (u) => E.specialRows(u).map((r) => (r.hard ? 'Hard: ' + lc(r.when) : r.when) + ': ' + r.what);
@@ -1244,15 +1245,33 @@
       if (ans === 'kick' && (t.kicks.has(u.uid) || t.kicks.size >= E.teleNum(t, 'kickCap'))) continue;
       if (ans !== 'cut' && ans !== 'mend' && ans !== 'kick' && t.who !== 'all' && t.victim !== u.uid) continue;
       const d = u.teleMind || (u.teleMind = {}), s = b.skill == null ? 0.5 : b.skill;
-      if (d.id !== t.id) { d.id = t.id; d.go = Math.random() < (ans === 'cut' || ans === 'kick' ? 0.6 * s : 0.7 + 0.3 * s); d.at = t.start + 0.4 + (1 - s) * 1.2; } // skill 0.6 (an average draw) answers 4 in 5
+      if (d.id !== t.id) { d.id = t.id; const alone = ans === 'cut' && alive(C.allies).filter((a) => E.answersOf(a, 'cut').length).length <= 1; d.go = Math.random() < (alone ? s : ans === 'cut' || ans === 'kick' ? 0.6 * s : 0.7 + 0.3 * s); d.at = t.start + 0.4 + (1 - s) * 1.2; } // skill 0.6 (an average draw) answers 4 in 5
       if (!d.go || C.t < d.at || C.t >= t.until) continue;
       for (const id of E.answersOf(u, ans === 'kick' ? 'cut' : ans)) if (E.use(C, u, id, ans === 'cut' || ans === 'kick' ? m.uid : ans === 'mend' ? t.victim : undefined) === null) { d.go = false; return true; }
     }
     return false;
   }
+  // Open-world casters (#179, design: Open world): a mob whose ranged attack has a spell school, from level 10, outside
+  // dungeons and raids, casts a named spell at its target every SPELL.every sec: a 2 sec red bar, answered by an interrupt
+  // or a stun; missed, it hits SPELL.miss x its swing. A player with no interrupt yet takes the plain hit.
+  const SPELL = E.SPELL = { every: 14, first: [4, 8], level: 10, miss: 2, names: { fire: 'Cinder Blast', frost: 'Rime Blast', shadow: 'Dusk Blast', nature: 'Thorn Blast', arcane: 'Arcane Burst', holy: 'Searing Word' } };
+  E.spellOf = (u) => {
+    const M = u && u.kind === 'mob' && !u.boss && !u.inRun && D.MOBS[u.key]; if (!M || !TELE.on.has('spell')) return null;
+    const school = M.ranged; if (!school || school === 'physical' || u.level < SPELL.level) return null;
+    return { school, name: M.spellName || SPELL.names[school] || uc(school) + ' Blast' };
+  };
+  function owSpell(C, m, dt) {
+    const s = E.spellOf(m); if (!s || stunned(C, m)) return;
+    m.spT = (m.spT == null ? SPELL.first[0] + Math.random() * (SPELL.first[1] - SPELL.first[0]) : m.spT) - dt;
+    if (m.spT > 0) return;
+    const v = C.units[m.target]; if (!v || v.dead || m.tele) return; // waits for its target, and for a cast already going
+    m.spT = SPELL.every;
+    mech(C, m, 'spell', { name: s.name, who: 'cast', victim: v.uid, mult: 1, school: s.school, ab: 'mob_spell', cast: TELE.hardCast, miss: SPELL.miss });
+  }
   function specials(C, m, dt) {
     if (m.tele) teleTick(C, m);
     if (m.hardX && !m.dead) hardExtra(C, m, dt);
+    if (!m.dead) owSpell(C, m, dt);
     const sp = m.special;
     if (!sp || m.dead || stunned(C, m)) return;
     sp.t -= dt;
