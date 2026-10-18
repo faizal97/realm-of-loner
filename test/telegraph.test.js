@@ -235,10 +235,10 @@ test('slam styles: crush is the plain numbers, heavy starts at 3x with 3 kicks, 
 
 test('a boss\'s own slam: its name and emote, its style, and its own numbers over the style\'s', () => {
   const b = E.busterOf({ key: 'hamhock', name: 'Porkchop', special: { kind: 'slam' } });
-  assert.strictEqual(b.style, 'heavy'); assert.strictEqual(b.name, 'Belly Flop'); assert.strictEqual(b.nums.size, 3);
-  D.MOBS.hamhock.buster.size = 3.5;
+  assert.strictEqual(b.style, 'heavy'); assert.strictEqual(b.name, 'Belly Flop'); assert.strictEqual(b.nums.size, 2.5, 'his own start over heavy\'s 3x'); assert.strictEqual(b.nums.kickCap, 3, 'heavy\'s kicks');
+  const was = D.MOBS.hamhock.buster.size; D.MOBS.hamhock.buster.size = 3.5;
   assert.strictEqual(E.busterOf({ key: 'hamhock', name: 'Porkchop', special: { kind: 'slam' } }).nums.size, 3.5, 'the boss\'s number wins');
-  delete D.MOBS.hamhock.buster.size;
+  D.MOBS.hamhock.buster.size = was;
   const plain = E.busterOf({ key: 'rattlegore', name: 'Bonecrunch', special: { kind: 'slam' } });
   assert.deepStrictEqual([plain.style, plain.name, plain.text], ['crush', 'Crushing Slam', 'Bonecrunch slams the ground!']);
   assert.strictEqual(E.busterOf({ key: 'king_mosh', name: 'King Stomp', special: { kind: 'hogger' } }).name, 'Lunge');
@@ -248,12 +248,12 @@ test('the slam\'s bar and boss card use the boss\'s style', () => {
   E.TELE.on.add('slam'); E.TELE.on.add('hogger');
   const u = E.mobUnit('hamhock', 24);
   const row = E.specialRows(u).find((r) => r.tele === 'guard');
-  assert.match(row.name + ': ' + row.what, /^Belly Flop: .*takes 1x off, each interrupt or stun 0.5x \(3 at most\); unanswered it hits 3x\.$/);
+  assert.match(row.name + ': ' + row.what, /^Belly Flop: .*takes 1x off, each interrupt or stun 0.5x \(3 at most\); unanswered it hits 2\.5x\.$/);
   const q = E.specialRows(E.mobUnit('vagash', 11)).find((r) => r.tele === 'guard');
   assert.match(q.name + ': ' + q.what, /^Savage Maul: .*one interrupt or stun 0.5x; unanswered it hits 2x\.$/);
   const { C, m } = slamFight('mage', 20); m.key = 'hamhock'; m.special = { kind: 'slam', t: 0 }; m.hardX = []; E.TELE.on.add('slam'); // slamFight switched the kinds off
   const t = startOf(C);
-  assert.deepStrictEqual([t.name, t.size, t.kickCap, t.until - t.start], ['Belly Flop', 3, 3, 3]);
+  assert.deepStrictEqual([t.name, t.size, t.kickCap, t.until - t.start], ['Belly Flop', 2.5, 3, 3]);
   E.TELE.on.clear(); for (const k of ON) E.TELE.on.add(k);
 });
 

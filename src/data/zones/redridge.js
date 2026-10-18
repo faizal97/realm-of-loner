@@ -75,7 +75,7 @@
     defias_captive: { name: 'Grey Hood Captive', lvl: [23, 24], family: 'humanoid', drops: [['thieves_coin', 0.45], ['linen_cloth', 0.3]] },
     targorr: { name: 'Ulgrak the Butcher', lvl: [23, 23], family: 'humanoid', boss: true, special: 'slam', loot: ['targorr_axe', 'targorr_shackle'], qdrops: [['head_targorr', 1]], aggro: 'Free at last! And you will be the first to die!' },
     kam_deepfury: { name: 'Kalf Brandsson', lvl: [24, 24], family: 'humanoid', boss: true, special: 'molten', loot: ['kam_hammer', 'kam_bracers'], qdrops: [['head_kam', 1]], aggro: 'I have waited years for this!' },
-    hamhock: { name: 'Porkchop', lvl: [24, 24], family: 'giant', boss: true, special: 'slam', buster: { style: 'heavy', name: 'Belly Flop', text: 'Porkchop rears back for a belly flop!' }, loot: ['hamhock_leggings', 'hamhock_club'], aggro: 'Porkchop hungry!' },
+    hamhock: { name: 'Porkchop', lvl: [24, 24], family: 'giant', boss: true, special: 'slam', buster: { style: 'heavy', name: 'Belly Flop', text: 'Porkchop rears back for a belly flop!', size: 2.5 }, loot: ['hamhock_leggings', 'hamhock_club'], aggro: 'Porkchop hungry!' },
     dextren_ward: { name: 'Dexter Crowe', lvl: [24, 24], family: 'humanoid', boss: true, loot: ['dextren_cleaver', 'dextren_boots'], aggro: 'Another one for my collection.' },
     bruegal_ironknuckle: { name: 'Hugo Knuckles', lvl: [24, 24], family: 'humanoid', boss: true, loot: ['iron_knuckles', 'bruegal_belt'], aggro: 'Put up yer fists!' },
     bazil_thredd: { name: 'Silas Crane', lvl: [25, 25], family: 'humanoid', boss: true, special: 'thredd', loot: ['thredd_mask', 'thredd_blade', 'thredd_robe', 'thredd_cape'], qdrops: [['head_bazil', 1]], aggro: 'Blackwell will have your head for this!' },
