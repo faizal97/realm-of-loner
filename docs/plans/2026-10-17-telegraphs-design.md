@@ -46,6 +46,41 @@ It never goes below 0.5x unless the tank's defensive avoids it. The bar shows it
 1.5x"), each player's own answer glows (a healer's shield or quick heal, everyone's interrupt), and a group with no answer
 at all takes the plain hit. The numbers are starting points, set by the sims.
 
+### Each boss's own slam
+
+Every slam keeps the same answers, but each boss names its own (`D.MOBS[key].buster: { style, name, text }`) and picks
+one of three styles. Its data can also set any number for that boss alone.
+
+| style | unanswered | kicks that count | bar | feels like |
+|---|---|---|---|---|
+| crush (the plain slam) | 2.5x | 2 | 2.5 sec | the whole team chips in |
+| heavy | 3x | 3 | 3 sec | needs everyone |
+| quick | 2x | 1 | 1.5 sec | a reaction check, mostly the healer's |
+
+All three: a shield or quick heal takes 1x off, each kick 0.5x, never below 0.5x.
+
+**Raid slams are braced, not blocked.** With `brace` set, the tank's defensive takes that much off (1.5x) and the slam
+still lands. A raid's tank bots cycle their defensives, which avoided 13 of 32 slams. **A warned slam is easier than an
+unwarned one:** healers shield and heal the tank before it lands. So each raid slam has a raised floor, set over whole
+raids:
+
+| boss | slam | style | unanswered | floor | bar |
+|---|---|---|---|---|---|
+| Cinderhound | Molten Jaws | quick | 2.5x | 2x | 1.5 sec |
+| Magmahulk the Incinerator | Magma Fists | heavy | 3.5x | 2x | 3 sec |
+| Commander Serathis | Trident Thrust | crush, can't be interrupted, a shield or heal 1.5x off | 3x | 1.5x | 2.5 sec |
+| Coralheart Colossus | Tidal Crush | heavy | 4x | 2x | 4 sec |
+
+**Below 60 so far:** Snowfang's Savage Maul (quick), Skagg Smash (crush), Porkchop's Belly Flop (heavy, 2.5x). The other
+slam bosses use the plain crush slam.
+
+On screen, under the bar: a shield pip (a raid tank's brace), a plus (the shield or heal), one diamond per kick that
+counts, ringed when full. A steel bar reads "blocked" when a dungeon tank's defensive is up. Floating text says what each
+answer did: "Braced −1.5x", "Guarded −1x", "Kicked −0.5x", "Blocked", "Kicks full".
+
+Words said in a fight (a boss's lines, emotes, the group's callouts) also show as speech bubbles over the speaker. A
+friend's goes above them, a foe's under its nameplate, and none ever covers a red bar.
+
 ## Interrupts (every class, same rules)
 
 Free, instant, 12 s cooldown, learned at level 6. Each class has its own name and icon, but the rules are the same, so
