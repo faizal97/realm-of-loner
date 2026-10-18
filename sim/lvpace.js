@@ -37,7 +37,7 @@ let FIN = 0;
 { const rf = G.recapFeed; G.recapFeed = function (C, evs) { for (const e of evs) if (e.type === 'song' && e.what === 'finale' && G.pUnit && e.src === G.pUnit.uid) FIN++; return rf.apply(this, arguments); }; }
 // a wild place where this level fights: monsters around the level, no town
 const normal = (k) => D.MOBS[k] && !D.MOBS[k].named && !D.MOBS[k].elite && !D.MOBS[k].boss;
-const placeFor = (L) => Object.keys(D.PLACES).filter((k) => { const p = D.PLACES[k]; return p.lvl && !p.safe && !p.city && (p.mobs || []).length && p.mobs.every(([m]) => normal(m)) && p.lvl[0] <= L && p.lvl[1] >= L; }).sort((a, b) => Math.abs((D.PLACES[a].lvl[0] + D.PLACES[a].lvl[1]) / 2 - L) - Math.abs((D.PLACES[b].lvl[0] + D.PLACES[b].lvl[1]) / 2 - L))[0];
+const placeFor = (L) => Object.keys(D.PLACES).filter((k) => { const p = D.PLACES[k]; return p.lvl && !p.safe && !p.city && (p.mobs || []).length && p.mobs.every(([m]) => normal(m)) && (!process.env.CASTERS || p.mobs.some(([m]) => D.MOBS[m].ranged && D.MOBS[m].ranged !== 'physical')) && p.lvl[0] <= L && p.lvl[1] >= L; // CASTERS=1: a place with spell casters (#179) }).sort((a, b) => Math.abs((D.PLACES[a].lvl[0] + D.PLACES[a].lvl[1]) / 2 - L) - Math.abs((D.PLACES[b].lvl[0] + D.PLACES[b].lvl[1]) / 2 - L))[0];
 function hour(cls, L) {
   G.newGame({ name: 'L', cls, race: 'human' }); const S = G.S, P = S.player; S.flags.warModeAsked = true; S.flags.warMode = false; S.flags.noInvites = true;
   P.level = L; P.equip = G.botChar({ name: 'x', cls, race: 'human', level: Math.max(1, L - UNDERGEAR), skill: 0.8 }).equip; P.talents = G.autoTalents(cls, 'dps', L, 0); P.role = 'dps';
