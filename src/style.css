@@ -129,6 +129,16 @@ img { max-width: 100%; display: block; }
 .fct.heal { color: #4cff4c; }
 .fct.eff, .fct.heal.eff { color: #d39cff; } /* an item effect's numbers and callouts, the Effect line's colour (#23) */
 .fct.small { font-size: 14px; color: #e8e8e8; }
+/* speech bubbles over the speaker (#179): party lines on parchment, a foe's lines on ember, emotes as italic narration */
+.bubble { position: absolute; z-index: 140; max-width: 46%; padding: 4px 7px 5px; border: 1px solid #000; border-radius: 7px; font: 700 11px/1.25 var(--body); pointer-events: none; animation: bubin .18s ease-out; box-shadow: 0 2px 0 rgba(0, 0, 0, .55); }
+.bubble::after { content: ''; position: absolute; left: calc(var(--tail, 50%) - 5px); top: 100%; border: 5px solid transparent; border-top-color: inherit; border-bottom: 0; }
+.bubble.below::after { top: auto; bottom: 100%; border: 5px solid transparent; border-bottom-color: inherit; border-top: 0; }
+.bubble.party { background: #f3e6c4; color: #2a1a0a; border-color: #f3e6c4; outline: 1px solid #000; }
+.bubble.foe { background: #2a0c08; color: #ffd9c0; border-color: #2a0c08; outline: 1px solid #a8321e; }
+.bubble.emote { background: rgba(10, 8, 6, .82); color: #ffcf7a; font-style: italic; border-color: transparent; outline: 1px solid #5a3a14; }
+.bubble.emote::after { display: none; }
+@keyframes bubin { from { opacity: 0; transform: translateY(3px) scale(.92); } }
+@media (prefers-reduced-motion: reduce) { .bubble { animation: none; } }
 .fct.xp { color: #c28dff; font-size: 15px; }
 .fct.nature { color: #7dff5a; } .fct.fire { color: #ff9d3a; } .fct.frost { color: #8fd4ff; } .fct.holy { color: #ffe98a; } .fct.shadow { color: #c07cff; } .fct.arcane { color: #ff9ce8; }
 @keyframes rise { 0% { transform: translate(-50%, 0) scale(.8); opacity: 0; } 12% { transform: translate(-50%, -8px) scale(1.05); opacity: 1; } 100% { transform: translate(-50%, -64px); opacity: 0; } }
@@ -149,6 +159,26 @@ img { max-width: 100%; display: block; }
 .tbar.small i, .tbar.small b { left: 13px; }
 .tbar.small i { max-width: calc(100% - 13px); }
 .tbar.small b { font-size: 9px; line-height: 12px; }
+/* a slam on the tank (#179): the fill cools from ember red to amber as the team shrinks it, a pulse on each step down,
+   a steel bar once the tank's defensive is up; under it a plus (the mend) and two diamonds (the kicks) light up */
+.tbar { --heat: 0; }
+.tbar i { background: linear-gradient(hsl(calc(28 + var(--heat) * 12), 100%, 72%), hsl(calc(10 + var(--heat) * 26), 82%, 51%) 55%, hsl(calc(6 + var(--heat) * 22), 85%, 34%)); }
+.tbar.drop b { animation: teledrop .45s ease-out; }
+@keyframes teledrop { 0% { transform: scale(1.35); color: #fff3c0; } 100% { transform: scale(1); } }
+.tbar.blocked { box-shadow: 0 0 0 1px #2a4a6a, 0 0 10px rgba(120, 180, 255, .6); }
+.tbar.blocked i { background: linear-gradient(#e8f4ff, #8fb8e0 55%, #4a6a8e); }
+.tb-pips { position: absolute; left: 20px; top: calc(100% + 3px); display: flex; gap: 5px; align-items: center; }
+.tb-pips[hidden] { display: none; }
+.tbar:has(.tb-pips:not([hidden])) { margin-bottom: 15px; } /* room for the pips, so they never sit on the name */
+.tbar.small:has(.tb-pips:not([hidden])) { margin-bottom: 0; }
+.tb-pips i { position: static; display: block; width: 8px; height: 8px; background: #2a0c08; border: 1px solid #000; box-shadow: 0 0 0 1px #6a1a10; max-width: none; }
+.tb-pips .pk { transform: rotate(45deg); width: 7px; height: 7px; }
+.tb-pips .pm { clip-path: polygon(33% 0, 67% 0, 67% 33%, 100% 33%, 100% 67%, 67% 67%, 67% 100%, 33% 100%, 33% 67%, 0 67%, 0 33%, 33% 33%); width: 10px; height: 10px; border: 0; box-shadow: none; background: #3a1a14; }
+.tb-pips .pm.on { background: #7ef08a; }
+.tb-pips .pk.on { background: #ffe0c8; box-shadow: 0 0 0 1px #000, 0 0 5px rgba(255, 200, 150, .9); }
+.tb-pips.full .pk { box-shadow: 0 0 0 1px #000, 0 0 0 2px #ffe0c8; }
+.tbar.small .tb-pips { display: none; }
+@media (prefers-reduced-motion: reduce) { .tbar.drop b { animation: none; } }
 .overlay-msg { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; background: rgba(0,0,0,.55); z-index: 200; padding-inline: 16px; }
 .overlay-msg h3 { margin: 0; font: 24px/1.1 var(--display); color: var(--gold); text-shadow: 0 2px 3px #000; }
 .overlay-msg p { margin: 6px 0 0; font-weight: 700; text-shadow: 0 1px 2px #000; }

@@ -3680,6 +3680,7 @@
   };
   function partySay(m, text) {
     B.post(G.S, 'party', { name: m.name, cls: m.cls, id: m.bot.id }, text);
+    if (G.fight) emit('partySay', { m, text }); // the screen also shows it over the speaker (#179)
   }
   function memberOf(u) { return u.memberRef; }
 

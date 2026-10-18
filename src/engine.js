@@ -1148,6 +1148,8 @@
   E.answersOf = (u, ans) => (!u.cls ? [] : ans === 'step' ? ['step_back'] : D.CLASSES[u.cls].abilities.filter((id) => knows(u, id) && (ans === 'guard' ? D.ABILITIES[id].defensive : ans === 'mend' ? isMend(D.ABILITIES[id]) : D.ABILITIES[id].interrupt || D.ABILITIES[id].stun)));
   // a slam on the tank (#179): its size now, from what the team has done during the bar
   E.teleSize = (t) => Math.max(TELE.floor, (TELE.missOf.guard || TELE.miss) - (t.mended ? TELE.mend : 0) - TELE.kick * Math.min(TELE.kicks, t.kicks ? t.kicks.size : 0));
+  // the tank has a defensive up, or used one during the bar: the slam will be avoided (the screen turns its bar steel)
+  E.teleBlocked = (C, t) => { const v = C.units[t.victim]; return !!v && (t.done.has(v.uid) || v.auras.some((a) => D.ABILITIES[a.id] && D.ABILITIES[a.id].defensive)); };
   // can anyone in the group answer a slam (the tank's defensive, a mend, a kick)? A group with none takes the plain hit
   const teamAnswers = (C, t) => alive(C.allies).some((a) => (a.uid === t.victim && E.answersOf(a, 'guard').length) || (a.uid !== t.victim && (E.answersOf(a, 'mend').length || E.answersOf(a, 'cut').length)));
   // spec: { name, who: all|random|target|cast, victim, mult, school, ab, heal, text, cast }; key: what TELE.on names
@@ -1197,12 +1199,13 @@
     const t = m.tele; if (!t) return;
     if (t.who === 'cast') { ev(C, { type: 'tele', src: m.uid, what: 'cut', by: u.uid, name: t.name }); m.tele = null; }
     else if (t.who === 'target' && !t.kicks.has(u.uid) && t.kicks.size < TELE.kicks) { t.kicks.add(u.uid); ev(C, { type: 'tele', src: m.uid, what: 'kick', by: u.uid, name: t.name, size: E.teleSize(t) }); } // a kick weakens a slam, up to TELE.kicks
+    else if (t.who === 'target') ev(C, { type: 'tele', src: m.uid, what: 'kickfull', by: u.uid, name: t.name }); // a kick after the slam's kicks were full
   }
   function mendTele(C, v) {
-    for (const m of alive(foes(C, v))) { const t = m.tele; if (t && t.who === 'target' && t.victim === v.uid && !t.mended) { t.mended = true; ev(C, { type: 'tele', src: m.uid, what: 'mend', name: t.name, size: E.teleSize(t) }); } }
+    for (const m of alive(foes(C, v))) { const t = m.tele; if (t && t.who === 'target' && t.victim === v.uid && !t.mended) { t.mended = true; ev(C, { type: 'tele', src: m.uid, what: 'mend', tgt: v.uid, name: t.name, size: E.teleSize(t) }); } }
   }
   function answerTele(C, u, ans) {
-    for (const m of alive(foes(C, u))) { const t = m.tele; if (t && E.teleAnswer(t) === ans && (t.who === 'all' || t.victim === u.uid)) t.done.add(u.uid); }
+    for (const m of alive(foes(C, u))) { const t = m.tele; if (t && E.teleAnswer(t) === ans && (t.who === 'all' || t.victim === u.uid)) { t.done.add(u.uid); if (ans === 'guard') ev(C, { type: 'tele', src: m.uid, what: 'block', tgt: u.uid, name: t.name }); } }
   }
   // a bot answers by its skill (#179): once per telegraph it decides whether it will, then answers after its reaction
   // time; a cast needs one answer for the whole group, so each bot takes it on less often

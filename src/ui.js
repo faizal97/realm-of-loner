@@ -692,6 +692,28 @@
     sc.append(f);
     setTimeout(() => f.remove(), 1300);
   }
+  // speech bubbles (#179): what a unit says or does in a fight also shows over it, since the chat strip is easy to miss.
+  // A friend's above its nameplate when there is room; a foe's (or with no room) under it, over the sprite, so it never covers a red bar. One per unit.
+  const bubbles = {};
+  function bubble(uid, text, kind) {
+    const el = ui.spriteEls[uid], sc = els.scene; if (!el || !sc || !text) return false;
+    if (bubbles[uid]) bubbles[uid].remove();
+    const b = h('div', { class: 'bubble ' + kind }, text); sc.append(b);
+    const s = sc.getBoundingClientRect(), r = el.getBoundingClientRect(), np = el.querySelector('.np'), n = np ? np.getBoundingClientRect() : r;
+    const bars = [...el.querySelectorAll('.tbar:not([hidden])')].map((x) => x.getBoundingClientRect()); // a red bar sits above the nameplate, outside its box
+    const roof = Math.min(n.top, ...bars.map((x) => x.top)), floor = Math.max(n.bottom, ...bars.map((x) => x.bottom));
+    const w = b.offsetWidth, hgt = b.offsetHeight, cx = r.left - s.left + r.width / 2;
+    const left = Math.max(4, Math.min(s.width - w - 4, cx - w / 2));
+    const foe = G.fight && G.fight.units[uid] && G.fight.units[uid].side === 'enemy'; // a foe's red bar can appear above its nameplate at any moment: its bubbles go under
+    let top = foe ? -1 : roof - s.top - hgt - 7;
+    const hits = (y) => [...sc.querySelectorAll('.tbar:not([hidden])')].some((x) => { const q = x.getBoundingClientRect(); return q.left - s.left < left + w && q.right - s.left > left && q.top - s.top < y + hgt && q.bottom - s.top > y; }); // never over any red bar in the scene
+    if (top < 2 || hits(top)) { top = Math.min(s.height - hgt - 2, floor - s.top + 7); b.classList.add('below'); }
+    b.style.left = left + 'px'; b.style.top = top + 'px'; b.style.setProperty('--tail', Math.max(10, Math.min(w - 10, cx - left)) + 'px');
+    bubbles[uid] = b;
+    setTimeout(() => { b.remove(); if (bubbles[uid] === b) delete bubbles[uid]; }, Math.min(5000, 2200 + text.length * 45));
+    return true;
+  }
+  ui.bubbleFor = (member, text) => { const C = G.fight, u = C && C.allies.find((a) => a.memberRef === member); if (u) setTimeout(() => bubble(u.uid, text, 'party'), 60); };
   function flash(uid, cls, ms) {
     const el = ui.spriteEls[uid]; if (!el) return;
     el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
@@ -817,10 +839,14 @@
       // bosses (v10.8): a low gong before a special or a call for help, a roar when they frenzy
       if (S_ && e.type === 'emote' && C.units[e.uid] && C.units[e.uid].boss && C.units[e.uid].side === 'enemy') S_.play('warn', { gap: 1.2, vol: 0.7 });
       if (S_ && e.type === 'fx' && e.kind === 'enrage') S_.play('enrage', { gap: 1, vol: 0.8 });
-      if (e.type === 'tele' && e.what === 'start' && G.pUnit && E.teleFor(C, G.pUnit).some((x) => x.m.uid === e.src)) { if (S_) S_.play('warn', { gap: 0.5, vol: 1 }); teleCard(e.ans); } // a red bar you can answer (#179)
+      if (e.type === 'tele' && e.what === 'start' && G.pUnit && E.teleFor(C, G.pUnit).some((x) => x.m.uid === e.src)) { const mine = E.teleFor(C, G.pUnit).find((x) => x.m.uid === e.src); if (S_) S_.play('warn', { gap: 0.5, vol: 1 }); teleCard(mine.ans); } // a red bar you can answer (#179)
       if (e.type === 'tele' && e.what === 'dodge' && tgt && tgt.kind === 'player') fct(e.tgt, 'Avoided', 'small');
       if (e.type === 'tele' && e.what === 'cut') fct(e.src, 'Interrupted', 'small');
-      if (e.type === 'tele' && (e.what === 'kick' || e.what === 'mend')) fct(e.src, `${e.name} ${e.size}x`, 'small'); // the slam shrank
+      // a slam on the tank (#179): each answer says what it did, where it happened
+      if (e.type === 'tele' && e.what === 'kick') fct(e.by, `Kicked −${E.TELE.kick}x`, 'small');
+      if (e.type === 'tele' && e.what === 'mend') fct(e.tgt, `Guarded −${E.TELE.mend}x`, 'heal small');
+      if (e.type === 'tele' && e.what === 'block') fct(e.tgt, 'Blocked', 'small');
+      if (e.type === 'tele' && e.what === 'kickfull' && C.units[e.by] && C.units[e.by].kind === 'player') fct(e.by, 'Kicks full', 'small');
       if (e.type === 'dmg') {
         const school = e.school && e.school !== 'physical' ? e.school : '';
         const mine = src && src.kind === 'player';
@@ -845,8 +871,9 @@
         redraw = true;
       } else if (e.type === 'say') {
         B.post(G.S, 'monster', { name: e.name }, e.text);
+        bubble(e.uid, e.text, src && src.side === 'ally' ? 'party' : 'foe');
       } else if (e.type === 'emote') {
-        fct(null, e.text, 'small');
+        if (!bubble(e.uid, e.text, 'emote')) fct(null, e.text, 'small');
         B.post(G.S, 'monster', null, e.text);
       } else if (e.type === 'shift') {
         redraw = true; renderBar();
@@ -4899,7 +4926,8 @@
   }
   // telegraphs (#179): a boss's red bar over its head and in the target frame, with the answer's icon on its left (your
   // own interrupt or defensive, or Step Back); the bar fills as the cast runs, and lands when it is full
-  function teleBar(cls) { return h('div', { class: 'tbar' + (cls ? ' ' + cls : ''), hidden: true }, h('span', { class: 'tb-ic' }), h('i'), h('b')); }
+  // a slam on the tank (#179) also shows who has answered: a plus for the mend, two diamonds for the kicks; a steel bar once the tank's defensive is up
+  function teleBar(cls) { return h('div', { class: 'tbar' + (cls ? ' ' + cls : ''), hidden: true }, h('span', { class: 'tb-ic' }), h('i'), h('b'), h('span', { class: 'tb-pips', hidden: true }, h('i', { class: 'pm' }), h('i', { class: 'pk' }), h('i', { class: 'pk' }))); }
   function teleIconId(ans) {
     const u = G.pUnit, have = u ? E.answersOf(u, ans === 'kick' ? 'cut' : ans) : [];
     return have[0] || (ans === 'step' ? 'step_back' : ans === 'cut' || ans === 'kick' ? D.INTERRUPTS[G.S.player.cls] : 'shield_wall');
@@ -4909,21 +4937,32 @@
     const t = u && !u.dead && u.tele;
     if (!t) { if (!bar.hidden) { bar.hidden = true; bar.dataset.id = ''; } return; }
     if (bar.dataset.id != t.id) {
-      bar.dataset.id = t.id; bar.hidden = false;
+      bar.dataset.id = t.id; bar.hidden = false; bar.dataset.sz = ''; bar.classList.remove('drop'); // a new telegraph starts at its full size
       const mine = G.pUnit && E.teleFor(C, G.pUnit).find((x) => x.m === u); // your own answer's icon: a slam on the tank asks a healer for a mend, the others for a kick
       const ic = bar.querySelector('.tb-ic'); ic.innerHTML = ''; ic.append(img(abIcon(teleIconId(mine ? mine.ans : E.teleAnswer(t)))));
     }
-    const name = t.who === 'target' ? `${t.name} ${E.teleSize(t)}x` : t.name; // a slam shrinks as the team answers it
-    const nb = bar.querySelector('b'); if (nb.textContent !== name) nb.textContent = name;
+    const team = t.who === 'target', blocked = team && E.teleBlocked(C, t), size = team ? E.teleSize(t) : 0;
+    const name = blocked ? `${t.name}: blocked` : team ? `${t.name} ${size}x` : t.name; // a slam shrinks as the team answers it
+    const nb = bar.querySelector('b');
+    if (nb.textContent !== name) { nb.textContent = name; if (team && bar.dataset.sz && +bar.dataset.sz > size) { bar.classList.remove('drop'); void bar.offsetWidth; bar.classList.add('drop'); setTimeout(() => bar.classList.remove('drop'), 500); } }
+    bar.dataset.sz = size;
+    bar.classList.toggle('blocked', blocked);
+    if (team) bar.style.setProperty('--heat', String(Math.max(0, Math.min(1, (2.5 - size) / 2)))); // 0 at 2.5x (ember red) .. 1 at 0.5x (amber)
+    const pips = bar.querySelector('.tb-pips');
+    if (pips) {
+      pips.hidden = !team || blocked;
+      if (team) { pips.querySelector('.pm').classList.toggle('on', !!t.mended); pips.querySelectorAll('.pk').forEach((k, i) => k.classList.toggle('on', i < t.kicks.size)); pips.classList.toggle('full', t.kicks.size >= E.TELE.kicks); }
+    }
     bar.querySelector('i').style.width = Math.min(100, ((C.t - t.start) / (t.until - t.start)) * 100) + '%';
   }
   // the first red bar a character sees: what it is and what to press, once
   function teleCard(ans) {
-    const P = G.S.player; if (P.teleSeen) return;
-    P.teleSeen = 1; G.save();
+    const P = G.S.player, team = ans === 'mend' || ans === 'kick';
+    if (team ? P.teleSlamSeen : P.teleSeen) return;
+    if (team) P.teleSlamSeen = 1; else P.teleSeen = 1; G.save();
     const pic = img(abIcon(teleIconId(ans))); pic.classList.add('tip-pic');
-    const el = h('div', { class: 'tip-card' }, h('div', { class: 'tip-row' }, pic, h('div', { class: 'tip-t' }, h('b', { style: { color: '#ff7a52' } }, 'Red bar! '),
-      'A red bar is an attack you can answer. Press the glowing button before it fills.')),
+    const el = h('div', { class: 'tip-card' }, h('div', { class: 'tip-row' }, pic, h('div', { class: 'tip-t' }, h('b', { style: { color: '#ff7a52' } }, team ? 'Slam on your tank! ' : 'Red bar! '),
+      team ? 'Shield or heal the tank, or interrupt the boss, before the bar fills. Each answer makes the slam smaller.' : 'A red bar is an attack you can answer. Press the glowing button before it fills.')),
       h('div', { class: 'tip-b' }, h('button', { class: 'chip gold', onclick: () => el.remove() }, 'Got it')));
     (document.getElementById('app') || document.body).append(el);
     setTimeout(() => el.remove(), 14000);
@@ -5524,6 +5563,7 @@
     }, 60));
     G.on('questDone', (d) => { toast((d && d.text) || 'Quest complete', true); }); // a bounty brings its own line (#115)
     G.on('selfheal', (n) => fct('me', '+' + n, 'heal'));
+    G.on('partySay', (d) => ui.bubbleFor(d.m, d.text));
     G.on('xp', (d) => { if (G.pUnit && ui.spriteEls[G.pUnit.uid]) fct(G.pUnit.uid, '+' + d.amount + ' XP', 'xp'); xpFloat(d); });
     G.on('rollResult', (d) => { ui.rollQueue = ui.rollQueue || []; ui.rollQueue.push(d); if (!ui.rollCard) showRollCard(); });
   }
