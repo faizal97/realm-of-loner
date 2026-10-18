@@ -41,7 +41,7 @@
     sneed_shredder: { name: "Snork's Shredder", lvl: [19, 19], family: 'mechanical', boss: true, special: 'whirl', loot: ['buzzer_blade', 'gold_gloves', 'defias_boots'] },
     gilnid: { name: 'Gimble', lvl: [19, 19], family: 'humanoid', boss: true, special: 'molten', aggro: 'Anyone want to take a break? Well too bad! Get to work you oafs!', loot: ['smelting_pants', 'lavish_ring', 'defias_leggings'] },
     mr_smite: { name: 'Mr. Clobber', lvl: [20, 20], family: 'humanoid', boss: true, special: 'smite', aggro: "We're under attack! Avast, ye swabs! Repel the invaders!", loot: ['smites_hammer', 'thiefs_blade', 'emberstone_staff'] },
-    cookie: { name: 'Crumbs', lvl: [20, 20], family: 'murloc', boss: true, special: 'cook', aggro: 'Mrrglrrgl... blub!', loot: ['cookies_rod', 'cookies_tenderizer', 'corsair_shirt'] },
+    cookie: { name: 'Crumbs', lvl: [20, 20], family: 'murloc', boss: true, special: 'cook', healName: 'Hearty Meal', specialText: 'Crumbs reaches for his cooking!', aggro: 'Mrrglrrgl... blub!', loot: ['cookies_rod', 'cookies_tenderizer', 'corsair_shirt'] },
     vancleef: { name: 'Corvin Blackwell', lvl: [21, 21], family: 'humanoid', boss: true, special: 'vancleef', aggro: 'None may challenge the Brotherhood!', loot: ['cruel_barb', 'cape_brotherhood', 'defias_armor'], qdrops: [['vancleef_head', 1], ['unsent_letter', 1]] },
     blackguard: { name: 'Blackguard', lvl: [19, 19], family: 'humanoid', sprite: 'defias_pirate', drops: [] },
     young_goretusk: { name: 'Young Razorhog', lvl: [10, 11], family: 'beast', drops: [['boar_tusk', 0.4], ['ruined_pelt', 0.3]], qdrops: [['goretusk_liver', 0.55]] },

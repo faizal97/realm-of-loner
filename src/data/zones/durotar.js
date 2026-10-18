@@ -49,7 +49,7 @@
     oggleflint: { name: 'Skagg', lvl: [11, 11], family: 'humanoid', boss: true, special: 'slam', buster: { style: 'crush', name: 'Skagg Smash', text: 'Skagg lifts his club high!' }, aggro: 'Grrrr! Skagg smash!', loot: ['oggleflint_mace', 'bazzalan_belt'] },
     taragaman: { name: 'Bazzak the Hungerer', lvl: [12, 12], family: 'demon', boss: true, special: 'whirl', aggro: 'They call me the Hungerer. Soon you will see why!', loot: ['cursed_felblade', 'subterranean_cape'], qdrops: [['taragaman_heart', 1]] },
     jergosh: { name: 'Varrok the Invoker', lvl: [12, 12], family: 'humanoid', boss: true, special: 'molten', aggro: 'The Hollow Eye will burn you!', loot: ['robe_evocation', 'chanting_blade'] },
-    bazzalan: { name: 'Ulzan', lvl: [12, 12], family: 'demon', boss: true, special: 'cook', aggro: 'You dare trespass here?', loot: ['bazzalan_belt', 'chanting_blade', 'cursed_felblade'] },
+    bazzalan: { name: 'Ulzan', lvl: [12, 12], family: 'demon', boss: true, special: 'cook', healName: 'Fel Feast', specialText: 'Ulzan begins to feed on fel fire!', aggro: 'You dare trespass here?', loot: ['bazzalan_belt', 'chanting_blade', 'cursed_felblade'] },
   });
 
   // places

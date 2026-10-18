@@ -27,7 +27,7 @@
     rattlegore: { name: 'Bonecrunch', lvl: [58, 58], family: 'undead', boss: true, special: 'slam', specialText: 'Bonecrunch smashes the ground!', loot: ['rattlegore_legs', 'rattlegore_axe'] },
     ras_frostwhisper: { name: 'Morvish the Frozen', lvl: [59, 59], family: 'undead', boss: true, special: 'molten', specialText: 'Morvish the Frozen hurls a frost volley!', loot: ['ras_boots', 'ras_wand'], aggro: 'Your life is mine, mortal.' },
     instructor_malicia: { name: 'Instructor Grimsby', lvl: [59, 59], family: 'humanoid', boss: true, special: 'molten', specialText: 'Malicia hurls a shadow bolt!', loot: ['malicia_dagger', 'ras_boots'] },
-    lord_alexei_barov: { name: 'Lord Anton Varga', lvl: [59, 59], family: 'undead', boss: true, special: 'cook', specialText: 'Anton Varga drains your life to heal himself.', loot: ['malicia_dagger', 'rattlegore_legs'], qdrops: [['barov_deed', 1]] },
+    lord_alexei_barov: { name: 'Lord Anton Varga', lvl: [59, 59], family: 'undead', boss: true, special: 'cook', healName: 'Life Drain', specialText: 'Anton Varga begins to drain your life!', loot: ['malicia_dagger', 'rattlegore_legs'], qdrops: [['barov_deed', 1]] },
     darkmaster_gandling: { name: 'Headmaster Sallow', lvl: [60, 60], family: 'undead', boss: true, special: 'kelris', summon: 'risen_construct', specialText: 'Headmaster Sallow shadow-shifts you into a room of the risen!', loot: ['gandling_staff', 'gandling_robe', 'gandling_leather', 'gandling_plate'], qdrops: [['gandling_head', 1]], aggro: 'School is in session!' },
   });
 

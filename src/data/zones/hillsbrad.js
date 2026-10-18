@@ -61,7 +61,7 @@
     rethilgore: { name: 'Rotjaw', lvl: [27, 27], family: 'humanoid', boss: true, special: 'slam', loot: ['rethilgore_bracers', 'butcher_apron'], aggro: 'About time someone killed the wizard.' },
     razorclaw: { name: 'Cleaver the Butcher', lvl: [27, 27], family: 'humanoid', boss: true, special: 'slam', loot: ['butcher_cleaver', 'butcher_apron'], aggro: 'Fresh meat for the kitchens!' },
     baron_silverlaine: { name: 'Baron Ashcroft', lvl: [28, 28], family: 'undead', boss: true, loot: ['silverlaine_rapier', 'silverlaine_gloves'], aggro: 'Leave my halls at once!' },
-    commander_springvale: { name: 'Commander Ashdown', lvl: [28, 28], family: 'undead', boss: true, special: 'cook', specialText: 'Commander Ashdown heals himself with unholy light.', loot: ['springvale_hammer', 'springvale_boots'], qdrops: [['springvale_seal', 1]], aggro: 'Countless more will fall before my eyes!' },
+    commander_springvale: { name: 'Commander Ashdown', lvl: [28, 28], family: 'undead', boss: true, special: 'cook', healName: 'Unholy Light', specialText: 'Commander Ashdown calls on unholy light!', loot: ['springvale_hammer', 'springvale_boots'], qdrops: [['springvale_seal', 1]], aggro: 'Countless more will fall before my eyes!' },
     fenrus: { name: 'Grimwolf the Dream-Eater', lvl: [28, 28], family: 'beast', boss: true, loot: ['fenrus_pelt', 'fenrus_fang'] },
     arugal: { name: 'Archmage Cairn', lvl: [28, 28], family: 'humanoid', boss: true, special: 'arugal', loot: ['arugal_staff', 'arugal_robe', 'arugal_leggings', 'arugal_plate'], qdrops: [['arugal_head', 1]], aggro: 'You, too, shall serve!' },
   });

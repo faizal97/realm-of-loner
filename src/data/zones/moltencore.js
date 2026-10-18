@@ -55,7 +55,7 @@
     core_rager: { name: 'Core Rager', lvl: [60, 60], family: 'beast', hpMult: 0.6, dmgMult: 0.45, drops: [] },
     flamewaker_priest: { name: 'Ashbound Priest', ranged: 'fire', lvl: [60, 60], family: 'elemental', hpMult: 0.8, drops: [['gold_dust', 0.2]] },
     flamewaker_elite: { name: 'Ashbound Elite', lvl: [60, 60], family: 'elemental', hpMult: 0.8, dmgMult: 0.6, drops: [['gold_dust', 0.3]] },
-    flamewaker_healer: { name: 'Ashbound Healer', lvl: [60, 60], family: 'elemental', hpMult: 0.6, dmgMult: 0.5, special: 'cook', specialText: 'The Ashbound Healer knits its flames back together.', drops: [['gold_dust', 0.2]] },
+    flamewaker_healer: { name: 'Ashbound Healer', lvl: [60, 60], family: 'elemental', hpMult: 0.6, dmgMult: 0.5, special: 'cook', healName: 'Flame Knit', specialText: 'The Ashbound Healer begins to knit its flames back together!', drops: [['gold_dust', 0.2]] },
     son_of_flame: { name: 'Son of Flame', lvl: [60, 60], family: 'elemental', hpMult: 0.9, drops: [] },
     // bosses
     magmadar: { name: 'Cinderhound', lvl: [60, 60], family: 'beast', boss: true, special: 'slam', buster: { style: 'quick', name: 'Molten Jaws', text: 'Cinderhound bares its glowing jaws!', size: 2.5, floor: 2, brace: 1.5 }, specialText: 'Cinderhound sinks both jaws into you!', loot: ['magmadar_legs', 'magmadar_cloak', 'garr_bracers'] },

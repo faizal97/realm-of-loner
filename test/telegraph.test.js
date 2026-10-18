@@ -296,3 +296,16 @@ test('a dungeon slam is still blocked by the tank\'s defensive', () => {
   assert.strictEqual(evs(C, 'dodge').length, 1); assert.strictEqual(teleDmg(C, tank), 0);
   E.TELE.on.clear(); for (const k of ON) E.TELE.on.add(k);
 });
+
+test('each healing boss casts its own heal, warned in its own words, never another boss\'s', () => {
+  E.TELE.on.add('cook');
+  for (const [k, M] of Object.entries(D.MOBS).filter(([, M]) => M.special === 'cook')) {
+    assert.ok(M.healName, k + ' names its heal');
+    assert.ok(M.specialText && /Crumbs/.test(M.specialText) === (k === 'cookie'), k + ' warns in its own words');
+    const row = E.specialRows(E.mobUnit(k, M.lvl[0])).find((r) => r.tele === 'cut');
+    assert.strictEqual(row.name, M.healName, k);
+    assert.match(row.what, /Red bar first: an interrupt or a stun stops it/);
+  }
+  assert.ok(!/Fairbanks|Theka/.test(Object.values(D.MOBS).map((M) => M.specialText || '').join(' ')), 'no old names');
+  E.TELE.on.clear(); for (const k of ON) E.TELE.on.add(k);
+});

@@ -24,7 +24,7 @@
     razorfen_geomancer: { name: 'Thorn Warrens Geomancer', lvl: [29, 30], family: 'humanoid', drops: [['quilboar_tusk', 0.4], ['linen_cloth', 0.3]], qdrops: [['blueleaf_tuber', 0.3]] },
     kraul_bat: { name: 'Warrens Bat', fly: 7, lvl: [30, 31], family: 'beast', drops: [['ruined_pelt', 0.3]] },
     death_head_cultist: { name: 'Bone Mask Cultist', ranged: 'shadow', lvl: [30, 31], family: 'humanoid', drops: [['quilboar_tusk', 0.3], ['linen_cloth', 0.35]] },
-    aggem_thorncurse: { name: 'Hexer Brambletusk', lvl: [30, 30], family: 'humanoid', boss: true, special: 'cook', specialText: 'Hexer Brambletusk calls the thorns to mend his wounds.', loot: ['aggem_crown', 'aggem_staff'], aggro: 'The thorns will drink your blood!' },
+    aggem_thorncurse: { name: 'Hexer Brambletusk', lvl: [30, 30], family: 'humanoid', boss: true, special: 'cook', healName: 'Thorn Mending', specialText: 'Hexer Brambletusk calls the thorns to mend him!', loot: ['aggem_crown', 'aggem_staff'], aggro: 'The thorns will drink your blood!' },
     death_speaker_jargba: { name: 'Bone Speaker Harrok', lvl: [31, 31], family: 'humanoid', boss: true, special: 'molten', specialText: 'Bone Speaker Harrok hurls a bolt of death!', loot: ['jargba_robe', 'jargba_mantle'], qdrops: [['jargba_skull', 1]], aggro: 'Death comes for you!' },
     overlord_ramtusk: { name: 'Overlord Snarltusk', lvl: [31, 31], family: 'humanoid', boss: true, special: 'slam', loot: ['ramtusk_hammer', 'ramtusk_legs'], aggro: 'Thorn Warrens never falls!' },
     agathelos: { name: 'Rageback', lvl: [32, 32], family: 'beast', boss: true, special: 'hogger', specialText: 'Rageback charges!', loot: ['agathelos_hide', 'agathelos_tusk'] },

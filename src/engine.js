@@ -1059,8 +1059,8 @@
     const healRow = (every, first, x, hard) => out.push({ name: 'Heals itself', when: `Every ${every} sec (first at ${first} sec)`, what: `heals for ${Math.round(x * 100)}% of its health (${Math.round(u.maxHp * x)}).`, hard });
     if (S.mult) hitRow(S.every, SPECIAL_FIRST, S.mult, S.who, S.school, false);
     if (S.mult && teleOn(sp.kind)) { const bu = S.who === 'target' ? E.busterOf(u) : null; teleRow(out[out.length - 1], bu ? bu.name : SPECIAL_NAME[sp.kind], S.who === 'target' ? 'guard' : 'step', false, bu && bu.nums); }
-    if (S.heal && teleOn(sp.kind)) teleRow(out[out.length - 1], SPECIAL_NAME[sp.kind], 'cut', true);
     if (S.heal) healRow(S.every, SPECIAL_FIRST, S.heal, false);
+    if (S.heal && teleOn(sp.kind)) teleRow(out[out.length - 1], E.healName(u), 'cut', true); // after its row (it crashed before it)
     if (S.adds) {
       const byMob = {};
       for (const [at, key, n, lv] of S.adds) { const k = key || sp.summon || 'twilight_acolyte', id = k + ':' + n; (byMob[id] = byMob[id] || { k, n, lv, at: [] }).at.push(Math.round(at * 100) + '%'); }
@@ -1086,6 +1086,7 @@
     const nums = Object.assign({}, E.BUSTER[b.style || 'crush']); for (const k of Object.keys(TELE_KEY)) if (b[k] != null) nums[k] = b[k]; // a boss's own numbers win over its style's
     return { style: b.style || 'crush', nums, name: b.name || (lunge ? 'Lunge' : 'Crushing Slam'), own: b.text, text: b.text || `${u ? u.name : 'It'} ${lunge ? 'lunges' : 'slams the ground'}!` };
   };
+  E.healName = (u) => (u && D.MOBS[u.key] && D.MOBS[u.key].healName) || 'Hearty Meal'; // a healing boss's own cast (#179)
   const SPECIAL_NAME = { slam: 'Crushing Slam', hogger: 'Lunge', whirl: 'Whirling Blades', molten: 'Molten Splash', cook: 'Hearty Meal', arugal: 'Shadow Lance' }; // the casts' names, as mech() names them
   // a telegraphed mechanic's row (#179): its cast's name, and its answer
   E.TELE_ANSWER = { step: 'Step Back', guard: 'a defensive', cut: 'an interrupt or a stun' };
@@ -1327,7 +1328,7 @@
       if (a) mech(C, m, 'molten', { name: 'Molten Splash', who: 'random', victim: a.uid, mult: SPECIALS.molten.mult, school: 'fire', ab: 'molten', text: sp.text || `${m.name} splashes molten metal!` });
     } else if (sp.kind === 'cook') {
       sp.t = SPECIALS.cook.every;
-      mech(C, m, 'cook', { name: 'Hearty Meal', who: 'cast', heal: SPECIALS.cook.heal, text: sp.text || 'Crumbs eats some of his cooking.' });
+      mech(C, m, 'cook', { name: E.healName(m), who: 'cast', heal: SPECIALS.cook.heal, text: sp.text || `${m.name} begins to heal!` }); // each healer's own cast (D.MOBS[key].healName)
     }
   }
   function stomp(C, m, text) {
