@@ -1084,7 +1084,7 @@
   E.busterOf = (u) => {
     const b = (u && D.MOBS[u.key] && D.MOBS[u.key].buster) || {}, lunge = u && u.special && u.special.kind === 'hogger';
     const nums = Object.assign({}, E.BUSTER[b.style || 'crush']); for (const k of Object.keys(TELE_KEY)) if (b[k] != null) nums[k] = b[k]; // a boss's own numbers win over its style's
-    return { style: b.style || 'crush', nums, name: b.name || (lunge ? 'Lunge' : 'Crushing Slam'), text: b.text || `${u ? u.name : 'It'} ${lunge ? 'lunges' : 'slams the ground'}!` };
+    return { style: b.style || 'crush', nums, name: b.name || (lunge ? 'Lunge' : 'Crushing Slam'), own: b.text, text: b.text || `${u ? u.name : 'It'} ${lunge ? 'lunges' : 'slams the ground'}!` };
   };
   const SPECIAL_NAME = { slam: 'Crushing Slam', hogger: 'Lunge', whirl: 'Whirling Blades', molten: 'Molten Splash', cook: 'Hearty Meal', arugal: 'Shadow Lance' }; // the casts' names, as mech() names them
   // a telegraphed mechanic's row (#179): its cast's name, and its answer
@@ -1092,7 +1092,7 @@
   function teleRow(r, name, ans, heal, n) { // n: the slam's own numbers (its style and overrides), else TELE's
     if (name) r.name = name;
     r.tele = ans;
-    if (ans === 'guard') { const k = E.teleNum(n, 'kickCap'); r.what += ` Red bar first: the tank's defensive avoids it; a shield or quick heal on the tank takes ${E.teleNum(n, 'mend')}x off, ${k === 1 ? 'one interrupt or stun' : 'each interrupt or stun'} ${E.teleNum(n, 'kick')}x${k === 1 ? '' : ` (${k} at most)`}; unanswered it hits ${E.teleNum(n, 'size')}x.`; }
+    if (ans === 'guard') { const k = E.teleNum(n, 'kickCap'); r.what += ` Red bar first: the tank's defensive avoids it; a shield or quick heal on the tank takes ${E.teleNum(n, 'mend')}x off${k === 0 ? ' (it can\'t be interrupted)' : `, ${k === 1 ? 'one interrupt or stun' : 'each interrupt or stun'} ${E.teleNum(n, 'kick')}x${k === 1 ? '' : ` (${k} at most)`}`}; unanswered it hits ${E.teleNum(n, 'size')}x${E.teleNum(n, 'floor') >= 1 ? `, never under ${E.teleNum(n, 'floor')}x` : ''}.`; }
     else r.what += ` Red bar first: ${E.TELE_ANSWER[ans]} ${heal ? 'stops it' : 'avoids it'}; missed, it ${heal ? 'heals' : 'hits'} ${heal ? TELE.healMiss : TELE.missOf[ans] || TELE.miss}x.`;
   }
   const lc = (t) => t.charAt(0).toLowerCase() + t.slice(1), uc = (t) => t.charAt(0).toUpperCase() + t.slice(1);
@@ -1306,7 +1306,7 @@
     if (sp.kind === 'slam' || sp.kind === 'hogger') {
       const Ss = SPECIALS[sp.kind]; sp.t = Ss.every;
       const bu = E.busterOf(m);
-      if (tgt && !tgt.dead) mech(C, m, sp.kind, Object.assign({}, bu.nums, { name: bu.name, who: 'target', victim: tgt.uid, mult: Ss.mult, school: 'physical', ab: 'slam', text: sp.text || bu.text }));
+      if (tgt && !tgt.dead) mech(C, m, sp.kind, Object.assign({}, bu.nums, { name: bu.name, who: 'target', victim: tgt.uid, mult: Ss.mult, school: 'physical', ab: 'slam', text: bu.own || sp.text || bu.text })); // the boss's own warning, else its special's line
     } else if (sp.kind === 'whirl') {
       sp.t = SPECIALS.whirl.every;
       mech(C, m, 'whirl', { name: 'Whirling Blades', who: 'all', mult: SPECIALS.whirl.mult, school: 'physical', ab: 'whirl', text: sp.text || `${m.name === 'Big Chopper' ? 'Big Chopper' : 'The Shredder'} whirls its saw blades!` });

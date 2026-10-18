@@ -256,3 +256,20 @@ test('the slam\'s bar and boss card use the boss\'s style', () => {
   assert.deepStrictEqual([t.name, t.size, t.kickCap, t.until - t.start], ['Belly Flop', 3, 3, 3]);
   E.TELE.on.clear(); for (const k of ON) E.TELE.on.add(k);
 });
+
+test('raid slams: each boss its own, a full raid can\'t shrink them under 1x, and Trident Thrust can\'t be kicked', () => {
+  E.TELE.on.add('slam');
+  for (const k of ['magmadar', 'golemagg', 'commander_serathis', 'coralheart_colossus']) {
+    const b = E.busterOf(E.mobUnit(k, 60));
+    assert.ok(b.own && b.name !== 'Crushing Slam', k + ' has its own slam');
+    const t = Object.assign({ kicks: new Set([1, 2, 3, 4, 5]), mended: true }, b.nums);
+    assert.ok(E.teleSize(t) >= 1, k + ' never under 1x');
+  }
+  const row = E.specialRows(E.mobUnit('commander_serathis', 60)).find((r) => r.tele === 'guard');
+  assert.match(row.name + ': ' + row.what, /^Trident Thrust: .*takes 1\.5x off \(it can't be interrupted\); unanswered it hits 3x, never under 1x\.$/);
+  const { C, u, m } = slamFight('mage', 20); m.key = 'commander_serathis'; m.special = { kind: 'slam', t: 0 }; m.hardX = []; E.TELE.on.add('slam');
+  const t = startOf(C);
+  assert.strictEqual(t.name, 'Trident Thrust');
+  assert.deepStrictEqual(E.teleFor(C, u).map((x) => x.ans), [], 'a mage has no shield or heal, and the thrust can\'t be kicked');
+  E.TELE.on.clear(); for (const k of ON) E.TELE.on.add(k);
+});
