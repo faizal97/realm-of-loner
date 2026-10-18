@@ -1092,7 +1092,7 @@
   function teleRow(r, name, ans, heal, n) { // n: the slam's own numbers (its style and overrides), else TELE's
     if (name) r.name = name;
     r.tele = ans;
-    if (ans === 'guard') { const k = E.teleNum(n, 'kickCap'); r.what += ` Red bar first: the tank's defensive avoids it; a shield or quick heal on the tank takes ${E.teleNum(n, 'mend')}x off${k === 0 ? ' (it can\'t be interrupted)' : `, ${k === 1 ? 'one interrupt or stun' : 'each interrupt or stun'} ${E.teleNum(n, 'kick')}x${k === 1 ? '' : ` (${k} at most)`}`}; unanswered it hits ${E.teleNum(n, 'size')}x${E.teleNum(n, 'floor') >= 1 ? `, never under ${E.teleNum(n, 'floor')}x` : ''}.`; }
+    if (ans === 'guard') { const k = E.teleNum(n, 'kickCap'); r.what += ` Red bar first: the tank's defensive ${E.teleNum(n, 'brace') != null ? `takes ${E.teleNum(n, 'brace')}x off` : 'avoids it'}; a shield or quick heal on the tank takes ${E.teleNum(n, 'mend')}x off${k === 0 ? ' (it can\'t be interrupted)' : `, ${k === 1 ? 'one interrupt or stun' : 'each interrupt or stun'} ${E.teleNum(n, 'kick')}x${k === 1 ? '' : ` (${k} at most)`}`}; unanswered it hits ${E.teleNum(n, 'size')}x${E.teleNum(n, 'floor') >= 1 ? `, never under ${E.teleNum(n, 'floor')}x` : ''}.`; }
     else r.what += ` Red bar first: ${E.TELE_ANSWER[ans]} ${heal ? 'stops it' : 'avoids it'}; missed, it ${heal ? 'heals' : 'hits'} ${heal ? TELE.healMiss : TELE.missOf[ans] || TELE.miss}x.`;
   }
   const lc = (t) => t.charAt(0).toLowerCase() + t.slice(1), uc = (t) => t.charAt(0).toUpperCase() + t.slice(1);
@@ -1153,15 +1153,17 @@
   E.isMend = isMend;
   E.answersOf = (u, ans) => (!u.cls ? [] : ans === 'step' ? ['step_back'] : D.CLASSES[u.cls].abilities.filter((id) => knows(u, id) && (ans === 'guard' ? D.ABILITIES[id].defensive : ans === 'mend' ? isMend(D.ABILITIES[id]) : D.ABILITIES[id].interrupt || D.ABILITIES[id].stun)));
   // a slam on the tank (#179): its size now, from what the team has done during the bar
-  E.teleSize = (t) => Math.max(E.teleNum(t, 'floor'), E.teleNum(t, 'size') - (t.mended ? E.teleNum(t, 'mend') : 0) - E.teleNum(t, 'kick') * Math.min(E.teleNum(t, 'kickCap'), t.kicks ? t.kicks.size : 0));
+  E.teleSize = (t) => Math.max(E.teleNum(t, 'floor'), E.teleNum(t, 'size') - (t.mended ? E.teleNum(t, 'mend') : 0) - (t.braced ? t.brace : 0) - E.teleNum(t, 'kick') * Math.min(E.teleNum(t, 'kickCap'), t.kicks ? t.kicks.size : 0));
   // A tank buster's style (#179): each boss's slam has its own name (D.MOBS[key].buster: { style, name, text }) and one of
   // these styles' numbers. crush is TELE's own numbers. size: unanswered; mend: a shield or quick heal takes off; kick: each
-  // interrupt or stun takes off; kickCap: kicks that count; floor: never smaller; cast: the bar's length (sec).
+  // interrupt or stun takes off; kickCap: kicks that count; floor: never smaller; cast: the bar's length (sec); brace: set,
+  // the tank's defensive takes this much off instead of avoiding the slam (raid bosses: a full raid would avoid too many).
   E.BUSTER = { crush: {}, heavy: { size: 3, kickCap: 3, cast: 3 }, quick: { size: 2, kickCap: 1, cast: 1.5 } };
-  const TELE_KEY = { size: null, mend: 'mend', kick: 'kick', kickCap: 'kicks', floor: 'floor', cast: 'cast' };
+  const TELE_KEY = { size: null, mend: 'mend', kick: 'kick', kickCap: 'kicks', floor: 'floor', cast: 'cast', brace: null };
   E.teleNum = (t, k) => (t && t[k] != null ? t[k] : k === 'size' ? TELE.missOf.guard || TELE.miss : TELE[TELE_KEY[k]]);
   // the tank has a defensive up, or used one during the bar: the slam will be avoided (the screen turns its bar steel)
-  E.teleBlocked = (C, t) => { const v = C.units[t.victim]; return !!v && (t.done.has(v.uid) || v.auras.some((a) => D.ABILITIES[a.id] && D.ABILITIES[a.id].defensive)); };
+  const tankGuarded = (C, t) => { const v = C.units[t.victim]; return !!v && (t.done.has(v.uid) || v.auras.some((a) => D.ABILITIES[a.id] && D.ABILITIES[a.id].defensive)); };
+  E.teleBlocked = (C, t) => t.brace == null && tankGuarded(C, t); // a braced slam is never blocked, only made smaller
   // can anyone in the group answer a slam (the tank's defensive, a mend, a kick)? A group with none takes the plain hit
   const teamAnswers = (C, t) => alive(C.allies).some((a) => (a.uid === t.victim && E.answersOf(a, 'guard').length) || (a.uid !== t.victim && (E.answersOf(a, 'mend').length || E.answersOf(a, 'cut').length)));
   // spec: { name, who: all|random|target|cast, victim, mult, school, ab, heal, text, cast }; key: what TELE.on names
@@ -1179,7 +1181,8 @@
     for (const a of who) {
       let x = t.mult, missed = null;
       if (t.tele) {
-        if (t.done.has(a.uid) || (t.who === 'target' && a.auras.some((x2) => D.ABILITIES[x2.id] && D.ABILITIES[x2.id].defensive))) { ev(C, { type: 'tele', src: m.uid, what: 'dodge', tgt: a.uid, name: t.name }); continue; }
+        if (t.who === 'target' && t.brace != null) braceTele(C, m, t); // a defensive raised as it lands still braces
+        else if (t.done.has(a.uid) || (t.who === 'target' && a.auras.some((x2) => D.ABILITIES[x2.id] && D.ABILITIES[x2.id].defensive))) { ev(C, { type: 'tele', src: m.uid, what: 'dodge', tgt: a.uid, name: t.name }); continue; }
         if (t.who === 'target') { if (teamAnswers(C, t)) { const k = E.teleSize(t); if (k > 1) missed = 'guard'; x *= k; } }
         else if (E.answersOf(a, E.teleAnswer(t)).length) { missed = E.teleAnswer(t); x *= TELE.missOf[missed] || TELE.miss; }
       }
@@ -1203,9 +1206,16 @@
   function teleTick(C, m) {
     const t = m.tele;
     if (m.dead) { m.tele = null; return; }
+    if (t.who === 'target' && t.brace != null) braceTele(C, m, t); // the tank's defensive was already up
     if (C.t < t.until) return;
     m.tele = null; ev(C, { type: 'tele', src: m.uid, what: 'land', name: t.name });
     land(C, m, t);
+  }
+  // a braced slam (#179): the tank's defensive takes t.brace off, once; the screen shows it as the tank's pip
+  function braceTele(C, m, t, used) {
+    if (t.braced || (!used && !tankGuarded(C, t))) return;
+    t.braced = true; t.done.add(t.victim);
+    ev(C, { type: 'tele', src: m.uid, what: 'brace', tgt: t.victim, name: t.name, size: E.teleSize(t), off: t.brace });
   }
   function cutCast(C, u, m) {
     const t = m.tele; if (!t) return;
@@ -1217,7 +1227,7 @@
     for (const m of alive(foes(C, v))) { const t = m.tele; if (t && t.who === 'target' && t.victim === v.uid && !t.mended) { t.mended = true; ev(C, { type: 'tele', src: m.uid, what: 'mend', tgt: v.uid, name: t.name, size: E.teleSize(t), off: E.teleNum(t, 'mend') }); } }
   }
   function answerTele(C, u, ans) {
-    for (const m of alive(foes(C, u))) { const t = m.tele; if (t && E.teleAnswer(t) === ans && (t.who === 'all' || t.victim === u.uid)) { t.done.add(u.uid); if (ans === 'guard') ev(C, { type: 'tele', src: m.uid, what: 'block', tgt: u.uid, name: t.name }); } }
+    for (const m of alive(foes(C, u))) { const t = m.tele; if (t && E.teleAnswer(t) === ans && (t.who === 'all' || t.victim === u.uid)) { t.done.add(u.uid); if (ans === 'guard' && t.brace != null) braceTele(C, m, t, true); else if (ans === 'guard') ev(C, { type: 'tele', src: m.uid, what: 'block', tgt: u.uid, name: t.name }); } }
   }
   // a bot answers by its skill (#179): once per telegraph it decides whether it will, then answers after its reaction
   // time; a cast needs one answer for the whole group, so each bot takes it on less often

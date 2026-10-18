@@ -273,3 +273,26 @@ test('raid slams: each boss its own, a full raid can\'t shrink them under 1x, an
   assert.deepStrictEqual(E.teleFor(C, u).map((x) => x.ans), [], 'a mage has no shield or heal, and the thrust can\'t be kicked');
   E.TELE.on.clear(); for (const k of ON) E.TELE.on.add(k);
 });
+
+test('a raid slam is braced, not blocked: the tank\'s defensive takes 1.5x off and it still lands', () => {
+  const { C, m, tank } = slamFight('mage', 20); m.key = 'golemagg'; m.special = { kind: 'slam', t: 0 }; m.hardX = []; E.TELE.on.add('slam');
+  tank.auras.push({ id: 'shield_wall', until: 1e9 });
+  const t = startOf(C); E.tick(C, 0.1);
+  assert.ok(t.braced, 'braced'); assert.ok(!E.teleBlocked(C, t), 'never blocked');
+  assert.strictEqual(E.teleSize(t), 2, '3.5x - 1.5x');
+  tick(C, 4);
+  assert.strictEqual(evs(C, 'brace').length, 1); assert.strictEqual(evs(C, 'dodge').length, 0, 'not avoided');
+  assert.ok(teleDmg(C, tank) > 0, 'it landed on the tank');
+  const row = E.specialRows(E.mobUnit('golemagg', 60)).find((r) => r.tele === 'guard');
+  assert.match(row.what, /Red bar first: the tank's defensive takes 1\.5x off; a shield or quick heal/);
+  E.TELE.on.clear(); for (const k of ON) E.TELE.on.add(k);
+});
+
+test('a dungeon slam is still blocked by the tank\'s defensive', () => {
+  const { C, m, tank } = slamFight('mage', 20); m.key = 'oggleflint'; m.special = { kind: 'slam', t: 0 }; m.hardX = []; E.TELE.on.add('slam');
+  tank.auras.push({ id: 'shield_wall', until: 1e9 });
+  const t = startOf(C);
+  assert.ok(E.teleBlocked(C, t)); tick(C, 4);
+  assert.strictEqual(evs(C, 'dodge').length, 1); assert.strictEqual(teleDmg(C, tank), 0);
+  E.TELE.on.clear(); for (const k of ON) E.TELE.on.add(k);
+});

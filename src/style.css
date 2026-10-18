@@ -175,6 +175,8 @@ img { max-width: 100%; display: block; }
 .tb-pips .pk { transform: rotate(45deg); width: 7px; height: 7px; }
 .tb-pips .pm { clip-path: polygon(33% 0, 67% 0, 67% 33%, 100% 33%, 100% 67%, 67% 67%, 67% 100%, 33% 100%, 33% 67%, 0 67%, 0 33%, 33% 33%); width: 10px; height: 10px; border: 0; box-shadow: none; background: #3a1a14; }
 .tb-pips .pm.on { background: #7ef08a; }
+.tb-pips .pg { clip-path: polygon(0 0, 100% 0, 100% 55%, 50% 100%, 0 55%); width: 9px; height: 10px; border: 0; box-shadow: none; background: #3a1a14; } /* a raid tank's brace (#179) */
+.tb-pips .pg.on { background: #a8d0ff; }
 .tb-pips .pk.on { background: #ffe0c8; box-shadow: 0 0 0 1px #000, 0 0 5px rgba(255, 200, 150, .9); }
 .tb-pips.full .pk { box-shadow: 0 0 0 1px #000, 0 0 0 2px #ffe0c8; }
 .tbar.small .tb-pips { display: none; }
