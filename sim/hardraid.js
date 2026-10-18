@@ -19,6 +19,8 @@ if (process.env.HARD) { const [bh, bd, th, td] = process.env.HARD.split(',').map
 const ONLY_HARD = !!process.env.HARD;
 // TELE=x:baron_geddon,slam switches on telegraphs by kind ('x:<mob>' for a boss extra), as in sim/difficulty.js (#179)
 if (process.env.TELE) for (const k of process.env.TELE.split(',')) globalThis.E.TELE.on.add(k);
+// BUSTER=coralheart_colossus.floor=1 sets a boss's Hard slam numbers (buster.hard) for measuring
+if (process.env.BUSTER) for (const kv of process.env.BUSTER.split(',')) { const [km, v] = kv.split('='), [k, f] = km.split('.'), b = D.MOBS[k].buster; b.hard = Object.assign({}, b.hard, { [f]: +v }); }
 function run(hard, cls) {
   G.newGame({ name: 'Hr', cls, race: 'human' }); const S = G.S, P = S.player; P.level = 60; S.flags.warModeAsked = true;
   P.talents = G.autoTalents(cls, 'dps', 60, 0); P.role = 'dps'; gear(P);

@@ -1084,6 +1084,7 @@
   E.busterOf = (u) => {
     const b = (u && D.MOBS[u.key] && D.MOBS[u.key].buster) || {}, lunge = u && u.special && u.special.kind === 'hogger';
     const nums = Object.assign({}, E.BUSTER[b.style || 'crush']); for (const k of Object.keys(TELE_KEY)) if (b[k] != null) nums[k] = b[k]; // a boss's own numbers win over its style's
+    if (u && u.onHard && b.hard) for (const k of Object.keys(TELE_KEY)) if (b.hard[k] != null) nums[k] = b.hard[k]; // and on Hard, its Hard numbers (Hard bosses hit far harder)
     return { style: b.style || 'crush', nums, name: b.name || (lunge ? 'Lunge' : 'Crushing Slam'), own: b.text, text: b.text || `${u ? u.name : 'It'} ${lunge ? 'lunges' : 'slams the ground'}!` };
   };
   E.healName = (u) => (u && D.MOBS[u.key] && D.MOBS[u.key].healName) || 'Hearty Meal'; // a healing boss's own cast (#179)

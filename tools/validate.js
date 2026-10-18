@@ -40,6 +40,7 @@ for (const [k, m] of Object.entries(D.MOBS)) {
     if (!(m.special === 'slam' || m.special === 'hogger')) err(`mob ${k}: buster on a mob whose special is not slam or hogger`);
     if (m.buster.style && !BUSTER[m.buster.style]) err(`mob ${k}: buster style '${m.buster.style}' is not one of ${Object.keys(BUSTER).join(', ')}`);
     for (const f of ['size', 'mend', 'kick', 'kickCap', 'floor', 'cast', 'brace']) if (m.buster[f] != null && !(m.buster[f] >= 0)) err(`mob ${k}: buster ${f} must be a number`);
+    if (m.buster.hard) for (const f of Object.keys(m.buster.hard)) if (!['size', 'mend', 'kick', 'kickCap', 'floor', 'cast', 'brace'].includes(f) || !(m.buster.hard[f] >= 0)) err(`mob ${k}: buster hard.${f} must be one of the slam numbers`);
     if (m.buster.kickCap != null && !(Number.isInteger(m.buster.kickCap) && m.buster.kickCap <= 3)) err(`mob ${k}: buster kickCap must be 0-3 (the bar shows 3 diamonds)`);
   }
   for (const [id] of (m.drops || []).concat(m.qdrops || [])) if (!has('ITEMS', id)) err(`mob ${k}: drops unknown item '${id}'`);
