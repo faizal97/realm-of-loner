@@ -1143,7 +1143,7 @@
   // the tank's defensive against a hit on the target ('guard'), an interrupt or a stun against a heal ('cut'). Answered:
   // avoided. Missed: TELE.miss x the hit, but only for a unit that has the answer (one that doesn't know it yet takes the
   // hit as before). TELE.on lists the mechanics switched on (each measured before it was, sim/difficulty.js TELE=): a special's kind, 'x:<mob>' for a boss's extra, '*' for all.
-  const TELE = E.TELE = { on: new Set(['whirl', 'molten', 'arugal', 'slam', 'hogger', 'cook']), cast: 2.5, hardCast: 2, miss: 2.5, missOf: {}, healMiss: 1.5, mend: 1, kick: 0.5, kicks: 2, floor: 0.5 }; // missOf: a missed answer's size by answer ('step', 'guard'), when it differs from miss.
+  const TELE = E.TELE = { on: new Set(['whirl', 'molten', 'arugal', 'slam', 'hogger', 'cook', 'spell']), cast: 2.5, hardCast: 2, miss: 2.5, missOf: {}, healMiss: 1.5, mend: 1, kick: 0.5, kicks: 2, floor: 0.5 }; // missOf: a missed answer's size by answer ('step', 'guard'), when it differs from miss.
   // A hit on the tank ('guard') is the whole team's (#179): the tank's defensive avoids it; otherwise it starts at miss x, a
   // shield or quick heal on the tank during the bar takes `mend` x off, each interrupt or stun on the caster `kick` x (up
   // to `kicks` of them), never below `floor` x.

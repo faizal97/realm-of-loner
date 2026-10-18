@@ -157,7 +157,7 @@ test('the death recap names the telegraph and the answer that was missed', () =>
 });
 
 test('the kinds switched on in the game, each measured first (sim/difficulty.js TELE=)', () => {
-  assert.deepStrictEqual(ON, ['whirl', 'molten', 'arugal', 'slam', 'hogger', 'cook']);
+  assert.deepStrictEqual(ON, ['whirl', 'molten', 'arugal', 'slam', 'hogger', 'cook', 'spell']);
   E.TELE.on.clear(); for (const k of ON) E.TELE.on.add(k); // the earlier tests switched kinds on and off
   const u = E.mobUnit('taragaman', 20);
   assert.match(E.specialRows(u)[0].name + ': ' + E.specialRows(u)[0].what, /^Whirling Blades: .*Red bar first: Step Back avoids it/);
@@ -338,5 +338,5 @@ test('open-world casters cast a named spell from level 10, outside dungeons and 
     assert.strictEqual(E.spellOf(E.mobUnit(archer, 30)), null, 'an archer has no spell');
     assert.match(E.specialFacts(E.mobUnit('thistlefur_shaman', 25))[0], /Thorn Blast|interrupt or a stun stops it; missed, it hits 2x/);
   } finally { E.TELE.on.clear(); for (const k of was) E.TELE.on.add(k); }
-  assert.strictEqual(E.spellOf(E.mobUnit('thistlefur_shaman', 25)), null, 'switched off, no spell');
+  E.TELE.on.delete('spell'); assert.strictEqual(E.spellOf(E.mobUnit('thistlefur_shaman', 25)), null, 'switched off, no spell'); E.TELE.on.add('spell');
 });
