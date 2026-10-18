@@ -32,6 +32,9 @@ const ACTS = (process.env.ACTS ? process.env.ACTS.split(',') : Object.keys(D.ACT
 if (process.env.XMULT) for (const k of ACTS) { const o = D.DUNGEONS[D.ACTIVITIES[k].dungeon] || {}; for (const b in o.extra || {}) for (const x of o.extra[b]) if ((x.kind || 'adds') === 'hit') x.mult = +process.env.XMULT; }
 // TELE=whirl,molten switches on telegraphs by kind (a special's kind, 'x:<mob>' for a boss extra, '*' for all), as E.TELE.on (#179)
 if (process.env.TELE) for (const k of process.env.TELE.split(',')) globalThis.E.TELE.on.add(k);
+// TELE_MISS=guard:1.5 sets a missed answer's size by answer; TELE_DEF=shield_block makes abilities count as defensives (trying answers, #179)
+if (process.env.TELE_MISS) for (const kv of process.env.TELE_MISS.split(',')) { const [k, v] = kv.split(':'); globalThis.E.TELE.missOf[k] = +v; }
+if (process.env.TELE_DEF) for (const id of process.env.TELE_DEF.split(',')) D.ABILITIES[id].defensive = true;
 if (process.env.SCALE) { const [td, bd, th = 1, bh = 1] = process.env.SCALE.split(',').map(Number); for (const k of ACTS) { const o = D.ACTIVITIES[k].dungeon ? D.DUNGEONS[D.ACTIVITIES[k].dungeon] : D.ACTIVITIES[k]; o.trashMult = { hp: (o.trashMult || { hp: 1 }).hp * th, dmg: (o.trashMult || { dmg: 1 }).dmg * td }; o.bossMult = { hp: (o.bossMult || { hp: 1 }).hp * bh, dmg: (o.bossMult || { dmg: 1 }).dmg * bd }; } }
 if (PROFILE === 'masher') {
   const use = globalThis.E.use, one = {};

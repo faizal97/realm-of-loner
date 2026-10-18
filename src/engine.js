@@ -1085,7 +1085,7 @@
   function teleRow(r, name, ans, heal) {
     if (name) r.name = name;
     r.tele = ans;
-    r.what += ` Red bar first: ${E.TELE_ANSWER[ans]} ${heal ? 'stops it' : 'avoids it'}; missed, it ${heal ? 'heals' : 'hits'} ${heal ? TELE.healMiss : TELE.miss}x.`;
+    r.what += ` Red bar first: ${E.TELE_ANSWER[ans]} ${heal ? 'stops it' : 'avoids it'}; missed, it ${heal ? 'heals' : 'hits'} ${heal ? TELE.healMiss : TELE.missOf[ans] || TELE.miss}x.`;
   }
   const lc = (t) => t.charAt(0).toLowerCase() + t.slice(1), uc = (t) => t.charAt(0).toUpperCase() + t.slice(1);
   E.specialFacts = (u) => E.specialRows(u).map((r) => (r.hard ? 'Hard: ' + lc(r.when) : r.when) + ': ' + r.what);
@@ -1132,7 +1132,7 @@
   // the tank's defensive against a hit on the target ('guard'), an interrupt or a stun against a heal ('cut'). Answered:
   // avoided. Missed: TELE.miss x the hit, but only for a unit that has the answer (one that doesn't know it yet takes the
   // hit as before). TELE.on lists the mechanics switched on (each measured before it was, sim/difficulty.js TELE=): a special's kind, 'x:<mob>' for a boss's extra, '*' for all.
-  const TELE = E.TELE = { on: new Set(['whirl', 'molten', 'arugal']), cast: 2.5, hardCast: 2, miss: 2.5, healMiss: 1.5 };
+  const TELE = E.TELE = { on: new Set(['whirl', 'molten', 'arugal']), cast: 2.5, hardCast: 2, miss: 2.5, missOf: {}, healMiss: 1.5 }; // missOf: a missed answer's size by answer ('step', 'guard'), when it differs from miss
   let teleSeq = 0;
   const teleOn = (key, spec) => !!(spec && spec.on) || TELE.on.has('*') || TELE.on.has(key); // spec.on: switched on in the data (`tele: true` on a boss extra)
   E.teleAnswer = (t) => (t.who === 'cast' ? 'cut' : t.who === 'target' ? 'guard' : 'step');
@@ -1154,7 +1154,7 @@
       let x = t.mult, missed = null;
       if (t.tele) {
         if (t.done.has(a.uid) || (t.who === 'target' && a.auras.some((x2) => D.ABILITIES[x2.id] && D.ABILITIES[x2.id].defensive))) { ev(C, { type: 'tele', src: m.uid, what: 'dodge', tgt: a.uid, name: t.name }); continue; }
-        if (E.answersOf(a, E.teleAnswer(t)).length) { x *= TELE.miss; missed = E.teleAnswer(t); }
+        if (E.answersOf(a, E.teleAnswer(t)).length) { missed = E.teleAnswer(t); x *= TELE.missOf[missed] || TELE.miss; }
       }
       dealDamage(C, m, a, rnd(m.dmg[0], m.dmg[1]) * x, { school: t.school || 'physical', ab: t.ab, tele: t.tele ? t.name : undefined, teleMiss: missed });
     }
