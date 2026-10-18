@@ -35,6 +35,8 @@ if (process.env.XMULT) for (const k of ACTS) { const o = D.DUNGEONS[D.ACTIVITIES
 if (process.env.TELE) for (const k of process.env.TELE.split(',')) globalThis.E.TELE.on.add(k);
 // TELE_MISS=guard:1.5 sets a missed answer's size by answer; TELE_DEF=shield_block makes abilities count as defensives (trying answers, #179)
 if (process.env.TELE_MISS) for (const kv of process.env.TELE_MISS.split(',')) { const [k, v] = kv.split(':'); globalThis.E.TELE.missOf[k] = +v; }
+// BUSTER=golemagg.floor=2,golemagg.size=4 sets a boss's slam numbers for measuring (#179)
+if (process.env.BUSTER) for (const kv of process.env.BUSTER.split(',')) { const [km, v] = kv.split('='), [k, f] = km.split('.'); D.MOBS[k].buster = Object.assign({}, D.MOBS[k].buster, { [f]: +v }); }
 if (process.env.TELE_DEF) for (const id of process.env.TELE_DEF.split(',')) D.ABILITIES[id].defensive = true;
 if (process.env.SCALE) { const [td, bd, th = 1, bh = 1] = process.env.SCALE.split(',').map(Number); for (const k of ACTS) { const o = D.ACTIVITIES[k].dungeon ? D.DUNGEONS[D.ACTIVITIES[k].dungeon] : D.ACTIVITIES[k]; o.trashMult = { hp: (o.trashMult || { hp: 1 }).hp * th, dmg: (o.trashMult || { dmg: 1 }).dmg * td }; o.bossMult = { hp: (o.bossMult || { hp: 1 }).hp * bh, dmg: (o.bossMult || { dmg: 1 }).dmg * bd }; } }
 if (PROFILE === 'masher') {
