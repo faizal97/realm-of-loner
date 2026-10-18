@@ -12,6 +12,7 @@
 //   unchanged). Default: today's player (bot gear, skill 0.7). All four are done in the sim, with no engine hook.
 //   TELE=whirl switches on the telegraphs of that kind of mechanic (#179); TELE=* all of them.
 //   SCALE=1.2,1.2 multiplies the Normal trash and boss damage (and hp: SCALE=td,bd,th,bh) of the activities in ACTS.
+//   ONLY=golemagg fights only the pull with that mob, so one boss's mechanic is measured without the rest of the run's luck.
 //   HARD=1 queues a raid on Hard (needs a Normal clear first: the sim records one); JSON=1 prints the raw rows.
 //   Lanternwake's run (v10.13): ACTS=ev_snuffed_road DATE=2026-10-28T19:00 LVOFF=5|25|50 (levels 15, 35, 60).
 require('./_seed.js');
@@ -55,6 +56,7 @@ function clear(act, cls) {
   G.queueFor(act, HARD ? { hard: true } : undefined); if (!S.queue) return null; G.acceptPop(); if (!S.run) return null;
   if (PROFILE === 'baddraw') for (const m of S.group.members) if (m.bot) m.bot.skill = 0.2;
   const R = S.run, atts = []; let last = null, att = null, g = 0;
+  if (process.env.ONLY) { R.pulls = R.pulls.filter((p) => p.mobs.includes(process.env.ONLY)); if (!R.pulls.length) return null; } // one boss's pull alone (#179)
   const sample = (C) => {
     const al = C.allies.filter((u) => u.kind !== 'pet'); if (!al.length) return;
     let hp = 0, mx = 0, lo = 1; for (const u of al) { const h = u.dead ? 0 : Math.max(0, u.hp), f = h / u.maxHp; hp += h; mx += u.maxHp; if (f < lo) lo = f; }
