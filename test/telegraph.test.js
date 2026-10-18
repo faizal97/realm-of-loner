@@ -162,3 +162,61 @@ test('the kinds switched on in the game, each measured first (sim/difficulty.js 
   const u = E.mobUnit('taragaman', 20);
   assert.match(E.specialRows(u)[0].name + ': ' + E.specialRows(u)[0].what, /^Whirling Blades: .*Red bar first: Step Back avoids it/);
 });
+
+// a slam on the tank is the whole team's (#179): a bot tank holds the boss, the player helps
+function slamFight(cls, level) {
+  const SLAM = { kind: 'hit', who: 'target', mult: 1, name: 'Test Slam' };
+  const f = fight(level, cls, SLAM);
+  const tank = E.charUnit(G.botChar({ name: 'Tank', cls: 'warrior', race: 'human', level: 20, skill: 0.5 }), 'ally', 'bot', Date.now());
+  tank.bot = { skill: 0, react: 0.9 }; tank.role = 'tank'; tank.maxHp = tank.hp = 1e6; E.addAlly(f.C, tank);
+  f.m.threat[tank.uid] = 1e9; f.m.target = tank.uid;
+  return Object.assign(f, { tank });
+}
+
+test('a slam\'s size: 2.5x, a mend takes 1x off, a kick 0.5x, two kicks at most, never below 0.5x', () => {
+  const t = { kicks: new Set(), mended: false };
+  assert.strictEqual(E.teleSize(t), 2.5);
+  t.kicks.add(1); assert.strictEqual(E.teleSize(t), 2);
+  t.kicks.add(2); t.kicks.add(3); assert.strictEqual(E.teleSize(t), 1.5, 'a third kick does nothing');
+  t.mended = true; assert.strictEqual(E.teleSize(t), 0.5);
+  E.TELE.mend = 5; assert.strictEqual(E.teleSize(t), 0.5, 'the floor'); E.TELE.mend = 1;
+});
+
+test('a healer\'s shield on the tank during the bar takes 1x off the slam, and the healer\'s button is asked for', () => {
+  const { C, u, m, tank } = slamFight('priest', 20);
+  const t = startOf(C);
+  assert.strictEqual(t.victim, tank.uid);
+  assert.deepStrictEqual(E.teleFor(C, u).map((x) => x.ans), ['mend', 'kick']);
+  assert.ok(E.answersOf(u, 'mend').includes('pw_shield'));
+  assert.strictEqual(E.use(C, u, 'pw_shield', tank.uid), null);
+  assert.ok(t.mended);
+  assert.strictEqual(E.teleSize(t), 1.5);
+  assert.deepStrictEqual(E.teleFor(C, u).map((x) => x.ans), ['kick'], 'mended: only the kick is left');
+  m.tele.until = C.t; // land it now, before the shield's absorb is counted in: the size is what matters here
+});
+
+test('a kick weakens the slam but does not cancel it, once per player', () => {
+  const { C, u, m } = slamFight('mage', 20);
+  const t = startOf(C);
+  assert.strictEqual(E.use(C, u, 'spellbreak', m.uid), null);
+  assert.ok(m.tele, 'still coming');
+  assert.strictEqual(E.teleSize(t), 2);
+  assert.deepStrictEqual(E.teleFor(C, u), [], 'your kick is spent on this one');
+  assert.ok(evs(C, 'kick').length === 1);
+});
+
+test('the tank\'s defensive avoids the slam whatever the others did', () => {
+  const { C, u } = fight(40, 'warrior', { kind: 'hit', who: 'target', mult: 1, name: 'Test Slam' });
+  startOf(C);
+  assert.deepStrictEqual(E.teleFor(C, u).map((x) => x.ans), ['guard']);
+  E.use(C, u, 'shield_wall'); tick(C, 3);
+  assert.strictEqual(teleDmg(C, u), 0);
+});
+
+test('the boss card explains the team\'s answers to a slam', () => {
+  E.TELE.on.add('slam');
+  const k = Object.keys(D.MOBS).find((x) => D.MOBS[x].special === 'slam');
+  const r = E.specialRows(E.mobUnit(k, 30))[0];
+  assert.strictEqual(r.name, 'Crushing Slam');
+  assert.match(r.what, /the tank's defensive avoids it; a shield or quick heal on the tank takes 1x off, each interrupt or stun 0\.5x \(2 at most\); unanswered it hits 2\.5x\./);
+});

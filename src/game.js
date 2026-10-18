@@ -4068,7 +4068,7 @@
   const RECAP_S = 5, RECAP_LOW_MANA = 0.15;
   const RECAP_LABEL = { slam: 'slam', hogger: 'lunge', whirl: 'whirling blades', molten: 'molten metal' };
   const fmtN = (n) => Math.round(n).toLocaleString('en-US');
-  const RECAP_MISSED = { step: 'no Step Back', guard: 'no defensive', cut: 'not interrupted' }; // a telegraph in the last 5 s whose answer you had (#179)
+  const RECAP_MISSED = { step: 'no Step Back', guard: 'slam not guarded', cut: 'not interrupted' }; // a telegraph in the last 5 s whose answer you had (#179)
   const roleOf = (u) => u.role || (u.kind === 'player' ? G.role() : null);
   function blowName(C, e) {
     const by = C.units[e.src], who = by ? `${by.name}'s ` : '', special = by && by.kind === 'mob' && (RECAP_LABEL[e.ab] || /^hard_/.test(e.ab || ''));

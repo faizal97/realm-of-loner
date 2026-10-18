@@ -895,6 +895,7 @@
     if (ab.rage) u.res = Math.min(100, u.res + ab.rage);
     if ((ab.stun || ab.interrupt) && tgt && tgt.side !== u.side) cutCast(C, u, tgt); // an interrupt or a stun stops a telegraphed cast, a boss's too (#179)
     if (ab.defensive) answerTele(C, u, 'guard');
+    if (tgt && tgt.side === u.side && isMend(ab)) mendTele(C, tgt); // a shield or quick heal on the tank during a slam's red bar (#179)
     if (ab.stun && tgt && !tgt.boss) { tgt.stunUntil = C.t + ab.stun; if (ab.fear) { tgt.fleeUntil = C.t + ab.stun; tgt.fleeFrom = u.uid; } ev(C, { type: 'stun', tgt: tgt.uid, dur: ab.stun }); } // fear: it runs from you (Stage Fright, #251)
 
     const centre = ab.target === 'aoe' && aoeAtTarget(ab) ? (C.units[u.target] && !C.units[u.target].dead ? C.units[u.target] : u) : u;
@@ -1085,7 +1086,8 @@
   function teleRow(r, name, ans, heal) {
     if (name) r.name = name;
     r.tele = ans;
-    r.what += ` Red bar first: ${E.TELE_ANSWER[ans]} ${heal ? 'stops it' : 'avoids it'}; missed, it ${heal ? 'heals' : 'hits'} ${heal ? TELE.healMiss : TELE.missOf[ans] || TELE.miss}x.`;
+    if (ans === 'guard') r.what += ` Red bar first: the tank's defensive avoids it; a shield or quick heal on the tank takes ${TELE.mend}x off, each interrupt or stun ${TELE.kick}x (${TELE.kicks} at most); unanswered it hits ${TELE.missOf.guard || TELE.miss}x.`;
+    else r.what += ` Red bar first: ${E.TELE_ANSWER[ans]} ${heal ? 'stops it' : 'avoids it'}; missed, it ${heal ? 'heals' : 'hits'} ${heal ? TELE.healMiss : TELE.missOf[ans] || TELE.miss}x.`;
   }
   const lc = (t) => t.charAt(0).toLowerCase() + t.slice(1), uc = (t) => t.charAt(0).toUpperCase() + t.slice(1);
   E.specialFacts = (u) => E.specialRows(u).map((r) => (r.hard ? 'Hard: ' + lc(r.when) : r.when) + ': ' + r.what);
@@ -1132,17 +1134,27 @@
   // the tank's defensive against a hit on the target ('guard'), an interrupt or a stun against a heal ('cut'). Answered:
   // avoided. Missed: TELE.miss x the hit, but only for a unit that has the answer (one that doesn't know it yet takes the
   // hit as before). TELE.on lists the mechanics switched on (each measured before it was, sim/difficulty.js TELE=): a special's kind, 'x:<mob>' for a boss's extra, '*' for all.
-  const TELE = E.TELE = { on: new Set(['whirl', 'molten', 'arugal']), cast: 2.5, hardCast: 2, miss: 2.5, missOf: {}, healMiss: 1.5 }; // missOf: a missed answer's size by answer ('step', 'guard'), when it differs from miss
+  const TELE = E.TELE = { on: new Set(['whirl', 'molten', 'arugal']), cast: 2.5, hardCast: 2, miss: 2.5, missOf: {}, healMiss: 1.5, mend: 1, kick: 0.5, kicks: 2, floor: 0.5 }; // missOf: a missed answer's size by answer ('step', 'guard'), when it differs from miss.
+  // A hit on the tank ('guard') is the whole team's (#179): the tank's defensive avoids it; otherwise it starts at miss x, a
+  // shield or quick heal on the tank during the bar takes `mend` x off, each interrupt or stun on the caster `kick` x (up
+  // to `kicks` of them), never below `floor` x.
   let teleSeq = 0;
   const teleOn = (key, spec) => !!(spec && spec.on) || TELE.on.has('*') || TELE.on.has(key); // spec.on: switched on in the data (`tele: true` on a boss extra)
   E.teleAnswer = (t) => (t.who === 'cast' ? 'cut' : t.who === 'target' ? 'guard' : 'step');
   // the abilities a unit answers with (known ones, cooldown or not)
-  E.answersOf = (u, ans) => (!u.cls ? [] : ans === 'step' ? ['step_back'] : D.CLASSES[u.cls].abilities.filter((id) => knows(u, id) && (ans === 'guard' ? D.ABILITIES[id].defensive : D.ABILITIES[id].interrupt || D.ABILITIES[id].stun)));
+  // a shield or a quick heal (instant or 1.5 sec at most) on a friend: what guards the tank against a slam
+  const isMend = (a) => !!a && !!(a.shield || a.hot || a.heal) && (a.target === 'ally' || a.either) && (!a.cast || a.cast <= 1.5);
+  E.isMend = isMend;
+  E.answersOf = (u, ans) => (!u.cls ? [] : ans === 'step' ? ['step_back'] : D.CLASSES[u.cls].abilities.filter((id) => knows(u, id) && (ans === 'guard' ? D.ABILITIES[id].defensive : ans === 'mend' ? isMend(D.ABILITIES[id]) : D.ABILITIES[id].interrupt || D.ABILITIES[id].stun)));
+  // a slam on the tank (#179): its size now, from what the team has done during the bar
+  E.teleSize = (t) => Math.max(TELE.floor, (TELE.missOf.guard || TELE.miss) - (t.mended ? TELE.mend : 0) - TELE.kick * Math.min(TELE.kicks, t.kicks ? t.kicks.size : 0));
+  // can anyone in the group answer a slam (the tank's defensive, a mend, a kick)? A group with none takes the plain hit
+  const teamAnswers = (C, t) => alive(C.allies).some((a) => (a.uid === t.victim && E.answersOf(a, 'guard').length) || (a.uid !== t.victim && (E.answersOf(a, 'mend').length || E.answersOf(a, 'cut').length)));
   // spec: { name, who: all|random|target|cast, victim, mult, school, ab, heal, text, cast }; key: what TELE.on names
   function mech(C, m, key, spec) {
     if (!teleOn(key, spec)) { if (spec.text) ev(C, { type: 'emote', uid: m.uid, text: spec.text }); return land(C, m, spec); }
     if (m.tele) return; // one telegraph at a time: a mechanic due while another is cast is skipped this round
-    const t = m.tele = Object.assign({}, spec, { tele: true, id: ++teleSeq, start: C.t, until: C.t + (spec.cast || TELE.cast), done: new Set() });
+    const t = m.tele = Object.assign({}, spec, { tele: true, id: ++teleSeq, start: C.t, until: C.t + (spec.cast || TELE.cast), done: new Set(), kicks: new Set(), mended: false });
     if (t.text) ev(C, { type: 'emote', uid: m.uid, text: t.text });
     ev(C, { type: 'tele', src: m.uid, what: 'start', name: t.name, who: t.who, victim: t.victim || null, ans: E.teleAnswer(t), until: t.until });
   }
@@ -1154,15 +1166,26 @@
       let x = t.mult, missed = null;
       if (t.tele) {
         if (t.done.has(a.uid) || (t.who === 'target' && a.auras.some((x2) => D.ABILITIES[x2.id] && D.ABILITIES[x2.id].defensive))) { ev(C, { type: 'tele', src: m.uid, what: 'dodge', tgt: a.uid, name: t.name }); continue; }
-        if (E.answersOf(a, E.teleAnswer(t)).length) { missed = E.teleAnswer(t); x *= TELE.missOf[missed] || TELE.miss; }
+        if (t.who === 'target') { if (teamAnswers(C, t)) { const k = E.teleSize(t); if (k > 1) missed = 'guard'; x *= k; } }
+        else if (E.answersOf(a, E.teleAnswer(t)).length) { missed = E.teleAnswer(t); x *= TELE.missOf[missed] || TELE.miss; }
       }
       dealDamage(C, m, a, rnd(m.dmg[0], m.dmg[1]) * x, { school: t.school || 'physical', ab: t.ab, tele: t.tele ? t.name : undefined, teleMiss: missed });
     }
   }
   // the telegraphs a unit should answer now (the screen's red bars and glowing buttons): a cast anyone may cut, a group
   // hit, or a hit aimed at this unit, not yet answered by it
-  E.teleFor = (C, u) => alive(foes(C, u)).filter((m) => m.tele && !m.tele.done.has(u.uid) && (m.tele.who === 'cast' || m.tele.who === 'all' || m.tele.victim === u.uid || (m.tele.who === 'target' && m.target === u.uid)))
-    .map((m) => ({ m, t: m.tele, ans: E.teleAnswer(m.tele) }));
+  // hit, or a hit aimed at this unit, not yet answered by it; a slam on the tank asks the others for a mend or a kick
+  E.teleFor = (C, u) => {
+    const out = [];
+    for (const m of alive(foes(C, u))) {
+      const t = m.tele; if (!t || t.done.has(u.uid)) continue;
+      if (t.who === 'target' && t.victim !== u.uid) {
+        if (!t.mended && E.answersOf(u, 'mend').length) out.push({ m, t, ans: 'mend' });
+        if (!t.kicks.has(u.uid) && t.kicks.size < TELE.kicks && E.answersOf(u, 'cut').length) out.push({ m, t, ans: 'kick' });
+      } else if (t.who === 'cast' || t.who === 'all' || t.victim === u.uid) out.push({ m, t, ans: E.teleAnswer(t) });
+    }
+    return out;
+  };
   function teleTick(C, m) {
     const t = m.tele;
     if (m.dead) { m.tele = null; return; }
@@ -1171,7 +1194,12 @@
     land(C, m, t);
   }
   function cutCast(C, u, m) {
-    if (m.tele && m.tele.who === 'cast') { ev(C, { type: 'tele', src: m.uid, what: 'cut', by: u.uid, name: m.tele.name }); m.tele = null; }
+    const t = m.tele; if (!t) return;
+    if (t.who === 'cast') { ev(C, { type: 'tele', src: m.uid, what: 'cut', by: u.uid, name: t.name }); m.tele = null; }
+    else if (t.who === 'target' && !t.kicks.has(u.uid) && t.kicks.size < TELE.kicks) { t.kicks.add(u.uid); ev(C, { type: 'tele', src: m.uid, what: 'kick', by: u.uid, name: t.name, size: E.teleSize(t) }); } // a kick weakens a slam, up to TELE.kicks
+  }
+  function mendTele(C, v) {
+    for (const m of alive(foes(C, v))) { const t = m.tele; if (t && t.who === 'target' && t.victim === v.uid && !t.mended) { t.mended = true; ev(C, { type: 'tele', src: m.uid, what: 'mend', name: t.name, size: E.teleSize(t) }); } }
   }
   function answerTele(C, u, ans) {
     for (const m of alive(foes(C, u))) { const t = m.tele; if (t && E.teleAnswer(t) === ans && (t.who === 'all' || t.victim === u.uid)) t.done.add(u.uid); }
@@ -1182,12 +1210,15 @@
     if (!u.cls) return false;
     for (const m of alive(foes(C, u))) {
       const t = m.tele; if (!t || t.done.has(u.uid)) continue;
-      const ans = E.teleAnswer(t);
-      if (ans !== 'cut' && t.who !== 'all' && t.victim !== u.uid) continue;
+      // a slam on someone else: a healer guards the tank with a mend, the others kick (#179)
+      const ans = t.who === 'target' && t.victim !== u.uid ? ((u.role || D.CLASSES[u.cls].role) === 'healer' ? 'mend' : 'kick') : E.teleAnswer(t);
+      if (ans === 'mend' && t.mended) continue;
+      if (ans === 'kick' && (t.kicks.has(u.uid) || t.kicks.size >= TELE.kicks)) continue;
+      if (ans !== 'cut' && ans !== 'mend' && ans !== 'kick' && t.who !== 'all' && t.victim !== u.uid) continue;
       const d = u.teleMind || (u.teleMind = {}), s = b.skill == null ? 0.5 : b.skill;
-      if (d.id !== t.id) { d.id = t.id; d.go = Math.random() < (ans === 'cut' ? 0.6 * s : 0.7 + 0.3 * s); d.at = t.start + 0.4 + (1 - s) * 1.2; } // skill 0.6 (an average draw) answers 4 in 5
+      if (d.id !== t.id) { d.id = t.id; d.go = Math.random() < (ans === 'cut' || ans === 'kick' ? 0.6 * s : 0.7 + 0.3 * s); d.at = t.start + 0.4 + (1 - s) * 1.2; } // skill 0.6 (an average draw) answers 4 in 5
       if (!d.go || C.t < d.at || C.t >= t.until) continue;
-      for (const id of E.answersOf(u, ans)) if (E.use(C, u, id, ans === 'cut' ? m.uid : undefined) === null) { d.go = false; return true; }
+      for (const id of E.answersOf(u, ans === 'kick' ? 'cut' : ans)) if (E.use(C, u, id, ans === 'cut' || ans === 'kick' ? m.uid : ans === 'mend' ? t.victim : undefined) === null) { d.go = false; return true; }
     }
     return false;
   }

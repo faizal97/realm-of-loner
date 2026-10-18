@@ -820,6 +820,7 @@
       if (e.type === 'tele' && e.what === 'start' && G.pUnit && E.teleFor(C, G.pUnit).some((x) => x.m.uid === e.src)) { if (S_) S_.play('warn', { gap: 0.5, vol: 1 }); teleCard(e.ans); } // a red bar you can answer (#179)
       if (e.type === 'tele' && e.what === 'dodge' && tgt && tgt.kind === 'player') fct(e.tgt, 'Avoided', 'small');
       if (e.type === 'tele' && e.what === 'cut') fct(e.src, 'Interrupted', 'small');
+      if (e.type === 'tele' && (e.what === 'kick' || e.what === 'mend')) fct(e.src, `${e.name} ${e.size}x`, 'small'); // the slam shrank
       if (e.type === 'dmg') {
         const school = e.school && e.school !== 'physical' ? e.school : '';
         const mine = src && src.kind === 'player';
@@ -4900,8 +4901,8 @@
   // own interrupt or defensive, or Step Back); the bar fills as the cast runs, and lands when it is full
   function teleBar(cls) { return h('div', { class: 'tbar' + (cls ? ' ' + cls : ''), hidden: true }, h('span', { class: 'tb-ic' }), h('i'), h('b')); }
   function teleIconId(ans) {
-    const u = G.pUnit, have = u ? E.answersOf(u, ans) : [];
-    return have[0] || (ans === 'step' ? 'step_back' : ans === 'cut' ? D.INTERRUPTS[G.S.player.cls] : 'shield_wall');
+    const u = G.pUnit, have = u ? E.answersOf(u, ans === 'kick' ? 'cut' : ans) : [];
+    return have[0] || (ans === 'step' ? 'step_back' : ans === 'cut' || ans === 'kick' ? D.INTERRUPTS[G.S.player.cls] : 'shield_wall');
   }
   function paintTele(bar, C, u) {
     if (!bar) return;
@@ -4909,9 +4910,11 @@
     if (!t) { if (!bar.hidden) { bar.hidden = true; bar.dataset.id = ''; } return; }
     if (bar.dataset.id != t.id) {
       bar.dataset.id = t.id; bar.hidden = false;
-      const ic = bar.querySelector('.tb-ic'); ic.innerHTML = ''; ic.append(img(abIcon(teleIconId(E.teleAnswer(t)))));
-      bar.querySelector('b').textContent = t.name;
+      const mine = G.pUnit && E.teleFor(C, G.pUnit).find((x) => x.m === u); // your own answer's icon: a slam on the tank asks a healer for a mend, the others for a kick
+      const ic = bar.querySelector('.tb-ic'); ic.innerHTML = ''; ic.append(img(abIcon(teleIconId(mine ? mine.ans : E.teleAnswer(t)))));
     }
+    const name = t.who === 'target' ? `${t.name} ${E.teleSize(t)}x` : t.name; // a slam shrinks as the team answers it
+    const nb = bar.querySelector('b'); if (nb.textContent !== name) nb.textContent = name;
     bar.querySelector('i').style.width = Math.min(100, ((C.t - t.start) / (t.until - t.start)) * 100) + '%';
   }
   // the first red bar a character sees: what it is and what to press, once

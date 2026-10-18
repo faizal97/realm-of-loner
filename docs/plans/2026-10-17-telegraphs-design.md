@@ -17,7 +17,7 @@ and #215 showed no damage number can do that on its own.
   | whirl (a hit around the boss) | every member, alone | Step Back out of reach |
   | breath, group-wide hit | every member, alone | Step Back |
   | hit on a random member | that member | Step Back |
-  | slam on the target | the tank | a defensive |
+  | slam on the target | the whole team | the tank's defensive avoids it; otherwise see *Slams are the team's* |
   | self-heal, a spell cast | anyone | an interrupt or a stun |
   | adds, frenzy, time limit | — | not telegraphed (they stay as they are) |
 
@@ -28,6 +28,23 @@ and #215 showed no damage number can do that on its own.
   saving it is part of the skill.
 - **Bots answer by their skill**, with a reaction delay, as they play everything else. A weak draw misses more.
 - **Trials keep their numbers**; their telegraphs follow the same rules.
+
+## Slams are the team's
+
+A hit on the tank comes every 8 sec, and most tank defensives have long cooldowns (Shield Wall 180 sec, Divine
+Protection 300 sec). The tank alone can answer only a few slams, so the first rule made good groups wipe more
+(fitted, below 60: 14% -> 23% of runs with a wipe). The whole team answers a slam instead:
+
+| who | does, during the red bar | the slam |
+|---|---|---|
+| the tank | a defensive up when it lands | avoided |
+| anyone | a shield or a quick heal (instant, or a cast of 1.5 sec at most) on the tank | 1x off |
+| anyone | an interrupt or a stun on the boss, one each, 2 at most | 0.5x off each |
+| nobody | | 2.5x |
+
+It never goes below 0.5x unless the tank's defensive avoids it. The bar shows its size as it shrinks ("Crushing Slam
+1.5x"), each player's own answer glows (a healer's shield or quick heal, everyone's interrupt), and a group with no answer
+at all takes the plain hit. The numbers are starting points, set by the sims.
 
 ## Interrupts (every class, same rules)
 
