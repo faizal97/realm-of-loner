@@ -1095,7 +1095,7 @@
     if (name) r.name = name;
     r.tele = ans;
     if (ans === 'guard') { const k = E.teleNum(n, 'kickCap'); r.what += ` Red bar first: the tank's defensive ${E.teleNum(n, 'brace') != null ? `takes ${E.teleNum(n, 'brace')}x off` : 'avoids it'}; a shield or quick heal on the tank takes ${E.teleNum(n, 'mend')}x off${k === 0 ? ' (it can\'t be interrupted)' : `, ${k === 1 ? 'one interrupt or stun' : 'each interrupt or stun'} ${E.teleNum(n, 'kick')}x${k === 1 ? '' : ` (${k} at most)`}`}; unanswered it hits ${E.teleNum(n, 'size')}x${E.teleNum(n, 'floor') >= 1 ? `, never under ${E.teleNum(n, 'floor')}x` : ''}.`; }
-    else r.what += ` Red bar first: ${E.TELE_ANSWER[ans]} ${heal ? 'stops it' : 'avoids it'}; missed, it ${heal ? 'heals' : 'hits'} ${heal ? TELE.healMiss : TELE.missOf[ans] || TELE.miss}x.`;
+    else r.what += ` Red bar first: ${E.TELE_ANSWER[ans]} ${heal ? 'stops it' : 'avoids it'}; missed, it ${heal ? 'heals' : 'hits'} ${(n && n.miss) || (heal ? TELE.healMiss : TELE.missOf[ans] || TELE.miss)}x.`;
   }
   const lc = (t) => t.charAt(0).toLowerCase() + t.slice(1), uc = (t) => t.charAt(0).toUpperCase() + t.slice(1);
   E.specialFacts = (u) => E.specialRows(u).map((r) => (r.hard ? 'Hard: ' + lc(r.when) : r.when) + ': ' + r.what);
@@ -1119,12 +1119,12 @@
       if (x.t > 0) continue;
       x.t = x.every;
       const cast = x.hard !== false ? TELE.hardCast : TELE.cast, key = 'x:' + m.key; // Hard casts are quicker
-      if (kind === 'heal') { mech(C, m, key, { name: x.name || 'Mend', who: 'cast', heal: x.heal, text: x.text, cast, on: x.tele }); continue; }
+      if (kind === 'heal') { mech(C, m, key, { name: x.name || 'Mend', who: 'cast', heal: x.heal, text: x.text, cast, on: x.tele, miss: x.miss }); continue; }
       const allies = alive(C.allies), tgt = C.units[m.target];
       const v = x.who === 'all' ? null : x.who === 'random' ? allies[rint(0, allies.length - 1)] : tgt && !tgt.dead ? tgt : null;
       if (x.who !== 'all' && !v) continue;
       const S = x.school ? uc(x.school) : '';
-      mech(C, m, key, { name: x.name || (x.who === 'all' ? (S ? S + ' Wave' : 'Sweep') : x.who === 'random' ? (S ? S + ' Lash' : 'Lash') : 'Crushing Blow'), who: x.who === 'all' ? 'all' : x.who === 'random' ? 'random' : 'target', victim: v ? v.uid : null, mult: x.mult, school: x.school || 'physical', ab: 'hard_' + (x.school || 'hit'), text: x.text, cast, on: x.tele });
+      mech(C, m, key, { name: x.name || (x.who === 'all' ? (S ? S + ' Wave' : 'Sweep') : x.who === 'random' ? (S ? S + ' Lash' : 'Lash') : 'Crushing Blow'), who: x.who === 'all' ? 'all' : x.who === 'random' ? 'random' : 'target', victim: v ? v.uid : null, mult: x.mult, school: x.school || 'physical', ab: 'hard_' + (x.school || 'hit'), text: x.text, cast, on: x.tele, miss: x.miss }); // miss: its own size when missed (Hard hits harder)
     }
   }
   // a mob's name for more than one (v10.8): `plural` on the mob if set, else the head noun of "X of Y" takes the ending
@@ -1178,7 +1178,7 @@
     ev(C, { type: 'tele', src: m.uid, what: 'start', name: t.name, who: t.who, victim: t.victim || null, ans: E.teleAnswer(t), until: t.until });
   }
   function land(C, m, t) {
-    if (t.heal) { heal(C, m, m, m.maxHp * t.heal * (t.tele ? TELE.healMiss : 1), {}); return; }
+    if (t.heal) { heal(C, m, m, m.maxHp * t.heal * (t.tele ? t.miss || TELE.healMiss : 1), {}); return; }
     const tgt = C.units[m.target], v = t.victim && C.units[t.victim];
     const who = t.who === 'all' ? alive(C.allies) : [v || (t.who === 'target' ? tgt : null)].filter((a) => a && !a.dead);
     for (const a of who) {
@@ -1187,7 +1187,7 @@
         if (t.who === 'target' && t.brace != null) braceTele(C, m, t); // a defensive raised as it lands still braces
         else if (t.done.has(a.uid) || (t.who === 'target' && a.auras.some((x2) => D.ABILITIES[x2.id] && D.ABILITIES[x2.id].defensive))) { ev(C, { type: 'tele', src: m.uid, what: 'dodge', tgt: a.uid, name: t.name }); continue; }
         if (t.who === 'target') { if (teamAnswers(C, t)) { const k = E.teleSize(t); if (k > 1) missed = 'guard'; x *= k; } }
-        else if (E.answersOf(a, E.teleAnswer(t)).length) { missed = E.teleAnswer(t); x *= TELE.missOf[missed] || TELE.miss; }
+        else if (E.answersOf(a, E.teleAnswer(t)).length) { missed = E.teleAnswer(t); x *= t.miss || TELE.missOf[missed] || TELE.miss; }
       }
       dealDamage(C, m, a, rnd(m.dmg[0], m.dmg[1]) * x, { school: t.school || 'physical', ab: t.ab, tele: t.tele ? t.name : undefined, teleMiss: missed });
     }
