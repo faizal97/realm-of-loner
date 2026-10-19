@@ -69,11 +69,12 @@ let rel;
 const WEB_ONLY = flag('--web-only');
 if (NOTES_FILE && !flag('--dry')) die('--notes is for dry runs only');
 if (WEB_ONLY) { // a web-only patch (Faizal, 2026-10-04): a tag and its notes, no GitHub release, so the Android updater stays quiet
-  if (!tag || /-beta\./.test(tag)) die('--web-only needs a release tag, e.g. node tools/announce_discord.js v10.10.2 --web-only');
+  const beta = !!tag && /-beta\./.test(tag); // a quick web-only beta (--beta --web-only): the /beta/ page only, no APK
+  if (!tag || (beta && !flag('--beta'))) die('--web-only needs a tag, e.g. node tools/announce_discord.js v10.10.2 --web-only (a beta: add --beta)');
   const nf = NOTES_FILE || path.join(__dirname, '..', 'notes', tag + '.md');
   if (!fs.existsSync(nf)) die(`no ${nf}`);
   if (!NOTES_FILE) { try { execFileSync('git', ['rev-parse', '-q', '--verify', `refs/tags/${tag}`], { stdio: 'ignore' }); } catch (e) { if (!flag('--dry')) die(`no git tag ${tag}: tag and push it first`); } }
-  rel = { tagName: tag, name: DEVLOG_TITLE || tag, body: fs.readFileSync(nf, 'utf8'), url: '', isPrerelease: false, assets: [], webOnly: true }; // --title: the post's title (no release to read it from)
+  rel = { tagName: tag, name: DEVLOG_TITLE || tag, body: fs.readFileSync(nf, 'utf8'), url: '', isPrerelease: beta, assets: [], webOnly: true }; // --title: the post's title (no release to read it from)
 } else try { if (NOTES_FILE) throw new Error('notes file'); rel = JSON.parse(execFileSync('gh', ['release', 'view', ...(tag ? [tag] : []), '--json', 'tagName,name,body,url,isPrerelease,assets'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })); }
 catch (e) { // a dry run before the release exists: the notes file the release will use
   const nf = NOTES_FILE || (tag && path.join(__dirname, '..', 'notes', tag + '.md'));
@@ -90,7 +91,9 @@ const apk = rel.assets.find((a) => a.name.endsWith('.apk'));
 // betas are not on itch.io. A beta post gives both ways in (issue #27): the Android switch, and the browser /beta/ page on
 // GitHub Pages, the one GitHub link a post may carry (never the repo, its releases or its issues)
 const BETA_PAGE = 'https://faizal97.github.io/realm-of-loner/beta/';
-const links = rel.isPrerelease
+const links = rel.isPrerelease && rel.webOnly
+  ? `**Browser only:** [play the beta](${BETA_PAGE}). Characters from the itch.io browser version don't carry over to this page. This build has no Android update; Android beta testers get the next beta that has one.`
+  : rel.isPrerelease
   ? `**Android:** turn on Settings → Beta updates.\n**Browser:** [play the beta](${BETA_PAGE}). Characters from the itch.io browser version don't carry over to this page.`
   : rel.webOnly ? `[Play on itch.io](${ITCH}) in your browser: it's live there now. The Android app gets it with the next update.`
   : `[Play on itch.io](${ITCH}): in your browser or on Android`;
@@ -132,7 +135,7 @@ const payloads = parts.map((text, i) => ({
     url: rel.isPrerelease ? BETA_PAGE : ITCH,
     description: (i > 0 ? '*(continued)*\n' : '') + text + (i === N - 1 ? foot : '\n\n*(continued below)*'),
     color: rel.isPrerelease ? 0x6c8ebf : 0xc9a44c,
-    footer: { text: rel.isPrerelease ? 'Beta builds: Settings → Beta updates on Android, or the /beta/ page in a browser' : rel.webOnly ? 'In your browser now; the Android app gets it with the next update' : 'Update in game from Settings, or get it on itch.io' },
+    footer: { text: rel.isPrerelease && rel.webOnly ? 'Browser beta: the /beta/ page only' : rel.isPrerelease ? 'Beta builds: Settings → Beta updates on Android, or the /beta/ page in a browser' : rel.webOnly ? 'In your browser now; the Android app gets it with the next update' : 'Update in game from Settings, or get it on itch.io' },
   }],
 }));
 const msgLen = (p) => p.content.length + p.embeds.reduce((a, e) => a + e.title.length + e.description.length + e.footer.text.length, 0);
