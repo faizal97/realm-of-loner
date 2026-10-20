@@ -1,0 +1,74 @@
+# Close bounty-spam pull requests from outside contributors (#148)
+
+# A pull request from someone who is not a collaborator is closed and locked
+# (reason: spam) with one neutral comment when its metadata looks like a
+# bounty-bot submission: a bounty marker in the title or body (/claim, /opire,
+# /bounty, /reward, "Bounty Reward Wallet", an EVM wallet address), or no
+# change to any of the game's source directories. The matching rules live in
+# tools/spam_pr_guard.js and are unit-tested in test/spam-guard.test.js
+# (against #147, closed, and a real gameplay PR, left open).
+#
+# Safety: the job reads only the pull request's metadata through the API —
+# it never checks out, builds or runs the PR's code, and there are no
+# secrets. Collaborators are never touched (the collaborator check runs
+# first). A workflow_dispatch run is a dry run: it reports what it would
+# close, without closing anything.
+name: guard spam pull requests
+on:
+  pull_request:
+    types: [opened, edited, reopened]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Report what would be closed, without closing
+        type: boolean
+        default: true
+permissions:
+  pull-requests: write
+  issues: write
+concurrency:
+  group: guard-spam-pr-${{ github.event.pull_request.number || 'manual' }}
+  cancel-in-progress: false
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check the pull request's metadata against the spam rules
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+          ACTOR: ${{ github.event.pull_request.user.login || github.actor }}
+        run: |
+          set -eu
+          # collaborators are never touched, whatever the metadata says
+          if gh api "repos/$REPO/collaborators/$ACTOR" --silent; then
+            echo "$ACTOR is a collaborator; nothing to do"
+            exit 0
+          fi
+          meta=$(gh api "repos/$REPO/pulls/$PR")
+          title=$(printf '%s' "$meta" | jq -r '.title // ""')
+          body=$(printf '%s' "$meta" | jq -r '.body // ""')
+          files=$(gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[].filename')
+          # the rules run on the runner's own node (no checkout of the head)
+          reason=$(printf '%s\n' "$title" "$body" "$files" | node -e '
+            const fs = require("fs");
+            const { spamReason } = require("./tools/spam_pr_guard");
+            const chunks = fs.readFileSync(0, "utf8").split("\n");
+            const files = chunks.slice(2).filter((f) => f !== "");
+            console.log(spamReason(chunks[0], chunks[1], files) || "");
+          ')
+          if [ -z "$reason" ]; then
+            echo "no spam rule matched #$PR; leaving it open"
+            exit 0
+          fi
+          echo "spam rule matched #$PR: $reason"
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "dry run: would close and lock #$PR"
+            exit 0
+          fi
+          gh pr close "$PR" --repo "$REPO" --comment "Closing this automatically: it looks like a bounty or automated pull request rather than a change to the game. This project has no bounties. If this was a real contribution, please open an issue first."
+          gh api -X PUT "repos/$REPO/issues/$PR/lock" -f lock_reason=spam --silent
+          echo "closed and locked #$PR"
