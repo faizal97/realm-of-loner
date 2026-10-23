@@ -4841,10 +4841,21 @@
       h('p', { style: { color: 'var(--muted)' } }, `${rep.online} players online on ${D.REALM} right now.`),
       h('button', { class: 'btn wide', onclick: closeDialog }, 'Enter World')]);
   }
+  // who you'll play with (#189): one row each (name in its class colour, level and class, role); a raid's nine others are
+  // counted by role instead, with a row only for players you know, so the dialog stays the same size
+  function popMember(m) {
+    const P = G.S.player, known = SOC.isFriend(m.bot.id) ? 'Friend' : P.guild >= 0 && m.bot.guild === P.guild ? 'Guild' : '';
+    return h('div', { class: 'pop-m' }, h('span', { class: 'cls-' + m.cls }, m.name), h('small', null, `${m.level} ${D.CLASSES[m.cls].name}`),
+      known ? h('small', { class: 'pop-known' }, known) : null, h('b', null, m.role === 'tank' ? 'TANK' : m.role === 'healer' ? 'HEAL' : 'DPS'));
+  }
   function showPop(q) {
-    const A = D.ACTIVITIES[q.act];
-    showDialog([h('h3', null, 'Your group is ready'), h('p', null, A.name), h('p', { style: { color: 'var(--muted)' } }, `Role: ${G.role() === 'tank' ? 'Tank' : G.role() === 'healer' ? 'Healer' : 'Damage'}`),
-      h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { closeDialog(); closeSheet(); G.acceptPop(); renderAll(); } }, 'Enter'), h('button', { class: 'btn alt', onclick: () => { closeDialog(); G.declinePop(); renderAll(); } }, 'Decline'))]);
+    const A = D.ACTIVITIES[q.act], ms = q.group ? q.group.members : [];
+    const n = (r) => ms.filter((m) => m.role === r).length, P = G.S.player;
+    const knownOnly = ms.filter((m) => SOC.isFriend(m.bot.id) || (P.guild >= 0 && m.bot.guild === P.guild));
+    const who = !ms.length ? null : ms.length <= 4 ? h('div', { class: 'pop-group' }, ...ms.map(popMember))
+      : h('div', { class: 'pop-group' }, h('p', { class: 'pop-count' }, [[n('tank'), 'tank'], [n('healer'), 'healer'], [n('dps'), 'damage']].filter((x) => x[0]).map(([k, w]) => `${k} ${w}${k > 1 && w !== 'damage' ? 's' : ''}`).join(' · ')), ...knownOnly.map(popMember));
+    showDialog([h('h3', null, 'Your group is ready'), h('p', null, A.name), h('p', { style: { color: 'var(--muted)' } }, `Role: ${G.role() === 'tank' ? 'Tank' : G.role() === 'healer' ? 'Healer' : 'Damage'}`), who,
+      h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { if (G.fight) return G.acceptPop(); closeDialog(); closeSheet(); G.acceptPop(); renderAll(); } }, 'Enter'), h('button', { class: 'btn alt', onclick: () => { closeDialog(); G.declinePop(); renderAll(); } }, 'Decline'))]);
   }
   function showInvite(d) {
     showDialog([h('h3', null, 'Guild invitation'), h('p', null, `${d.from} invites you to join <${d.guildName}>.`), d.line ? h('p', { class: 'ai-note' }, `"${d.line}"`) : null,

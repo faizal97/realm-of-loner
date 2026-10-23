@@ -3527,7 +3527,8 @@
     for (const s of ['chest', 'legs', 'feet', 'hands', 'wrist', 'waist', 'back']) equip[s] = G.genGear(s, lvl, 2, s === 'back' ? {} : { atype: C.armorType });
     return { name: L.short, cls: L.cls, race: L.race, level: lvl, equip, role: L.role, hp: null, res: null, auras: [], bot: b, legend: key, talents: G.autoTalents(L.cls, L.role, lvl, 7) };
   };
-  function formGroup(act, opts) {
+  // picks the group without joining it (the queue pop shows it first, #189); formGroup joins it, or a picked one
+  function pickGroup(act, opts) {
     const S = G.S, A = D.ACTIVITIES[act];
     const roles = A.size === 3 ? ['tank', 'healer', 'dps'] : A.size === 10 ? ['tank', 'tank', 'healer', 'healer', 'healer', 'dps', 'dps', 'dps', 'dps', 'dps'] : ['tank', 'healer', 'dps', 'dps', 'dps'];
     const mine = G.role();
@@ -3557,17 +3558,22 @@
       lc.role = i >= 0 ? members[i].role : L.role; lc.syncLevel = cap; lc.cameo = key === guest;
       if (i >= 0) members[i] = lc; else members.push(lc);
     }
-    S.player.syncLevel = cap;
-    S.group = { act, members };
-    return S.group;
+    return { act, members, cap };
+  }
+  function formGroup(act, opts, picked) {
+    const g = picked || pickGroup(act, opts);
+    G.S.player.syncLevel = g.cap;
+    G.S.group = { act, members: g.members };
+    return G.S.group;
   }
   G.acceptPop = function () {
     const S = G.S;
     if (!S.queue) return;
-    const act = S.queue.act, trial = S.queue.trial || 0, hard = !!S.queue.hard; S.queue = null;
+    if (G.fight) return toast('Finish the fight first.'), false; // the pop stays open (#189)
+    const act = S.queue.act, trial = S.queue.trial || 0, hard = !!S.queue.hard, picked = S.queue.group; S.queue = null;
     stopActions();
     if (D.ACTIVITIES[act].bg) return startBg(act); // a battleground forms its own two teams
-    const grp = formGroup(act, trial ? { trial } : hard ? { hard } : undefined);
+    const grp = formGroup(act, trial ? { trial } : hard ? { hard } : undefined, picked); // the group the pop showed
     sys(`You have joined a group for ${D.ACTIVITIES[act].name}.`);
     grp.members.forEach((m, i) => { if (m.cameo || Math.random() < 0.7) S.pending.push({ at: now() + 800 + i * 1400 + Math.random() * 1500, bot: m.bot.id, ch: 'party', text: m.cameo ? G.legendLine(m.legend, 'hello') : B.partyLine(m.bot, 'hello'), fromName: m.name }); });
     startRun(act, trial, hard);
@@ -4179,7 +4185,11 @@
       const before = S.chat.length;
       B.chatTick(S, now());
       if (S.chat.length !== before) emit('chat');
-      if (S.queue && now() >= S.queue.popAt && !S.queue.popped) { S.queue.popped = true; emit('pop', S.queue); }
+      if (S.queue && now() >= S.queue.popAt && !S.queue.popped) {
+        const A = D.ACTIVITIES[S.queue.act]; S.queue.popped = true;
+        if (!A.bg) S.queue.group = pickGroup(S.queue.act, S.queue.trial ? { trial: S.queue.trial } : S.queue.hard ? { hard: true } : undefined); // who you'll play with (#189)
+        emit('pop', S.queue);
+      }
       // bots keep levelling while you play
       if (now() - S.lastSim > 60000) { const news = B.advance(S, now() - S.lastSim); for (const n of news) if (n.big) sys(n.text); }
     }
