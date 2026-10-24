@@ -640,6 +640,12 @@ img { max-width: 100%; display: block; }
 .mcard:active { background: rgba(110,80,40,.6); }
 .mcard.off { opacity: .45; }
 .mcard.quest-mob { border-color: #9a7a24; }
+.mcard-pack { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 52px; min-width: 0; } /* a whole row, so the name is never cut by the button (#211) */
+.mcard-pack > .mcard { border-right: 0; border-radius: 3px 0 0 3px; }
+.pack-btn { display: grid; place-content: center; gap: 0; min-height: 46px; background: rgba(40,28,14,.75); border: 1px solid #3b2d18; border-left: 1px dashed #5a4526; border-radius: 0 3px 3px 0; color: var(--text); }
+.pack-btn small { font: 600 11px/1 var(--body); color: var(--muted); }
+.pack-btn b { font: 700 15px/1.1 var(--body); color: #e8c45a; }
+.pack-btn:active { background: rgba(110,80,40,.6); }
 .mcard .ic { width: 30px; height: 30px; }
 .mcard .t { min-width: 0; }
 .mcard .t b { display: block; font: 700 12.5px/1.15 var(--body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

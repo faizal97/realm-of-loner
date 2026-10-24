@@ -1491,7 +1491,18 @@
   // #214: below creature level 20 the friend hits for 75% (Mage L15 3.8 -> 2.7 deaths an hour), and from 20 the pull is 12% (it was 14%;
   // Priest L25 2.7 -> 1.5, L30 2.4 -> 1.6). The creature you pulled is unchanged
   G.SOCIAL = { until: 20, low: 0.07, high: 0.12, after: [4, 7], lowDmg: 0.75 };
-  G.engage = function (mobId, useAbility) {
+  // Pack pulls (#211, a choice on the Fight card): creatures of a kind standing together come as one pull, each at half
+  // a lone one's health, damage and XP, so a pack pays off through area attacks and costs more when you have none.
+  // 2 below creature level 20, then 3; normal creatures only. sim/lvpace.js PACK=1 PACKS=2,3,3 PACKMULT=0.5,0.5 PACKXP=0.5.
+  G.PACK = { mult: 0.5, xp: 0.5, size: (lvl) => (lvl < 20 ? 2 : 3) };
+  G.packFor = function (mobId) {
+    const list = G.placeMobs(), m = list.find((x) => x.id === mobId);
+    if (!m || m.state !== 'alive' || m.id.startsWith('n_')) return null;
+    const M = D.MOBS[m.key]; if (M.elite || M.boss || M.named) return null;
+    const pack = [m].concat(list.filter((x) => x !== m && x.state === 'alive' && x.key === m.key && !x.id.startsWith('n_'))).slice(0, G.PACK.size(m.level));
+    return pack.length > 1 ? pack : null;
+  };
+  G.engage = function (mobId, useAbility, asPack) {
     const S = G.S, P = S.player;
     if (G.fight || P.travel || P.ghostUntil || S.run || S.bg) return;
     const list = G.placeMobs();
@@ -1499,10 +1510,13 @@
     if (!m) return;
     if (m.state === 'tapped') return toast(`Tapped by ${m.by}. You won't get anything from it.`);
     if (m.state !== 'alive') return;
+    const pack = asPack ? G.packFor(mobId) : null;
     stopActions();
     m.state = 'fight';
     const pu = E.charUnit(P, 'ally', 'player', now());
-    const mu = E.mobUnit(m.key, m.level);
+    const pm = pack ? { hp: G.PACK.mult, dmg: G.PACK.mult } : undefined;
+    const mu = E.mobUnit(m.key, m.level, pm);
+    if (pack) mu.packXp = G.PACK.xp;
     mu.inst = m;
     G.pUnit = pu;
     const pet = G.petUnitFor(pu);
@@ -1512,13 +1526,19 @@
     G.fight.kind = 'solo';
     healPickStart(G.fight); // #156
     G.fight.addAt = null;
+    if (pack) {
+      for (const o of pack.slice(1)) { o.state = 'fight'; const ou = E.mobUnit(o.key, o.level, pm); ou.inst = o; ou.packXp = G.PACK.xp; E.addEnemy(G.fight, ou); }
+      G.fight.opts.killOrder = 'spread'; // the group's bots spread their attacks, as a player who pulled a pack for area attacks
+      G.fight.packed = pack.length;
+      if (!G.S.flags.packSeen) { G.S.flags.packSeen = true; info(`Pack of ${pack.length}: each weaker, half XP.`); }
+    }
     // a party pulls more: each extra member usually brings another nearby creature into it
     const extra = [];
-    for (let i = 1; i < G.partySize(); i++) if (Math.random() < EXTRA_PULL) { const o = G.placeMobs().find((x) => x.state === 'alive' && x !== m && !extra.includes(x) && !x.id.startsWith('n_')); if (o) extra.push(o); }
+    if (!pack) for (let i = 1; i < G.partySize(); i++) if (Math.random() < EXTRA_PULL) { const o = G.placeMobs().find((x) => x.state === 'alive' && x !== m && !extra.includes(x) && !x.id.startsWith('n_')); if (o) extra.push(o); }
     for (const o of extra) { o.state = 'fight'; const ou = E.mobUnit(o.key, o.level); ou.inst = o; E.addEnemy(G.fight, ou); }
     // social pull: humanoids and murlocs sometimes bring a friend
     const M = D.MOBS[m.key];
-    if (!M.named && (M.family === 'humanoid' || M.family === 'murloc') && Math.random() < (m.level < G.SOCIAL.until ? G.SOCIAL.low : G.SOCIAL.high)) {
+    if (!pack && !M.named && (M.family === 'humanoid' || M.family === 'murloc') && Math.random() < (m.level < G.SOCIAL.until ? G.SOCIAL.low : G.SOCIAL.high)) {
       const friend = G.placeMobs().find((x) => x.state === 'alive' && x.key === m.key && x !== m);
       if (friend) { friend.state = 'fight'; G.fight.addAt = { t: rnd(G.SOCIAL.after[0], G.SOCIAL.after[1]), inst: friend }; }
     }
@@ -1742,7 +1762,7 @@
         }
         onKill(e.key); G.lwKill(e.level, e.elite); // Lanternwake candles
         if (e.inst && e.inst.id.startsWith('n_') && !D.MOBS[e.key].boss) G.epicDrop('rare', e.level); // a rare's purple chance (#141)
-        G.gainXp(Math.round(G.xpForKill(e.level, e.elite) * share), true);
+        G.gainXp(Math.round(G.xpForKill(e.level, e.elite) * share * (e.packXp || 1)), true); // a pack creature: half (#211)
         const l = rollLoot(e.key, e.level, 1 / size);
         if (size > 1) {
           // gear goes to whoever wins the roll; everything else is yours

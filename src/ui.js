@@ -1162,13 +1162,18 @@
     if (foe) grid.append(h('button', { class: 'mcard foe-card', onclick: () => confirmAttack(foe) },
       h('div', { class: 'ic mob' }, img(art('portrait', looks(foe)))),
       h('div', { class: 't' }, h('b', null, h('span', { style: { color: conColor(foe.level) } }, foe.level + ' '), foe.name), h('small', { style: { color: '#ff6a5a' } }, `Enemy ${D.CLASSES[foe.cls].name}`))));
+    const packShown = new Set(); // one pack button for each kind (#211), on its first card
     for (const m of mobs.slice().sort((a, c) => rankMob(a) - rankMob(c)).slice(0, 12)) {
       const M = D.MOBS[m.key];
       const alive = m.state === 'alive';
       const st = m.state === 'tapped' ? `Fighting ${m.by}` : m.state === 'dead' ? 'Respawning' : m.state === 'fight' ? 'In combat' : (M.elite ? 'Elite' : M.named ? 'Rare' : 'Attack');
-      grid.append(h('button', { class: 'mcard' + (alive ? '' : ' off') + (needKeys.has(m.key) ? ' quest-mob' : ''), 'data-mob': m.id, onclick: () => G.engage(m.id) },
+      const pack = alive && !packShown.has(m.key) ? G.packFor(m.id) : null;
+      const card = h('button', { class: 'mcard' + (alive ? '' : ' off') + (needKeys.has(m.key) ? ' quest-mob' : ''), 'data-mob': m.id, onclick: () => G.engage(m.id) },
         h('div', { class: 'ic mob' }, img(mobArt(m.key))),
-        h('div', { class: 't' }, h('b', null, h('span', { style: { color: conColor(m.level) } }, (M.elite ? m.level + '+' : m.level) + ' '), M.name), h('small', { class: m.state === 'tapped' ? 'cls-' + m.byCls : '' }, (needKeys.has(m.key) ? '◆ ' : '') + st))));
+        h('div', { class: 't' }, h('b', null, h('span', { style: { color: conColor(m.level) } }, (M.elite ? m.level + '+' : m.level) + ' '), M.name), h('small', { class: m.state === 'tapped' ? 'cls-' + m.byCls : '' }, (needKeys.has(m.key) ? '◆ ' : '') + st)));
+      if (!pack) { grid.append(card); continue; }
+      packShown.add(m.key); // tapping the card pulls one; the pack is its own button, so it is never pulled by accident
+      grid.append(h('div', { class: 'mcard-pack' }, card, h('button', { class: 'pack-btn', 'data-pack': m.id, 'aria-label': `Pull the group: ${pack.length} ${M.name}`, onclick: () => G.engage(m.id, null, true) }, h('small', null, 'Pull'), h('b', { class: 'tnum' }, pack.length))));
     }
     b.append(grid);
     // a rare hunt that isn't up here (#43): what it is and when it was last seen, never when it's next due
