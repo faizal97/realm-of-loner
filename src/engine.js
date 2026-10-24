@@ -1588,12 +1588,12 @@
         if (low2 >= 3 && has('grand_finale') && try_('grand_finale')) return;
         if (low2 >= 2 && has('chorus_grove') && try_('chorus_grove')) return;
         if (hurt >= 3 && has('encore') && try_('encore')) return;
-        if (has('song_of_rest') && (hurt >= 1 || E.songOf(u, 'song_of_rest')) && botSong(C, u, b, 'song_of_rest', null, try_, low2 >= 2, 'dirge')) return; // the song on the beat (#250); its Finale when two are low; it takes Dirge's slot (#267)
+        if (has('song_of_rest') && (hurt >= Math.min(3, allies.length) || E.songOf(u, 'song_of_rest')) && botSong(C, u, b, 'song_of_rest', null, try_, low2 >= 2, 'dirge')) return; // the song on the beat (#250); its Finale when two are low; it takes Dirge's slot (#267). Started when 3 are hurt (or all of a smaller group): in a dungeon one hurt ally is the tank, and the song mostly overhealed and ran the bot out of mana (#277)
         if (low && low.hp / low.maxHp < 0.4 && has('crescendo') && low.hp / low.maxHp > 0.2 && try_('crescendo', low)) return;
         if (low && low.hp / low.maxHp < thr && try_('soothing_chord', low)) return;
         if (tank && tank.hp / tank.maxHp < 0.9 && has('counterpoint') && !auraOf(tank, 'counterpoint') && try_('counterpoint', tank)) return;
         if (tank && tank.hp / tank.maxHp < 0.85 && has('verse_of_mending') && !auraOf(tank, 'verse_of_mending') && try_('verse_of_mending', tank)) return;
-        if (has('marching_song') && botSong(C, u, b, 'marching_song', null, try_, hurt === 0 && en.some((e) => e.boss))) return; // the second song (#251)
+        if (has('marching_song') && u.res / u.maxRes > 0.7 && botSong(C, u, b, 'marching_song', null, try_, hurt === 0 && en.some((e) => e.boss))) return; // the second song (#251), only with mana to spare (#277)
         if (has('cleansing_verse')) { const sick = allies.find((a) => a.auras.some((x) => x.dot != null && C.units[x.src] && C.units[x.src].side !== a.side)); if (sick && Math.random() < 0.5 * (b.skill || 0.5) && try_('cleansing_verse', sick)) return; }
         if (has('intermission') && u.res / u.maxRes < 0.35 && try_('intermission')) return;
         for (const s of ['hearthsong', 'anthem_of_stone']) if (has(s) && !auraOf(u, s) && try_(s)) return;
