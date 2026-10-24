@@ -85,7 +85,7 @@
     extra: { wickless_knight: [gallop, wisps(0.66, 2, false), wisps(0.33, 2, false), midnight(100, false)] },
     hardExtra: { wickless_knight: [Object.assign({}, gallop, { every: 14, hard: true }), wisps(0.7, 2, true), wisps(0.45, 2, true), wisps(0.2, 2, true), midnight(90, true)] },
     pulls: [
-      { scene: 'snuffed_road', label: 'Lantern-wisps', mobs: ['lw_wisp', 'lw_wisp', 'lw_wisp'] },
+      { scene: 'snuffed_road', label: 'Lantern-Wisps', mobs: ['lw_wisp', 'lw_wisp', 'lw_wisp'] },
       { scene: 'snuffed_road', label: 'The Wickless Knight', mobs: ['wickless_knight'], boss: true },
     ],
   };
