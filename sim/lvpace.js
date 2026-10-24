@@ -25,6 +25,9 @@ const SKILL = +(process.env.SKILL || 0.8), UNDERGEAR = +(process.env.UNDERGEAR |
 // them); PACKAI=focus keeps the usual order (area attacks from 3). Other classes pull one as now. KILLS=creatures counts
 // every creature killed (a fight with a social pull is 2 kills) instead of one a fight; deaths a kill follow it. FIGHTS=1
 // adds each class's fights by size (creatures in it at any point) and the deaths in them.
+// PACKMULT=0.6,0.6 (#211): every creature in a pulled pack (the first one too) has that share of a lone one's health and
+// damage, the same XP; a lone pull is unchanged.
+const PACKMULT = (process.env.PACKMULT || '1,1').split(',').map(Number), PACKXP = +(process.env.PACKXP || 1); // PACKXP=0.6: a pack fight's XP at that share
 const PACK = !!process.env.PACK, PACKS = (process.env.PACKS || '2,3,4').split(',').map(Number), PACKAI = process.env.PACKAI || 'spread', KILLC = process.env.KILLS === 'creatures', FIGHTS = !!process.env.FIGHTS;
 const packSize = (cls, L) => (Object.values(D.ABILITIES).some((a) => a.cls === cls && a.target === 'aoe' && a.dmg && (a.lvl || 1) <= L) ? PACKS[L < 20 ? 0 : L < 40 ? 1 : 2] : 1);
 const BAND = 20; // game designer, #4: within ±20% of the class average (was ±15%), at most 2 deaths an hour
@@ -64,7 +67,7 @@ function hour(cls, L) {
   while (t < end) {
     if (food && G.countItem(food.id) < 5) G.addItem(G.copyItem(food.id), 20); if (drink && G.countItem(drink.id) < 5) G.addItem(G.copyItem(drink.id), 20);
     if (P.ghostUntil) { tm.dead += 1; step(1); continue; }
-    if (G.fight) { tm.fight += 0.1; if (G.pUnit && G.pUnit.kind === 'player') { G.pUnit.kind = 'bot'; G.pUnit.bot = { skill: SKILL, react: SKILL === 0.8 ? 0.4 : 0.9 - 0.6 * SKILL }; G.pUnit.role = 'dps'; } const lv0 = P.level, x0 = P.xp, Cf = G.fight; maxN = Math.max(maxN, Cf.enemies.length); step(0.1); if (!G.fight) { const died = !!P.ghostUntil, dead = Cf.enemies.filter((e) => e.dead || e.hp <= 0).length; if (died) deaths++; if (KILLC) kills += dead; else if (!died) kills++; const z = size[maxN] = size[maxN] || { n: 0, d: 0 }; z.n++; if (died) z.d++; maxN = 0; xp += P.xp - x0; P.level = L; P.xp = 0; } continue; }
+    if (G.fight) { tm.fight += 0.1; if (G.pUnit && G.pUnit.kind === 'player') { G.pUnit.kind = 'bot'; G.pUnit.bot = { skill: SKILL, react: SKILL === 0.8 ? 0.4 : 0.9 - 0.6 * SKILL }; G.pUnit.role = 'dps'; } const lv0 = P.level, x0 = P.xp, Cf = G.fight; maxN = Math.max(maxN, Cf.enemies.length); step(0.1); if (!G.fight) { const died = !!P.ghostUntil, dead = Cf.enemies.filter((e) => e.dead || e.hp <= 0).length; if (died) deaths++; if (KILLC) kills += dead; else if (!died) kills++; const z = size[maxN] = size[maxN] || { n: 0, d: 0 }; z.n++; if (died) z.d++; maxN = 0; xp += (P.xp - x0) * (Cf.packed ? PACKXP : 1); P.level = L; P.xp = 0; } continue; }
     // rest: start below 60% health or 35% mana, then eat and drink back up like a player (to 95% health, 90% mana), not
     // just over the line: pulling again at 35% mana ran casters dry mid-fight (#4)
     const v = G.vitals(), low = v.hp < v.maxHp * 0.6 || (v.resType === 'mana' && v.res < v.maxRes * 0.35);
@@ -78,7 +81,10 @@ function hour(cls, L) {
     const m = G.placeMobs().find((x) => x.state === 'alive' && normal(x.key)); if (!m) { tm.other += 1; step(1); continue; } // a player levels on normal monsters, not the rare
     tm.other += 2; step(2); if (G.fight) continue; // a player loots and taps the next one: about 2 sec between pulls
     G.engage(m.id); if (!G.fight) { step(1); continue; }
-    if (pack > 1) { for (const o of G.placeMobs().filter((x) => x.state === 'alive' && x.key === m.key && x !== m).slice(0, pack - 1)) { o.state = 'fight'; const ou = globalThis.E.mobUnit(o.key, o.level); ou.inst = o; globalThis.E.addEnemy(G.fight, ou); } if (PACKAI === 'spread') G.fight.opts.killOrder = 'spread'; }
+    if (pack > 1) { const more = G.placeMobs().filter((x) => x.state === 'alive' && x.key === m.key && x !== m).slice(0, pack - 1), mult = { hp: PACKMULT[0], dmg: PACKMULT[1] };
+      if (more.length) for (const u of Object.values(G.fight.units)) if (u.side === 'enemy' && u.inst === m) { u.maxHp = u.hp = Math.round(u.maxHp * mult.hp); u.dmg = u.dmg.map((d) => d * mult.dmg); }
+      if (more.length) G.fight.packed = true;
+      for (const o of more) { o.state = 'fight'; const ou = globalThis.E.mobUnit(o.key, o.level, mult); ou.inst = o; globalThis.E.addEnemy(G.fight, ou); } if (PACKAI === 'spread') G.fight.opts.killOrder = 'spread'; }
   }
   return { xp, deaths, kills, tm, size, fin: FIN - fin0 };
 }
