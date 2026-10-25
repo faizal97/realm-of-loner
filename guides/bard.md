@@ -2,7 +2,7 @@
 class: bard
 by: official
 written: 10.14.0
-checked: 10.14.0
+checked: 10.15.0
 ---
 A Bard heals or deals damage with songs that keep playing while you do other things, and chooses which each time it joins a group. Bards wear leather, use a dagger or staff, carry an instrument in the ranged slot, and run on mana.
 
@@ -20,6 +20,7 @@ A Bard heals or deals damage with songs that keep playing while you do other thi
 - At full verses, a tap on the beat keeps the song at full.
 - A tap on a song already playing costs a quarter of starting it, and has a 0.5 sec global cooldown.
 - Two songs play at once; a third replaces the one you started first. A second song joins the first one's beat, so you tap them together.
+- A song still playing when a fight ends carries into the next fight, verses and all.
 
 ### Instruments
 Pick one outside a fight with its button on your bar. The item in your ranged slot gives stats only. Every instrument costs the same mana per second while you keep your songs going.
@@ -36,6 +37,8 @@ Played well, the three end up within 5% of each other for damage and for healing
 - [[Sharp Refrain]] (level 8) is instant, on a 6 sec cooldown.
 - [[Lullaby]] (level 10) puts nearby enemies (not bosses) to sleep for 3 sec, when more than you can handle come at once.
 - From level 16, [[Ballad of Blades]] hits your target and every enemy near it.
+- [[Sour Note]] (level 6) cuts off an enemy's cast: free, 12 sec cooldown, no global cooldown. From level 10, casters out in the world cast a spell behind a red bar every 14 sec; missed, it hits twice as hard.
+- **Pull** on the Fight list brings a pack of 2 (3 from creature level 20) at once, each with half the health, damage and XP.
 
 ### Before every fight
 - [[Hearthsong]] (level 26) on your party: 30 Spirit and 22 Intellect for 30 min at level 60.
@@ -68,6 +71,8 @@ At level 60 with no gear, on the Lute:
 When only the tank is hurt, a healing song mostly heals people who don't need it. Keep the tank up with [[Counterpoint]], [[Verse of Mending]] and [[Soothing Chord]], and save the song's mana.
 
 Keep [[Marching Song]] (level 6) as your second song: your party attacks and casts about 8% faster, 12.5% at 3 verses. Its Finale gives three times that for 6 sec.
+- A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[Sour Note]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
+- A red bar on a slam at the tank: [[Verse of Mending]] (level 14) or [[Counterpoint]] (level 22) on the tank before it lands makes it smaller, and so does each interrupt.
 
 ### When it goes wrong
 - A Finale is your fastest party heal. Keep a song at full verses for the moment the party needs it.
@@ -102,6 +107,7 @@ At level 60 with no gear, on the Lute:
 Watch the beat while you cast: a 2.5 sec cast started just before the beat runs past it.
 
 Against groups: [[Ballad of Blades]] and [[Requiem]] (level 56, about 245 to every enemy near you, 10 sec cooldown).
+- A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[Sour Note]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
 
 ### When it goes wrong
 - [[Stage Fright]] (level 36): one enemy (not a boss) runs from you for 6 sec. 30 sec cooldown.

@@ -2,7 +2,7 @@
 class: druid
 by: official
 written: 10.11.0
-checked: 10.14.0
+checked: 10.15.0
 ---
 A Druid heals, tanks or deals damage, and chooses which each time it joins a group. You heal and cast in your own form and tank in [[Bear Form]] (level 10). Druids wear leather, use a staff, mace or dagger, and run on mana.
 
@@ -17,6 +17,8 @@ A Druid heals, tanks or deals damage, and chooses which each time it joins a gro
 - [[Entangling Roots]] (level 12) holds a melee enemy in place and slows it, so you can cast in peace.
 - [[Bear Form]] (level 10) is your answer when a fight turns: much more armor and health. Your health share stays the same when you shift.
 - From level 24, add [[Insect Swarm]]: with [[Moonbeam]] it does the most damage for its mana.
+- [[ability/thornlash|Thornlash]] (level 6) cuts off an enemy's cast: free, 12 sec cooldown, no global cooldown. From level 10, casters out in the world cast a spell behind a red bar every 14 sec; missed, it hits twice as hard.
+- **Pull** on the Fight list brings a pack of 2 (3 from creature level 20) at once, each with half the health, damage and XP.
 
 ### Before every fight
 - [[Mark of the Grove]] on your party: armor and all stats for 30 min.
@@ -43,6 +45,8 @@ Your first point comes at level 10 and you have 51 by level 60. Each tree holds 
 - [[Wild Growth]] (level 54) heals over 7 sec on a 6 sec cooldown. Keep it on whoever takes the most damage.
 - Different heals over time stack on one target. The same one cast again restarts and loses the ticks it had left, so let it finish first.
 - [[Healing Touch]] is your slowest and least efficient heal (2.5 sec). Use it when **Clear Stream** makes it instant.
+- A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[ability/thornlash|Thornlash]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
+- A red bar on a slam at the tank: [[Rejuvenation]] or [[Quick Mend]] (level 36) on the tank before it lands makes it smaller, and so does each interrupt.
 
 ### When it goes wrong
 - [[Quick Mend]] (level 36): instant, 15 sec cooldown.
@@ -70,6 +74,8 @@ Restoration first: all 19 points fit. **Gift of Nature** and **Nature's Swiftnes
 - [[Barkskin]] and [[Frenzied Regeneration]] work in [[Bear Form]]. Your other spells don't.
 - [[Maul]] and [[Swipe]] both add extra threat. Swipe hits every enemy near you.
 - [[Growl]] has a 10 sec cooldown and no global cooldown.
+- A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[ability/thornlash|Thornlash]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
+- A red bar on a slam at you: [[Barkskin]] (level 28, works in Bear Form) avoids it in a dungeon; in a raid it takes 1.5 times off. Each shield, quick heal or interrupt from your group makes it smaller.
 
 ### When it goes wrong
 - [[Bash]] (level 32) stuns your target for 4 sec; [[Feral Charge]] (level 44) closes the distance and stuns for 3. Stuns don't work on bosses.
@@ -100,6 +106,7 @@ Spells that glow:
 - **Night Sky** (with **Moonkin Form**): a [[Wrath]] or [[Star Bolt]] crit makes [[Falling Stars]] ready and free.
 
 Against groups: [[Hurricane]] (level 26, slows), [[Falling Stars]] (level 52) and [[Typhoon]] (level 56, stuns for 2 sec). Falling Stars and Typhoon hit within 8 m of you: with no enemy that close, you step in, cast and step back.
+- A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[ability/thornlash|Thornlash]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
 
 ### When it goes wrong
 - [[Entangling Roots]] holds a melee enemy in place while you cast.

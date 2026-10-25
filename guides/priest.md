@@ -2,7 +2,7 @@
 class: priest
 by: official
 written: 10.11.0
-checked: 10.14.0
+checked: 10.15.0
 ---
 A Priest heals or deals Shadow damage, and chooses the role each time it joins a group. On your own you fight with Holy and Shadow spells and heal yourself between hits. Priests wear cloth, use a mace or a staff, and cast with mana.
 
@@ -31,6 +31,8 @@ To stay alive:
 - [[Fade]] (level 24) clears your threat. Alone, the enemies on you also stand still for 2.5 sec.
 - [[Desperate Prayer]] (level 38) heals you at once for no mana, 3 min cooldown.
 - [[Vampiric Embrace]] (level 52) heals you over 20 sec for 316 mana, 20 sec cooldown.
+- [[Hush]] (level 6) cuts off an enemy's cast: free, 12 sec cooldown, no global cooldown. From level 10, casters out in the world cast a spell behind a red bar every 14 sec; missed, it hits twice as hard.
+- **Pull** on the Fight list brings a pack of 2 (3 from creature level 20) at once, each with half the health, damage and XP.
 
 ### Before every fight
 - [[Word of Fortitude]]: Stamina for 30 min. Cast in a fight, it reaches your group within 40 m; outside a fight only you get it.
@@ -67,6 +69,8 @@ Tap a lit spell while it glows:
 - **Steady Grace** (the **Surge of Power** talent): your heals can make [[Penance]] ready.
 
 Save [[Surge of Power]] (level 44) for the hardest part of a fight: spell power and 15% faster casting for 15 sec.
+- A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[Hush]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
+- A red bar on a slam at the tank: [[Word of Warding]], [[Renew]] or [[Flash Heal]] (level 28) on the tank before it lands makes it smaller, and so does each interrupt.
 
 ### When it goes wrong
 - [[Pain Suppression]] (level 54): one target absorbs 1780 damage for 8 sec. 2 min cooldown.
@@ -98,6 +102,7 @@ Holy first, all 19 points: **Spiritual Healing** and **Inspiration** raise your 
 - [[Shadowform]]: 73 spell power and 150 armor for 30 min, on yourself.
 - [[Vampiric Embrace]] (level 52) heals you over 20 sec.
 - **Creeping Dark** needs the **Shadowform** talent.
+- A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[Hush]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
 
 ### When it goes wrong
 - [[Fade]] (level 24): enemies lose all threat on you. 30 sec cooldown.

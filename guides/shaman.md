@@ -2,7 +2,7 @@
 class: shaman
 by: official
 written: 10.11.0
-checked: 10.14.0
+checked: 10.15.0
 ---
 A Shaman fights with spells and totems from range and can heal or deal damage; you choose the role each time you join a group. Shamans wear leather and use a mace, axe, staff or dagger. Your resource is mana.
 
@@ -17,6 +17,8 @@ A Shaman fights with spells and totems from range and can heal or deal damage; y
 - [[Frost Shock]] (level 16) slows an enemy's attacks and movement by 50% for 8 sec (a quarter of that on a boss). Use it when a fight turns bad.
 - Solo, most enemies fight you up close, so [[Fire Nova Totem]] (level 24) and [[Magma Totem]] (level 32) reach them.
 - Heal yourself with [[Healing Wave]] between fights. Spirit refills mana only 5 sec after your last spell.
+- [[Storm Snap]] (level 6) cuts off an enemy's cast: free, 12 sec cooldown, no global cooldown. From level 10, casters out in the world cast a spell behind a red bar every 14 sec; missed, it hits twice as hard.
+- **Pull** on the Fight list brings a pack of 2 (3 from creature level 20) at once, each with half the health, damage and XP.
 
 ### Before every fight
 - [[Lightning Shield]] (level 8): three charges hit enemies who strike you in melee. Lasts 10 min or until used.
@@ -44,6 +46,8 @@ Numbers at level 60 with no gear and no talents:
 - [[Lesser Healing Wave]] heals about 1.4 health per mana in 1.5 sec.
 - **Tidal Surge** (with the **Healing Way** talent): [[Healing Wave]] and [[Lesser Healing Wave]] can make your next [[Chain Heal]] instant and free.
 - [[Stoneskin Totem]] at the start of each pull: the armor helps your tank most.
+- A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[Storm Snap]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
+- A red bar on a slam at the tank: [[Lesser Healing Wave]] (level 20) on the tank before it lands makes it smaller, and so does each interrupt.
 
 ### When it goes wrong
 - [[Earth Shield]] (level 44) absorbs damage on you only, not on the tank. It doesn't use the global cooldown; 30 sec cooldown.
@@ -76,6 +80,7 @@ Reactions light up your spells:
 - **Molten Fury** (with **Elemental Fury**): a [[Lightning Bolt]] or [[Chain Lightning]] crit makes [[Earthquake]] ready and free ([[Flame Shock]] before level 52).
 
 Against groups, [[Chain Lightning]] and [[Earthquake]] (level 52) land around your target, so they work from the back line. [[Elemental Mastery]] (level 48) adds spell power for 15 sec in a fight.
+- A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[Storm Snap]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
 
 ### When it goes wrong
 - [[Frost Shock]] halves an enemy's attack speed for 8 sec.

@@ -2,7 +2,7 @@
 class: mage
 by: official
 written: 10.11.0
-checked: 10.14.0
+checked: 10.15.0
 ---
 A Mage deals damage with Fire, Frost and Arcane spells from range, and has many ways to keep enemies off it. It fills one role: damage. Mages wear cloth, use a staff or a dagger, and run on mana.
 
@@ -18,6 +18,8 @@ A Mage deals damage with Fire, Frost and Arcane spells from range, and has many 
 - [[Mana Shield]] (level 18) soaks hits. [[ability/scorch|Scorch]] (level 24) casts faster than Fireball and costs less mana.
 - [[Inferno Blast]] (level 34) opens a fight: it does the most damage for its mana.
 - From level 56, open with [[Arcane Blast]] and cast Fireball while its extra cost lasts.
+- [[Spellbreak]] (level 6) cuts off an enemy's cast: free, 12 sec cooldown, no global cooldown. From level 10, casters out in the world cast a spell behind a red bar every 14 sec; missed, it hits twice as hard.
+- **Pull** on the Fight list brings a pack of 2 (3 from creature level 20) at once, each with half the health, damage and XP.
 
 ### Before every fight
 - [[Frost Armor]]: +390 armor for 10 min, for 60 mana. Melee attackers (not bosses) attack and move 25% slower for 5 sec.
@@ -46,6 +48,7 @@ You get your first point at level 10 and 51 by level 60. The Mage trees hold 51 
 - **Blaze Heart** (level 34): a crit with [[Fireball]], [[ability/scorch|Scorch]] or [[Fire Blast]] makes [[Inferno Blast]] instant and free.
 - [[Arcane Power]] (level 36) and [[Combustion]] (level 48) add spell power for 15 sec and stack.
 - [[Frost Storm]] (level 26) hits around your target. [[Frost Nova]], [[Arcane Explosion]], [[Cone of Cold]], [[Blast Wave]] and [[Dragon's Breath]] only hit within 8 m of you: with no enemy that close, you step in, cast and step back.
+- A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[Spellbreak]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
 
 ### When it goes wrong
 - Your shields stack: [[Mana Shield]], [[Fire Ward]] and [[Ice Barrier]] (level 44, the biggest) each absorb on their own. They only work in a fight.

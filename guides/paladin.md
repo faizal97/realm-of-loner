@@ -2,7 +2,7 @@
 class: paladin
 by: official
 written: 10.11.0
-checked: 10.14.0
+checked: 10.15.0
 ---
 A Paladin fights in melee with holy spells on top, and in a group fills two roles: healer or tank. You choose the role each time you join a group; your gear stays the same. Paladins wear mail, use a mace, sword or axe, and run on mana.
 
@@ -24,6 +24,8 @@ A Paladin fights in melee with holy spells on top, and in a group fills two role
 - [[Hammer of the Righteous]] (level 54) and [[Divine Storm]] (level 56) cost a flat 60 and 80 mana: cheap at 60.
 - Spells with a cast time stop your weapon swings while you cast.
 - Mana only comes back once 5 sec have passed since your last spell that cost mana.
+- [[Stern Word]] (level 6) cuts off an enemy's cast: free, 12 sec cooldown, no global cooldown. From level 10, casters out in the world cast a spell behind a red bar every 14 sec; missed, it hits twice as hard.
+- **Pull** on the Fight list brings a pack of 2 (3 from creature level 20) at once, each with half the health, damage and XP.
 
 ### Before every fight
 - [[Steadfast Aura]] on your party: armor for 30 min, free.
@@ -55,6 +57,8 @@ Retribution suits leveling. **Vengeance** raises your Holy and physical damage a
 - [[Radiant Wrath]] adds 100 spell power for 20 sec. Use it for the hardest part of a fight.
 - [[Holy Shock]] (level 32) heals your heal target at once: 520 to 540 for 267 mana, 20 sec cooldown. When you aren't the healer, it hits your enemy instead.
 - **Radiance** (with **Divine Favor**): [[Holy Light]] can make [[Holy Shock]] ready and free.
+- A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[Stern Word]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
+- A red bar on a slam at the tank: [[Holy Shock]] (level 32) on the tank before it lands makes it smaller, and so does each interrupt.
 
 ### When it goes wrong
 - [[Lay on Hands]]: 2,200 healing on anyone, 10 min cooldown.
@@ -85,6 +89,8 @@ Holy first: all 18 points fit. **Healing Light** makes [[Holy Light]] heal 20% m
 - [[Holy Shield]] absorbs 1,340 damage, and what it absorbs makes threat too. It doesn't use the global cooldown.
 - [[Holy Shield]] and a priest's [[Word of Warding]] stack: each absorbs on its own.
 - **Bulwark** (with **Blessing of Sanctuary**): when you dodge, [[Holy Shield]] ([[Consecration]] before level 52) can be ready and free.
+- A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[Stern Word]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
+- A red bar on a slam at you: [[Divine Protection]] or [[Holy Shield]] (level 52) avoids it in a dungeon; in a raid it takes 1.5 times off. Each shield, quick heal or interrupt from your group makes it smaller.
 
 ### When it goes wrong
 - [[Divine Protection]]: no damage for 6 sec, and enemies stay on you.

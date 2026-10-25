@@ -2,7 +2,7 @@
 class: hunter
 by: official
 written: 10.11.0
-checked: 10.14.0
+checked: 10.15.0
 ---
 A Hunter fights from range with a bow and a tamed beast at its side. It fills one role: damage. Hunters wear leather, use an axe, sword or dagger in melee, and run on mana.
 
@@ -21,6 +21,8 @@ A Hunter fights from range with a bow and a tamed beast at its side. It fills on
 - [[Immolation Trap]] (level 18) and [[Spirit of the Hawk]] (level 20) raise your damage.
 - [[Feign Death]] (level 24) saves a pull that goes wrong.
 - [[Aimed Shot]] (level 28) is your big hit until [[Kill Command]] (level 52) and [[Twinfang Shot]] (level 56).
+- [[Pinning Shot]] (level 6) cuts off an enemy's cast: free, 12 sec cooldown, no global cooldown. From level 10, casters out in the world cast a spell behind a red bar every 14 sec; missed, it hits twice as hard.
+- **Pull** on the Fight list brings a pack of 2 (3 from creature level 20) at once, each with half the health, damage and XP.
 
 ### Before every fight
 - [[Spirit of the Hawk]] (level 20): attack power, 80 at level 60, for 30 min.
@@ -54,6 +56,7 @@ You get your first talent point at level 10 and 51 by level 60. Beast Mastery ho
 - **Steady Aim** (level 28): [[Arcane Shot]] can make [[Aimed Shot]] instant.
 - Burst: [[Rapid Fire]], [[Bestial Wrath]] and [[Rapid Killing]] stack.
 - Groups: [[Multi-Shot]], [[Volley]] and [[Explosive Trap]].
+- A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[Pinning Shot]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
 
 ### When it goes wrong
 - [[Feign Death]] drops all your threat. With your pet out, enemies turn to it.

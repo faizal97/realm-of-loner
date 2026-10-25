@@ -2,7 +2,7 @@
 class: rogue
 by: official
 written: 10.11.0
-checked: 10.14.0
+checked: 10.15.0
 ---
 A Rogue fights in melee: quick strikes build combo points, then a finisher spends them. You can only fill the damage role. Rogues wear leather and use one dagger or sword, and run on energy: 100 at most, full at the start of every fight, refilling 10 per second.
 
@@ -19,6 +19,8 @@ A Rogue fights in melee: quick strikes build combo points, then a finisher spend
 - [[Ambush]] (level 20) opens a fight with a big hit and 2 combo points.
 - [[Feint]] (level 28): alone, the enemies attacking you stop for 2.5 sec. 10 sec cooldown.
 - [[Blind]] (level 32) stops an enemy for 8 sec, a second enemy out of the fight.
+- [[Throat Jab]] (level 6) cuts off an enemy's cast: free, 12 sec cooldown, no global cooldown. From level 10, casters out in the world cast a spell behind a red bar every 14 sec; missed, it hits twice as hard.
+- **Pull** on the Fight list brings a pack of 2 (3 from creature level 20) at once, each with half the health, damage and XP.
 
 ### Talents
 You get your first point at level 10 and 51 by level 60. Assassination holds 17 points, Combat 18 and Subtlety 16: 51 in all, so at level 60 you have every talent. The order only matters while you level. The first reset is free; then 1g, 5g, 10g.
@@ -52,6 +54,7 @@ Reactions:
 - **Quiet Blade** (**Preparation**): a dodge can make [[Backstab]] free. Otherwise skip it.
 
 Stack [[Cold Blood]] (level 54) and [[Shadow Dance]] (level 58) with [[Killing Spree]] (level 56).
+- A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[Throat Jab]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
 
 ### When it goes wrong
 - [[Evasion]]: 50% more dodge for 15 sec. No help against spells.

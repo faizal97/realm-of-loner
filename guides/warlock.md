@@ -2,7 +2,7 @@
 class: warlock
 by: official
 written: 10.11.0
-checked: 10.14.0
+checked: 10.15.0
 ---
 A Warlock deals damage, mostly with curses and burns that keep hurting while you cast the next spell, and fights with a demon at its side. It fills one role: damage. You wear cloth, use a staff, dagger or sword, and spend mana, which [[Life Tap]] refills from your health.
 
@@ -17,6 +17,8 @@ A Warlock deals damage, mostly with curses and burns that keep hurting while you
 - At level 10, summon a **Voidwalker**: every 5 sec it pulls a creature that is hitting you onto itself.
 - [[Shadow Ward]] (level 14) and [[Death Coil]] (level 24) keep you alive when a fight goes badly.
 - [[Siphon Life]] (level 32) is one more spell over time; [[Conflagrate]] (level 34) an instant hit.
+- [[Choke Hex]] (level 6) cuts off an enemy's cast: free, 12 sec cooldown, no global cooldown. From level 10, casters out in the world cast a spell behind a red bar every 14 sec; missed, it hits twice as hard.
+- **Pull** on the Fight list brings a pack of 2 (3 from creature level 20) at once, each with half the health, damage and XP.
 
 ### Before every fight
 - [[Demon Skin]] raises your armor for 30 min. From level 18, [[Demon Armor]] gives more armor, adds Stamina and replaces Demon Skin.
@@ -52,6 +54,7 @@ You get your first point at level 10 and 51 by level 60. The trees hold 17, 15 a
 - **Ruinous Flame** (**Ruin**): a [[Shadow Bolt]] or [[Incinerate]] crit readies a free [[Shadowburn]].
 - Boss cooldowns: [[Demonic Sacrifice]] (level 54) and [[Metamorphosis]] (level 58), 30 sec of spell power.
 - Groups: [[Shadow Bolt Volley]] (level 48) and [[Shadowfury]] (level 44). Shadowfury hits within 8 m of you: with no enemy that close, you step in, cast and step back. Leave out [[Searing Pain]]: it draws threat.
+- A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[Choke Hex]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
 
 ### When it goes wrong
 - [[Shadow Ward]] absorbs 540 damage of any kind. Cast it in a fight.
