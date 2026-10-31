@@ -2137,7 +2137,8 @@
     const back = h('div', { class: 'sheet-back', onclick: closeSheet }, sheet);
     app.append(back);
     ui.sheet = name; ui.sheetEl = back; ui.sheetBody = body; ui.sheetTitle = titleEl; ui.sheetDef = { name, title, sub, fill }; sheetTop();
-    ui.sheetFn = () => { const s = body.scrollTop; body.innerHTML = ''; fill(body, titleEl); body.scrollTop = s; };
+    ui.sheetFn = () => { const s = body.scrollTop; body.innerHTML = ''; fill(body, titleEl); body.scrollTop = s; placeEvLantern(); }; // a redraw can move the header (#287)
+    sheet.addEventListener('animationend', placeEvLantern, { once: true });
     ui.sheetFn();
   }
   // in a run (#67) a sheet and its backdrop start below the scene, so the scene's menu stays one tap away: Bags -> Hero
@@ -2149,7 +2150,7 @@
     const d = (ui.sheetStack || []).pop(); if (!d) return fallback ? fallback() : closeSheet();
     openSheet(d.name, d.title, d.sub, d.fill, true); ui.sheetBody.scrollTop = d.scroll || 0;
   }
-  function closeSheet() { if (ui.sheetEl) ui.sheetEl.remove(); ui.sheet = null; ui.sheetFn = null; ui.sheetEl = null; ui.sheetDef = null; ui.sheetStack = []; }
+  function closeSheet() { if (ui.sheetEl) ui.sheetEl.remove(); ui.sheet = null; ui.sheetFn = null; ui.sheetEl = null; ui.sheetDef = null; ui.sheetStack = []; placeEvLantern(); }
   // the death recap (#192): one line per death in order, at most 5 then "+N more": name in class colour and the killing
   // blow, then the facts of the last 5 seconds in small muted text. Facts only.
   function recapDialog() {
@@ -3326,7 +3327,10 @@
     const btn = ui.evBtn; if (!btn) return;
     const p = lwPrefs(), r = app.getBoundingClientRect(), bar = els.bottom && els.bottom.getBoundingClientRect();
     const lo = 64, hi = Math.max(lo, (bar && bar.top > 0 ? bar.top - r.top : r.height * 0.7) - 64);
-    const y = p.y == null ? hi : Math.max(lo, Math.min(hi, p.y * r.height - 28)); // first place: just above the ability bar
+    let y = p.y == null ? hi : Math.max(lo, Math.min(hi, p.y * r.height - 28)); // first place: just above the ability bar
+    // never over an open sheet's header (Back, Sort, ×; #287): above it if there's room, else just below it
+    const sh = ui.sheetEl && ui.sheetEl.querySelector('.sheet-h'), hr = sh && sh.getBoundingClientRect();
+    if (hr && hr.height) { const hT = hr.top - r.top, hB = hr.bottom - r.top; if (y < hB + 4 && y + 56 > hT - 4) y = hT - 60 >= lo ? hT - 60 : hB + 8; }
     btn.style.top = Math.round(y) + 'px';
     if (p.side === 'l') { btn.style.left = '6px'; btn.style.right = 'auto'; } else { btn.style.right = '6px'; btn.style.left = 'auto'; }
   }
