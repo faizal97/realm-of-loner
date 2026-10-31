@@ -2,7 +2,7 @@
 class: bard
 by: official
 written: 10.14.0
-checked: 10.15.0
+checked: 10.16.0
 ---
 A Bard heals or deals damage with songs that keep playing while you do other things, and chooses which each time it joins a group. Bards wear leather, use a dagger or staff, carry an instrument in the ranged slot, and run on mana.
 

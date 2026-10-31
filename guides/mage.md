@@ -2,7 +2,7 @@
 class: mage
 by: official
 written: 10.11.0
-checked: 10.15.0
+checked: 10.16.0
 ---
 A Mage deals damage with Fire, Frost and Arcane spells from range, and has many ways to keep enemies off it. It fills one role: damage. Mages wear cloth, use a staff or a dagger, and run on mana.
 
