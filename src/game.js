@@ -527,6 +527,23 @@
     emit('change');
     return { n: pick.length, money: v };
   };
+  // Sort (#133): equipment, consumables, trade goods, quest items, then junk (any grey) last; inside each, highest quality,
+  // then highest level, then name; stacks of one item merge up to 20. Returns whether the order changed.
+  const SORT_KIND = { potion: 1, elixir: 1, food: 1, drink: 1, stone: 1, kit: 1, mat: 2, recipe: 2, quest: 3, event: 3, junk: 4 };
+  G.sortBags = function () {
+    const P = G.S.player, was = P.bags.map((b) => b.item.id + ':' + b.n).join();
+    const kind = (it) => (it.q === 0 ? 4 : SORT_KIND[it.slot] || 0);
+    const merged = [];
+    for (const b of P.bags) {
+      const st = G.stackable(b.item) && merged.find((x) => x.item.id === b.item.id && x.n < 20);
+      if (!st) { merged.push(b); continue; }
+      const take = Math.min(20 - st.n, b.n); st.n += take; if (b.n > take) merged.push({ item: b.item, n: b.n - take });
+    }
+    merged.sort((a, b) => kind(a.item) - kind(b.item) || (b.item.q || 0) - (a.item.q || 0) || (b.item.lvl || 0) - (a.item.lvl || 0) || a.item.name.localeCompare(b.item.name) || b.n - a.n);
+    P.bags = merged;
+    emit('change');
+    return P.bags.map((b) => b.item.id + ':' + b.n).join() !== was;
+  };
   G.vendorStock = function (npc) {
     const base = vendorBase(npc);
     const pl = D.PLACES[G.S.player.place];

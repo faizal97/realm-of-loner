@@ -430,6 +430,7 @@ img { max-width: 100%; display: block; }
 .bag-badge.full { background: #d42a20; color: #fff; }
 .bag-badge.inline { position: static; display: inline-block; margin-right: 6px; vertical-align: middle; }
 .bag-free { color: #e8a33a; font-weight: 700; } .bag-free.full { color: #ff6a5a; }
+.bag-sort { float: right; margin: 0 4px 0 8px; padding: 5px 12px; font: 700 13px var(--body); color: var(--gold); background: #2a2014; border: 1px solid #5a4424; border-radius: 6px; cursor: pointer; } .bag-sort:active { background: #3b2d18; }
 .nav button.dot::after { content: ''; position: absolute; top: 6px; right: 26%; width: 8px; height: 8px; border-radius: 50%; background: #ffd100; box-shadow: 0 0 6px #ffd100; }
 
 /* ---------- sheets & dialogs */
