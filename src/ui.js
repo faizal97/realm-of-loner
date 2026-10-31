@@ -2975,8 +2975,10 @@
       const P = G.S.player;
       const bd = G.bagBadge(); // "2 free" or "Full" beside the count, in the badge's colour, so the badge explains itself (#90)
       t.innerHTML = ''; t.append('Bags', h('small', { html: `${P.bags.length}/${G.bagCap()}${bd ? ` <span class="bag-free${bd.full ? ' full' : ''}">${bd.full ? 'Full' : bd.n + ' free'}</span>` : ''} · ` + moneyHtml(P.money) }));
-      // Sort (#133) beside the count; not while picking items to sell, where it would move the picks
-      if (P.bags.length > 1 && !ui.sellPick) t.prepend(h('button', { class: 'bag-sort', onclick: () => { const moved = G.sortBags(); ui.bagSel = null; toast(moved ? 'Bags sorted.' : 'Already sorted.'); ui.sheetFn(); } }, 'Sort'));
+      // Sort (#133) in the header row before ×, styled as the header's Back; the header outlives a redraw, so the old one
+      // goes first. Not while picking items to sell, where it would move the picks. The toast tells the order.
+      const hd = t.parentNode, oldSort = hd && hd.querySelector('.bag-sort'); if (oldSort) oldSort.remove();
+      if (hd && P.bags.length > 1 && !ui.sellPick) hd.insertBefore(h('button', { class: 'sheet-backbtn bag-sort', 'aria-label': 'Sort bags: gear first, junk last', onclick: () => { const moved = G.sortBags(); ui.bagSel = null; toast(moved ? 'Bags sorted: gear first, junk last.' : 'Already sorted.'); ui.sheetFn(); } }, 'Sort'), hd.querySelector('.x'));
       // the bag bar (v10.9): your bags in one short row, empty slots shown; tap one to take it off
       if ((P.bagsEq || []).length) {
         const bar = h('div', { class: 'bagbar' });
