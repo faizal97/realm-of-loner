@@ -3953,7 +3953,7 @@
         if (R.hard) nb.bot.skill = clamp(TR().botSkill(G.trialRating()) + 0.05 + rnd(-0.06, 0.05), 0.3, 0.95); // a Hard group refills with skilled players too
         const i = S.group.members.indexOf(m);
         S.group.members[i] = nb;
-        sys(`${nb.name} has joined the group.`);
+        sys(`${nb.name} has joined the group.`); emit('runUpdate'); // the party frames show the new member at once, not after a tap (#281)
         S.pending.push({ at: t + 1500, bot: nb.bot.id, ch: 'party', text: B.partyLine(nb.bot, 'hello'), fromName: nb.name });
       }
       const waiting = S.group.members.some((m) => m.gone);
