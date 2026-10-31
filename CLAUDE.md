@@ -35,8 +35,10 @@ A single-player fake MMO set in its own world, Caldreth: every other "player" is
 ```bash
 node tools/validate.js   # data check (build.py runs it first and stops on errors)
 python3 build.py      # inlines fonts, CSS, JS, audio → dist/index.html and app/assets/game/index.html
-cd app && JAVA_HOME=/opt/homebrew/opt/openjdk@17 flutter build apk --release
+cd app && JAVA_HOME=/opt/homebrew/opt/openjdk@17 flutter build apk --release --target-platform android-arm,android-arm64
 ```
+
+The release APK (GitHub, the in-app updater, itch.io Android) is ARM only: phones are ARM, and leaving out x86_64 saves about 15 MB. The emulator smoke test needs x86_64 or arm64 to match the AVD, so build it separately with `flutter run` or `flutter build apk --debug` (all ABIs) and never ship that one.
 
 **Version numbers:** the major number goes up only with an expansion: v11 is The Ruinfall Saga, Chapter 1, v12 is Chapter 2, v13 is Chapter 3. Everything between expansions is a minor (vX.Y, a feature update) or a patch (vX.Y.Z, fixes). Never reset or go backwards: the in-app updater and Android's build number need versions to keep rising. Players see the update's name first ("The Ruinfall Saga, Chapter 1: The Ashen Coronation"), the number second.
 
