@@ -571,7 +571,10 @@
     // party stands, so they never sit on an enemy's or a boss's nameplate (enemies stand right)
     // the strip along the scene's top (#83, the game designer's call): the place name, "N online", the battle speed and the
     // run menu, in every state; no unit is drawn into it (spriteEl, fitBelowStrip)
-    sc.append(h('div', { class: 'strip' }, h('div', { class: 'zone' }, title, h('small', null, sub)), h('div', { class: 'online', id: 'online' }), h('div', { class: 'scene-ctl' }, speedChip(), runMenuBtn())));
+    const zoneEl = h('div', { class: 'zone', onclick: () => { if (zoneEl.scrollHeight > zoneEl.clientHeight + 1) toast(sub ? `${title} · ${sub}` : title); } }, title, h('small', null, sub));
+    sc.append(h('div', { class: 'strip' }, zoneEl, h('div', { class: 'online', id: 'online' }), h('div', { class: 'scene-ctl' }, speedChip(), runMenuBtn())));
+    // a name too long for one line wraps to two at a smaller size (#86); past two it ends in … and a tap shows it whole
+    requestAnimationFrame(() => { if (zoneEl.isConnected && zoneEl.scrollWidth > zoneEl.clientWidth + 1) zoneEl.classList.add('wrap'); });
     const C = G.fight;
     if (C) {
       // slots by where each stands (stage 4): the tank and melee at the front, a group's back line in the back slots

@@ -1040,6 +1040,8 @@ svg.sym { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: 
 .scene .strip { position: absolute; z-index: 210; top: 0; left: 0; right: 0; height: 32px; display: flex; align-items: center; gap: 8px; padding-left: 8px; background: linear-gradient(#17110a, #0f0b06); border-bottom: 1px solid var(--edge); box-sizing: border-box; }
 .scene .strip .zone { position: static; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.1; }
 .scene .strip .zone small { display: inline; margin: 0 0 0 6px; }
+.scene .strip .zone.wrap { white-space: normal; font-size: 12px; line-height: 1.05; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; } /* #86: two lines, then … */
+.scene .strip .zone.wrap small { font-size: 10px; margin-left: 4px; }
 .scene .strip .online { position: static; flex: none; }
 .scene .strip .scene-ctl { display: flex; flex: none; align-self: stretch; }
 .scene .strip .scene-ctl > button { position: relative; top: auto; right: auto; left: auto; height: 100%; min-width: 44px; width: auto; border: 0; border-left: 1px solid var(--edge); border-radius: 0; background: transparent; }
