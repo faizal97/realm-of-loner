@@ -1366,7 +1366,7 @@
     pruneBounties(); // an earlier day's bounty has lapsed and no longer takes a place (#154)
     if (G.bountiesHeld() >= 6) return toast('You can hold 6 bounties at a time.');
     P.bounty[b.id] = { mob: b.mob, n: b.n, prog: 0, done: false, weekly: b.weekly, day: b.weekly ? weekKey() : dayKey(), reward: { xp: b.xp, money: b.money, marks: b.marks } };
-    sys(`Bounty accepted: ${b.n} ${D.MOBS[b.mob].name}.`); emit('change');
+    sys(`Bounty accepted: ${b.n} ${D.MOBS[b.mob].name}.`); toast('Bounty accepted: added to your Quest Log.'); emit('change'); // #135: a sign where you tapped
   };
   G.turnInBounty = function (b) {
     const P = G.S.player, st = (P.bounty || {})[b.id]; if (!st || st.prog < st.n || st.done) return;
