@@ -913,7 +913,16 @@
   // land and the expansion's first quests stay closed until she dies in Veshmira's Lair (quest dw_onyxia_a / _h).
   // Saves that were already on the isle before v9.8 keep their way in (flags.stormBroken, set in G.load).
   const STORM_REGIONS = new Set(['tidewatch', 'skullreef', 'stormveil']);
-  G.stormBroken = () => { const S = G.S; return !!(S && (S.flags.stormBroken || S.player.done.dw_onyxia_a || S.player.done.dw_onyxia_h)); };
+  G.stormBroken = () => { const S = G.S; return !!(S && (S.flags.stormBroken || S.player.done.dw_onyxia_a || S.player.done.dw_onyxia_h || (((S.player.codex || {}).onyxias_lair || {}).clears))); }; // a Lair clear counts too (#288)
+  // the quests that lift the storm (#288), first to last: { q, npc, place, state: done|current|next|ahead }; 'next' is the
+  // first one not done when none is in your log
+  G.stormChain = function () {
+    const P = G.S.player, out = []; let q = G.myFaction() === 'horde' ? 'dw_onyxia_h' : 'dw_onyxia_a';
+    while (q && D.QUESTS[q]) { const Q = D.QUESTS[q]; out.unshift({ q, npc: Q.giver, place: Object.keys(D.PLACES).find((p) => D.PLACES[p].npcs.includes(Q.giver)) }); q = (Q.pre || [])[0]; }
+    let open = false;
+    for (const s of out) { s.state = P.done[s.q] ? 'done' : P.quests[s.q] ? 'current' : open ? 'ahead' : 'next'; if (s.state !== 'done') open = true; }
+    return out;
+  };
   G.stormBlocks = (id) => { const p = D.PLACES[id]; return !!(p && STORM_REGIONS.has(p.region) && !G.stormBroken() && !STORM_REGIONS.has((D.PLACES[G.S.player.place] || {}).region)); };
   G.STORM_TEXT = "Veshmira's storm still rages around the isle. No ship can land while she lives.";
   G.placeFaction = function (id) {

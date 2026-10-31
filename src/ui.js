@@ -4501,7 +4501,23 @@
         : G.S.queue && !why ? [h('button', { class: 'btn why', disabled: true }, `In queue for ${D.ACTIVITIES[G.S.queue.act].name}`), // queued for something else says so (#169)
           h('button', { class: 'btn alt', onclick: () => { G.leaveQueue(); ui.sheetFn(); } }, 'Leave the queue')]
         : h('button', { class: 'btn' + (why ? ' why' : ''), disabled: !!why, onclick: () => { if (trial ? G.queueTrial(act, ui.trialLvl) : (G.queueFor(act, hard ? { hard: true } : undefined), !!G.S.queue)) closeSheet(); } }, why ? (why === 'hidden' ? 'Only for the other faction' : why) : trial ? `Queue for Trial ${lvl}` : hard ? 'Queue for Hard' : 'Queue')));
+      if (!trial && A.where && G.stormBlocks(A.where)) b.append(...stormSteps()); // what lifts the storm (#288)
     });
+  }
+  // Veshmira's storm (#288): what lifts it, as facts: a Lair clear, or the quest chain step by step (giver, place, state),
+  // with the way to the next giver
+  const STORM_STATE = { done: 'Done', current: 'In your log', next: 'Next', ahead: '' };
+  function stormSteps() {
+    const P = G.S.player, ch = G.stormChain(), list = h('div', { class: 'list' });
+    ch.forEach((s, i) => {
+      const Q = D.QUESTS[s.q], N = D.NPCS[s.npc], pl = D.PLACES[s.place], here = P.place === s.place;
+      const go = s.state === 'next' || s.state === 'current' ? h('button', { class: 'chip gold', onclick: () => here ? openNpc(s.npc) : routeDialog(s.place) }, here ? 'Talk' : 'Show the way') : null;
+      list.append(h('div', { class: 'row' + (s.state === 'ahead' ? ' dim' : '') }, h('div', { class: 'ic step' }, String(i + 1)),
+        h('div', { class: 't' }, h('b', { style: s.state === 'done' ? { color: 'var(--muted)' } : null }, Q.name), h('small', { style: { whiteSpace: 'normal' } }, `${N.name} · ${pl.name}, ${pl.zone}`)),
+        h('div', { class: 'r' }, go || STORM_STATE[s.state])));
+    });
+    return [h('div', { class: 'sec-h', style: { marginTop: '12px' } }, 'To lift the storm', h('small', null, `${ch.filter((s) => s.state === 'done').length}/${ch.length}`)),
+      h('p', { class: 'ai-note', style: { margin: '0 0 6px' } }, "Clear Veshmira's Lair, or hand in The Brood Mother at the end of this chain."), list];
   }
   // the boss card (v10.7): one boss (or both Twin Tides) in full: numbers, each ability as its own row (name, when, what,
   // Hard ones tagged), this week's Hard bonus and the drops as rows. Facts only (docs/design-mindset.md).

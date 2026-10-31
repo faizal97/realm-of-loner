@@ -1124,3 +1124,4 @@ button.ev-fact { width: 100%; background: none; border: 0; border-bottom: 1px so
 .bar.xpmain { overflow: visible; } /* its fills stop at 100% */
 .bar.xpmain::before { content: ''; position: absolute; inset: -8px 0; }
 .frames .bar.xpmain::before { inset: -6px 0 -18px; }
+.row .ic.step { display: grid; place-items: center; font: 700 17px var(--display); color: var(--gold); } .row.dim { opacity: .6; } /* the storm chain's steps (#288) */
