@@ -112,12 +112,13 @@
   // Release notes are GitHub markdown; show the simple parts (headings, bold, bullets) as safe HTML.
   UPD.notesHtml = function (md) {
     const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const inline = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/`([^`]+)`/g, '$1');
+    const inline = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/(^|[^*])\*([^*\s][^*]*?)\*(?!\*)/g, '$1<i>$2</i>').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/`([^`]+)`/g, '$1');
     const out = []; let list = 0;
     const close = (to) => { while (list > to) { out.push('</ul>'); list--; } };
     for (const raw of String(md).replace(/\r/g, '').split('\n')) {
       const m = raw.match(/^(\s*)[-*] (.*)$/);
       if (m) { const lvl = Math.floor(m[1].length / 2) + 1; while (list < lvl) { out.push('<ul>'); list++; } close(lvl); out.push(`<li>${inline(m[2])}</li>`); continue; }
+      if (list && /^\s+\S/.test(raw) && out[out.length - 1].endsWith('</li>')) { out[out.length - 1] = out[out.length - 1].slice(0, -5) + `<br>${inline(raw.trim())}</li>`; continue; } // a dev note under a bullet
       close(0);
       const hd = raw.match(/^#{1,4}\s+(.*)$/);
       if (hd) out.push(`<p><b>${inline(hd[1])}</b></p>`);
