@@ -200,6 +200,13 @@ several sharing a line separated by " / ".
 - **Forgehall** — the Slagborn's hall of learning in Cinderpeak Depths
 - **Lanternwake** — the autumn festival (24 October to 7 November): Caldreth lights candles for its dead so they can find the road home. Its folk tale is the Wickless Knight, a shade who lost his way centuries ago and puts out every lantern he passes; he is a tale, not part of the main story, and spoils nothing
 - **Wake Candles** — the festival's candles, spent at the Wakekeeper's stall
+- **Longnight** — the winter festival (15 December to 4 January): on the longest night every house keeps its hearth burning and its door shut until the year turns; at midnight on New Year's Eve the towns set off fireworks to shout the old year out. Its folk tale is the Cold Guest; a tale, not part of the main story, and spoils nothing
+- **the Cold Guest** — the Longnight folk tale: she knocks at doors on the longest night, and where someone lets her in the hearth dies and the house never warms again
+- **the Knocker** — the Cold Guest's herald, who goes ahead of her with his frost hounds
+- **the Uninvited** — the frozen ghosts of the household that let the Cold Guest in
+- **The Shuttered Lane** — a street of barred doors, where the Knocker is fought
+- **The Open Door** — the one house that let the Cold Guest in, frozen through
+- **Kindling** — what is given to a town's great hearth during Longnight
 - **Pyre Bastion** — the Order's stronghold in Graymouth
 - **King's Square** — the old market square of Graymouth
 - **Bracken Arms** — the inn at Brackenford
