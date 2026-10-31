@@ -2576,11 +2576,17 @@
     });
   }
 
+  // no route (#138): name the enemy town on the road, and the Group Finder when it goes there
+  function noRouteWhy(to) {
+    const pl = D.PLACES[to], bl = G.routeBlock(G.S.player.place, to);
+    if (!bl) return `There's no way to ${pl.name} from here.`;
+    return `The road to ${pl.name} runs through ${D.PLACES[bl.town].name}, an enemy town.` + (bl.act ? ' Join it through the Group Finder.' : '');
+  }
   function routeDialog(to) {
     const P = G.S.player, pl = D.PLACES[to];
     if (P.travel) return toast('You are already on the road.');
     const r = G.route(P.place, to);
-    if (!r) return showDialog([h('h3', null, pl.name), h('p', null, G.enemyTown(to) ? `${pl.name} is an enemy town. The guards would kill you on sight.` : `There's no way to ${pl.name} from here.`), h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', onclick: closeDialog }, 'OK'))], true);
+    if (!r) return showDialog([h('h3', null, pl.name), h('p', null, G.enemyTown(to) ? `${pl.name} is an enemy town. The guards would kill you on sight.` : noRouteWhy(to)), h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', onclick: closeDialog }, 'OK'))], true);
     const steps = r.path.slice(1).map((p, i) => { const a = r.path[i]; const via = (D.PLACES[a].via || {})[p]; return h('div', { class: 'obj' }, `${i + 1}. ${D.PLACES[p].name}`, h('small', { style: { color: 'var(--muted)' } }, ` · ${D.PLACES[p].zone}${via ? ' · ' + via : ''} · ${G.travelSecs(a, p)} s`)); });
     showDialog([h('h3', null, 'Route to ' + pl.name), h('p', null, `${pl.zone} · levels ${pl.lvl[0]}–${pl.lvl[1]} · ${r.path.length - 1} stop${r.path.length > 2 ? 's' : ''}, about ${r.secs} s`), ...steps,
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { closeDialog(); closeSheet(); G.travelRoute(to); } }, 'Go'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Cancel'))], true);

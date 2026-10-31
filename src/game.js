@@ -941,9 +941,17 @@
     const path = [to]; while (path[0] !== from) path.unshift(prev[path[0]]);
     return { path, secs: Math.round(dist[to]) };
   };
+  // why there is no route (#138): the enemy town on the road you'd need, and the Group Finder activity that goes there
+  G.routeBlock = function (from, to) {
+    if (!D.PLACES[to] || G.enemyTown(to) || G.stormBlocks(to)) return null;
+    const { dist, prev } = routeSearch(from, to, true); if (dist[to] == null) return null;
+    let town = null; for (let p = prev[to]; p && p !== from && !town; p = prev[p]) if (G.enemyTown(p)) town = p; // the one nearest: the road's last gate (earlier ones may have a way round)
+    const act = Object.keys(D.ACTIVITIES).find((k) => D.ACTIVITIES[k].where === to && !D.ACTIVITIES[k].event); // the finder can send you there
+    return town ? { town, act } : null;
+  };
   // seconds from a place to every place you can reach from it (one search, for lists that rank many places)
   G.travelTimes = (from) => routeSearch(from, null).dist;
-  function routeSearch(from, to) {
+  function routeSearch(from, to, throughFoes) {
     const dist = { [from]: 0 }, prev = {}, done = new Set();
     const open = [from];
     while (open.length) {
@@ -951,7 +959,7 @@
       const a = open.shift(); if (done.has(a)) continue; done.add(a);
       if (a === to) break;
       for (const b in D.PLACES[a].links) {
-        if (done.has(b) || (G.enemyTown(b) && b !== to) || G.stormBlocks(b)) continue;
+        if (done.has(b) || (G.enemyTown(b) && b !== to && !throughFoes) || G.stormBlocks(b)) continue;
         const d = dist[a] + (G.travelSecs(a, b) || D.PLACES[a].links[b]);
         if (dist[b] == null || d < dist[b]) { dist[b] = d; prev[b] = a; open.push(b); }
       }
