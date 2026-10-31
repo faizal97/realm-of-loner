@@ -99,6 +99,7 @@
   // a bard's instrument is one button (play_lute's place on the bar) that shows and explains the instrument now played
   const barAb = (id) => (D.ABILITIES[id] && D.ABILITIES[id].instrument && G.instrumentAb ? G.instrumentAb() : id);
   const abIcon = (id) => art('icon', (D.ABILITIES[id] && D.ABILITIES[id].icon) || id);
+  const potionIcon = () => { const b = G.potionNext(); return (b && b.item.icon) || 'potion_red'; }; // the potion a tap drinks (#279)
   const barIcon = (id) => abIcon(barAb(id)); // on the action bar only: elsewhere each instrument shows its own
   // ---------- buffs and debuffs with time left, for any unit (or the player out of combat)
   const AURA_ALIAS = { momentum: 'rapid_fire', weakened_soul: 'pw_shield', seal: 'seal_righteousness', stoneskin: 'stoneskin_totem', rockbiter: 'rockbiter_weapon', chilled: 'frost_armor', bear: 'bear_form', fireball_burn: 'fireball', stun: 'hammer_justice', searing_totem: 'searing_totem' };
@@ -1743,7 +1744,7 @@
     if (id === 'eat') return G.consume('food');
     if (id === 'drink') return G.consume('drink');
     if (D.ABILITIES[id] && D.ABILITIES[id].instrument) { const why = G.nextInstrument(); if (why) toast(why); return; } // the next instrument learned
-    if (id === 'potion') return G.usePotion(G.pUnit ? (G.pUnit.hp / G.pUnit.maxHp < 0.6 || !G.bestPotion('mana') ? null : 'mana') : null);
+    if (id === 'potion') return G.usePotion(G.potionKind());
     if (G.fight) {
       if (id === 'attack') { G.toggleAuto(); return; }
       const why = G.useAbility(id);
@@ -2034,7 +2035,10 @@
       for (const id in els.abs) {
         const btn = els.abs[id];
         let p = 1, left = 0, nores = false, on = false;
-        if (id === 'potion') { const lp = ((P.potionAt || 0) - now()) / 1000; if (lp > 0) { p = 1 - lp / 120; left = lp; } }
+        if (id === 'potion') {
+          const lp = ((P.potionAt || 0) - now()) / 1000; if (lp > 0) { p = 1 - lp / 120; left = lp; }
+          const ic = potionIcon(); if (btn.dataset.ic !== ic) { btn.dataset.ic = ic; const im = btn.querySelector('img'); if (im) im.src = art('icon', ic); } // follows your health in a fight
+        }
         else if (C && G.pUnit && id !== 'eat' && id !== 'drink') {
           const u = G.pUnit, ab = D.ABILITIES[id];
           if (id === 'attack') on = u.auto;

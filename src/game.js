@@ -2226,6 +2226,9 @@
     const P = G.S.player;
     return P.bags.filter((b) => b.item.slot === 'potion' && b.item[kind] && (b.item.lvl || 1) <= P.level).sort((a, c) => c.item[kind][1] - a.item[kind][1])[0];
   };
+  // what a tap on the bar's Potion drinks (#279): in a fight, mana unless you're under 60% health or have none; else health first
+  G.potionKind = () => (G.pUnit ? (G.pUnit.hp / G.pUnit.maxHp < 0.6 || !G.bestPotion('mana') ? null : 'mana') : null);
+  G.potionNext = () => { const k = G.potionKind(); return k ? G.bestPotion(k) : G.bestPotion('heal') || G.bestPotion('mana'); };
   G.usePotion = function (kind) {
     const P = G.S.player;
     if (!G.potionReady()) return toast(`Potions are on cooldown (${Math.ceil(((P.potionAt || 0) - now()) / 1000)} sec).`);
