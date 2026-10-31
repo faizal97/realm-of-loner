@@ -4567,6 +4567,7 @@
       tabs.append(h('button', { class: (tab === k ? 'on' : '') + (n ? ' dot' : ''), onclick: () => { ui.gfTab = k; ui.sheetFn(); } }, label));
     }
     b.append(tabs);
+    const qa = G.questActs(); // the activities your quests need (#285), marked on their rows and listed in For You
     const row = (x, showKind) => {
       const A = x.A, queued = S.queue && S.queue.act === x.k, kind = actKind(A);
       const synced = !x.why && P.level > A.maxLvl ? `synced to level ${A.maxLvl}` : '';
@@ -4578,7 +4579,7 @@
       return h('div', { class: 'row gf-row tap' + (!doable(x) ? ' gf-locked' : '') + (queued ? ' gf-queued' : ''), onclick: (e) => { if (e.target.closest('button')) return; openBriefing(x.k, false); } }, // tap the row for its briefing (v10.4)
         actPic(A),
         h('div', { class: 't' }, h('b', null, A.name, h('span', { class: 'gf-lvl tnum' }, A.minLvl === A.maxLvl ? String(A.minLvl) : `${A.minLvl}–${A.maxLvl}`)),
-          h('small', null, showKind ? h('span', { class: 'gf-kind k-' + kind }, KIND_LABEL[kind]) : null, x.k === G.featuredRaid() ? h('span', { class: 'gf-kind k-featured' }, 'Featured this week') : null, A.worldBoss ? h('span', { class: 'gf-kind k-featured' }, G.worldBossLooted(x.k) ? 'World boss · looted this week' : 'World boss this week') : null, A.event ? h('span', { class: 'gf-kind k-featured' }, `${D.EVENTS[A.event].name} · ${G.lwDaily().normal ? 'daily loot ready' : 'loot taken'}`) : null, note)),
+          h('small', null, showKind ? h('span', { class: 'gf-kind k-' + kind }, KIND_LABEL[kind]) : null, x.k === G.featuredRaid() ? h('span', { class: 'gf-kind k-featured' }, 'Featured this week') : null, qa[x.k] ? h('span', { class: 'gf-kind k-featured' }, 'Your quest') : null, A.worldBoss ? h('span', { class: 'gf-kind k-featured' }, G.worldBossLooted(x.k) ? 'World boss · looted this week' : 'World boss this week') : null, A.event ? h('span', { class: 'gf-kind k-featured' }, `${D.EVENTS[A.event].name} · ${G.lwDaily().normal ? 'daily loot ready' : 'loot taken'}`) : null, note)),
         btn);
     };
     const byLevel = (a, c) => a.A.minLvl - c.A.minLvl || kinds.indexOf(actKind(a.A)) - kinds.indexOf(actKind(c.A));
@@ -4610,6 +4611,8 @@
         b.append(h('p', { class: 'ai-note', style: { margin: 0 } }, mine.length ? 'Nothing at your level. Closest shown; you are synced down.' : 'Nothing to queue for yet. Keep levelling: the first groups open at level 8.'));
       }
       for (const x of mine) b.append(row(x, true));
+      const forQuests = all.filter((x) => qa[x.k] && doable(x) && !mine.includes(x)).sort(byLevel); // outlevelled or not, if a quest needs it (#285)
+      if (forQuests.length) { b.append(h('div', { class: 'sec-h' }, 'For your quests')); for (const x of forQuests) b.append(row(x, true)); }
       const next = all.filter((x) => !doable(x) && /^Requires level/.test(x.why)).sort(byLevel)[0];
       if (next) b.append(h('p', { class: 'ai-note', style: { margin: 0 } }, `Next: ${next.A.name} (${KIND_LABEL[actKind(next.A)].toLowerCase()}) at level ${next.A.minLvl}.`));
     } else if (tab === 'trials') {

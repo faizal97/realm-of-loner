@@ -1131,6 +1131,19 @@
       return { o, have: q && q.prog[i] ? 1 : 0, n: 1, label: 'Go to ' + D.PLACES[o.place].name };
     });
   };
+  // the group activities your unfinished quests need (#285): a kill objective's creature or a collect objective's dropper
+  // is in its pulls. { act: quest name }, at any level, so an outlevelled Wanted still shows for the quest that needs it
+  G.questActs = function () {
+    const P = G.S.player, out = {};
+    for (const qid in P.quests) {
+      const left = G.questProgress(qid).filter((p) => p.have < p.n).map((p) => p.o);
+      const mobs = new Set();
+      for (const o of left) { if (o.type === 'kill') mobs.add(o.mob); else if (o.type === 'collect') { const s = G.objSource(o.item); for (const m of (s && s.mobs) || []) mobs.add(m); } }
+      if (!mobs.size) continue;
+      for (const k in D.ACTIVITIES) { const A = D.ACTIVITIES[k]; if (!out[k] && ((A.dungeon ? D.DUNGEONS[A.dungeon].pulls : A.pulls) || []).some((pl) => pl.mobs.some((m) => mobs.has(m)))) out[k] = D.QUESTS[qid].name; }
+    }
+    return out;
+  };
   // where a collect objective's item comes from (#173), worked out from the data so a new quest gets it with no extra
   // work: the places whose gather gives it (a pick-up), else the creatures that drop it
   G.objSource = function (item) {
