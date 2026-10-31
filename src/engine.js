@@ -1112,7 +1112,7 @@
         if (x.done || (x.after != null ? C.t < x.after : pct >= x.at)) continue; // after: seconds into the fight (a time limit)
         x.done = true; emote(x);
         if (kind === 'enrage') { m.enrage = (m.enrage || 1) * x.mult; ev(C, { type: 'fx', uid: m.uid, kind: 'enrage' }); }
-        else for (let i = 0; i < x.n; i++) E.addEnemy(C, E.mobUnit(x.mob, addLvl(m, x.lvl), (C.opts.dungeonMult || { hp: 1, dmg: 1 })));
+        else { const dm = C.opts.dungeonMult || { hp: 1, dmg: 1 }, am = x.mult || 1; for (let i = 0; i < x.n; i++) E.addEnemy(C, E.mobUnit(x.mob, addLvl(m, x.lvl), { hp: dm.hp * am, dmg: dm.dmg * am })); } // mult: this wave's strength (#282: Hard's Lantern-Wisps)
         continue;
       }
       if (stunned(C, m)) continue;

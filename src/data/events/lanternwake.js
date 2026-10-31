@@ -70,9 +70,10 @@
     lw_ghost: { name: 'Wandering Ghost', lvl: [10, 60], family: 'undead', sprite: 'lw_ghost' }, // the costume's look only
     wickless_knight: { name: 'The Wickless Knight', lvl: [10, 60], family: 'undead', boss: true, elite: true, named: true, special: 'slam', specialText: 'The Wickless Knight snuffs the light out of his target!', aggro: 'Another light. Another light to put out.' },
   });
-  // his mechanics are the Hard-raid system's (`extra`, hard: false on Normal); Hard adds faster blows and more wisps
+  // his mechanics are the Hard-raid system's (`extra`, hard: false on Normal); Hard adds faster blows and more wisps.
+  // Hard's three waves are at 70% (#282): at full strength fitted groups wiped in 53-65% of runs, at 70% 10-26%
   const gallop = { kind: 'hit', every: 15, mult: 0.4, who: 'all', school: 'shadow', hard: false, text: 'The Wickless Knight gallops through the group!' };
-  const wisps = (at, n, hard) => ({ kind: 'adds', at, mob: 'lw_wisp', n, lvl: 0, hard, text: 'The Wickless Knight calls his wisps to relight his lantern!' });
+  const wisps = (at, n, hard, mult) => ({ kind: 'adds', at, mob: 'lw_wisp', n, lvl: 0, hard, mult, text: 'The Wickless Knight calls his wisps to relight his lantern!' }); // mult: the wave's health and damage
   const midnight = (after, hard) => ({ kind: 'enrage', after, mult: 2.5, hard, text: 'Midnight! The Wickless Knight\'s lantern blazes black!' });
   D.ACTIVITIES.ev_snuffed_road = {
     name: 'The Snuffed Road', where: 'stormwind', size: 5, minLvl: 10, maxLvl: 60, event: 'lanternwake', scale: true, music: 'lanternwake', since: '2026-10-24',
@@ -83,7 +84,7 @@
     // at the level cap groups wear raid gear, so from level 40 the numbers rise to these at 60
     atCap: { from: 40, trashMult: { hp: 2.8, dmg: 2.6 }, bossMult: { hp: 9, dmg: 4.2 }, hard: { trashMult: { hp: 3, dmg: 2.8 }, bossMult: { hp: 9.3, dmg: 4.2 } } },
     extra: { wickless_knight: [gallop, wisps(0.66, 2, false), wisps(0.33, 2, false), midnight(100, false)] },
-    hardExtra: { wickless_knight: [Object.assign({}, gallop, { every: 14, hard: true }), wisps(0.7, 2, true), wisps(0.45, 2, true), wisps(0.2, 2, true), midnight(90, true)] },
+    hardExtra: { wickless_knight: [Object.assign({}, gallop, { every: 14, hard: true }), wisps(0.7, 2, true, 0.7), wisps(0.45, 2, true, 0.7), wisps(0.2, 2, true, 0.7), midnight(90, true)] },
     pulls: [
       { scene: 'snuffed_road', label: 'Lantern-Wisps', mobs: ['lw_wisp', 'lw_wisp', 'lw_wisp'] },
       { scene: 'snuffed_road', label: 'The Wickless Knight', mobs: ['wickless_knight'], boss: true },
