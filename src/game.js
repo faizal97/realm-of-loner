@@ -2348,15 +2348,20 @@
   G.saveAccount = (a) => ls.set(ACCOUNT_KEY, JSON.stringify(a));
   G.addMarks = function (n, why) { const a = G.account(); a.marks += n; G.saveAccount(a); loot(`+${n} Mentor Marks${why ? ' (' + why + ')' : ''}. You have ${a.marks}.`); };
   // Heirlooms: stats follow the wearer's level, so an alt can wear the same piece from 1 to the cap.
+  G.HEIR_SHARE = 0.9; // #194: an heirloom's power as a share of a fitted green at your level
   G.makeHeirloom = function (id, level) {
     const H = D.HEIRLOOMS[id], L = Math.max(1, level);
     const it = { id, name: H.name, slot: H.slot, q: 5, lvl: 1, icon: H.icon, heirloom: true, sell: 0, stats: {} };
-    it.stats[H.stat[0]] = Math.max(1, Math.round(1 + L * 0.42)); it.stats[H.stat[1]] = Math.max(1, Math.round(L * 0.3));
-    // same damage curve as random gear, at rare quality
-    if (H.wtype) { it.wtype = H.wtype; it.speed = H.speed; const dps = (1.6 + L * 0.45) * 1.22 * (H.wtype === 'staff' ? 1.35 : 1); it.dmg = [Math.max(1, Math.round(dps * H.speed * 0.7)), Math.max(2, Math.round(dps * H.speed * 1.3))]; }
-    else if (H.slot === 'back') it.armor = Math.round((D.SLOT_ARMOR.back || 3) * (L + 2) * 1.1);
-    if (H.sp) it.sp = Math.round(L * 0.5);
-    it.source = 'Heirloom: follows your level. +5% experience.';
+    // #194: a little under quest gear at every level: HEIR_SHARE of a fitted green's stat points (D.gearBudget), damage
+    // and cloak armour, so a quest green is an upgrade and a blue a clear one; the +XP is the heirloom's value
+    const SH = G.HEIR_SHARE, pts = Math.max(2, Math.round(SH * D.gearBudget(L, 2)));
+    const sp = H.sp ? Math.min(Math.round(pts * 0.4), pts - 2) : 0, a = Math.max(1, Math.round((pts - sp) * 0.58));
+    it.stats[H.stat[0]] = a; it.stats[H.stat[1]] = Math.max(1, pts - sp - a);
+    if (sp) it.sp = sp;
+    // the green damage curve (random gear at q2) at that share
+    if (H.wtype) { it.wtype = H.wtype; it.speed = H.speed; const dps = (1.6 + L * 0.45) * 1.1 * SH * (H.wtype === 'staff' ? 1.35 : 1); it.dmg = [Math.max(1, Math.round(dps * H.speed * 0.7)), Math.max(2, Math.round(dps * H.speed * 1.3))]; }
+    else if (H.slot === 'back') it.armor = Math.max(1, Math.round((D.SLOT_ARMOR.back || 3) * 0.3 * (L + 2) * 0.9 * 1.1 * SH));
+    it.source = 'Grows with you. A little weaker than quest gear. +5% experience.';
     return it;
   };
   G.refreshHeirlooms = function () {
