@@ -2184,7 +2184,10 @@
     t.append(h('div', { class: 'nm q' + it.q }, it.name));
     const upi = D.GEAR_SLOTS.includes(it.slot) ? G.upgradeInfo(it) : null;
     if (it.hard) t.append(h('div', { class: 'st', style: { color: '#ff8a5a' } }, `Dropped on Hard: ${G.HARD_STEPS} upgrade steps up`));
-    if (upi && upi.ok) t.append(h('div', { class: 'st', style: { color: '#7fd4ff' } }, upi.room ? `Power ${upi.pct}% of the ceiling${upi.capPct < 100 ? ` (blues stop at ${upi.capPct}%)` : ''}` : `Power ${upi.pct}%: at the ceiling`));
+    if (upi && upi.ok) { // #284: says what 100% is, and how it rises
+      t.append(h('div', { class: 'st', style: { color: '#7fd4ff' } }, `Power: ${upi.pct}% of newest raid gear${upi.room ? (upi.capPct < 100 ? ` · max ${upi.capPct}%` : '') : ' (max)'}`));
+      if (upi.room) t.append(h('div', { class: 'st', style: { color: '#7fd4ff', opacity: 0.75 } }, 'Mentor Marks raise it, up to the max.'));
+    }
     const why = who ? null : blockReason(it);
     if (why) t.append(h('div', { class: 'red', style: { fontWeight: 800 } }, why.text));
     if (it.slot === 'quest') t.append(h('div', { class: 'st' }, 'Quest Item'));
@@ -2941,7 +2944,7 @@
       const pa = a.split(re), pb = b.split(re); if (pa.length !== pb.length || pa.some((x, i) => i % 2 === 0 && x !== pb[i])) return `${a} After: ${b}`;
       return pa.map((x, i) => (i % 2 && x !== pb[i] ? `${x} → ${pb[i]}` : x)).join(''); })() : null;
     showDialog([h('h3', null, `Upgrade ${it.name}?`),
-      h('p', null, `From ${inf.pct}% to ${inf.nextPct}% of the ceiling: ${diff.join(', ') || (F ? 'the stats round to the same numbers' : 'a little stronger')}.`),
+      h('p', null, `From ${inf.pct}% to ${inf.nextPct}% of newest raid gear: ${diff.join(', ') || (F ? 'the stats round to the same numbers' : 'a little stronger')}.`),
       fxLine ? h('p', { class: 'eff' }, `Effect: ${F.name}. ${fxLine}`) : null,
       F ? h('p', { class: 'eff', style: { margin: '-4px 0 0' } }, `Effect strength ${fxPct(it)} → ${fxPct(next)}`) : null, // one rule for every effect, so a growth the rounding hides still shows (#42)
       h('p', null, `Costs ${inf.cost} Mentor Marks. You have ${marks}. Its look stays the same.`),
@@ -3090,7 +3093,7 @@
     if (rAll.length) pr('Raids cleared', rAll.filter((k) => cx[k] && cx[k].clears).length, rAll.length);
     if (P.level >= cap) {
       const up = D.GEAR_SLOTS.map((s) => P.equip[s]).filter((it) => it && G.upgradeInfo(it).ok);
-      if (up.length) pr('Worn gear', `${Math.round(up.reduce((s, it) => s + G.upgradeInfo(it).pct, 0) / up.length)}% of the ceiling`);
+      if (up.length) pr('Worn gear power', `${Math.round(up.reduce((s, it) => s + G.upgradeInfo(it).pct, 0) / up.length)}% of newest raid gear`);
       if (P.trials) pr('Best Trial beaten in time', P.trials.bestEver ? `Trial ${P.trials.bestEver}` : 'Not yet');
     }
     if (P.level >= cap || G.account().marks) pr('Mentor Marks', G.account().marks);

@@ -8,7 +8,7 @@ corrected. Read this before designing a screen, a label, a system or a number.
 Every number, label, icon and glow has to explain itself, on the screen, without a guide.
 
 - **A number says what it compares with.** "83% strength" was unclear (compared with what?); "−17% health and damage
-  (a normal level-60 run is 0%)" is not. "Power 91% of the ceiling" names its ceiling.
+  (a normal level-60 run is 0%)" is not. "Power: 91% of newest raid gear" names what 100% is ("of the ceiling" did not: players asked).
 - **Every chip, badge and icon has a label or a tap that explains it.** An Omen chip opens its rule and its counter; a
   Trial row says "Best: Trial 7, in time".
 - **Every buff and debuff explains itself.** Tapping one (on you, a party member or an enemy) shows its name, what it

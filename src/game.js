@@ -2446,13 +2446,13 @@
     if (!it) return false;
     if (G.fight) { toast('You are in combat.'); return false; }
     const inf = G.upgradeInfo(it);
-    if (!inf.room) { toast('This item is at the ceiling.'); return false; }
+    if (!inf.room) { toast('Already at max power.'); return false; }
     const a = G.account();
     if (a.marks < inf.cost) { toast(`You need ${inf.cost} Mentor Marks.`); return false; }
     a.marks -= inf.cost; G.saveAccount(a);
     const next = G.upgradedCopy(it, inf.next);
     if (where.slot) P.equip[where.slot] = next; else P.bags[where.bag].item = next;
-    loot(`${B.link(next.name, next.q)} is now at ${inf.nextPct}% of the ceiling (${inf.cost} Mentor Marks).`);
+    loot(`${B.link(next.name, next.q)} is now at ${inf.nextPct}% of newest raid gear (${inf.cost} Mentor Marks).`);
     G.save(); emit('change');
     return true;
   };
