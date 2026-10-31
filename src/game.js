@@ -968,6 +968,15 @@
   };
   // seconds from a place to every place you can reach from it (one search, for lists that rank many places)
   G.travelTimes = (from) => routeSearch(from, null).dist;
+  // the nearest profession trainer of your faction you can reach (#76): { place, npc, secs }, secs 0 when it is here
+  G.nearestTrainer = function (from) {
+    from = from || G.S.player.place;
+    const npc = 'crafts_' + G.myFaction(), places = (D.PROF_TRAINERS || {})[npc] || [];
+    if (places.includes(from)) return { place: from, npc, secs: 0 };
+    const dist = G.travelTimes(from); let best = null;
+    for (const p of places) if (dist[p] != null && !G.enemyTown(p) && (!best || dist[p] < best.secs)) best = { place: p, npc, secs: Math.round(dist[p]) };
+    return best;
+  };
   function routeSearch(from, to, throughFoes) {
     const dist = { [from]: 0 }, prev = {}, done = new Set();
     const open = [from];
@@ -2066,10 +2075,10 @@
     }
   }
   // the nodes you can see here (you only notice what your professions look for)
-  G.placeNodes = function () {
+  G.placeNodes = function (all) { // all (#76): nodes of professions you don't have too, so the world points at the skill
     const P = G.S.player, pl = D.PLACES[P.place]; if (!nodePlace(pl) || G.S.run) return [];
     const W = placeState(P.place); nodesTick(P.place, W, now());
-    return W.pnodes.list.map((k, i) => ({ i, key: k, N: D.NODES[k] })).filter((x) => G.hasProf(x.N.prof));
+    return W.pnodes.list.map((k, i) => ({ i, key: k, N: D.NODES[k] })).filter((x) => all || G.hasProf(x.N.prof));
   };
   G.gatherNode = function (i) {
     const S = G.S, P = S.player;
@@ -2077,7 +2086,7 @@
     if (S.run || P.travel) return;
     const W = placeState(P.place), key = W.pnodes && W.pnodes.list[i]; if (!key) return;
     const N = D.NODES[key], p = G.profs()[N.prof];
-    if (!p) return;
+    if (!p) return toast(`Requires ${D.PROFESSIONS[N.prof].name}: learn it from a profession trainer.`);
     if (p.skill < N.skill) return toast(`Requires ${D.PROFESSIONS[N.prof].name} ${N.skill}.`);
     if (G.bagsFull() && !P.bags.some((b) => b.item.id === N.item && b.n < 20)) return toast('Inventory is full.');
     stopActions();
