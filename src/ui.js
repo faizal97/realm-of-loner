@@ -1934,6 +1934,10 @@
     const P = S.player;
     const sp = document.getElementById('speed'); if (sp && sp.hidden === speedFight()) sp.hidden = !speedFight();
     moneyTick(S);
+    // Deserter counts down on an open sheet (#280): when its minute changes, or it ends, the sheet draws again, so the
+    // text is right and Queue unlocks without a refresh
+    const dm = (S.flags.deserterUntil || 0) > now() ? Math.ceil((S.flags.deserterUntil - now()) / 60000) : 0;
+    if (dm !== ui.deserterMin) { const was = ui.deserterMin; ui.deserterMin = dm; if (was != null && ui.sheetFn && ui.sheetBody && /Deserter/.test(ui.sheetBody.textContent)) ui.sheetFn(); }
     // low health in a fight: the screen edges glow red
     app.classList.toggle('lowhp', !!G.fight && v0hp(P));
     if (window.SND) window.SND.music(musicNow(), false, ui.csMusic || G.musicFor((n) => SND.inlined(n))); // a track that will not load falls back to the inlined one
