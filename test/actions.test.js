@@ -75,6 +75,7 @@ const ACTIONS = {
   equip: () => { const i = bag(G.S.player, (x) => x.slot && D.GEAR_SLOTS.includes(x.slot)); if (i >= 0) G.equip(i); else G.equip(0); },
   unequip: () => G.unequip(first(G.S.player.equip) || 'chest'),
   unequipBag: () => G.unequipBag(0),
+  setPotionPick: () => { give('minor_healing_potion'); G.setPotionPick('minor_healing_potion'); G.pressPotion(); G.setPotionPick(null); },
   useItem: () => { give(anyItem((x) => x.slot === 'food') || 'linen_cloth'); G.useItem(G.S.player.bags.length - 1); },
   consume: () => { G.consume('eat'); G.consume('drink'); },
   upgradeItem: () => G.upgradeItem(first(G.S.player.equip) || 'chest'),

@@ -1704,7 +1704,7 @@
         btn.append(h('span', { class: 'cnt tnum' }, n));
       }
       let pressT = null, long = false;
-      btn.addEventListener('pointerdown', () => { long = false; pressT = setTimeout(() => { long = true; abilityTip(id); }, 450); });
+      btn.addEventListener('pointerdown', () => { long = false; pressT = setTimeout(() => { long = true; if (id === 'potion') openPotionPicker(); else abilityTip(id); }, 450); }); // the Potion's long-press picks what it drinks (#296)
       btn.addEventListener('pointerup', () => clearTimeout(pressT));
       btn.addEventListener('pointerleave', () => clearTimeout(pressT));
       btn.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -1760,7 +1760,7 @@
     if (id === 'eat') return G.consume('food');
     if (id === 'drink') return G.consume('drink');
     if (D.ABILITIES[id] && D.ABILITIES[id].instrument) { const why = G.nextInstrument(); if (why) toast(why); return; } // the next instrument learned
-    if (id === 'potion') return G.usePotion(G.potionKind());
+    if (id === 'potion') return G.pressPotion();
     if (G.fight) {
       if (id === 'attack') { G.toggleAuto(); return; }
       const why = G.useAbility(id);
@@ -1812,8 +1812,19 @@
   }
   // a long press on a bar button: what it does, and Arrange (#67: the bar's own menu, not only Hero → Abilities)
   const arrangeBtn = () => h('div', { class: 'btn-row', style: { marginTop: '8px' } }, h('button', { class: 'btn alt', onclick: () => { closeDialog(); openBarEditor(); } }, 'Arrange the action bar'));
+  // the Potion button's picker (#296): Auto (health first; in a fight mana, unless under 60% health) or one potion from
+  // the bags, which a tap then drinks until it runs out
+  function openPotionPicker() {
+    const P = G.S.player, pick = (G.potionChoice() || {}).item, help = h('p', { class: 'ai-note', style: { display: 'none', margin: '0 0 6px' } }, 'Auto: health first. In a fight, mana unless you are under 60% health.');
+    const opt = (ic, name, n, on, id) => h('button', { class: 'row' + (on ? ' sel' : ''), style: { width: '100%' }, onclick: () => { G.setPotionPick(id); closeDialog(); renderAll(); } },
+      h('div', { class: 'ic' }, img(art('icon', ic))), h('div', { class: 't' }, h('b', null, name), n != null ? h('small', { class: 'tnum' }, `In bags: ${n}`) : null), on ? h('span', { class: 'chip gold' }, 'Selected') : null);
+    const opts = G.potionOptions();
+    showDialog([h('h3', null, 'Potion button', h('button', { class: 'chip', 'aria-label': 'How Auto works', style: { marginLeft: '8px', verticalAlign: 'middle' }, onclick: () => { help.style.display = help.style.display === 'none' ? '' : 'none'; } }, '?')), help,
+    h('div', { class: 'list' }, opt('potion_red', 'Auto', null, !pick, null), ...opts.map((o) => opt(o.item.icon || 'potion_red', o.item.name, o.n, pick && pick.id === o.item.id, o.item.id))),
+    opts.length ? null : h('p', { class: 'ai-note' }, 'No potions in your bags.'), arrangeBtn()], true);
+  }
   function abilityTip(id) {
-    const simple = { attack: 'Attack: turns auto-attack on or off.', potion: 'Potion: drinks your best healing potion (or a mana potion when your health is fine). Works in combat; 2 min cooldown.',
+    const simple = { attack: 'Attack: turns auto-attack on or off.', potion: 'Potion: drinks one potion, Auto or the one you pick (long-press it). Works in combat; 2 min cooldown.',
       eat: `Eat: restores health over ${G.EAT_SECS} sec.`, drink: `Drink: restores mana over ${G.DRINK_SECS} sec.` };
     if (!id || simple[id]) return showDialog([h('p', null, id ? simple[id] : 'An empty slot: a fight-only ability shows here in a fight, or nothing yet.'), arrangeBtn()], true);
     id = barAb(id);

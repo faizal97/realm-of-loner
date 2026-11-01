@@ -2308,17 +2308,25 @@
   };
   // what a tap on the bar's Potion drinks (#279): in a fight, mana unless you're under 60% health or have none; else health first
   G.potionKind = () => (G.pUnit ? (G.pUnit.hp / G.pUnit.maxHp < 0.6 || !G.bestPotion('mana') ? null : 'mana') : null);
-  G.potionNext = () => { const k = G.potionKind(); return k ? G.bestPotion(k) : G.bestPotion('heal') || G.bestPotion('mana'); };
-  G.usePotion = function (kind) {
+  // or the one potion the player picked for it (#296: long-press the button), saved per character; Auto when unset
+  G.potionUsable = (it) => it.slot === 'potion' && (it.lvl || 1) <= G.S.player.level && (!!it.heal || D.CLASSES[G.S.player.cls].resource === 'mana');
+  G.potionOptions = () => { const out = {}; for (const b of G.S.player.bags) if (G.potionUsable(b.item)) (out[b.item.id] ||= { item: b.item, n: 0 }).n += b.n; return Object.values(out); };
+  G.potionChoice = () => { const P = G.S.player; if (!P.potionPick) return null; const b = P.bags.find((x) => x.item.id === P.potionPick && G.potionUsable(x.item)); if (!b) P.potionPick = null; return b || null; };
+  G.setPotionPick = (id) => { G.S.player.potionPick = id || null; emit('change'); };
+  G.potionNext = () => { const c = G.potionChoice(); if (c) return c; const k = G.potionKind(); return k ? G.bestPotion(k) : G.bestPotion('heal') || G.bestPotion('mana'); };
+  G.pressPotion = () => { const c = G.potionChoice(); return c ? G.usePotion(null, c.item.id) : G.usePotion(G.potionKind()); };
+  G.usePotion = function (kind, id) {
     const P = G.S.player;
     if (!G.potionReady()) return toast(`Potions are on cooldown (${Math.ceil(((P.potionAt || 0) - now()) / 1000)} sec).`);
-    const b = kind ? G.bestPotion(kind) : (G.bestPotion('heal') || G.bestPotion('mana')); if (!b) return toast('You have no potions.');
+    const b = id ? P.bags.find((x) => x.item.id === id && x.item.slot === 'potion') : kind ? G.bestPotion(kind) : (G.bestPotion('heal') || G.bestPotion('mana')); if (!b) return toast('You have no potions.');
     const it = b.item, isHeal = !!it.heal, amt = rint((it.heal || it.mana)[0], (it.heal || it.mana)[1]);
     if (!isHeal && D.CLASSES[P.cls].resource !== 'mana') return toast('You have no mana to restore.');
     G.removeItem(it.id, 1); P.potionAt = now() + POTION_CD;
     if (G.fight && G.pUnit) { const u = G.pUnit; if (isHeal) u.hp = Math.min(u.maxHp, u.hp + amt); else u.res = Math.min(u.maxRes, u.res + amt); }
     else { const v = G.vitals(); if (isHeal) P.hp = Math.min(v.maxHp, P.hp + amt); else P.res = Math.min(v.maxRes, P.res + amt); }
-    emit(isHeal ? 'selfheal' : 'change', amt); sys(`${it.name}: +${amt} ${isHeal ? 'health' : 'mana'}.`); emit('change');
+    emit(isHeal ? 'selfheal' : 'change', amt); sys(`${it.name}: +${amt} ${isHeal ? 'health' : 'mana'}.`);
+    if (P.potionPick === it.id && !P.bags.some((x) => x.item.id === it.id)) { P.potionPick = null; toast(`Out of ${it.name}. Potion button: Auto.`); } // the picked one ran out (#296)
+    emit('change');
   };
   G.usable = (it) => ['potion', 'elixir', 'stone', 'kit', 'bag', 'recipe', 'event'].includes(it.slot);
   G.useItem = function (idx) {
