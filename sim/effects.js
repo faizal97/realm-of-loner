@@ -99,7 +99,7 @@ const PLAN = [
   { effect: 'stubborn_blood', classes: ['warrior', 'rogue'], wins: ['solo'], loses: ['healed'] },
   { effect: 'kindled_edge', classes: ['rogue', 'warrior'], wins: ['boss'], loses: ['shorttrash'] },
   { effect: 'chase_the_next', classes: ['rogue', 'warrior'], wins: ['trash'], loses: ['boss'] },
-  { effect: 'steady_fuse', classes: ['mage', 'warrior'], wins: ['boss'], loses: ['highcrit'], loseBar: -1.75 }, // its own lose bar (game designer, #191): no cost passes both -2 and +2, and a sure crit on a timer barely loses where crits are already common
+  { effect: 'steady_fuse', classes: ['mage', 'warrior'], wins: ['boss'], loses: ['highcrit'], loseBar: -1.25 }, // its own lose bar (game designer, #191, -1.25 since the bots think, #149): no cost passes both -2 and +2, and a sure crit on a timer barely loses where crits are already common
   { effect: 'glass_heart', classes: ['rogue', 'warrior'], wins: ['healed'], loses: ['solo'] },
   { effect: 'lavish_mend', classes: ['priest', 'druid'], wins: ['groupwide'], loses: ['tankonly'], provisional: '#40, judged on sim/capacity.js' }, // wins: survival, +5 to +15 points (game designer, #22),
   { effect: 'tethered_mend', classes: ['priest', 'druid'], wins: ['tankonly'], loses: ['groupwide'], provisional: '#40, judged on sim/capacity.js' },

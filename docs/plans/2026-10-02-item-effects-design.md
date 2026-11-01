@@ -156,3 +156,5 @@ v10.10 starts after v10.9.0 ships. Each beta is playable on its own.
 - Bots wearing effect items, and linking them in chat.
 
 **Per-effect bar (2026-10-10, #191):** Steady Fuse's loses bar is −1.75 instead of −2.0, at cost 0.51 (interval 45 s). After #141 and #191 moved the baseline, no cost or interval passed both of its bars. The wins bar was kept, because an effect is picked for its win. It's re-checked at the next effects baseline (#215), and goes back to −2.0 if a cost then passes it.
+
+**Per-effect bar (2026-11-01, #149):** Steady Fuse's loses bar is −1.25, at cost 0.56 (interval 45 s). Once the bots think, the guaranteed crit is worth more: at 0.51 its win rose from +2.4% to +3.4% and its loss shrank from −1.96% to −0.78% (5-seed means). No cost up to the 0.6 cap and no interval from 50 to 70 s passed −1.75 as dropped; the loss stuck on the level-20 warrior in the high-crit case, where crits are already common. At 0.56: wins +3.7% (+4.3% at full upgrade), loses −1.30% (−1.52%).
