@@ -4,6 +4,9 @@
   const G = {};
   const rnd = E.rnd, rint = E.rint, clamp = E.clamp;
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  // #74: what bots say, when and who says it draws from the cosmetic stream (E.crand); everything that decides an outcome
+  // (fights, drops, rolls, who joins or leaves a group) stays on Math.random
+  const crand = () => E.crand(), cpick = (a) => E.cpick(a);
   const now = () => Date.now();
   const lower = (t) => String(t).toLowerCase();
   // Characters: one save per character under azsolo.char.<id>, plus an index for the select screen.
@@ -258,7 +261,7 @@
       }
       if (P.guild >= 0) {
         const mates = S.bots.filter((b) => b.guild === P.guild);
-        if (mates.length) B.post(S, 'guild', pick(mates), pick(['wb!', 'welcome back', 'oh hey you are back', 'yo']));
+        if (mates.length) B.post(S, 'guild', cpick(mates), cpick(['wb!', 'welcome back', 'oh hey you are back', 'yo']));
       }
       S.news = report.news.slice().sort((a, b) => b.t - a.t).concat(S.news).slice(0, 40); // newest first, as Social → News reads: a long absence drops its oldest lines, not the summary at its end (#18)
     } else {
@@ -743,12 +746,12 @@
     const date = new Date();
     const near = B.onlineIn(S, P.place, date);
     S.pending = S.pending || [];
-    const gz = () => pick(['gz', 'grats', 'gratz', 'gz!', 'nice', 'congrats']);
+    const gz = () => cpick(['gz', 'grats', 'gratz', 'gz!', 'nice', 'congrats']);
     if (P.guild >= 0) {
       const mates = S.bots.filter((b) => b.guild === P.guild && B.isOnline(b, date)).slice(0, 3);
-      mates.forEach((b, i) => S.pending.push({ at: now() + 1500 + i * 1800 + Math.random() * 2000, bot: b.id, ch: 'guild', text: gz() }));
+      mates.forEach((b, i) => S.pending.push({ at: now() + 1500 + i * 1800 + crand() * 2000, bot: b.id, ch: 'guild', text: gz() }));
     }
-    if (near.length && Math.random() < 0.5) S.pending.push({ at: now() + 2500, bot: pick(near).id, ch: 'say', text: gz() });
+    if (near.length && crand() < 0.5) S.pending.push({ at: now() + 2500, bot: cpick(near).id, ch: 'say', text: gz() });
     if (P.level === 5 && P.guild < 0 && !S.flags.guildOffer) S.flags.guildOfferAt = now() + 90000;
   }
 
@@ -870,7 +873,7 @@
         if (Math.random() < pTap) {
           const b = pick(near);
           m.state = 'tapped'; m.by = b.name; m.byCls = b.cls; m.until = t + rnd(6, 14) * 1000;
-          if (m.id.startsWith('n_') && Math.random() < 0.6) B.post(S, 'say', b, pick([`got ${D.MOBS[m.key].name}!`, `${D.MOBS[m.key].name} is mine sry`, 'finally']));
+          if (m.id.startsWith('n_') && crand() < 0.6) B.post(S, 'say', b, cpick([`got ${D.MOBS[m.key].name}!`, `${D.MOBS[m.key].name} is mine sry`, 'finally']));
         }
       }
     }
@@ -893,7 +896,7 @@
       const g = opts[rint(0, opts.length - 1)];
       const inviter = S.bots.find((b) => b.guild === g) || pick(S.bots);
       // the pitch is part of the invitation (issue #8: a whisper posted with it read as a pitch after you declined)
-      emit('invite', { guild: g, guildName: B.GUILDS[g], from: inviter.name, line: pick(['hey, want to join our guild? chill ppl, we run dungeons', 'we are recruiting, want an invite?']) });
+      emit('invite', { guild: g, guildName: B.GUILDS[g], from: inviter.name, line: cpick(['hey, want to join our guild? chill ppl, we run dungeons', 'we are recruiting, want an invite?']) });
     }
   }
   const questKeys = () => G.questMobs();
@@ -904,7 +907,7 @@
     S.player.guild = g;
     sys(`You have joined ${B.GUILDS[g]}.`);
     const mates = S.bots.filter((b) => b.guild === g && B.isOnline(b, new Date()));
-    mates.slice(0, 3).forEach((b, i) => S.pending.push({ at: now() + 1200 + i * 2200, bot: b.id, ch: 'guild', text: pick(['welcome!', 'welcome :)', 'hi!', 'o/', 'welcome to the guild']) }));
+    mates.slice(0, 3).forEach((b, i) => S.pending.push({ at: now() + 1200 + i * 2200, bot: b.id, ch: 'guild', text: cpick(['welcome!', 'welcome :)', 'hi!', 'o/', 'welcome to the guild']) }));
   };
 
   // ============================================================ travel / hearth / gather / rest
@@ -1822,7 +1825,7 @@
 
   function endSolo(C) {
     const S = G.S, P = S.player;
-    if (C.wanderer) { const Hd = D.LEGENDS[C.wanderer.key].hooded; B.post(S, 'say', { name: Hd.name, cls: 'paladin' }, pick(Hd.leave)); sys('The hooded knight walks off without giving a name.'); }
+    if (C.wanderer) { const Hd = D.LEGENDS[C.wanderer.key].hooded; B.post(S, 'say', { name: Hd.name, cls: 'paladin' }, cpick(Hd.leave)); sys('The hooded knight walks off without giving a name.'); }
     const pu = G.pUnit;
     recordFx(C, pu); E.writeBack(C, pu, now());
     if (C.over === 'win' && pu.dead) P.hp = 1; // the kill and your death in the same moment: the kill counts, and you live (#121)
@@ -1861,7 +1864,7 @@
       P.deaths++; P.hp = 0;
       P.ghostUntil = now() + 15000;
       sys('You have died. Your spirit runs back to your body...');
-      if (Math.random() < 0.3) { const near = B.onlineIn(S, P.place, new Date()); if (near.length) B.post(S, 'say', pick(near), pick(['rip', 'oof', 'lol rip', 'u ok?'])); }
+      if (crand() < 0.3) { const near = B.onlineIn(S, P.place, new Date()); if (near.length) B.post(S, 'say', cpick(near), cpick(['rip', 'oof', 'lol rip', 'u ok?'])); }
     }
     G.fight = null; G.pUnit = null;
     emit('fightEnd', { result });
@@ -2613,7 +2616,7 @@
     stopActions();
     const grp = formGroup(req.act, { firstTimers: req.firstTimers });
     sys(`${req.posterName}'s group summons you to ${D.ACTIVITIES[req.act].name}.`);
-    grp.members.forEach((m, i) => S.pending.push({ at: now() + 900 + i * 1400, bot: m.bot.id, ch: 'party', text: pick(i === 0 ? ['ty for coming!!', 'thank you so much', 'yay a helper', 'omg ty'] : ['hi', 'ty', 'hello', 'o/']), fromName: m.name }));
+    grp.members.forEach((m, i) => S.pending.push({ at: now() + 900 + i * 1400, bot: m.bot.id, ch: 'party', text: cpick(i === 0 ? ['ty for coming!!', 'thank you so much', 'yay a helper', 'omg ty'] : ['hi', 'ty', 'hello', 'o/']), fromName: m.name }));
     startRun(req.act);
     const R = S.run; R.help = { firstTimers: req.firstTimers, stuck: !!req.startIdx }; R.idx = req.startIdx || 0; R.noSpeed = !!req.startIdx;
     if (req.startIdx) sys(`They wiped here twice. Next: ${R.pulls[R.idx].label}.`);
@@ -2753,9 +2756,9 @@
     sys(`An enemy player is nearby: ${b.name}, level ${level} ${R.name || ''} ${D.CLASSES[b.cls].name}.`);
     // the zone notices
     const mates = B.onlineIn(S, P.place, new Date()).filter((x) => B.factionOf(x) === myF);
-    if (mates.length && (place.safe || Math.random() < 0.4)) {
+    if (mates.length && (place.safe || crand() < 0.4)) {
       const who = D.FACTIONS[theirF].name.toUpperCase(); // the faction's name in the game (Krugar, Accord), never its key (#93)
-      B.post(S, place.safe ? 'general' : 'say', pick(mates), pick(place.safe ? [`${who} IN ${place.name.toUpperCase()}!!`, `${lower(who)} in ${place.name.toLowerCase()}, careful`, `inc ${lower(who)} near the inn`] : ['watch out, pvp', `${lower(who)} here`, `a ${lower(D.CLASSES[b.cls].name)} is ganking here`]));
+      B.post(S, place.safe ? 'general' : 'say', cpick(mates), cpick(place.safe ? [`${who} IN ${place.name.toUpperCase()}!!`, `${lower(who)} in ${place.name.toLowerCase()}, careful`, `inc ${lower(who)} near the inn`] : ['watch out, pvp', `${lower(who)} here`, `a ${lower(D.CLASSES[b.cls].name)} is ganking here`]));
       emit('chat');
     }
     emit('intruder', S.intruder);
@@ -2792,7 +2795,7 @@
     if (!won) P.hp = Math.max(1, Math.round(G.vitals().maxHp * 0.05));
     if (d.wager) { if (won) P.money += d.wager; else P.money = Math.max(0, P.money - d.wager); }
     sys(won ? `You won the duel against ${d.name}!${d.wager ? ' +' + G.moneyText(d.wager) + '.' : ''}` : `${d.name} won the duel.${d.wager ? ' You paid ' + G.moneyText(d.wager) + '.' : ''}`);
-    S.pending.push({ at: now() + 1500, bot: d.bot, ch: 'whisper', text: won ? pick(['gg, u got me', 'gg wp', 'nice one, rematch sometime?', 'ok ur good lol']) : pick(['gg!', 'gg wp', 'close one', 'ez... jk gg']) });
+    S.pending.push({ at: now() + 1500, bot: d.bot, ch: 'whisper', text: won ? cpick(['gg, u got me', 'gg wp', 'nice one, rematch sometime?', 'ok ur good lol']) : cpick(['gg!', 'gg wp', 'close one', 'ez... jk gg']) });
     G.fight = null; G.pUnit = null;
     emit('duelEnd', { bot: d.bot, won }); emit('fightEnd', { result: C.over, duel: true }); emit('change');
   }
@@ -2849,13 +2852,13 @@
       const honor = Math.round((10 + 2 * info.level) * (info.town ? 1.5 : 1));
       P.pvp.kills++; P.pvp.honor += honor; G.honorLooks();
       sys(`You defeated ${info.name}. +${honor} Honor.`);
-      if (mates.length && Math.random() < 0.5) B.post(S, 'say', pick(mates), pick(['gj', 'nice', 'ez', 'get rekt lol', 'thx for the help', 'ty']));
+      if (mates.length && crand() < 0.5) B.post(S, 'say', cpick(mates), cpick(['gj', 'nice', 'ez', 'get rekt lol', 'thx for the help', 'ty']));
       f.nextAmbush = now() + AMBUSH_GAP * rnd(0.8, 1.5);
     } else {
       P.pvp.deaths++; P.deaths++; P.hp = 0;
       P.ghostUntil = now() + 15000;
       sys(`${info.name} killed you. Your spirit runs back to your body...`);
-      if (mates.length && Math.random() < 0.4) B.post(S, 'say', pick(mates), pick(['rip', 'gankers smh', 'we will get him', 'u ok?']));
+      if (mates.length && crand() < 0.4) B.post(S, 'say', cpick(mates), cpick(['rip', 'gankers smh', 'we will get him', 'u ok?']));
       f.nextAmbush = now() + AMBUSH_AFTER_DEATH;
     }
     G.fight = null; G.pUnit = null;
@@ -2987,7 +2990,7 @@
     const S = G.S; if (!S || !S.bots) return; const w = G.brawlWindow(), t = now(), soon = !w.open && w.opensAt.getTime() - t < 5 * 60000;
     if (!soon || S.brawlTold === w.id) return; S.brawlTold = w.id;
     const b = S.bots.filter((x) => (x.level || 1) >= BRAWL.minLvl); if (!b.length) return;
-    B.post(S, 'general', pick(b), pick(['bloodsand brawl opens in 5, who is fighting', 'arena in rumhook opens at the top of the hour', 'brawl soon, last time i got knocked out round 1 lol', 'bloodsand pit opens in a few min, chest is mine']));
+    B.post(S, 'general', cpick(b), cpick(['bloodsand brawl opens in 5, who is fighting', 'arena in rumhook opens at the top of the hour', 'brawl soon, last time i got knocked out round 1 lol', 'bloodsand pit opens in a few min, chest is mine']));
     emit('chat');
   };
 
@@ -3170,7 +3173,7 @@
     const lead = opts.leader && S.bots.find((b) => b.id === opts.leader);
     if (lead) { const i = grp.members.findIndex((m) => m.role === 'dps' && !m.legend); if (i >= 0) { const lc = G.botChar(Object.assign({}, lead, { level: grp.members[i].level, role: 'dps' })); lc.syncLevel = grp.members[i].syncLevel; grp.members[i] = lc; } }
     sys(`${lead ? lead.name + "'s" : 'The'} group summons you to ${D.ACTIVITIES[act].name}.`);
-    grp.members.forEach((m, i) => S.pending.push({ at: now() + 900 + i * 1400, bot: m.bot.id, ch: 'party', text: m.cameo ? G.legendLine(m.legend, 'hello') : pick(m.bot.id === (lead && lead.id) ? ['ty for joining!', 'yay ty', 'nice, lets go'] : ['hi', 'hello', 'o/', 'hey']), fromName: m.name }));
+    grp.members.forEach((m, i) => S.pending.push({ at: now() + 900 + i * 1400, bot: m.bot.id, ch: 'party', text: m.cameo ? G.legendLine(m.legend, 'hello') : cpick(m.bot.id === (lead && lead.id) ? ['ty for joining!', 'yay ty', 'nice, lets go'] : ['hi', 'hello', 'o/', 'hey']), fromName: m.name }));
     startRun(act);
     S.run.soc = opts.soc || null;
     const guest = grp.members.find((m) => m.cameo); if (guest) emit('legendJoin', { key: guest.legend });
@@ -3220,7 +3223,7 @@
     const diff = Math.abs(b.level - P.level);
     const yes = Math.random() < (diff <= 3 ? 0.75 : diff <= 5 ? 0.35 : 0.05);
     sys(`You invite ${b.name} to your group.`);
-    S.pending.push({ at: now() + rnd(1500, 3500), bot: b.id, ch: 'whisper', text: yes ? pick(['sure', 'ok!', 'yeah why not', 'sure, same quest']) : pick(['no ty', 'soloing sry', 'nah', 'too low lol']),
+    S.pending.push({ at: now() + rnd(1500, 3500), bot: b.id, ch: 'whisper', text: yes ? cpick(['sure', 'ok!', 'yeah why not', 'sure, same quest']) : cpick(['no ty', 'soloing sry', 'nah', 'too low lol']),
       onPost: () => { if (yes && G.S && !G.S.run) addToParty(b); } });
   };
   G.acceptPartyInvite = function (botId) {
@@ -3626,7 +3629,7 @@
       C.wanderer = { key, name: Hd.name };
       W.n++; W.last = now(); W.zones[region] = (W.zones[region] || 0) + 1;
       B.post(S, 'combat', null, `A hooded knight joins the fight!`);
-      B.post(S, 'say', { name: Hd.name, cls: 'paladin' }, pick(Hd.join));
+      B.post(S, 'say', { name: Hd.name, cls: 'paladin' }, cpick(Hd.join));
       emit('change');
       return;
     }
@@ -3644,7 +3647,7 @@
     return key;
   };
   // what a legend says in the party when they arrive and leave (their own lines, in D.LEGENDS[key].cameo)
-  G.legendLine = (key, kind) => { const c = (D.LEGENDS[key] || {}).cameo || {}; return pick(c[kind] || ['o/']); };
+  G.legendLine = (key, kind) => { const c = (D.LEGENDS[key] || {}).cameo || {}; return cpick(c[kind] || ['o/']); };
   // wearing a Legend's keepsake: its look on your back, only once their story is done
   G.setKeepsake = function (key) {
     const P = G.S.player, L = key && D.LEGENDS[key];
@@ -3710,7 +3713,7 @@
     if (D.ACTIVITIES[act].bg) return startBg(act); // a battleground forms its own two teams
     const grp = formGroup(act, trial ? { trial } : hard ? { hard } : undefined, picked); // the group the pop showed
     sys(`You have joined a group for ${D.ACTIVITIES[act].name}.`);
-    grp.members.forEach((m, i) => { if (m.cameo || Math.random() < 0.7) S.pending.push({ at: now() + 800 + i * 1400 + Math.random() * 1500, bot: m.bot.id, ch: 'party', text: m.cameo ? G.legendLine(m.legend, 'hello') : B.partyLine(m.bot, 'hello'), fromName: m.name }); });
+    grp.members.forEach((m, i) => { if (m.cameo || crand() < 0.7) S.pending.push({ at: now() + 800 + i * 1400 + crand() * 1500, bot: m.bot.id, ch: 'party', text: m.cameo ? G.legendLine(m.legend, 'hello') : B.partyLine(m.bot, 'hello'), fromName: m.name }); });
     startRun(act, trial, hard);
     const guest = grp.members.find((m) => m.cameo); if (guest) emit('legendJoin', { key: guest.legend });
     emit('change');
@@ -3743,8 +3746,8 @@
     if (A.scale) S.run.mobLevel = G.syncLevel(act);
     { // a bot shows off the effect item it wears (#56): a link to the real item, tappable like any other
       const m = S.group.members.find((x) => !x.gone && x.bot && Object.values(x.equip || {}).some((it) => G.effectOf(it)));
-      if (m && Math.random() < 0.35) { const it = Object.values(m.equip).find((x) => G.effectOf(x)), L = B.link(it.name, it.q);
-        partySay(m, pick([`finally got ${L}!`, `${L} is carrying me lol`, `took me forever to get ${L}`, `${L} finally dropped for me last week`])); }
+      if (m && crand() < 0.35) { const it = Object.values(m.equip).find((x) => G.effectOf(x)), L = B.link(it.name, it.q);
+        partySay(m, cpick([`finally got ${L}!`, `${L} is carrying me lol`, `took me forever to get ${L}`, `${L} finally dropped for me last week`])); }
     }
     if (trial) { // Trials (v10.4): enemies at the level cap, stronger with each Trial level
       const f = TR().factor(trial), sc = (m) => ({ hp: ((m && m.hp) || 1) * f, dmg: ((m && m.dmg) || 1) * f }), Rec = G.trials();
@@ -3817,7 +3820,7 @@
       G.fight.extraAt = { t: rnd(4, 8), mobs: R.pulls[R.idx + 1].mobs.slice(0, 1) };
     }
     R.phase = 'fight';
-    if (tb && Math.random() < 0.5) partySay(tb, B.partyLine(tb.bot, 'pull'));
+    if (tb && crand() < 0.5) partySay(tb, B.partyLine(tb.bot, 'pull'));
     emit('fightStart', { fight: G.fight });
     emit('runUpdate');
   };
@@ -3847,7 +3850,7 @@
         const gear = evA ? [] : l.items.filter((it) => D.GEAR_SLOTS.includes(it.slot) && it.q >= 2); // a festival run drops no gear
         for (const it of gear) addRoll(it);
       }
-      if (pull.boss && evA) { if (evA === 'longnight') lnBossLoot(R); else lwBossLoot(R); const talker = pick(S.group.members.filter((m) => !m.gone)); if (talker) partySay(talker, B.partyLine(talker.bot, 'win')); }
+      if (pull.boss && evA) { if (evA === 'longnight') lnBossLoot(R); else lwBossLoot(R); const talker = cpick(S.group.members.filter((m) => !m.gone)); if (talker) partySay(talker, B.partyLine(talker.bot, 'win')); }
       else if (pull.boss) {
         const M = D.MOBS[pull.mobs[0]];
         const table = (M.loot || []).slice().sort(() => Math.random() - 0.5);
@@ -3898,7 +3901,7 @@
         const pLeave = 0.08 + m.bot.toxic * 0.25 + (R.wipes - 1) * 0.12;
         if (Math.random() < pLeave) {
           m.gone = true;
-          S.pending.push({ at: now() + 2500 + Math.random() * 2000, bot: m.bot.id, ch: 'party', text: B.partyLine(m.bot, m.bot.toxic > 0.5 ? 'rage' : 'leave'), fromName: m.name,
+          S.pending.push({ at: now() + 2500 + crand() * 2000, bot: m.bot.id, ch: 'party', text: B.partyLine(m.bot, m.bot.toxic > 0.5 ? 'rage' : 'leave'), fromName: m.name,
             onPost: () => sys(`${m.name} has left the group.`) });
         }
       }
@@ -3979,9 +3982,9 @@
         const usable = G.canUseItem(r.item, win.m.cls);
         if (win.m.bot.ninja && !usable) {
           const other = S.group.members.find((m) => !m.gone && m !== win.m);
-          if (other) S.pending.push({ at: t + 2000, bot: other.bot.id, ch: 'party', text: pick(['ninja...', 'wtf that is not even your armor', 'reported lol', 'bruh']), fromName: other.name });
+          if (other) S.pending.push({ at: t + 2000, bot: other.bot.id, ch: 'party', text: cpick(['ninja...', 'wtf that is not even your armor', 'reported lol', 'bruh']), fromName: other.name });
           S.pending.push({ at: t + 4500, bot: win.m.bot.id, ch: 'party', text: B.partyLine(win.m.bot, 'loot'), fromName: win.m.name });
-        } else if (Math.random() < 0.5) {
+        } else if (crand() < 0.5) {
           const other = S.group.members.find((m) => !m.gone && m !== win.m);
           if (other) S.pending.push({ at: t + 1800, bot: other.bot.id, ch: 'party', text: B.partyLine(other.bot, 'loot'), fromName: other.name });
         }
@@ -4160,7 +4163,7 @@
     if (S.run) {
       if (S.run.phase !== 'done' && S.group) {
         const m = S.group.members.find((x) => !x.gone);
-        if (m) partySay(m, pick(['wait what', 'bye then', 'k', 'rip']));
+        if (m) partySay(m, cpick(['wait what', 'bye then', 'k', 'rip']));
         const ms = G.deserterFor(S.run);
         if (ms) { S.flags.deserterUntil = now() + ms; sys(`You left before the end: Deserter for ${ms / 60000} minutes.`); }
         else sys('You left after a wipe: no Deserter.');
@@ -4291,7 +4294,7 @@
           C.extraAt = null;
           const tb = S.group.members.find((m) => m.role === 'tank');
           sys('Another pack joins the fight!');
-          if (tb) partySay(tb, pick(['oops', 'my bad', 'extra pack sry', 'uh oh']));
+          if (tb) partySay(tb, cpick(['oops', 'my bad', 'extra pack sry', 'uh oh']));
           else B.post(S, 'party', null, 'extra pack!');
         }
         if (C.kind === 'rehearsal' && C.events.length) rehearsalStep(C, C.events);
@@ -4456,7 +4459,7 @@
       if (!D.PLACES[P.place].safe || !near.length) return toast('Toss treats in a town.');
       const bot = pick(near); G.removeItem(it.id, 1);
       sys(`You toss a Lanternwake Treat to ${bot.name}.`);
-      S.pending.push({ at: now() + 1200 + Math.random() * 1500, bot: bot.id, ch: 'say', text: pick([`thanks for the treat ${P.name}!`, `ty for the treat!`, `oh a Lanternwake treat, thank you ${P.name}`, `ty ${P.name}, happy Lanternwake`]), fromName: bot.name });
+      S.pending.push({ at: now() + 1200 + crand() * 1500, bot: bot.id, ch: 'say', text: cpick([`thanks for the treat ${P.name}!`, `ty for the treat!`, `oh a Lanternwake treat, thank you ${P.name}`, `ty ${P.name}, happy Lanternwake`]), fromName: bot.name });
     } else if (it.townLantern) {
       if (!D.PLACES[P.place].safe) return toast('Only in a town.');
       const a = G.lwAccount(), t = lwRec(a).town; G.removeItem(it.id, 1);
@@ -4699,7 +4702,7 @@
     if (now() < (S.flags.lnAsk || 0)) return;
     const near = lnNear().filter((x) => !(st.prog.fed || []).includes(x.id));
     if (!near.length) return;
-    const b = pick(near), m = B.post(S, 'say', b, pick(STEW_ASK)());
+    const b = cpick(near), m = B.post(S, 'say', b, cpick(STEW_ASK)());
     S.flags.lnAsk = now() + rnd(20, 45) * 1000;
     if (m) { m.act = { kind: 'ln_stew', bot: b.id, state: 'open', until: now() + 5 * 60000 }; emit('change'); }
   }
@@ -4713,7 +4716,7 @@
     a.state = 'done'; st.prog.bowls++; st.prog.fed = (st.prog.fed || []).concat([a.bot]);
     const b = S.bots.find((x) => x.id === a.bot);
     sys(`You hand ${b ? b.name : 'them'} a bowl of Longnight Stew (${st.prog.bowls}/${LN().stew.bowls}).`);
-    if (b) S.pending.push({ at: now() + rnd(1200, 2600), bot: b.id, ch: 'say', text: pick([`oh thank you ${P.name}! so warm`, `ty!! happy Longnight ${P.name}`, `you're the best, thank you`, `mmm, perfect. ty ${P.name}`]), fromName: b.name });
+    if (b) S.pending.push({ at: now() + 1200 + crand() * 1400, bot: b.id, ch: 'say', text: cpick([`oh thank you ${P.name}! so warm`, `ty!! happy Longnight ${P.name}`, `you're the best, thank you`, `mmm, perfect. ty ${P.name}`]), fromName: b.name });
     if (st.prog.bowls >= LN().stew.bowls) lnDailyDone();
     emit('change'); G.save();
   };
@@ -4805,11 +4808,11 @@
       st.prog.wins++;
       sys(`You win the round against ${Z.name} (${Math.min(st.prog.wins, LN().snow.wins)}/${LN().snow.wins}).`);
       G.lnGive(LN().earn.elite, 'a snowball round');
-      if (Z.bot) S.pending.push({ at: now() + rnd(1000, 2400), bot: Z.bot, ch: 'say', text: pick([`gg ${P.name}, good arm`, `ok ok you win lol`, `rematch next Longnight!`, `gg, my hands are frozen`]), fromName: Z.name });
+      if (Z.bot) S.pending.push({ at: now() + 1000 + crand() * 1400, bot: Z.bot, ch: 'say', text: cpick([`gg ${P.name}, good arm`, `ok ok you win lol`, `rematch next Longnight!`, `gg, my hands are frozen`]), fromName: Z.name });
       if (st.prog.wins >= LN().snow.wins) lnDailyDone();
     } else if (Z.over === 'lose') {
       sys(`${Z.name} wins the round.`);
-      if (Z.bot) S.pending.push({ at: now() + rnd(1000, 2400), bot: Z.bot, ch: 'say', text: pick([`gotcha ${P.name}!`, `haha gg`, `snow in your boots now`, `gg! duck next time lol`]), fromName: Z.name });
+      if (Z.bot) S.pending.push({ at: now() + 1000 + crand() * 1400, bot: Z.bot, ch: 'say', text: cpick([`gotcha ${P.name}!`, `haha gg`, `snow in your boots now`, `gg! duck next time lol`]), fromName: Z.name });
     }
     S.snow = null; emit('snow', null); emit('change'); G.save();
   }
@@ -4822,7 +4825,7 @@
     if (now() < (S.flags.lnSay || 0)) return;
     S.flags.lnSay = now() + rnd(90, 200) * 1000;
     const near = lnNear();
-    if (near.length) B.post(S, 'say', pick(near), pick(HEARTH_SAY)());
+    if (near.length) B.post(S, 'say', cpick(near), cpick(HEARTH_SAY)());
   }
   G.lnTick = function () { if (!G.lnOn() || !G.S || !G.S.player) return; try { lnStewTick(); lnTownTick(); } catch (e) { console.error(e); } };
 
@@ -4837,7 +4840,7 @@
       if (!town || !near.length) return toast('Throw snowballs in a town.');
       const bot = pick(near); G.removeItem(it.id, 1);
       sys(`You throw a snowball at ${bot.name}. Direct hit!`);
-      S.pending.push({ at: now() + 1200 + Math.random() * 1500, bot: bot.id, ch: 'say', text: pick([`hey!! ${P.name} lol`, `oh it's ON ${P.name}`, `snow down my collar, thanks ${P.name}`, `lol nice throw`, `${P.name}!!! happy Longnight to you too`]), fromName: bot.name });
+      S.pending.push({ at: now() + 1200 + crand() * 1500, bot: bot.id, ch: 'say', text: cpick([`hey!! ${P.name} lol`, `oh it's ON ${P.name}`, `snow down my collar, thanks ${P.name}`, `lol nice throw`, `${P.name}!!! happy Longnight to you too`]), fromName: bot.name });
     } else if (it.cocoa) { G.removeItem(it.id, 1); sys('You sit by the fire with a cup of Hearthside Cocoa. Warm at last.'); emit('emote', { kind: 'cocoa' }); }
     else if (it.garland) {
       if (!town) return toast('Only in a town.');

@@ -7,6 +7,13 @@
   const rint = (a, b) => Math.floor(a + Math.random() * (b - a + 1));
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   E.rnd = rnd; E.rint = rint; E.clamp = clamp;
+  // #74: chat and other cosmetic randomness (what bots say and when, who says it, flavour shouts) draw from their own
+  // stream, so changing chat never moves the dice of a fight, a drop or a group; Math.random stays the outcome stream.
+  // Seeded once from Math.random when the engine loads (one draw, always the same point), so a seeded sim stays
+  // reproducible on both streams. E.seedCosmetic(n) reseeds it.
+  let cosS = (Math.random() * 4294967296) >>> 0;
+  const crand = () => { cosS = (cosS + 0x6D2B79F5) >>> 0; let x = cosS; x = Math.imul(x ^ (x >>> 15), x | 1); x ^= x + Math.imul(x ^ (x >>> 7), x | 61); return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
+  E.crand = crand; E.cpick = (a) => a[Math.floor(crand() * a.length)]; E.cchance = (p) => crand() < p; E.seedCosmetic = (n) => { cosS = n >>> 0; };
   let UID = 1;
 
   // ------------------------------------------------------------- character stats
@@ -338,7 +345,7 @@
     const puller = (opts && opts.puller) || allies[0];
     for (const e of enemies) { e.threat[puller.uid] = 1; e.target = puller.uid; }
     for (const a of allies) if (!a.target && enemies[0]) a.target = enemies[0].uid;
-    for (const e of enemies) if (D.MOBS[e.key] && D.MOBS[e.key].aggro && Math.random() < 0.8) say(C, e, D.MOBS[e.key].aggro, 'monster');
+    for (const e of enemies) if (D.MOBS[e.key] && D.MOBS[e.key].aggro && crand() < 0.8) say(C, e, D.MOBS[e.key].aggro, 'monster');
     return C;
   };
 
