@@ -1606,10 +1606,10 @@
         if (low && low.hp / low.maxHp < thr && try_('soothing_chord', low)) return;
         if (tank && tank.hp / tank.maxHp < 0.9 && has('counterpoint') && !auraOf(tank, 'counterpoint') && try_('counterpoint', tank)) return;
         if (tank && tank.hp / tank.maxHp < 0.85 && has('verse_of_mending') && !auraOf(tank, 'verse_of_mending') && try_('verse_of_mending', tank)) return;
+        if (hurt === 0 && u.res / u.maxRes > 0.7) for (const s of ['hearthsong', 'anthem_of_stone']) if (has(s) && !auraOf(u, s) && try_(s)) return; // the 30 min buffs only with nobody hurt and mana to spare (#265)
         if (has('marching_song') && u.res / u.maxRes > 0.7 && botSong(C, u, b, 'marching_song', null, try_, hurt === 0 && en.some((e) => e.boss))) return; // the second song (#251), only with mana to spare (#277)
         if (has('cleansing_verse')) { const sick = allies.find((a) => a.auras.some((x) => x.dot != null && C.units[x.src] && C.units[x.src].side !== a.side)); if (sick && Math.random() < 0.5 * (b.skill || 0.5) && try_('cleansing_verse', sick)) return; }
         if (has('intermission') && u.res / u.maxRes < 0.35 && try_('intermission')) return;
-        for (const s of ['hearthsong', 'anthem_of_stone']) if (has(s) && !auraOf(u, s) && try_(s)) return;
         if (en.length >= 3 && has('lullaby') && Math.random() < 0.3 * (b.skill || 0.5) && try_('lullaby')) return;
         if (!b.healOnly && u.res / u.maxRes > 0.7 && Math.random() < 0.4) { const f = focusTarget(C, u); if (f && has('dirge') && botSong(C, u, b, 'dirge', f, try_, true)) return; if (f) try_('dissonant_note', f); }
         return;
