@@ -2098,11 +2098,12 @@
     return list[0][0];
   }
   // up to 2 ore veins and 2 herbs per wild place; each kind respawns on its own timer
+  G.NODES_PER_KIND = 2; // ore and herb each: up to 4 nodes in a place, and the scene has a spot for each (POS_NODE in ui.js)
   function nodesTick(id, W, t) {
     const pl = D.PLACES[id]; if (!nodePlace(pl)) return;
     if (!W.pnodes || !W.pnodes.at) W.pnodes = { list: [rollNode(pl, 'ore'), rollNode(pl, 'herb')], at: { ore: t + rnd(60, 100) * 1000, herb: t + rnd(60, 100) * 1000 } };
     for (const kind of ['ore', 'herb']) {
-      if (W.pnodes.list.filter((k) => nodeKind(k) === kind).length < 2 && t >= W.pnodes.at[kind]) { W.pnodes.list.push(rollNode(pl, kind)); W.pnodes.at[kind] = t + rnd(60, 100) * 1000; }
+      if (W.pnodes.list.filter((k) => nodeKind(k) === kind).length < G.NODES_PER_KIND && t >= W.pnodes.at[kind]) { W.pnodes.list.push(rollNode(pl, kind)); W.pnodes.at[kind] = t + rnd(60, 100) * 1000; }
       else if (t >= W.pnodes.at[kind]) W.pnodes.at[kind] = t + rnd(60, 100) * 1000;
     }
   }
