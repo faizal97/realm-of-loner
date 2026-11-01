@@ -1386,6 +1386,26 @@
   const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const dayKey = () => ymd(new Date(now()));
   const weekKey = () => { const d = new Date(now()); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return 'w' + ymd(d); };
+  // when each clock next changes (#183): every timed thing says it, from this one helper, so the screens agree and a new
+  // timed activity can't ship without a time. 'day' (local midnight: bounties, daily loot, the Roulette, festival dailies),
+  // 'week' (local Monday: the weekly bounty), 'omens' (the Trials' Omens on the 1st, 8th, 15th and 22nd), 'hunt' (the
+  // rare-hunt windows, 6 hours in UTC). Returns ms.
+  G.nextChange = function (kind, t) {
+    t = t == null ? now() : t; const d = new Date(t), y = d.getFullYear(), m = d.getMonth(), day = d.getDate();
+    if (kind === 'day') return new Date(y, m, day + 1).getTime();
+    if (kind === 'week') return new Date(y, m, day + 7 - (d.getDay() + 6) % 7).getTime();
+    if (kind === 'omens') { const next = [8, 15, 22].find((x) => x > day); return (next ? new Date(y, m, next) : new Date(y, m + 1, 1)).getTime(); }
+    if (kind === 'hunt') return (Math.floor(t / G.HUNT_WINDOW) + 1) * G.HUNT_WINDOW;
+    throw new Error('no clock: ' + kind);
+  };
+  // that time as a player reads it: 'midnight' for the next one, a clock time later today, else a day ('Mon 2 Nov')
+  const WDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], MON3 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  G.whenText = function (ms, t) {
+    t = t == null ? now() : t; const d = new Date(ms);
+    if (ms === G.nextChange('day', t)) return 'midnight';
+    if (new Date(t).toDateString() === d.toDateString()) return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    return `${WDAYS[d.getDay()]} ${d.getDate()} ${MON3[d.getMonth()]}`;
+  };
   // a bounty taken before the switch carries a UTC key; it stays good for that one day so nothing vanishes
   const oldDayKey = () => new Date(now()).toISOString().slice(0, 10);
   const oldWeekKey = () => { const d = new Date(now()); const day = (d.getDay() + 6) % 7; d.setDate(d.getDate() - day); return 'w' + d.toISOString().slice(0, 10); };

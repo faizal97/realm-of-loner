@@ -1189,7 +1189,7 @@
     for (const r of (G.huntRares ? G.huntRares() : [])) if (r.place === G.S.player.place && !G.huntUp(r.key, Date.now())) {
       const M = D.MOBS[r.key], ago = Date.now() - G.huntLastSeen(r.key, Date.now()), agoT = ago < 3600e3 ? `${Math.max(1, Math.round(ago / 60000))} min ago` : `${Math.round(ago / 3600e3)} h ago`;
       b.append(h('button', { class: 'row', style: { marginTop: '6px', textAlign: 'left', width: '100%' }, onclick: () => huntCard(r) }, h('div', { class: 'ic mob' }, img(mobArt(r.key))),
-        h('div', { class: 't' }, h('b', null, `Rare hunt: ${M.name}`), h('small', null, `Not here now · last seen ${agoT}`)), h('div', { class: 'r' }, h('span', { class: 'nav-arr' }, '›'))));
+        h('div', { class: 't' }, h('b', null, `Rare hunt: ${M.name}`), h('small', null, `Not here now · last seen ${agoT} · ${huntNext(r.key)}`)), h('div', { class: 'r' }, h('span', { class: 'nav-arr' }, '›'))));
     }
   }
   function peopleTab(b, place) {
@@ -1225,16 +1225,20 @@
     if (foe) b.append(h('div', { class: 'sec-h foe-h' }, 'Enemy player', h('small', null, 'tap to attack')),
       h('div', { class: 'chips' }, h('button', { class: 'chip foe', onclick: () => confirmAttack(foe) }, h('span', null, '⚔ ' + foe.name), h('small', null, `${foe.level} ${D.CLASSES[foe.cls].name}`))));
   }
+  // when a clock next changes, as a phrase (#183): 'at midnight', 'at 13:00', 'on Mon 9 Nov' (G.nextChange, G.whenText)
+  const clockAt = (kind) => { const w = G.whenText(G.nextChange(kind)); return (w === 'midnight' || w.includes(':') ? 'at ' : 'on ') + w; };
+  // a rare hunt that isn't up: still due in this window, or back in the next one
+  const huntNext = (key) => { const t = Date.now(), hn = G.huntNow(key, t), P = G.S.player, gone = t >= hn.end || (P.huntKilled && P.huntKilled[key] === hn.w); return gone ? `next window ${G.whenText(G.nextChange('hunt', t), t)}` : `due by ${G.whenText(G.nextChange('hunt', t), t)}`; };
   // the hub's board: 3 daily bounties and 1 weekly, rotating with the real date
   function openBountyBoard() {
-    openSheet('bounty', 'Bounty Board', `${D.PLACES[G.S.player.place].name} · new every day · weekly on Monday · hold up to 6`, (b) => {
+    openSheet('bounty', 'Bounty Board', `${D.PLACES[G.S.player.place].name} · new ${clockAt('day')} · weekly ${clockAt('week')} · hold up to 6`, (b) => {
       const P = G.S.player, list = h('div', { class: 'list' });
       for (const bb of G.bounties(P.place)) {
         const st = G.bountyState(bb), rec = (P.bounty || {})[bb.id];
         const label = st === 'available' ? 'Take' : st === 'complete' ? 'Hand in' : st === 'done' ? 'Done' : `${rec.prog}/${bb.n}`;
         list.append(h('button', { class: 'row' + (st === 'done' ? ' off' : ''), onclick: () => {
           // a taken bounty opens its detail, a handed-in one says when the next come (#167)
-          if (st === 'done') return toast(bb.weekly ? 'Handed in this week. A new weekly bounty on Monday.' : 'Handed in today. New bounties at the daily reset.', true);
+          if (st === 'done') return toast(bb.weekly ? `Handed in this week. A new weekly bounty ${clockAt('week')}.` : `Handed in today. New bounties ${clockAt('day')}.`, true);
           if (st !== 'available' && st !== 'complete') { const x = G.myBounties().find((m) => m.id === bb.id); if (x) return openSheet('quest', `${x.weekly ? 'Weekly bounty' : 'Bounty'}: ${D.MOBS[x.mob].name}`, x.hubName, (bd) => bd.append(...bountyDetail(x))); }
           if (st === 'available') G.acceptBounty(bb); else if (st === 'complete') G.turnInBounty(bb); ui.sheetFn(); renderPanel(); } },
           h('div', { class: 'ic mob' }, img(mobArt(bb.mob))),
@@ -2181,7 +2185,7 @@
     const M = D.MOBS[r.key], u = E.mobUnit(r.key, M.lvl[1]), t = Date.now(), seen = new Date(G.huntLastSeen(r.key, t)), k = (n) => (n >= 10000 ? (n / 1000).toFixed(1) + 'k' : String(Math.round(n)));
     showDialog([h('h3', null, M.name), h('p', null, `Level ${M.lvl[1]}${M.elite ? ' elite' : ''} · ${k(u.maxHp)} health · hits for ${k(u.dmg[0])}–${k(u.dmg[1])}`),
       h('p', null, G.trophies()[r.key] ? `Trophy: taken by ${G.trophies()[r.key].by}` : 'Trophy: not yet'),
-      h('p', null, `Rare at ${D.PLACES[r.place].name}. Spawns once every 6h, stays ~30 min. Last seen ${seen.toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' })}.`),
+      h('p', null, `Rare at ${D.PLACES[r.place].name}. Spawns once every 6h, stays ~30 min. Last seen ${seen.toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' })}. ${huntNext(r.key)[0].toUpperCase() + huntNext(r.key).slice(1)}.`),
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: closeDialog }, 'Got it'))], true);
   }
   // ---------- item tooltip
@@ -2719,7 +2723,7 @@
       h('div', { class: 'obj tnum' + (x.complete ? ' done' : '') }, `${M.name}: ${x.prog}/${x.n}`, !x.complete && where.length ? h('small', { class: 'obj-where' }, ' · ' + placeNames(where)) : null),
       x.complete ? h('div', { class: 'obj turnin-to' }, qmark('ready'), ' Hand in at the ', h('b', null, 'Bounty Board'), x.hub === P.place && !P.travel ? ` here in ${x.hubName}.` : ` in ${x.hubName}${hub ? ', ' + hub.zone : ''}.`,
         x.hub !== P.place || P.travel ? h('button', { class: 'chip gold', style: { marginLeft: '6px' }, onclick: () => routeDialog(x.hub) }, 'Show the way') : null) : null,
-      h('p', { class: 'ai-note' }, x.weekly ? 'Lapses at the end of the week (Monday).' : 'Lapses at midnight.'),
+      h('p', { class: 'ai-note' }, x.weekly ? `Lapses ${clockAt('week')}.` : `Lapses ${clockAt('day')}.`),
       h('h4', null, 'Rewards'),
       h('div', { class: 'money', html: `${rw.xp || 0} experience · ` + moneyHtml(rw.money || 0) + (rw.marks ? ` · ${rw.marks} Mentor Marks` : '') + (x.weekly ? ' · bonus gear' : '') }));
     const back = () => sheetBack(openQuests);
@@ -3259,7 +3263,7 @@
       const Ev = D.EVENTS.lanternwake, live = G.eventLive('lanternwake'), A = D.ACTIVITIES[Ev.act];
       title.querySelector('small').textContent = `${lwDates()} · ${lwStatus('lanternwake')}`;
       b.append(h('div', { class: 'ev-story' }, ...Ev.story.map((t) => h('p', null, t))));
-      if (live) b.append(h('div', { class: 'sec-h' }, 'Today', h('small', null, 'resets at midnight')), h('div', { class: 'ev-facts' }, ...lwTodayFacts()));
+      if (live) b.append(h('div', { class: 'sec-h' }, 'Today', h('small', null, `resets ${clockAt('day')}`)), h('div', { class: 'ev-facts' }, ...lwTodayFacts()));
       // where candles come from
       const E1 = Ev.earn;
       b.append(h('div', { class: 'sec-h' }, 'Wake Candles', h('small', null, `max ${Ev.cap} a day`)), h('div', { class: 'ev-facts' },
@@ -3439,7 +3443,7 @@
       const E0 = LNE(), live = G.lnOn(), st = G.ln(), after = () => ui.sheetFn();
       title.querySelector('small').textContent = `${evDates('longnight')} · ${lwStatus('longnight')}`;
       b.append(h('div', { class: 'ev-story ln' }, ...E0.story.map((t) => h('p', null, t))));
-      if (live) b.append(h('div', { class: 'sec-h' }, 'Today', h('small', null, 'resets at midnight')), h('div', { class: 'ev-facts' }, ...lnTodayFacts()));
+      if (live) b.append(h('div', { class: 'sec-h' }, 'Today', h('small', null, `resets ${clockAt('day')}`)), h('div', { class: 'ev-facts' }, ...lnTodayFacts()));
       b.append(h('div', { class: 'sec-h' }, 'Calendar', h('small', null, st ? `${st.doors.length}/${E0.doors.length} open` : `${E0.doors.length} doors, 15–30 Dec`)), lnCalendar(after));
       if (live && st && st.ready) b.append(h('button', { class: 'btn wide', onclick: () => { const n = G.lnOpenDoor(); if (n != null) toast(`Door ${n + 1}: ${lnDoorReward(E0.doors[n]).name}`); after(); } }, `Open door ${st.doors.length + 1}`));
       b.append(h('div', { class: 'sec-h' }, 'The great hearth', h('small', null, 'shared with the town')), lnHearth());
@@ -4569,7 +4573,7 @@
     b.append(h('div', { class: 'row' }, h('div', { class: 'ic' }, img(art('icon', 'journal'))),
       h('div', { class: 't' }, h('b', null, `Rating ${rating} · Realm rank #${board.rank} of ${board.of}`), h('small', { style: { whiteSpace: 'normal' } }, `This week: ${Math.min(4, wk.n)} of 4 Trials at your best or higher${wk.paid ? ' · bonus paid' : ' · +25 Mentor Marks'}`))));
     const weekOmens = T.omensFor(T.period(new Date()).id);
-    if (weekOmens.length) b.append(h('div', { class: 'chips', style: { margin: '6px 0 0' } }, h('small', { class: 'dim', style: { alignSelf: 'center' } }, 'This week\'s Omens:'), ...weekOmens.map((k) => omenChip(k, T.TIER_LVL[T.OMENS[k].tier]))));
+    if (weekOmens.length) b.append(h('div', { class: 'chips', style: { margin: '6px 0 0' } }, h('small', { class: 'dim', style: { alignSelf: 'center' } }, `Omens, until ${G.whenText(G.nextChange('omens'))}:`), ...weekOmens.map((k) => omenChip(k, T.TIER_LVL[T.OMENS[k].tier]))));
     b.append(h('div', { class: 'btn-row', style: { margin: '6px 0' } }, h('button', { class: 'btn alt', onclick: () => openTrialBoard() }, 'Leaderboard'), h('button', { class: 'btn alt', onclick: () => openTrialHistory() }, 'History')));
     { // the Trialsworn set (v10.7): earned once per account, shown with what each step needs; and this month's cloak
       const got = G.account().trialsworn || {}, TS = D.TRIALSWORN, n = Object.keys(TS).filter((x) => got[x]).length, part = (x, label) => `${label} ${got[x] ? '✓' : `(Trial ${TS[x].lvl})`}`;
@@ -4589,7 +4593,7 @@
         queued ? h('button', { class: 'chip', onclick: () => { G.leaveQueue(); ui.sheetFn(); } }, 'Leave')
           : S.queue && !why ? queuedChip() : h('button', { class: 'chip gold', style: { whiteSpace: 'nowrap' }, disabled: !!why, onclick: () => openTrialBriefing(act) }, `Trial ${max}`)));
     }
-    b.append(note('Beat par to open the next level, or beat it by a wide margin to open two. Each clear pays 5 Mentor Marks plus the Trial level. Omens are extra rules that change every week: tap one to read it.'));
+    b.append(note('Beat par to open the next level, or beat it by a wide margin to open two. Each clear pays 5 Mentor Marks plus the Trial level. Omens are extra rules that change on the 1st, 8th, 15th and 22nd: tap one to read it.'));
   }
   // how a Trial level compares with a normal level-60 run: "−17% health and damage", "normal ...", "+23% ..."
   const trialStrength = (lvl) => { const d = Math.round((window.TRIALS.factor(lvl) - 1) * 100); return Math.abs(d) <= 2 ? 'normal health and damage' : `${d > 0 ? '+' : '−'}${Math.abs(d)}% health and damage`; };
