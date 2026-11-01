@@ -6,6 +6,8 @@
 //   ROOT=~/azeroth-solo-measure ACTS=deadmines,stockade CLASSES=mage,warrior,priest N=8 SEED=0 node sim/difficulty.js
 //   LVOFF=3 plays that many levels above the activity's minimum (default 0, the lowest level the finder lets in);
 //   GEAR=blue gives a level-60 player a level-60 blue in every slot (default: the gear the game gives its bots, G.botChar);
+//   GEAR=epic with PROFILE=fitted: the fitted gear at Epic quality (a player who has cleared Normal raids, for HARD=1);
+//   RATING=0|400|800 sets the Trial rating, which picks a Hard group's bot skill (0.6-0.7 at 0, 0.85-0.95 at 800);
 //   PROFILE=fitted|masher|undergeared|baddraw (docs/design-mindset.md section 7): fitted = level-60-grade blue gear in every slot and
 //   bot AI skill 0.85; masher = the player presses ONE button (the class's first damaging ability, or its first heal for a healer)
 //   and nothing else; undergeared = white gear ten levels below the activity; baddraw = every bot in the group at skill 0.2 (gear
@@ -52,7 +54,8 @@ const AS = {}; if (process.env.ABILSTAT) {
 const RealDate = Date; let t = process.env.DATE ? new RealDate(process.env.DATE).getTime() : new RealDate(2026, 9, 14, 19).getTime(); // DATE=2026-10-28T19:00 plays on that day (a festival run needs its dates, v10.13)
 globalThis.Date = class extends RealDate { constructor(...a) { if (a.length) super(...a); else super(t); } static now() { return t; } };
 const PROFILE = process.env.PROFILE || 'today';
-const N = +(process.env.N || 8), CLS = (process.env.CLASSES || 'mage,warrior,priest').split(','), LVOFF = +(process.env.LVOFF || 0), HARD = !!process.env.HARD, BLUE = process.env.GEAR === 'blue';
+const N = +(process.env.N || 8), CLS = (process.env.CLASSES || 'mage,warrior,priest').split(','), LVOFF = +(process.env.LVOFF || 0), HARD = !!process.env.HARD, BLUE = process.env.GEAR === 'blue', EPIC = process.env.GEAR === 'epic';
+if (process.env.RATING) G.trialRating = () => +process.env.RATING; // RATING=800: the Trial rating that sets a Hard group's skill (#298)
 const SKIP = (k) => D.ACTIVITIES[k].worldBoss || !(D.ACTIVITIES[k].dungeon ? D.DUNGEONS[D.ACTIVITIES[k].dungeon].pulls.length : (D.ACTIVITIES[k].pulls || []).length);
 const ACTS = (process.env.ACTS ? process.env.ACTS.split(',') : Object.keys(D.ACTIVITIES).filter((k) => !SKIP(k)));
 // SCALE="trash dmg,boss dmg[,trash hp,boss hp]" multiplies the Normal multipliers of every activity in ACTS (#215: searching for
@@ -79,7 +82,7 @@ function clear(act, cls) {
   P.equip = G.botChar({ name: 'x', cls, race: 'human', level: LV, skill: 0.6 }).equip;
   if (BLUE && LV >= 60) for (const slot of D.GEAR_SLOTS) P.equip[slot] = G.genGear(slot, 60, 3, D.CLASSES[cls].armorType === 'cloth' ? { atype: 'cloth' } : D.CLASSES[cls].armorType === 'leather' ? { atype: 'leather' } : D.CLASSES[cls].armorType === 'plate' ? { atype: 'plate' } : { atype: 'mail' });
   if (PROFILE === 'undergeared') for (const slot of D.GEAR_SLOTS) if (slot !== 'offhand' && (slot !== 'ranged' || D.CLASSES[cls].ranged)) P.equip[slot] = G.genGear(slot, Math.max(1, LV - 10), 1, slot === 'weapon' ? { wtype: D.CLASSES[cls].weapons[0] } : slot === 'ranged' ? {} : { atype: D.CLASSES[cls].armorType });
-  if (PROFILE === 'fitted') for (const slot of D.GEAR_SLOTS) if (slot !== 'offhand' && (slot !== 'ranged' || D.CLASSES[cls].ranged)) P.equip[slot] = G.genGear(slot, LV, 3, Object.assign({ affix: G.classAffix(cls) }, slot === 'weapon' ? { wtype: D.CLASSES[cls].weapons[0] } : slot === 'ranged' ? {} : { atype: D.CLASSES[cls].armorType }));
+  if (PROFILE === 'fitted') for (const slot of D.GEAR_SLOTS) if (slot !== 'offhand' && (slot !== 'ranged' || D.CLASSES[cls].ranged)) P.equip[slot] = G.genGear(slot, LV, EPIC ? 4 : 3, Object.assign({ affix: G.classAffix(cls) }, slot === 'weapon' ? { wtype: D.CLASSES[cls].weapons[0] } : slot === 'ranged' ? {} : { atype: D.CLASSES[cls].armorType }));
   P.talents = G.autoTalents(cls, D.CLASSES[cls].role === 'tank' ? 'tank' : D.CLASSES[cls].role === 'healer' ? 'healer' : 'dps', LV, 0); P.hp = null; P.res = null;
   S.flags.warModeAsked = true; P.place = A.where;
   if (HARD) P.codex = { [act]: { clears: 1, flawless: 0, speed: 0, best: null } };
