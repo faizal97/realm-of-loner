@@ -40,3 +40,18 @@ test('rare hunts: the next 6-hour window in UTC, shown as a clock time today', (
   assert.strictEqual(n % G.HUNT_WINDOW, 0); assert.ok(n > t && n - t <= G.HUNT_WINDOW);
   assert.match(G.whenText(n), /^\d\d:\d\d$/);
 });
+
+test('the group finder\'s clocks are these: the Roulette is ready again at the next midnight, the featured raid and world boss change at the next Monday', () => {
+  character(60);
+  const t = at(2026, 11, 3, 15), S = G.S;
+  S.flags.rouletteDay = new Date(t).getFullYear() + '-' + String(new Date(t).getMonth() + 1).padStart(2, '0') + '-' + String(new Date(t).getDate()).padStart(2, '0'); S.flags.rouletteLocal = true;
+  const dn = G.nextChange('day');
+  setNow(dn - 1); assert.strictEqual(G.rouletteReady(), false, 'done until midnight');
+  setNow(dn); assert.strictEqual(G.rouletteReady(), true, 'ready at midnight');
+  setNow(t); const wn = G.nextChange('week');
+  G.raidWeek().featured = true;
+  setNow(wn - 1); assert.strictEqual(G.featuredClaimed(), true, 'the featured bonus stays taken until Monday');
+  assert.strictEqual(G.featuredRaid(new Date(wn - 1)), G.featuredRaid(new Date(t)), 'the same raid until Monday');
+  assert.strictEqual(G.worldBoss(new Date(wn - 1)), G.worldBoss(new Date(t)), 'the same world boss until Monday');
+  setNow(wn); assert.strictEqual(G.featuredClaimed(), false, 'a new week at Monday');
+});

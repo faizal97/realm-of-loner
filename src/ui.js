@@ -1227,6 +1227,7 @@
   }
   // when a clock next changes, as a phrase (#183): 'at midnight', 'at 13:00', 'on Mon 9 Nov' (G.nextChange, G.whenText)
   const clockAt = (kind) => { const w = G.whenText(G.nextChange(kind)); return (w === 'midnight' || w.includes(':') ? 'at ' : 'on ') + w; };
+  const untilAt = (kind) => G.whenText(G.nextChange(kind)); // 'until midnight', 'until Mon 9 Nov'
   // a rare hunt that isn't up: still due in this window, or back in the next one
   const huntNext = (key) => { const t = Date.now(), hn = G.huntNow(key, t), P = G.S.player, gone = t >= hn.end || (P.huntKilled && P.huntKilled[key] === hn.w); return gone ? `next window ${G.whenText(G.nextChange('hunt', t), t)}` : `due by ${G.whenText(G.nextChange('hunt', t), t)}`; };
   // a bounty's pay as one line (#184): XP below 60, an extra Mentor Mark at 60
@@ -3109,15 +3110,15 @@
     const acts = Object.keys(D.ACTIVITIES).filter((k) => { const A = D.ACTIVITIES[k]; return !A.needQuest && P.level >= A.minLvl && P.level <= A.maxLvl && G.activityBlock(k) !== 'hidden'; });
     const dg = acts.filter((k) => D.ACTIVITIES[k].dungeon && (D.ACTIVITIES[k].size || 5) <= 5), rd = acts.filter((k) => (D.ACTIVITIES[k].size || 5) > 5), wa = acts.filter((k) => !D.ACTIVITIES[k].dungeon);
     if (dg.length || rd.length || wa.length) add('hearthstone', [dg.length ? `${dg.length} dungeon${dg.length > 1 ? 's' : ''}` : '', rd.length ? `${rd.length} raid${rd.length > 1 ? 's' : ''}` : '', wa.length ? `${wa.length} Wanted` : ''].filter(Boolean).join(', ') + ' at your level', dg.concat(rd, wa).slice(0, 3).map((k) => D.ACTIVITIES[k].name).join(', ') + (dg.length + rd.length + wa.length > 3 ? ', ...' : ''), () => { closeSheet(); openSocial('groups'); });
-    if (G.rouletteOptions().length) add('hearthstone', G.rouletteReady() ? 'Dungeon Roulette: ready today' : 'Dungeon Roulette: done today', null, () => { closeSheet(); openSocial('groups'); });
+    if (G.rouletteOptions().length) add('hearthstone', G.rouletteReady() ? 'Dungeon Roulette: Ready' : 'Dungeon Roulette: Done', G.rouletteReady() ? null : `again ${clockAt('day')}`, () => { closeSheet(); openSocial('groups'); });
     const bh = G.bountiesHeld(); if (bh) add('journal', `${bh} bount${bh === 1 ? 'y' : 'ies'} in progress`, null, null);
     if (G.eventLive('lanternwake')) { const st = G.lw(), Ev = D.EVENTS.lanternwake; add('event_lanternwake', 'Lanternwake', `${lwEndsText()} · candles ${st ? st.today : 0}/${Ev.cap}`, () => openLanternwake()); }
     if (G.lnOn()) { const st = G.ln(); add('event_longnight', 'Longnight', `${lwEndsText('longnight')} · ${st && st.done ? 'daily done' : G.LN_DAILY[G.lnToday()]}${st && st.ready ? ` · ${st.ready} door${st.ready > 1 ? 's' : ''} to open` : ''}`, () => openLongnight()); }
-    { const wb = P.level >= cap && G.worldBoss(); if (wb) add('hearthstone', `World boss: ${D.MOBS[D.ACTIVITIES[wb].boss].name}`, `${D.PLACES[D.ACTIVITIES[wb].where].name}, ${D.PLACES[D.ACTIVITIES[wb].where].zone} · ${G.worldBossLooted(wb) ? 'looted this week' : 'loot open this week'}`, () => { ui.gfTab = 'raid'; closeSheet(); openSocial('groups'); }); }
+    { const wb = P.level >= cap && G.worldBoss(); if (wb) add('hearthstone', `World boss: ${D.MOBS[D.ACTIVITIES[wb].boss].name}`, `${D.PLACES[D.ACTIVITIES[wb].where].name}, ${D.PLACES[D.ACTIVITIES[wb].where].zone} · ${G.worldBossLooted(wb) ? `looted · a new one ${clockAt('week')}` : `loot open until ${untilAt('week')}`}`, () => { ui.gfTab = 'raid'; closeSheet(); openSocial('groups'); }); }
     if (P.level >= G.BRAWL.minLvl) { const w = G.brawlWindow(), fought = (P.brawl || {}).last === w.id;
       add('sword', w.open && !fought ? `The Bloodsand Brawl: open until ${brawlClock(w.closesAt)}` : `The Bloodsand Brawl: opens at ${brawlClock(w.open ? new Date(w.opensAt.getTime() + G.BRAWL.every * 3600000) : w.opensAt)}`,
         `${D.PLACES[G.BRAWL.place].name}, ${D.PLACES[G.BRAWL.place].zone} · ${G.brawlChestOpen() ? 'chest open today' : 'chest taken today'}`, () => { closeSheet(); if (P.place !== G.BRAWL.place) routeDialog(G.BRAWL.place); }); }
-    { const fr = P.level >= cap && G.featuredRaid(); if (fr) add('hearthstone', `Featured raid: ${D.ACTIVITIES[fr].name}`, G.featuredClaimed() ? 'Bonus taken this week' : `First clear this week: +${G.FEATURED_MARKS} Mentor Marks`, () => { ui.gfTab = 'raid'; closeSheet(); openSocial('groups'); }); }
+    { const fr = P.level >= cap && G.featuredRaid(); if (fr) add('hearthstone', `Featured raid: ${D.ACTIVITIES[fr].name}`, G.featuredClaimed() ? `Bonus taken · a new raid ${clockAt('week')}` : `First clear: +${G.FEATURED_MARKS} Mentor Marks · until ${untilAt('week')}`, () => { ui.gfTab = 'raid'; closeSheet(); openSocial('groups'); }); }
     if (P.level >= cap && window.TRIALS && TRIALS.open(TRIALS.season(new Date()))) { add('journal', `${TRIALS.name(TRIALS.season(new Date()))} Trials: rating ${G.trialRating()}`, `Realm rank #${G.trialBoard().rank} of ${G.trialBoard().of}`, () => { ui.gfTab = 'trials'; closeSheet(); openSocial('groups'); }); }
     // the next thing that opens with a level
     const nexts = [[D.TALENT_START, 'Talents'], [D.RIDING.lvl, 'Riding'], [cap, 'Trials, raids and gear upgrades']].filter(([l]) => P.level < l).sort((x, y) => x[0] - y[0]);
@@ -4661,10 +4662,10 @@
         if (Dg && G.par(Dg)) row('Par time', `${clockText(G.par(Dg))} (beating it gives a speed chest)`);
         if (Dg) row('Flawless', 'a clear without a wipe gives a bonus');
         if (cx && cx.clears) row('Your record', `${cx.clears} clear${cx.clears > 1 ? 's' : ''}${cx.hard ? ` (${cx.hard} on Hard)` : ''}${cx.best ? ', best ' + clockText(cx.best) : ''}`);
-        if (A.worldBoss) row('This week', G.worldBossLooted(act) ? 'looted: its loot drops again on Monday' : `its first kill this week drops its loot and ${G.WB_MARKS} Mentor Marks; after that, nothing until Monday. Next Monday another world boss comes out`);
+        if (A.worldBoss) row('This week', G.worldBossLooted(act) ? `looted · a new world boss ${clockAt('week')}` : `its first kill drops its loot and ${G.WB_MARKS} Mentor Marks; after that, nothing · a new world boss ${clockAt('week')}`);
         if (Dg && Dg.raid && act === G.featuredRaid()) {
           const looks = G.raidLooksLeft(act).length;
-          row('Featured this week', G.featuredClaimed() ? 'bonus taken this week (a new raid is featured on Monday)' : `the first clear this week (Normal or Hard) gives +${G.FEATURED_MARKS} Mentor Marks${looks ? ' and a look from its set' : ''}`);
+          row('Featured this week', G.featuredClaimed() ? `bonus taken · a new raid is featured ${clockAt('week')}` : `the first clear (Normal or Hard) gives +${G.FEATURED_MARKS} Mentor Marks${looks ? ' and a look from its set' : ''} · until ${untilAt('week')}`);
         }
         if (hard) {
           row('Hard', 'stronger enemies and one extra mechanic per boss');
@@ -4828,7 +4829,7 @@
       return h('div', { class: 'row gf-row tap' + (!doable(x) ? ' gf-locked' : '') + (queued ? ' gf-queued' : ''), onclick: (e) => { if (e.target.closest('button')) return; openBriefing(x.k, false); } }, // tap the row for its briefing (v10.4)
         actPic(A),
         h('div', { class: 't' }, h('b', null, A.name, h('span', { class: 'gf-lvl tnum' }, A.minLvl === A.maxLvl ? String(A.minLvl) : `${A.minLvl}–${A.maxLvl}`)),
-          h('small', null, showKind ? h('span', { class: 'gf-kind k-' + kind }, KIND_LABEL[kind]) : null, x.k === G.featuredRaid() ? h('span', { class: 'gf-kind k-featured' }, 'Featured this week') : null, qa[x.k] ? h('span', { class: 'gf-kind k-featured' }, 'Your quest') : null, A.worldBoss ? h('span', { class: 'gf-kind k-featured' }, G.worldBossLooted(x.k) ? 'World boss · looted this week' : 'World boss this week') : null, A.event ? h('span', { class: 'gf-kind k-featured' }, `${D.EVENTS[A.event].name} · ${(A.event === 'longnight' ? G.lnLoot()[x.k === D.EVENTS.longnight.guest ? 'guest' : 'knocker'] : G.lwDaily().normal) ? 'daily loot ready' : 'loot taken'}`) : null, note)),
+          h('small', null, showKind ? h('span', { class: 'gf-kind k-' + kind }, KIND_LABEL[kind]) : null, x.k === G.featuredRaid() ? h('span', { class: 'gf-kind k-featured' }, `Featured until ${untilAt('week')}`) : null, qa[x.k] ? h('span', { class: 'gf-kind k-featured' }, 'Your quest') : null, A.worldBoss ? h('span', { class: 'gf-kind k-featured' }, G.worldBossLooted(x.k) ? `World boss · looted until ${untilAt('week')}` : `World boss until ${untilAt('week')}`) : null, A.event ? h('span', { class: 'gf-kind k-featured' }, `${D.EVENTS[A.event].name} · ${(A.event === 'longnight' ? G.lnLoot()[x.k === D.EVENTS.longnight.guest ? 'guest' : 'knocker'] : G.lwDaily().normal) ? 'daily loot ready' : 'loot taken'}`) : null, note)),
         btn);
     };
     const byLevel = (a, c) => a.A.minLvl - c.A.minLvl || kinds.indexOf(actKind(a.A)) - kinds.indexOf(actKind(c.A));
@@ -4849,9 +4850,9 @@
       const rr = G.rouletteReady(), ropts = G.rouletteOptions();
       if (ropts.length) b.append(h('div', { class: 'row gf-row gf-roulette' },
         h('div', { class: 'ic' }, img(art('icon', 'hearthstone'))),
-        h('div', { class: 't' }, h('b', null, 'Dungeon Roulette', h('span', { class: 'gf-lvl' }, rr ? 'daily' : 'done today')),
+        h('div', { class: 't' }, h('b', null, 'Dungeon Roulette', h('span', { class: 'gf-lvl' }, rr ? 'daily' : `again ${clockAt('day')}`)),
           h('small', null, `${ropts.length === 1 ? 'The one dungeon you can reach' : `A random dungeon from the ${ropts.length} you can reach`}: +15 Mentor Marks, a bonus blue and gold.`)), // issue #14
-        rr && S.queue ? queuedChip() : h('button', { class: 'chip ' + (rr ? 'gold' : 'why'), disabled: !rr, onclick: () => { closeSheet(); G.startRoulette(); renderAll(); } }, rr ? 'Go' : 'Tomorrow')));
+        rr && S.queue ? queuedChip() : h('button', { class: 'chip ' + (rr ? 'gold' : 'why'), disabled: !rr, onclick: () => { closeSheet(); G.startRoulette(); renderAll(); } }, rr ? 'Go' : 'Done')));
       let mine = all.filter(atLevel).sort(byLevel);
       b.append(h('div', { class: 'sec-h' }, 'At your level', h('small', null, `level ${P.level}`)));
       if (!mine.length) {
