@@ -44,7 +44,7 @@
   H('brd_golem_core', { name: 'The Golem Lord', lvl: 54, giver: 'gorzeeki', turnin: 'gorzeeki', dungeon: 'blackrock_depths', text: "Golemsmith Kragg makes the Slagborn golems. Bring me the core he carries. I have plans for it.",
     objs: [{ type: 'collect', item: 'argelmach_core', n: 1 }], reward: { choice: ['fam_back_rare55'] } });
   Object.assign(D.DUNGEONS, {
-    blackrock_depths: { music: 'cinderpeak', name: 'Cinderpeak Depths', minLvl: 51, par: 500, trialPar: 570, size: 5, trashMult: { hp: 2.2, dmg: 2.2 }, bossMult: { hp: 10, dmg: 4.3 }, pulls: [
+    blackrock_depths: { music: 'cinderpeak', name: 'Cinderpeak Depths', minLvl: 51, par: 500, trialPar: 570, size: 5, trashMult: { hp: 2.2, dmg: 2.53 }, bossMult: { hp: 10, dmg: 4.94 }, pulls: [
       { scene: 'brd_prison', label: 'The detention block', mobs: ['anvilrage_warden', 'anvilrage_warden'] },
       { scene: 'brd_prison', label: 'High Interrogator Brisa', mobs: ['high_interrogator_gerstahn'], boss: true },
       { scene: 'brd_prison', label: 'Lord Stonebrand', mobs: ['lord_roccor'], boss: true },

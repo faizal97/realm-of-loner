@@ -1641,6 +1641,62 @@
     }
     return out;
   };
+  // A damage dealer's and a tank's options (#149, step 2), read from the kit like a healer's: each attack it knows on the
+  // target the group is on (an area attack on everything in its reach), worth its damage a second (for a tank, its
+  // threat): direct damage, plus a damage-over-time's ticks only as far as the target will live; a burst cooldown when a
+  // boss or a big pull has the fight ahead of it. Looking ahead: an interrupt or stun is kept for red bars while a boss or
+  // an elite is up; a caster paces its mana for the fight like a healer; a tank raises a defensive when it is about to
+  // die or a red bar on it would take 40% of its health. A weaker bot misjudges more (E.botChoose)
+  E.fightLeft = (C, u) => { const en = alive(foes(C, u)), dps = en.reduce((a, e) => a + E.rate(C, e, 'in'), 0); return dps > 0 ? en.reduce((a, e) => a + e.hp, 0) / dps : 30; };
+  E.dmgAmount = (u, id) => {
+    const A = D.ABILITIES[id], L = u.level, st = u.st || {}; let n = 0; const d = A.dmg;
+    if (d) {
+      if (d.weapon) n += (st.wMin + st.wMax) / 2 + ((st.apTotal || 0) / 14) * (st.wSpeed || 2) + (d.bonus[0] + d.bonus[1]) / 2 + (d.perLvl || 0) * L;
+      else if (d.perCp) { const cps = Math.max(1, u.cp || 0); n += cps * (d.perCp[0] + d.perCp[1]) / 2 + d.perLvl * L + (st.apTotal || 0) * d.apCoef * cps; }
+      else if (d.base) n += (d.base[0] + d.base[1]) / 2 + (d.perLvl || 0) * L + (d.coef || 0) * (st.sp || 0) + (d.rapCoef || 0) * (st.rap || 0);
+    }
+    return n;
+  };
+  const DOT_TICK = (u, A) => A.dot.dmg + (A.dot.perLvl || 0) * u.level + (A.dot.coef || 0) * ((u.st && u.st.sp) || 0);
+  const DEFS = {}, defsOf = (cls) => DEFS[cls] || (DEFS[cls] = [...new Set(kitOf(cls).defensive.concat(Object.keys(D.ABILITIES).filter((k) => D.ABILITIES[k].defensive && D.ABILITIES[k].cls === cls)))]);
+  const FIGHT_TARGETS = 8; // guardrail: an area attack counts at most 8 enemies in reach
+  E.fightOptions = (C, u, skill) => {
+    const s = skill == null ? 0.5 : skill, out = [], noise = () => 1 + (1 - s) * 0.6 * (Math.random() * 2 - 1);
+    const en = alive(foes(C, u)); if (!en.length || !u.cls || u.cls === 'bard') return out; // a bard keeps its own songs on the beat (botSong)
+    const tk = C.units[u.target] && !C.units[u.target].dead && C.units[u.target].side !== u.side ? C.units[u.target] : focusTarget(C, u); if (!tk) return out;
+    const tank = u.role === 'tank', left = E.fightLeft(C, u) * noise(), big = en.some((e) => e.boss || e.elite);
+    const keep = big ? new Set(E.answersOf(u, 'cut')) : new Set(); // kept for the red bars
+    const pace = u.resType === 'mana' ? Math.min(1, E.manaPace(C, u) * noise()) : 0;
+    const ready = (id) => !((u.cds[id] || 0) > C.t) && abCost(D.ABILITIES[id], u) <= u.res;
+    const kit = kitOf(u.cls);
+    if (tank || u.hp / u.maxHp < 0.35) { // a defensive ahead of the hit
+      const ah = E.healAhead(C, u, u), danger = ah.hit > u.hp * 0.4 || ah.ttd < 4 * noise() || u.hp / u.maxHp < 0.25;
+      if (danger && !u.auras.some((a) => D.ABILITIES[a.id] && D.ABILITIES[a.id].defensive)) for (const id of defsOf(u.cls)) if (knows(u, id) && ready(id)) out.push({ id, tgt: null, score: 1e6 });
+    }
+    let best = 0;
+    for (const id of D.CLASSES[u.cls].abilities) {
+      const A = D.ABILITIES[id];
+      if (!A || !knows(u, id) || !ready(id) || A.form || A.shapeshift || A.opener || A.taunt || A.needAura || A.heal || A.passive) continue;
+      if (!(A.dmg || A.dot) || (A.target !== 'enemy' && A.target !== 'aoe')) continue;
+      if (keep.has(id) && (A.cd || 0) >= 6) continue;
+      if (A.finisher && (u.cp || 0) < 3 && tk.hp / tk.maxHp > 0.15) continue; // a finisher waits for points, unless the target is nearly dead
+      if (A.stun && !A.dmg) continue;
+      const time = Math.max(A.gcdLen || 1.5, A.cast || 0), ttl = (E.rate(C, tk, 'in') > 0 ? tk.hp / E.rate(C, tk, 'in') : 30) * noise();
+      let per = E.dmgAmount(u, id);
+      if (A.dot && !auraOf(tk, A.dot.id)) per += DOT_TICK(u, A) * Math.min(A.dot.ticks, Math.max(0, Math.floor(ttl / A.dot.every)));
+      else if (A.dot && !A.dmg) continue; // already ticking
+      const n = A.target === 'aoe' ? Math.min(FIGHT_TARGETS, en.filter((e) => !e.pos || !u.pos || E.dist(tk.pos ? tk : u, e) <= (A.radius || DIST.radius)).length) : 1;
+      const cost = Math.max(1, abCost(A, u)), val = (per * n * (tank ? (A.threat || 1) : 1) / time) * (pace ? Math.pow(per / cost, pace) : 1) * noise();
+      if (val > best) best = val;
+      out.push({ id, tgt: tk, score: val });
+    }
+    if (!tank && (en.some((e) => e.boss) || en.length >= 4) && left > 12) for (const id of kit.burst) if (knows(u, id) && ready(id)) out.push({ id, tgt: null, score: best * 2 }); // a cooldown on a fight worth it
+    return out;
+  };
+  function fightPick(C, u, b, try_) {
+    const c = E.botChoose(E.fightOptions(C, u, b.skill), b.skill);
+    return !!c && try_(c.id, c.tgt || undefined);
+  }
   function healerPick(C, u, b, try_) {
     const c = E.botChoose(E.healOptions(C, u, b.skill), b.skill);
     return !!c && try_(c.id, c.tgt || undefined);
@@ -1768,6 +1824,7 @@
         const tank = alive(u.side === 'ally' ? C.allies : C.enemies).find((a) => a.role === 'tank' && a !== u);
         if (u.role === 'tank' || !tank || (tk.hitBy && tk.hitBy[tank.uid])) for (const id of kit.openers) if (has(id) && !(D.ABILITIES[id].stun && tk.boss) && Math.random() < sk && try_(id, tk)) return;
       }
+      if (u.role === 'dps' && !b.oldKit && fightPick(C, u, b, try_)) return; // the attack that fits, from the kit (#149); b.oldKit: the sims' before
       if (u.role !== 'healer' && en.some((e) => e.boss)) for (const id of kit.burst) if (has(id) && Math.random() < use * 0.5 && try_(id)) return; // big cooldowns on bosses
       const spread = C.opts.killOrder === 'spread'; // spread: area attacks from 2 enemies, and more often
       if ((en.length >= 3 || (spread && en.length >= 2)) && tk) for (const id of kit.aoe) if (has(id) && Math.random() < (spread ? Math.min(1, use * 1.6) : use) && try_(id, tk)) return;
@@ -1784,6 +1841,7 @@
       if (skull && !loose) u.target = skull.uid;
       tgt = C.units[u.target];
       if (!tgt || tgt.dead) { tgt = skull || en[0]; u.target = tgt.uid; }
+      if (!b.oldKit && !(u.cls === 'druid' && u.form !== 'bear') && fightPick(C, u, b, try_)) return; // threat and defensives, from the kit (#149)
       if (u.cls === 'druid') {
         if (!u.form && has('bear_form') && try_('bear_form')) return;
         if (u.form === 'bear') { // the whole bear kit (#233; bear abilities aren't in the class list, so knows()): defensives, then the loose one, then threat on the pack

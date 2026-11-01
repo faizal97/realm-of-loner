@@ -159,7 +159,7 @@
 
   // group finder: Greyhowl Keep and the open-world elite
   Object.assign(D.DUNGEONS, {
-    shadowfang: { music: 'greyhowl_keep', name: 'Greyhowl Keep', minLvl: 26, par: 398, trialPar: 480, size: 5, trashMult: { hp: 2.2, dmg: 2.2 }, bossMult: { hp: 10, dmg: 4.8 }, pulls: [
+    shadowfang: { music: 'greyhowl_keep', name: 'Greyhowl Keep', minLvl: 26, par: 398, trialPar: 480, size: 5, trashMult: { hp: 2.2, dmg: 2.53 }, bossMult: { hp: 10, dmg: 5.52 }, pulls: [
       { scene: 'shadowfang_courtyard', label: 'The courtyard', mobs: ['shadowfang_moonwalker', 'shadowfang_darksoul'] },
       { scene: 'shadowfang_courtyard', label: 'Rotjaw', mobs: ['rethilgore'], boss: true },
       { scene: 'shadowfang_courtyard', label: 'The stables', mobs: ['shadowfang_moonwalker', 'shadowfang_moonwalker', 'haunted_servitor'] },

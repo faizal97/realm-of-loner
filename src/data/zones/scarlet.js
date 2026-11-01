@@ -65,7 +65,7 @@
   });
 
   Object.assign(D.DUNGEONS, {
-    sm_library: { music: 'pyre_library', name: 'The Pyre Abbey: Library', minLvl: 33, par: 238, trialPar: 270, size: 5, trashMult: { hp: 2.2, dmg: 2.2 }, bossMult: { hp: 10, dmg: 4.8 }, pulls: [
+    sm_library: { music: 'pyre_library', name: 'The Pyre Abbey: Library', minLvl: 33, par: 238, trialPar: 270, size: 5, trashMult: { hp: 2.2, dmg: 2.53 }, bossMult: { hp: 10, dmg: 5.52 }, pulls: [
       { scene: 'sm_library', label: 'The entrance hall', mobs: ['scarlet_monk', 'scarlet_chaplain'] },
       { scene: 'sm_library', label: 'Interrogator Crell', mobs: ['interrogator_vishas'], boss: true },
       { scene: 'sm_library', label: 'The reading room', mobs: ['scarlet_wizard', 'scarlet_monk', 'scarlet_chaplain'] },
@@ -73,7 +73,7 @@
       { scene: 'sm_library', label: 'The stacks', mobs: ['scarlet_wizard', 'scarlet_wizard'] },
       { scene: 'sm_library', label: 'Arcanist Veyne', mobs: ['arcanist_doan'], boss: true },
     ] },
-    sm_cathedral: { music: 'pyre_cathedral', name: 'The Pyre Abbey: Cathedral', minLvl: 36, par: 305, trialPar: 390, size: 5, trashMult: { hp: 2.2, dmg: 2.09 }, bossMult: { hp: 10, dmg: 4.56 }, trial: { trashMult: { hp: 2.2, dmg: 2.2 }, bossMult: { hp: 10, dmg: 4.8 } }, /* damage lowered to the dungeon target (#215: a fitted player wiped in 18-49% of runs, target 5-15%); Trials keep the numbers they were tuned on */ pulls: [
+    sm_cathedral: { music: 'pyre_cathedral', name: 'The Pyre Abbey: Cathedral', minLvl: 36, par: 305, trialPar: 390, size: 5, trashMult: { hp: 2.2, dmg: 2.4 }, bossMult: { hp: 10, dmg: 5.24 }, trial: { trashMult: { hp: 2.2, dmg: 2.2 }, bossMult: { hp: 10, dmg: 4.8 } }, /* damage lowered to the dungeon target (#215: a fitted player wiped in 18-49% of runs, target 5-15%); Trials keep the numbers they were tuned on */ pulls: [
       { scene: 'sm_cathedral', label: 'The armory', mobs: ['scarlet_myrmidon', 'scarlet_champion'] },
       { scene: 'sm_cathedral', label: 'Sir Barrow', mobs: ['herod'], boss: true },
       { scene: 'sm_cathedral', label: 'The courtyard', mobs: ['scarlet_abbot', 'scarlet_myrmidon', 'scarlet_champion'] },

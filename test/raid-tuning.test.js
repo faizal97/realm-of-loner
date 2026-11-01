@@ -50,10 +50,9 @@ test('level-60 dungeons hit harder; their Trials keep their numbers', () => {
   }
 });
 
-test('dungeons that were too hard for a fitted player hit softer; their Trials keep their numbers', () => {
+test('dungeons whose Normal damage was tuned apart from their Trials: the Trials keep their numbers', () => { // Normal: #215 lowered it, #149 raised it again for smarter bots
   for (const k of ['deadmines', 'wailing_caverns', 'stockade', 'gnomeregan', 'maraudon', 'sm_cathedral']) {
     const Dg = D.DUNGEONS[k];
     assert.deepStrictEqual([Dg.trial.trashMult.dmg, Dg.trial.bossMult.dmg], [2.2, 4.8], `${k}: Trial numbers unchanged`);
-    assert.ok(Dg.trashMult.dmg < 2.2 && Dg.bossMult.dmg < 4.8, `${k}: Normal lowered`);
   }
 });

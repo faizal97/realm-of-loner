@@ -11,7 +11,8 @@ function fight(level, cls, talents) {
   P.place = Object.keys(D.PLACES).find((k) => { const p = D.PLACES[k]; return p.lvl && p.lvl[0] <= level && p.lvl[1] >= level && !p.safe && (p.mobs || []).length; }) || P.place;
   const m = G.placeMobs().find((x) => x.state === 'alive'); G.engage(m.id);
   const C = G.fight, u = G.pUnit;
-  for (const e of C.enemies) { e.hp = e.maxHp = 1e7; e.dmg = [0, 0]; e.special = null; e.armor = 0; }
+  for (const e of C.enemies) { e.hp = e.maxHp = 1e7; e.dmg = [0, 0]; e.special = null; e.armor = 0; e.spT = 1e9; e.hardX = null; }
+  C.addAt = null; C.wandererTried = true; // inert, whichever creature the dice pick: no open-world spell and no wanderer joining
   u.res = u.maxRes = 1e6;
   return { C, u, e: C.enemies[0] };
 }
@@ -167,6 +168,7 @@ test('a caster at the back steps in for a close area attack, uses it, and walks 
 
 test('each recent Arcane Blast makes the next cost 50% more, up to 3 times, for 6 sec (#245)', () => {
   const { C, u, e } = fight(60, 'mage', {});
+  e.swingT = 1e9; // no swings: even a 1-damage hit pushes a cast back
   const base = E.abCost(D.ABILITIES.arcane_blast, u), costs = [];
   for (let i = 0; i < 5; i++) { costs.push(E.abCost(D.ABILITIES.arcane_blast, u)); use(C, u, 'arcane_blast', e); for (let k = 0; k < 25 && u.cast; k++) E.tick(C, 0.1); }
   assert.deepStrictEqual(costs.map((c) => Math.round((c / base) * 10) / 10), [1, 1.5, 2, 2.5, 2.5]);
