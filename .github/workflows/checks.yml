@@ -4,7 +4,8 @@
 # for effects and for prof, social, brawl), and is skipped when only docs or notes changed (#88). On main, once all but the
 # effects gate pass, publish-dev puts that dev build on the site's /dev/ page: https://faizal97.github.io/realm-of-loner/dev/
 # The effects gate (about an hour as one job since the bots think, #149) runs as 12 shards at once on every push and turns
-# the run red when it fails, but /dev/ doesn't wait for it; every beta and release runs it again in build.py.
+# the run red when it fails, but /dev/ doesn't wait for it. A beta or release build.py takes every sim gate from this run:
+# it builds only when every job here passed on that commit (or the version commit right after it).
 # Security: pull_request (never pull_request_target), read-only, no secrets, actions pinned to a commit, so a fork's
 # code can't reach anything. Only publish-dev may write, only on main, and only gh-pages' dev/ folder.
 name: checks

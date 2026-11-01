@@ -8,9 +8,39 @@ import base64, json, glob, sys, subprocess
 # release notes, shows "Dev build <sha>" for the version, keeps its own save keys (src/devkeys.js), has no updater,
 # What's new, cloud saves or Friends, and writes only dist-dev/ (never dist/ or the app's assets)
 DEV = '--dev' in sys.argv[1:]
-# --skip=effects,prof,…: gates another CI job runs in parallel (#88: the full build split in three); a build run by hand
-# never skips, and a release is always built without it
+# --skip=effects,prof,…: gates another CI job runs in parallel (#88: the full build split in three)
 SKIP = set(next((a[7:] for a in sys.argv[1:] if a.startswith('--skip=')), '').split(',')) - {''}
+# A beta or release build (no --dev, no --skip) takes its sim gates from GitHub: CI runs them all in about 8 minutes, here
+# they take over an hour. It needs a checks run where every job passed, on this commit or on the newest one before it
+# whose changes since touch only notes/ and app/pubspec.yaml (the version commit), and no code changed here since.
+# Otherwise the build stops. --local-gates runs every gate on this machine instead (GitHub down, or a run you doubt).
+SIM_GATES = {'cloudsync', 'friends', 'legends', 'upgrades', 'wardrobe', 'sellspeed', 'news', 'trials', 'reactions', 'hard',
+             'worldboss', 'distance', 'brawl', 'prof', 'social', 'auction', 'effects', 'rares', 'consumables', 'music'}
+NO_CODE = lambda p: p.startswith('notes/') or p == 'app/pubspec.yaml'
+def ci_passed():
+    git = lambda *a: subprocess.run(['git', '-C', R, *a], capture_output=True, text=True).stdout
+    changed = [l[3:] for l in git('status', '--porcelain').splitlines()]
+    code = [p for p in changed if not NO_CODE(p) and (p.split('/')[0] in ('src', 'sim', 'tools', 'test', 'audio', 'art', 'app', '.github') or p == 'build.py')]
+    if code: return 'uncommitted code (' + ', '.join(code[:5]) + '): commit and push it, so CI checks what you build'
+    for sha in git('rev-list', '--max-count=10', 'HEAD').split():
+        r = subprocess.run(['gh', 'run', 'list', '--workflow', 'checks.yml', '--commit', sha, '--limit', '1', '--json', 'databaseId,status'], cwd=R, capture_output=True, text=True)
+        if r.returncode != 0: return 'cannot ask GitHub (' + (r.stderr.strip().splitlines() or ['gh failed'])[-1] + ')'
+        runs = json.loads(r.stdout or '[]')
+        if runs:
+            run = runs[0]
+            if run['status'] != 'completed': return f'CI is still running on {sha[:7]}: gh run watch {run["databaseId"]}'
+            jobs = json.loads(subprocess.run(['gh', 'run', 'view', str(run['databaseId']), '--json', 'jobs'], cwd=R, capture_output=True, text=True).stdout or '{}').get('jobs', [])
+            bad = [j['name'] for j in jobs if j['conclusion'] != 'success' and not (j['name'] == 'publish-dev' and j['conclusion'] == 'skipped')]
+            if not jobs or bad: return f'CI on {sha[:7]} did not pass: ' + (', '.join(bad[:5]) or 'no jobs')
+            print(f'sim gates: passed on GitHub for {sha[:7]} (run {run["databaseId"]})')
+            return None
+        if not all(NO_CODE(p) for p in git('diff', '--name-only', f'{sha}^', 'HEAD').split()):
+            return f'no CI run for {sha[:7]}: push it and let CI finish'
+    return 'no CI run in the last 10 commits'
+if not DEV and not SKIP and '--local-gates' not in sys.argv[1:]:
+    why = ci_passed()
+    if why: sys.exit('build stopped: ' + why + ' (or python3 build.py --local-gates to run every gate here)')
+    SKIP = set(SIM_GATES)
 # a gate run quietly: on failure its own output is shown (its FAIL lines, or its last lines), so a failure on the CI runner
 # says why without a rerun
 def quiet(cmd):
