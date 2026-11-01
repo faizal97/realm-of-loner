@@ -67,7 +67,7 @@
     for (const u of C.allies.filter(isMember)) {
       const ans = askedOf(C, bar, u); if (!ans) continue;
       const f = fateOf(C, bar, u, ans); if (!f) continue;
-      bar.fates.push(`${u.name}: ${f.text}`); if (f.miss) tot(u.uid).missed++;
+      bar.fates.push(`${u.name}${bar.kicker === u.uid ? ' (kicker)' : ''}: ${f.text}`); if (f.miss) tot(u.uid).missed++;
     }
     bar.answered = bar.cut || bar.braced || bar.mended || bar.kicks > 0 || Object.keys(bar.dodged).length > 0;
   }
@@ -110,7 +110,7 @@
           else if (e.what === 'mend') { bar.mended = true; if (e.by != null) bar.used[e.by] = 'mended'; line(t, `RED BAR ${e.by != null ? nameOf(C, e.by) : 'a healer'} mends ${nameOf(C, e.tgt)} (now x${(e.size || 0).toFixed(2)})`); }
           else if (e.what === 'brace') { bar.braced = true; bar.used[e.tgt] = 'braced'; line(t, `RED BAR ${nameOf(C, e.tgt)} braces (now x${(e.size || 0).toFixed(2)})`); }
           else if (e.what === 'dodge' || e.what === 'block') { bar.dodged[e.tgt] = 1; bar.used[e.tgt] = e.what === 'dodge' ? 'avoided it' : 'blocked'; line(t, `RED BAR ${nameOf(C, e.tgt)} ${e.what === 'dodge' ? 'avoids' : 'blocks'} ${e.name}`); }
-          else if (e.what === 'land') { line(t, `RED BAR ${e.name} lands`); landed.push(bar); delete cur.open[e.src]; }
+          else if (e.what === 'land') { bar.kicker = e.kicker; line(t, `RED BAR ${e.name} lands${e.kicker != null ? ` (kicker: ${nameOf(C, e.kicker)})` : ''}`); landed.push(bar); delete cur.open[e.src]; }
           break;
         }
         default: break;

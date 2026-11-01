@@ -38,7 +38,7 @@ test('a lost fight: every section, the recap\'s deaths, and each landed red bar 
   const landed = L.bars.filter((b) => !b.cut && b.fates.length);
   assert.ok(landed.length > 0, 'a red bar landed');
   for (const b of landed) for (const m of L.members) {
-    const f = b.fates.find((x) => x.startsWith(m.name + ':'));
+    const f = b.fates.find((x) => x.startsWith(m.name + ':') || x.startsWith(m.name + ' (kicker):'));
     if (f) assert.match(f, /: (kicked|mended|braced|avoided it|blocked|cut it|.+: (dead|on cooldown|ready|kicks already full|already mended))/, f);
   }
   assert.ok(txt.length < 200000, `${txt.length} characters`);

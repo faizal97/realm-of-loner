@@ -1225,7 +1225,7 @@
     if (m.dead) { m.tele = null; return; }
     if (t.who === 'target' && t.brace != null) braceTele(C, m, t); // the tank's defensive was already up
     if (C.t < t.until) return;
-    m.tele = null; ev(C, { type: 'tele', src: m.uid, id: t.id, what: 'land', name: t.name });
+    m.tele = null; ev(C, { type: 'tele', src: m.uid, id: t.id, what: 'land', name: t.name, kicker: t.kicker != null ? t.kicker : null });
     land(C, m, t);
   }
   // a braced slam (#179): the tank's defensive takes t.brace off, once; the screen shows it as the tank's pip
@@ -1246,8 +1246,18 @@
   function answerTele(C, u, ans) {
     for (const m of alive(foes(C, u))) { const t = m.tele; if (t && E.teleAnswer(t) === ans && (t.who === 'all' || t.victim === u.uid)) { t.done.add(u.uid); if (ans === 'guard' && t.brace != null) braceTele(C, m, t, true); else if (ans === 'guard') ev(C, { type: 'tele', src: m.uid, what: 'block', tgt: u.uid, name: t.name }); } }
   }
+  // the kick order (#297): on each red bar a group answers with an interrupt, one bot whose interrupt is ready is its
+  // kicker, picked at random once, when the bar starts to be answered; the kicker answers as reliably as a healer's mend,
+  // the others keep their own lower roll. Not the victim of a slam, not a healer (a healer mends it), never the player
+  E.teleKicker = (C, t) => {
+    if (t.kicker !== undefined) return t.kicker;
+    const ready = alive(C.allies).filter((a) => a.kind === 'bot' && !a.isPlayer && a.uid !== t.victim && !(t.who === 'target' && (a.role || D.CLASSES[a.cls].role) === 'healer')
+      && E.answersOf(a, 'cut').some((id) => !((a.cds[id] || 0) > C.t)));
+    t.kicker = ready.length ? ready[rint(0, ready.length - 1)].uid : null;
+    return t.kicker;
+  };
   // a bot answers by its skill (#179): once per telegraph it decides whether it will, then answers after its reaction
-  // time; a cast needs one answer for the whole group, so each bot takes it on less often
+  // time; a cast needs one answer for the whole group, so each bot takes it on less often (the kick order's kicker excepted)
   function botAnswer(C, u, b) {
     if (!u.cls) return false;
     for (const m of alive(foes(C, u))) {
@@ -1258,7 +1268,7 @@
       if (ans === 'kick' && (t.kicks.has(u.uid) || t.kicks.size >= E.teleNum(t, 'kickCap'))) continue;
       if (ans !== 'cut' && ans !== 'mend' && ans !== 'kick' && t.who !== 'all' && t.victim !== u.uid) continue;
       const d = u.teleMind || (u.teleMind = {}), s = b.skill == null ? 0.5 : b.skill;
-      if (d.id !== t.id) { d.id = t.id; const alone = ans === 'cut' && alive(C.allies).filter((a) => E.answersOf(a, 'cut').length).length <= 1; d.go = Math.random() < (alone ? s : ans === 'cut' || ans === 'kick' ? 0.6 * s : 0.7 + 0.3 * s); d.at = t.start + 0.4 + (1 - s) * 1.2; } // skill 0.6 (an average draw) answers 4 in 5
+      if (d.id !== t.id) { d.id = t.id; const alone = ans === 'cut' && alive(C.allies).filter((a) => E.answersOf(a, 'cut').length).length <= 1; const kicker = (ans === 'cut' || ans === 'kick') && t.who !== 'all' && E.teleKicker(C, t) === u.uid; d.go = Math.random() < (kicker ? 0.7 + 0.3 * s : alone ? s : ans === 'cut' || ans === 'kick' ? 0.6 * s : 0.7 + 0.3 * s); d.at = t.start + 0.4 + (1 - s) * 1.2; } // skill 0.6 (an average draw) answers 4 in 5
       if (!d.go || C.t < d.at || C.t >= t.until) continue;
       for (const id of E.answersOf(u, ans === 'kick' ? 'cut' : ans)) if (E.use(C, u, id, ans === 'cut' || ans === 'kick' ? m.uid : ans === 'mend' ? t.victim : undefined) === null) { d.go = false; return true; }
     }
