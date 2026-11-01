@@ -412,6 +412,7 @@
   const POS_ALLY = [{ l: 3, b: 4, w: 25 }, { l: 20, b: 16, w: 19 }, { l: 1, b: 29, w: 17 }, { l: 22, b: 33, w: 15 }, { l: 10, b: 43, w: 13 }];
   // raids (10 players plus pets): a denser formation, front line first
   const POS_RAID = [{ l: 2, b: 3, w: 21 }, { l: 17, b: 10, w: 17 }, { l: 30, b: 4, w: 16 }, { l: 0, b: 22, w: 15 }, { l: 13, b: 25, w: 14 }, { l: 26, b: 20, w: 14 }, { l: 37, b: 27, w: 12 }, { l: 4, b: 38, w: 12 }, { l: 16, b: 40, w: 11 }, { l: 27, b: 37, w: 11 }, { l: 37, b: 44, w: 10 }, { l: 8, b: 50, w: 10 }, { l: 20, b: 52, w: 9 }, { l: 31, b: 52, w: 9 }];
+  const POS_NODE = [{ l: 31, b: 3, w: 11 }, { l: 49, b: 1, w: 10 }, { l: 40, b: 12, w: 9 }, { l: 58, b: 10, w: 9 }]; // gathering nodes: a place holds 2 ore and 2 herb (G.NODES_PER_KIND); a third had no spot and broke the scene
   const POS_EN = [{ r: 3, b: 4, w: 30 }, { r: 26, b: 15, w: 23 }, { r: 6, b: 28, w: 20 }, { r: 28, b: 34, w: 17 }, { r: 15, b: 44, w: 14 }];
   function sceneKey() {
     const S = G.S;
@@ -640,7 +641,7 @@
         }
         // gathering nodes you can see
         G.placeNodes(true).forEach((nd, i) => { // every node, known profession or not (#76): the world points at the skill
-          const el = spriteEl(art('node', nd.key), [{ l: 31, b: 3, w: 11 }, { l: 49, b: 1, w: 10 }][i], 'node tappable', h('div', { class: 'np', style: { fontSize: '10px' } }, h('span', { style: { color: G.hasProf(nd.N.prof) ? '#ffd84a' : '#9d9d9d' } }, nd.N.name)));
+          const el = spriteEl(art('node', nd.key), POS_NODE[i] || POS_NODE[POS_NODE.length - 1], 'node tappable', h('div', { class: 'np', style: { fontSize: '10px' } }, h('span', { style: { color: G.hasProf(nd.N.prof) ? '#ffd84a' : '#9d9d9d' } }, nd.N.name)));
           el.addEventListener('click', () => G.gatherNode(nd.i));
           sc.append(el);
         });
