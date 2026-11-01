@@ -1,8 +1,10 @@
 # Checks on every pull request and every push to main and the short work branches (#88). The fast job runs the data, lore,
 # name and symbol checks and the unit tests in a couple of minutes. The full build (#92) runs every gate of python3 build.py
 # --dev and the pass/fail sims it doesn't run (tools/ci-sim-gates.txt, seed 0), split in three jobs at once (build, and gates
-# for effects and for prof, social, brawl), and is skipped when only docs or notes changed (#88). On main, once all pass,
-# publish-dev puts that dev build on the site's /dev/ page: https://faizal97.github.io/realm-of-loner/dev/
+# for effects and for prof, social, brawl), and is skipped when only docs or notes changed (#88). On main, once all but the
+# effects gate pass, publish-dev puts that dev build on the site's /dev/ page: https://faizal97.github.io/realm-of-loner/dev/
+# The effects gate (about an hour since the bots think, #149) still runs on every push and turns the run red when it fails,
+# but /dev/ doesn't wait for it; every beta and release runs it again in build.py.
 # Security: pull_request (never pull_request_target), read-only, no secrets, actions pinned to a commit, so a fork's
 # code can't reach anything. Only publish-dev may write, only on main, and only gh-pages' dev/ folder.
 name: checks
@@ -99,7 +101,7 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 26
-      - name: The build and its gates (a dev build, #92), but effects, prof, social and brawl (the gates job runs those)
+      - name: The build and its gates (a dev build, #92), but effects, prof, social and brawl (the effects and gates jobs run those)
         run: python3 build.py --dev --skip=effects,prof,social,brawl
       - name: The pass/fail sims the build doesn't run (tools/ci-sim-gates.txt, seed 0)
         run: |
@@ -123,7 +125,36 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        sims: ['effects', 'prof social brawl']
+        sims: ['prof social brawl']
+    env:
+      TZ: Asia/Jakarta
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 26
+      - name: The gates, as build.py runs them
+        env:
+          SIMS: ${{ matrix.sims }}
+        run: |
+          for s in $SIMS; do
+            args=""; [ "$s" = brawl ] && args=48 # build.py runs brawl with 48
+            echo "::group::$s"; start=$(date +%s)
+            node "sim/$s.js" $args || { echo "::error title=Gate::sim/$s.js failed"; exit 1; }
+            echo "::endgroup::$s: $(( $(date +%s) - start ))s"
+          done
+  effects: # its own job, so publish-dev doesn't wait for it (an hour since #149)
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
+    name: gates (${{ matrix.sims }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        sims: ['effects']
     env:
       TZ: Asia/Jakarta
     steps:
