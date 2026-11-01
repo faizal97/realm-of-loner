@@ -1075,6 +1075,8 @@
       if (kind === 'adds') out.push({ name: 'Calls help', when: `At ${Math.round(x.at * 100)}% health`, what: joinText(x.n, x.mob, addLvl(u, x.lvl)), hard: hd });
       else if (kind === 'enrage' && x.after != null) out.push({ name: 'Time limit', when: `After ${x.after} sec`, what: `hits ${Math.round((x.mult - 1) * 100)}% harder until the fight ends.`, hard: hd });
       else if (kind === 'enrage') out.push({ name: 'Frenzy', when: `Below ${Math.round(x.at * 100)}% health`, what: `hits ${Math.round((x.mult - 1) * 100)}% harder.`, hard: hd });
+      else if (kind === 'countdown') out.push({ name: 'Time limit', when: `Below ${Math.round(x.at * 100)}% health`, what: `a ${x.secs} sec countdown starts; when it ends, hits ${Math.round((x.mult - 1) * 100)}% harder until the fight ends.`, hard: hd });
+      else if (kind === 'heal' && x.to) { healRow(x.every, x.every / 2, x.heal, hd); const r = out[out.length - 1]; r.name = 'Heals an ally'; r.what = `heals a hurt ${D.MOBS[x.to].name} for ${Math.round(x.heal * 100)}% of its health.`; }
       else if (kind === 'heal') healRow(x.every, x.every / 2, x.heal, hd);
       else hitRow(x.every, x.every / 2, x.mult, x.who, x.school, hd);
       if ((kind === 'heal' || kind === 'hit') && (x.tele || teleOn('x:' + u.key))) teleRow(out[out.length - 1], x.name, kind === 'heal' ? 'cut' : x.who === 'all' || x.who === 'random' ? 'step' : 'guard', kind === 'heal', x);
@@ -1108,11 +1110,18 @@
     const pct = m.hp / m.maxHp, emote = (x) => { if (x.text) ev(C, { type: 'emote', uid: m.uid, text: x.text }); };
     for (const x of m.hardX) {
       const kind = x.kind || 'adds';
+      if (kind === 'countdown') { // a time limit that starts at a health mark (Longnight's The Year Turns): enrage when it runs out
+        if (x.done) continue;
+        if (x.start == null) { if (pct >= x.at) continue; x.start = C.t; emote(x); ev(C, { type: 'countdown', uid: m.uid, name: x.name || 'Time limit', until: C.t + x.secs }); continue; }
+        if (C.t - x.start < x.secs) continue;
+        x.done = true; if (x.endText) ev(C, { type: 'emote', uid: m.uid, text: x.endText });
+        m.enrage = (m.enrage || 1) * x.mult; ev(C, { type: 'fx', uid: m.uid, kind: 'enrage' }); continue;
+      }
       if (kind === 'adds' || kind === 'enrage') {
         if (x.done || (x.after != null ? C.t < x.after : pct >= x.at)) continue; // after: seconds into the fight (a time limit)
         x.done = true; emote(x);
         if (kind === 'enrage') { m.enrage = (m.enrage || 1) * x.mult; ev(C, { type: 'fx', uid: m.uid, kind: 'enrage' }); }
-        else { const dm = C.opts.dungeonMult || { hp: 1, dmg: 1 }, am = x.mult || 1; for (let i = 0; i < x.n; i++) E.addEnemy(C, E.mobUnit(x.mob, addLvl(m, x.lvl), { hp: dm.hp * am, dmg: dm.dmg * am })); } // mult: this wave's strength (#282: Hard's Lantern-Wisps)
+        else { const dm = C.opts.dungeonMult || { hp: 1, dmg: 1 }, am = x.mult || 1; for (let i = 0; i < x.n; i++) { const a = E.mobUnit(x.mob, addLvl(m, x.lvl), { hp: dm.hp * am, dmg: dm.dmg * am }); if (x.extra) a.hardX = x.extra.map((e) => Object.assign({}, e)); E.addEnemy(C, a); } } // extra: the adds' own mechanics (Longnight's Uninvited heal her) // mult: this wave's strength (#282: Hard's Lantern-Wisps)
         continue;
       }
       if (stunned(C, m)) continue;
@@ -1120,7 +1129,11 @@
       if (x.t > 0) continue;
       x.t = x.every;
       const cast = x.hard !== false ? TELE.hardCast : TELE.cast, key = 'x:' + m.key; // Hard casts are quicker
-      if (kind === 'heal') { mech(C, m, key, { name: x.name || 'Mend', who: 'cast', heal: x.heal, text: x.text, cast, on: x.tele, miss: x.miss }); continue; }
+      if (kind === 'heal') {
+        let to = null;
+        if (x.to) { to = alive(C.enemies).filter((e) => e.key === x.to && e.hp < e.maxHp).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0]; if (!to) { x.t = 1; continue; } } // to: heals one of these (the most hurt), none hurt: waits
+        mech(C, m, key, { name: x.name || 'Mend', who: 'cast', heal: x.heal, healTo: to ? to.uid : null, text: x.text, cast, on: x.tele, miss: x.miss }); continue;
+      }
       const allies = alive(C.allies), tgt = C.units[m.target];
       const v = x.who === 'all' ? null : x.who === 'random' ? allies[rint(0, allies.length - 1)] : tgt && !tgt.dead ? tgt : null;
       if (x.who !== 'all' && !v) continue;
@@ -1179,7 +1192,7 @@
     ev(C, { type: 'tele', src: m.uid, what: 'start', name: t.name, who: t.who, victim: t.victim || null, ans: E.teleAnswer(t), until: t.until });
   }
   function land(C, m, t) {
-    if (t.heal) { heal(C, m, m, m.maxHp * t.heal * (t.tele ? t.miss || TELE.healMiss : 1), {}); return; }
+    if (t.heal) { const h = (t.healTo && C.units[t.healTo] && !C.units[t.healTo].dead && C.units[t.healTo]) || m; heal(C, m, h, h.maxHp * t.heal * (t.tele ? t.miss || TELE.healMiss : 1), {}); return; }
     const tgt = C.units[m.target], v = t.victim && C.units[t.victim];
     const who = t.who === 'all' ? alive(C.allies) : [v || (t.who === 'target' ? tgt : null)].filter((a) => a && !a.dead);
     for (const a of who) {

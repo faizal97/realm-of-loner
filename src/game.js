@@ -108,6 +108,7 @@
     G.lwRevokeTest(); // rewards from a test build's season stay in test builds
     if (G.lwRec().steed) G.giveTrialswornMount('wickless_steed'); // the Wickless Steed rides with every character
     G.lwExpire(); // candles from a festival that has ended
+    G.lnRevokeTest(); { const r = G.lnRec(); if (r.hound) G.giveTrialswornMount('frost_hound'); if (r.stag) G.giveTrialswornMount('pale_stag'); } G.lnExpire(); // Longnight, the same
     { const tw = G.account().trialsworn || {}; for (const k in tw) if (tw[k] && D.TRIALSWORN[k] && D.TRIALSWORN[k].mount) G.giveTrialswornMount(D.TRIALSWORN[k].mount); } // Trialsworn Chargers ride with every character
     if (S.player.keepsake) { S.player.wardrobe = Object.assign({ back: S.player.keepsake }, S.player.wardrobe); delete S.player.keepsake; } // v10.3: keepsakes moved into the wardrobe
     // v10: the world has new names. A save keeps copies of items, so their names come fresh from the data by id;
@@ -1331,6 +1332,7 @@
     if (it) { G.addItem(JSON.parse(JSON.stringify(it)), 1); loot(`You receive item: ${B.link(it.name, it.q)}.`); }
     G.gainXp(G.questXpFor(Q), false);
     G.lwEarn(D.EVENTS.lanternwake.earn.quest, 'a quest');
+    G.lnGive(D.EVENTS.longnight.earn.quest, 'a quest', true);
     emit('questDone', { qid, text: 'Quest complete' });
     emit('change');
   };
@@ -1816,7 +1818,7 @@
           e.inst.until = now() + (named ? D.PLACES[P.place].named[e.key] * 1000 : rnd(15, 28) * 1000);
           if (named && G.isHunt(e.key)) { P.huntKilled = P.huntKilled || {}; P.huntKilled[e.key] = G.huntNow(e.key, now()).w; e.inst.state = 'away'; G.takeTrophy(e.key); } // gone until its next window (#43)
         }
-        onKill(e.key); G.lwKill(e.level, e.elite); // Lanternwake candles
+        onKill(e.key); G.lwKill(e.level, e.elite); G.lnKill(e.level, e.elite); // festival candles and Kindling
         if (e.inst && e.inst.id.startsWith('n_') && !D.MOBS[e.key].boss) G.epicDrop('rare', e.level); // a rare's purple chance (#141)
         G.gainXp(Math.round(G.xpForKill(e.level, e.elite) * share * (e.packXp || 1)), true); // a pack creature: half (#211)
         const l = rollLoot(e.key, e.level, 1 / size);
@@ -2300,7 +2302,7 @@
   G.useItem = function (idx) {
     const S = G.S, P = S.player, b = P.bags[idx]; if (!b) return;
     const it = b.item, t = now();
-    if (it.slot === 'event') { if (G.fight) return toast('You are in combat.'); return G.lwUse(idx); } // Lanternwake's candle sink
+    if (it.slot === 'event') { if (G.fight) return toast('You are in combat.'); return D.ITEMS[it.id] && D.ITEMS[it.id].event === 'longnight' ? G.lnUse(idx) : G.lwUse(idx); } // a festival's toys
     if ((it.lvl || 1) > P.level) return toast(`Requires level ${it.lvl}.`);
     if (it.slot === 'potion') return G.usePotion(it.heal ? 'heal' : 'mana');
     if (G.fight) return toast('You are in combat.');
@@ -2529,7 +2531,7 @@
     if (n.clear) return !!(r.clears[n.clear] && r.clears[n.clear].clears);
     if (n.hard) return !!(r.clears[n.hard] && r.clears[n.hard].hard); // a whole raid cleared on Hard (v10.7)
     if (n.quest) return !!G.S.player.done[n.quest];
-    if (n.event) return G.lwRec().owned.includes(n.event); // bought from a festival (v10.13)
+    if (n.event) return G.lwRec().owned.includes(n.event) || G.lnRec().owned.includes(n.event); // from a festival (v10.13)
     if (n.prof) return ((G.S.player.prof || {})[n.prof] || {}).skill >= 300 || !!(G.S.player.artisan || {})[n.prof]; // Artisan (v10.9): 300 in that skill, now or before it was unlearned (#145)
     if (n.guildRank != null) return !!(root.SOC && SOC.rank() >= n.guildRank);
     if (n.trial) return ((G.S.player.trials || {}).bestEver || 0) >= n.trial; // Trials (v10.4): best level beaten in time
@@ -3399,6 +3401,7 @@
     const S = G.S, P = S.player, A = D.ACTIVITIES[act];
     if (A.event) { // a festival's run (v10.13): only while it is on, at your own level, queued from anywhere
       if (!G.eventLive(A.event)) return 'hidden';
+      if (A.finale && !G.lnFinale()) return 'Opens on 31 December, the New Year finale';
       if (P.level < A.minLvl) return `Requires level ${A.minLvl}`;
       if ((S.flags.deserterUntil || 0) > now()) return `Deserter: ${Math.ceil((S.flags.deserterUntil - now()) / 60000)} min`;
       return null;
@@ -3485,7 +3488,7 @@
     const S = G.S, A = D.ACTIVITIES[act], hard = !!(opts && opts.hard);
     const why = G.activityBlock(act);
     if (why) return toast(why === 'hidden' ? 'Only for the other faction.' : why + '.');
-    if (hard && A.event && !G.lwHardOpen()) return toast('Hard opens after one Normal clear of ' + A.name + '.');
+    if (hard && A.event && !(A.event === 'longnight' ? G.lnHardOpen(act) : G.lwHardOpen())) return toast('Hard opens after one Normal clear of ' + A.name + '.');
     if (hard && !A.event && !G.hardOpen(act)) return toast('Hard opens after a Normal clear at level ' + D.LEVEL_CAP + '.');
     if (S.wparty) disbandParty('You left your party to use the group finder.');
     if (S.run || S.group || G.bgBusy()) return toast('Leave your current group first.');
@@ -3788,15 +3791,15 @@
     if (result === 'win') {
       const size = 1 + S.group.members.filter((m) => !m.gone).length, evA = D.ACTIVITIES[R.act].event;
       for (const e of C.enemies) {
-        onKill(e.key); G.lwKill(e.level, false);
-        if (e.boss && !evA) G.lwEarn(D.EVENTS.lanternwake.earn.boss, 'a dungeon boss');
+        onKill(e.key); G.lwKill(e.level, false); G.lnKill(e.level, false);
+        if (e.boss && !evA) { G.lwEarn(D.EVENTS.lanternwake.earn.boss, 'a dungeon boss'); G.lnGive(D.EVENTS.longnight.earn.boss, 'a dungeon boss', true); }
         G.gainXp(Math.round(G.xpForKill(e.level, true) / size * 1.4), true);
         const l = rollLoot(e.key, e.level, 1 / size);
         giveLoot({ money: l.money, items: l.items.filter((it) => !D.GEAR_SLOTS.includes(it.slot)) });
         const gear = evA ? [] : l.items.filter((it) => D.GEAR_SLOTS.includes(it.slot) && it.q >= 2); // a festival run drops no gear
         for (const it of gear) addRoll(it);
       }
-      if (pull.boss && evA) { lwBossLoot(R); const talker = pick(S.group.members.filter((m) => !m.gone)); if (talker) partySay(talker, B.partyLine(talker.bot, 'win')); }
+      if (pull.boss && evA) { if (evA === 'longnight') lnBossLoot(R); else lwBossLoot(R); const talker = pick(S.group.members.filter((m) => !m.gone)); if (talker) partySay(talker, B.partyLine(talker.bot, 'win')); }
       else if (pull.boss) {
         const M = D.MOBS[pull.mobs[0]];
         const table = (M.loot || []).slice().sort(() => Math.random() - 0.5);
@@ -4215,7 +4218,8 @@
     if (fast > 1 && S.run && !S.run.finishedAt) S.run.fastSecs = (S.run.fastSecs || 0) + dt * (fast - 1);
     acc += dt * fast;
     if (S.player.fishing) try { fishTick(); } catch (e) { console.error(e); } // fishing (v10.9)
-    socAcc += dt; if (socAcc >= 1) { socAcc = 0; if (root.SOC) try { SOC.tick(); } catch (e) { console.error(e); } try { G.brawlTick(); } catch (e) { console.error(e); } }
+    socAcc += dt; if (socAcc >= 1) { socAcc = 0; if (root.SOC) try { SOC.tick(); } catch (e) { console.error(e); } try { G.brawlTick(); } catch (e) { console.error(e); } G.lnTick(); }
+    if (S.snow) try { G.lnSnowTick(dt); } catch (e) { console.error(e); } // Longnight's Snowball Brawl
     S.player.played = (S.player.played || 0) + dt;
     if (S.healPick && !G.fight) healPickCheck(); // #156: the picked member left the party
     // combat at fixed 0.1s steps
@@ -4241,6 +4245,7 @@
           else B.post(S, 'party', null, 'extra pack!');
         }
         if (C.kind === 'rehearsal' && C.events.length) rehearsalStep(C, C.events);
+        if (C.kind === 'knock' && C.events.some((e) => e.type === 'tele' && e.what === 'land' && e.name === 'Hearthchill')) C.chilled = true; // A Knock at the Door: the home went cold
         if (C.events.length) { G.recapFeed(C, C.events); emit('combat', C.events); C.events.length = 0; }
         if (C.over) {
           // a wipe in a run, or your own death out in the world: the recap of who died and why (#192)
@@ -4249,7 +4254,7 @@
           }
           // a fight always ends (#121): if a step of its ending throws, the fight is still closed, so the error shows once
           // instead of the ending being retried every frame (paying the kill again each time) with the game stuck in it
-          try { if (C.kind === 'rehearsal') endRehearsal(C); else if (C.kind === 'solo') endSolo(C); else if (C.kind === 'pvp') endPvp(C); else if (C.kind === 'duel') endDuel(C); else if (C.kind === 'bg') endBgFight(C); else if (C.kind === 'brawl') endBrawlFight(C); else endRunFight(C); }
+          try { if (C.kind === 'knock') endKnock(C); else if (C.kind === 'rehearsal') endRehearsal(C); else if (C.kind === 'solo') endSolo(C); else if (C.kind === 'pvp') endPvp(C); else if (C.kind === 'duel') endDuel(C); else if (C.kind === 'bg') endBgFight(C); else if (C.kind === 'brawl') endBrawlFight(C); else endRunFight(C); }
           finally { if (G.fight === C) { G.fight = null; G.pUnit = null; emit('fightEnd', { result: C.over }); } }
         }
       }
@@ -4287,8 +4292,11 @@
   // hand. Candles are per character, earned up to a daily cap and gone when the festival ends; what they buy is kept by
   // the account (account.lw). Nothing here gives power. Design: docs/plans/2026-10-11-lanternwake-design.md
   G.testBuild = () => !!(root.AZ_DEV || /-beta\./.test(String(root.AZ_VERSION || '')));
-  const evDays = (Ev, y) => [new Date(y, Ev.from[0] - 1, Ev.from[1]), new Date(y, Ev.to[0] - 1, Ev.to[1] + 1)]; // [start, end)
-  const inWindow = (Ev, d) => { const [a, b] = evDays(Ev, d.getFullYear()); return d >= a && d < b; };
+  // [start, end) of the festival that starts in year y; one that ends before it starts (Longnight: 15 December to 4 January) ends the next year
+  const evDays = (Ev, y) => { const wrap = Ev.to[0] < Ev.from[0]; return [new Date(y, Ev.from[0] - 1, Ev.from[1]), new Date(y + (wrap ? 1 : 0), Ev.to[0] - 1, Ev.to[1] + 1)]; };
+  // the year its current window started, or null outside it (a January date can be in last year's window)
+  const winYear = (Ev, d) => { for (const y of [d.getFullYear(), d.getFullYear() - 1]) { const [a, b] = evDays(Ev, y); if (d >= a && d < b) return y; } return null; };
+  const inWindow = (Ev, d) => winYear(Ev, d) != null;
   G.eventLive = function (key, date) {
     const Ev = (D.EVENTS || {})[key]; if (!Ev) return false;
     const d = date || new Date(now());
@@ -4296,10 +4304,11 @@
   };
   G.liveEvents = (date) => Object.keys(D.EVENTS || {}).filter((k) => G.eventLive(k, date));
   // when it ends (null while a test build keeps it on outside its dates), and when it next starts
-  G.eventEnds = function (key) { const Ev = D.EVENTS[key], d = new Date(now()); return inWindow(Ev, d) ? evDays(Ev, d.getFullYear())[1] : null; };
+  G.eventEnds = function (key) { const Ev = D.EVENTS[key], d = new Date(now()), y = winYear(Ev, d); return y != null ? evDays(Ev, y)[1] : null; };
   G.eventNext = function (key) { const Ev = D.EVENTS[key], d = new Date(now()), [a] = evDays(Ev, d.getFullYear()); return d < a ? a : evDays(Ev, d.getFullYear() + 1)[0]; };
   // the season's id: the year, or 'test-<year>' for a test build outside the dates, so test candles never carry over
-  G.eventSeason = function (key) { const d = new Date(now()); return inWindow(D.EVENTS[key], d) ? String(d.getFullYear()) : 'test-' + d.getFullYear(); };
+  G.eventSeason = function (key) { const d = new Date(now()), y = winYear(D.EVENTS[key], d); return y != null ? String(y) : 'test-' + d.getFullYear(); };
+  G.eventStart = function (key) { const Ev = D.EVENTS[key], d = new Date(now()), y = winYear(Ev, d); return y != null ? evDays(Ev, y)[0] : null; };
   const LW = () => D.EVENTS.lanternwake;
   G.lwAccount = function () { const a = G.account(); a.lw = Object.assign({ owned: [], steed: false, steedKills: 0, keepsakes: [], town: {} }, a.lw); return a; };
   // a test build's season (a beta or dev build outside the dates) keeps what it gives apart, in account.lwTest, so a beta
@@ -4381,7 +4390,7 @@
     emit('bought'); emit('change'); G.save();
   };
   // companions (v10.13): a small friend that follows you, only a look. Owned by the account, chosen per character
-  G.companions = () => Object.keys(D.COMPANIONS || {}).filter((k) => G.lwRec().owned.includes(k));
+  G.companions = () => Object.keys(D.COMPANIONS || {}).filter((k) => G.lwRec().owned.includes(k) || (D.COMPANIONS[k].event === 'longnight' && G.lnRec().owned.includes(k)));
   G.setCompanion = function (key) { const P = G.S.player; if (key && !G.companions().includes(key)) return; P.companion = key || null; emit('change'); G.save(); };
   // the candle sink, used from your bags
   G.lwUse = function (idx) {
@@ -4437,6 +4446,392 @@
     G.saveAccount(a);
   }
   G.lwBossLoot = lwBossLoot;
+
+  // ---- Longnight (v10.17): the winter festival, 15 December to 4 January (docs/plans/2026-11-01-longnight-design.md).
+  // No candles and no vendor: a calendar door for each day's daily, and Kindling for the town hearth (Hearth ranks).
+  // Rewards are the account's (G.lnRec, apart in a test season as Lanternwake's are); progress is the character's (P.ln)
+  const LN = () => D.EVENTS.longnight;
+  const DAY = 86400000;
+  G.lnOn = () => G.eventLive('longnight');
+  G.lnAccount = function () { const a = G.account(); a.ln = Object.assign({ owned: [], hound: false, houndKills: 0, stag: false, stagKills: 0, keepsakes: [], town: {} }, a.ln); return a; };
+  G.lnTesting = () => G.lnOn() && /^test/.test(G.eventSeason('longnight'));
+  const lnRec = (a) => { if (!G.lnTesting()) return a.ln; a.lnTest = Object.assign({ owned: [], hound: false, houndKills: 0, stag: false, stagKills: 0, keepsakes: [], town: {}, looks: [] }, a.lnTest); return a.lnTest; };
+  G.lnRec = () => lnRec(G.lnAccount());
+  const lnCollect = (look) => { if (!G.collectLook({ look }) || !G.lnTesting()) return false; const a = G.lnAccount(); lnRec(a).looks.push(look[0] + ':' + look[1]); G.saveAccount(a); return true; };
+  // outside a test season: the test record's looks and rewards go (as G.lwRevokeTest)
+  G.lnRevokeTest = function () {
+    if (G.lnTesting()) return;
+    const a = G.lnAccount();
+    if (a.lnTest) { const gone = new Set(a.lnTest.looks || []); a.looks = (a.looks || []).filter((k) => !gone.has(k)); delete a.lnTest; G.saveAccount(a); }
+    const P = G.S && G.S.player; if (!P) return;
+    const owned = a.ln.owned, looks = G.account().looks || [];
+    for (const [m, ok] of [['frost_hound', a.ln.hound], ['pale_stag', a.ln.stag]]) if (P.mounts && !ok && P.mounts.includes(m)) { P.mounts = P.mounts.filter((x) => x !== m); if (P.mount === m) P.mount = null; }
+    if (P.companion && D.COMPANIONS[P.companion] && D.COMPANIONS[P.companion].event === 'longnight' && !owned.includes(P.companion)) P.companion = null;
+    const t = D.TITLES.find((x) => x.id === P.title); if (t && t.need.event && /^ln_/.test(t.need.event) && !owned.includes(t.need.event)) P.title = null;
+    for (const pl in P.wardrobe || {}) { const k = P.wardrobe[pl]; if (/^ln_/.test(k) && !looks.includes(pl + ':' + k)) delete P.wardrobe[pl]; }
+    if (!G.lnOn() || (P.ln && /^test/.test(P.ln.season))) P.bags = (P.bags || []).filter((b) => (D.ITEMS[b.item.id] || {}).event !== 'longnight');
+  };
+  G.lnOwned = (id) => G.lnRec().owned.includes(id);
+  const lnOwn = (id) => { const a = G.lnAccount(), r = lnRec(a); if (!r.owned.includes(id)) r.owned.push(id); G.saveAccount(a); };
+  // the festival's day: 0 on 15 December; a test season counts from the first day it was seen
+  const lnMid = (t) => { const d = new Date(t); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); };
+  G.lnDay = function () {
+    const st = G.ln(); if (!st) return 0;
+    const start = G.eventStart('longnight'), from = start ? start.getTime() : st.first;
+    return Math.max(0, Math.round((lnMid(now()) - lnMid(from)) / DAY));
+  };
+  // the New Year finale (31 December on); a test season has it on, so the raid can be tried
+  G.lnFinale = function () {
+    if (!G.lnOn()) return false; if (G.lnTesting()) return true;
+    const d = new Date(now()), f = LN().finale; return d.getMonth() === 0 || (d.getMonth() + 1 === f[0] && d.getDate() >= f[1]);
+  };
+  // the town's stage (0 to 4) from fixed dates; a test season moves a stage a day
+  G.lnStage = function () {
+    if (!G.lnOn()) return 0; if (G.lnTesting()) return Math.min(LN().stages.length, 1 + G.lnDay());
+    const d = new Date(now()); if (d.getMonth() === 0) return LN().stages.length;
+    return LN().stages.filter((s) => d.getMonth() + 1 === s.on[0] && d.getDate() >= s.on[1]).length;
+  };
+  // the great hearth's fill (0 to 1): the whole server's, so it moves with the clock from the first day to the finale
+  G.lnHearthFill = function () {
+    if (!G.lnOn()) return 0; if (G.lnFinale() && !G.lnTesting()) return 1;
+    const start = G.eventStart('longnight'), fin = start ? new Date(start.getFullYear(), LN().finale[0] - 1, LN().finale[1]).getTime() : 0;
+    if (!start) return Math.min(1, (G.lnStage() + 0.5) / (LN().stages.length + 0.5));
+    return Math.max(0, Math.min(1, (now() - start.getTime()) / (fin - start.getTime())));
+  };
+  // this character's festival state; null when Longnight is not on. A new season starts it fresh, a new day the daily
+  G.ln = function () {
+    const P = G.S && G.S.player; if (!P || !G.lnOn()) return null;
+    const season = G.eventSeason('longnight');
+    if (P.ln && P.ln.season !== season && /^test/.test(P.ln.season)) G.lnRevokeTest();
+    if (!P.ln || P.ln.season !== season) P.ln = { season, first: lnMid(now()), kindling: 0, rank: 0, doors: [], ready: 0, day: null, done: false, prog: {}, lootDay: null, hardDay: null, guestDay: null, guestHardDay: null };
+    if (P.ln.day !== dayKey()) Object.assign(P.ln, { day: dayKey(), done: false, prog: { wins: 0, homes: [], wood: [], cooked: false, bowls: 0 } });
+    return P.ln;
+  };
+  G.lnExpire = function () { const P = G.S && G.S.player; if (P && P.ln && !G.lnOn()) delete P.ln; };
+  // today's daily: snow (Snowball Brawl), knock (A Knock at the Door) or stew (Longnight Stew), in turn
+  G.lnToday = () => LN().dailies[G.lnDay() % LN().dailies.length];
+  G.LN_DAILY = { snow: 'Snowball Brawl', knock: 'A Knock at the Door', stew: 'Longnight Stew' };
+  // how far today's daily is: { n, of, text }
+  G.lnProgress = function () {
+    const st = G.ln(); if (!st) return null;
+    const k = G.lnToday(), p = st.prog, E0 = LN();
+    if (k === 'snow') return { n: Math.min(p.wins, E0.snow.wins), of: E0.snow.wins, text: `Rounds won: ${Math.min(p.wins, E0.snow.wins)}/${E0.snow.wins}`, short: `Wins ${Math.min(p.wins, E0.snow.wins)}/${E0.snow.wins}` };
+    if (k === 'knock') return { n: p.homes.length, of: E0.knock, text: `Homes kept warm: ${p.homes.length}/${E0.knock}`, short: `Homes ${p.homes.length}/${E0.knock}` };
+    const w = E0.stew;
+    if (p.wood.length < w.wood) return { n: p.wood.length, of: w.wood, text: `Firewood: ${p.wood.length}/${w.wood}`, short: `Firewood ${p.wood.length}/${w.wood}` };
+    if (!p.cooked) return { n: 0, of: 1, text: 'Cook the stew at a great hearth', short: 'Cook it' };
+    return { n: p.bowls, of: w.bowls, text: `Bowls handed out: ${p.bowls}/${w.bowls}`, short: `Bowls ${p.bowls}/${w.bowls}` };
+  };
+  // the calendar: doors whose day has come, opened, and ready to open
+  G.lnDoorsDue = () => Math.min(LN().doors.length, G.lnDay() + 1);
+  function lnDailyDone() {
+    const st = G.ln(); if (!st || st.done) return;
+    st.done = true;
+    const behind = G.lnDoorsDue() - st.doors.length - st.ready, k = Math.max(0, Math.min(LN().perDay, behind));
+    st.ready += k;
+    sys(`Daily done: ${G.LN_DAILY[G.lnToday()]}.` + (k ? ` Doors to open: ${k}.` : ''));
+    G.lnGive(LN().earn.daily, 'the daily');
+    emit('lnDaily'); emit('change'); G.save();
+  }
+  G.lnDailyDone = lnDailyDone;
+  // open the next calendar door: its toy goes to your bags, its look to your wardrobe, door 16's fox to your companions
+  G.lnOpenDoor = function () {
+    const st = G.ln(); if (!st) return toast('Longnight is over.');
+    if (st.ready <= 0) return toast(st.doors.length >= LN().doors.length ? 'Every door is open.' : 'Finish today\'s daily to open a door.');
+    const i = st.doors.length, d = LN().doors[i]; if (!d) return;
+    if (d.item && !G.addItem(G.copyItem(d.item), d.n || 1)) return toast('Bags are full.');
+    st.ready--; st.doors.push(i);
+    if (d.item) loot(`Door ${i + 1}: ${B.link(D.ITEMS[d.item].name, D.ITEMS[d.item].q)}${d.n > 1 ? ' x' + d.n : ''}.`);
+    if (d.look) { lnCollect(D.ITEMS[d.look].look); loot(`Door ${i + 1}: ${B.link(D.ITEMS[d.look].name, 4)}. Added to your wardrobe.`); }
+    if (d.companion) { lnOwn(d.companion); emit('collected', { companion: d.companion }); loot(`Door ${i + 1}: ${D.COMPANIONS[d.companion].name}, a companion. Summon it: Hero → Journey → Companions.`); }
+    emit('lnDoor', { i }); emit('change'); G.save();
+    return i;
+  };
+  // Kindling for the great hearth: no cap; each rank's reward once
+  G.lnRankOf = (n) => LN().ranks.filter((r) => n >= r.at).length;
+  G.lnGive = function (n, why, quiet) {
+    const st = G.ln(); if (!st || !n) return 0;
+    st.kindling += n;
+    if (!quiet) loot(`+${n} Kindling (${why}).`);
+    const rk = G.lnRankOf(st.kindling);
+    while (st.rank < rk) {
+      const R = LN().ranks[st.rank]; st.rank++;
+      sys(`Hearth rank ${st.rank}: ${R.name}.`);
+      if (R.reward.item) { if (G.addItem(G.copyItem(R.reward.item), R.reward.n || 1)) loot(`Received ${B.link(D.ITEMS[R.reward.item].name, 1)} x${R.reward.n || 1}.`); else sys('Bags are full: the reward waits at the Hearthwarden.'), st.owed = (st.owed || []).concat([R.reward]); }
+      if (R.reward.title) { lnOwn(R.reward.title); loot(`New title: ${G.titleName(D.TITLES.find((t) => t.id === R.reward.title), G.S.player.name)}. Wear it: Hero → Journey → Titles.`); }
+      emit('lnRank', { rank: st.rank });
+    }
+    emit('kindling', { n, why });
+    return n;
+  };
+  // a reward a full bag could not take, handed over at the Hearthwarden
+  G.lnClaimOwed = function () { const st = G.ln(); if (!st || !st.owed || !st.owed.length) return; const r = st.owed[0]; if (!G.addItem(G.copyItem(r.item), r.n || 1)) return toast('Bags are full.'); st.owed.shift(); loot(`Received ${B.link(D.ITEMS[r.item].name, 1)} x${r.n || 1}.`); emit('change'); G.save(); };
+  G.lnKill = function (mobLvl, elite) { if (!G.lnOn() || G.S.player.level - mobLvl >= 5) return 0; return G.lnGive(elite ? LN().earn.elite : LN().earn.kill, 'a kill', true); };
+  // a festival town: one with the Hearthwarden and a great hearth (every city and hub with a profession trainer)
+  G.lnTown = (place) => { const Pl = D.PLACES[place || G.S.player.place]; return !!Pl && Pl.safe && (Pl.npcs || []).includes(LN().keeper); };
+  // people in this town for the festival's chat (anyone online of your faction when the town is quiet)
+  const lnNear = () => { const S = G.S, P = S.player, d = new Date(now()), mine = (x) => B.factionOf(x) === B.factionOf(P); const here = (B.onlineIn(S, P.place, d) || []).filter(mine); return here.length ? here : S.bots.filter((b) => mine(b) && B.isOnline(b, d)); };
+  // a place out in the world for the dailies (homes, firewood): not a town, no run or battleground
+  const lnWild = (place) => { const Pl = D.PLACES[place]; return !!Pl && !Pl.safe && !G.S.run && !G.S.bg; };
+
+  // ---- A Knock at the Door: at a place out in the world, frost hounds and a frostling come to a home. Win without
+  // letting the frostling's Hearthchill land (interrupt it) and the home stays warm. Three different places a day
+  G.lnCanKnock = function (place) {
+    const st = G.ln(); place = place || G.S.player.place;
+    if (!st || G.lnToday() !== 'knock' || st.done || !lnWild(place)) return null;
+    return st.prog.homes.includes(place) ? 'kept' : 'ready';
+  };
+  G.lnKnock = function () {
+    const S = G.S, P = S.player;
+    if (G.lnCanKnock(P.place) !== 'ready') return toast(G.lnCanKnock(P.place) === 'kept' ? 'This home is already warm. Try another place.' : 'No home to keep warm here.');
+    if (G.fight || P.travel || P.ghostUntil) return toast('Not now.');
+    stopActions();
+    const L = P.level, pu = E.charUnit(P, 'ally', 'player', now());
+    const foes = [E.mobUnit('ln_frost_hound', L), E.mobUnit('ln_frost_hound', L), E.mobUnit('ln_frostling', L)];
+    G.pUnit = pu;
+    const pet = G.petUnitFor(pu);
+    G.fight = E.fight(pet ? [pu, pet] : [pu], foes, { soloUid: pu.uid });
+    G.fight.kind = 'knock'; G.fight.knockAt = P.place;
+    G.fight.opts.killOrder = 'spread';
+    sys('Frost hounds at the door!');
+    emit('fightStart', { fight: G.fight });
+  };
+  function endKnock(C) {
+    const S = G.S, P = S.player, st = G.ln();
+    E.writeBack(C, G.pUnit, now());
+    if (P.hp != null && P.hp <= 0) P.hp = 1;
+    G.fight = null; G.pUnit = null;
+    if (C.over === 'win' && st && !C.chilled) {
+      if (!st.prog.homes.includes(C.knockAt)) st.prog.homes.push(C.knockAt);
+      sys(`Home kept warm: ${D.PLACES[C.knockAt].name} (${st.prog.homes.length}/${LN().knock}).`);
+      G.lnGive(LN().earn.elite, 'a home kept warm');
+      if (st.prog.homes.length >= LN().knock) lnDailyDone();
+    } else if (C.over === 'win') sys('Home lost: Hearthchill landed.');
+    else sys('Home lost: the hounds drove you off.');
+    emit('fightEnd', { result: C.over }); emit('change'); G.save();
+  }
+
+  // ---- Longnight Stew: firewood from 5 different places out in the world, cook at a great hearth, then hand a bowl to
+  // 3 people in town who ask for one in chat (real requests, with a Give button)
+  G.lnCanGather = function (place) {
+    const st = G.ln(); place = place || G.S.player.place;
+    if (!st || G.lnToday() !== 'stew' || st.done || !lnWild(place)) return null;
+    if (st.prog.wood.length >= LN().stew.wood) return 'done';
+    return st.prog.wood.includes(place) ? 'taken' : 'ready';
+  };
+  G.lnGather = function () {
+    const P = G.S.player, st = G.ln(), can = G.lnCanGather(P.place);
+    if (can !== 'ready') return toast(can === 'taken' ? 'You took the firewood here today.' : can === 'done' ? 'You have all the firewood. Cook it at a great hearth.' : 'No firewood here.');
+    if (G.fight) return toast('You are in combat.');
+    st.prog.wood.push(P.place);
+    sys(`Firewood gathered: ${D.PLACES[P.place].name} (${st.prog.wood.length}/${LN().stew.wood}).`);
+    if (st.prog.wood.length >= LN().stew.wood) sys('Firewood done. Cook it at a great hearth.');
+    emit('change'); G.save();
+  };
+  G.lnCook = function () {
+    const st = G.ln(); if (!st) return;
+    if (!G.lnTown()) return toast('Only at a great hearth (the Hearthwarden).');
+    if (st.prog.wood.length < LN().stew.wood) return toast(`Bring ${LN().stew.wood} firewood first (${st.prog.wood.length}/${LN().stew.wood}).`);
+    if (st.prog.cooked) return toast('The stew is cooked.');
+    if (!G.addItem(G.copyItem('ln_stew'), LN().stew.bowls)) return toast('Bags are full.');
+    st.prog.cooked = true; G.S.flags.lnAsk = 0;
+    loot(`You cook ${B.link('Longnight Stew', 1)} x${LN().stew.bowls}.`);
+    emit('change'); G.save();
+  };
+  // a bowl asked for in chat: posted near you in a festival town while you hold stew; G.lnGiveStew answers it
+  const STEW_ASK = [() => `anyone have a bowl of Longnight stew? freezing out here`, () => `so cold today. would love some stew if anyone cooked`, () => `is anyone handing out Longnight stew? i'd take a bowl`, () => `brrr. stew, anyone? happy Longnight`];
+  function lnStewTick() {
+    const S = G.S, P = S.player, st = G.ln();
+    if (!st || !st.prog.cooked || st.done || !G.lnTown() || G.fight || S.run) return;
+    if (!(P.bags || []).some((b) => b.item.id === 'ln_stew')) return;
+    if (S.chat.some((m) => m.act && m.act.kind === 'ln_stew' && m.act.state === 'open')) return;
+    if (now() < (S.flags.lnAsk || 0)) return;
+    const near = lnNear().filter((x) => !(st.prog.fed || []).includes(x.id));
+    if (!near.length) return;
+    const b = pick(near), m = B.post(S, 'say', b, pick(STEW_ASK)());
+    S.flags.lnAsk = now() + rnd(20, 45) * 1000;
+    if (m) { m.act = { kind: 'ln_stew', bot: b.id, state: 'open', until: now() + 5 * 60000 }; emit('change'); }
+  }
+  G.lnStewTick = lnStewTick;
+  G.lnGiveStew = function (m) {
+    const S = G.S, P = S.player, st = G.ln(), a = m && m.act;
+    if (!a || a.kind !== 'ln_stew' || a.state !== 'open') return;
+    if (!st) return 'Longnight is over.';
+    if (!(P.bags || []).some((x) => x.item.id === 'ln_stew')) return 'You have no stew left.';
+    G.removeItem('ln_stew', 1);
+    a.state = 'done'; st.prog.bowls++; st.prog.fed = (st.prog.fed || []).concat([a.bot]);
+    const b = S.bots.find((x) => x.id === a.bot);
+    sys(`You hand ${b ? b.name : 'them'} a bowl of Longnight Stew (${st.prog.bowls}/${LN().stew.bowls}).`);
+    if (b) S.pending.push({ at: now() + rnd(1200, 2600), bot: b.id, ch: 'say', text: pick([`oh thank you ${P.name}! so warm`, `ty!! happy Longnight ${P.name}`, `you're the best, thank you`, `mmm, perfect. ty ${P.name}`]), fromName: b.name });
+    if (st.prog.bowls >= LN().stew.bowls) lnDailyDone();
+    emit('change'); G.save();
+  };
+
+  // ---- Snowball Brawl: rounds against people in your town, the same kit for everyone. Throw (1 snow), Pack Snow
+  // (+1 snow, 1 sec), Duck (dodge for 0.9 sec), Snowboulder (3 snow, a red bar, 3 hits). First to 0 loses the round
+  G.SNOW = { hp: 6, maxSnow: 5, startSnow: 1, pack: 1, fly: 0.6, duck: 0.9, duckCd: 2.4, boulder: 3, wind: 2, boulderHit: 3, throwCd: 0.5 };
+  const snowSide = () => ({ hp: G.SNOW.hp, snow: G.SNOW.startSnow, packUntil: 0, duckUntil: -1, duckCd: 0, throwCd: 0, wind: null });
+  G.lnSnowWhy = function () {
+    const st = G.ln(), S = G.S;
+    if (!st) return 'Longnight is over.';
+    if (G.lnToday() !== 'snow') return 'Snowball Brawl is not today\'s daily.';
+    if (!G.lnTown()) return 'Only in a town with the Hearthwarden.';
+    if (G.fight || S.run || S.bg || S.snow) return 'Not now.';
+    return null;
+  };
+  // a round against someone online here; their skill (0 to 1) decides how well they duck and time a boulder
+  G.lnSnowStart = function (rng) {
+    const S = G.S, P = S.player, why = G.lnSnowWhy(); if (why) return toast(why);
+    const near = lnNear();
+    const foe = near.length ? pick(near) : null;
+    S.snow = { t: 0, me: snowSide(), foe: snowSide(), name: foe ? foe.name : 'A local', bot: foe ? foe.id : null, skill: foe && foe.skill != null ? foe.skill : 0.35 + Math.random() * 0.45, flying: [], log: [], over: null, think: 0.8 };
+    sys(`Snowball fight! ${S.snow.name} packs the first snowball.`);
+    emit('snow', S.snow); emit('change');
+  };
+  // one side acts; returns why not, or null
+  function snowAct(Z, who, act) {
+    const N = G.SNOW, me = Z[who], them = Z[who === 'me' ? 'foe' : 'me'];
+    if (Z.over || me.hp <= 0) return 'over';
+    if (Z.t < me.packUntil || me.wind) return 'busy';
+    if (act === 'throw') {
+      if (me.snow < 1) return 'No snow. Pack Snow first.';
+      if (Z.t < me.throwCd) return 'busy';
+      me.snow--; me.throwCd = Z.t + N.throwCd; Z.flying.push({ from: who, at: Z.t + N.fly, dmg: 1 }); return null;
+    }
+    if (act === 'pack') { if (me.snow >= N.maxSnow) return 'Your hands are full of snow.'; me.packUntil = Z.t + N.pack; me.packing = true; return null; }
+    if (act === 'duck') { if (Z.t < me.duckCd) return 'busy'; me.duckUntil = Z.t + N.duck; me.duckCd = Z.t + N.duckCd; return null; }
+    if (act === 'boulder') { if (me.snow < N.boulder) return `Snowboulder needs ${N.boulder} snow.`; me.snow -= N.boulder; me.wind = { until: Z.t + N.wind }; return null; }
+    void them; return 'busy';
+  }
+  G.snowAct = snowAct;
+  // the opponent: ducks what it sees coming (each snowball decided once, by skill), throws while you are busy packing or
+  // winding up, builds to a Snowboulder, packs when low
+  function snowFoe(Z, dt) {
+    const f = Z.foe, me = Z.me, sk = Z.skill;
+    for (const x of Z.flying) if (x.from === 'me' && x.seen == null) x.seen = Math.random() < (x.boulder ? 0.35 + sk * 0.55 : 0.25 + sk * 0.6);
+    const coming = Z.flying.some((x) => x.from === 'me' && x.seen && x.at - Z.t < 0.35) || (me.wind && me.wind.until - Z.t < 0.5 && Math.random() < 0.35 + sk * 0.55);
+    if (coming && !snowAct(Z, 'foe', 'duck')) return;
+    Z.think -= dt; if (Z.think > 0) return;
+    Z.think = 0.3 + (1 - sk) * 0.45;
+    const open = Z.t < me.packUntil || !!me.wind; // you are busy: a free hit
+    if (f.snow >= 1 && open && !snowAct(Z, 'foe', 'throw')) return;
+    if (f.snow >= G.SNOW.boulder && Math.random() < 0.45 + sk * 0.3 && !snowAct(Z, 'foe', 'boulder')) return;
+    if (f.snow < G.SNOW.boulder && Math.random() < 0.55 && !snowAct(Z, 'foe', 'pack')) return;
+    if (f.snow >= 1 && !snowAct(Z, 'foe', 'throw')) return;
+    snowAct(Z, 'foe', 'pack');
+  }
+  // the round at fixed steps: snow lands, boulders fall, the opponent thinks
+  G.snowStep = function (Z, dt, foeAI) {
+    const N = G.SNOW; if (Z.over) return;
+    Z.t += dt;
+    for (const s of ['me', 'foe']) { const u = Z[s]; if (u.packing && Z.t >= u.packUntil) { u.packing = false; u.snow = Math.min(N.maxSnow, u.snow + 1); } }
+    for (const s of ['me', 'foe']) { const u = Z[s]; if (u.wind && Z.t >= u.wind.until) { u.wind = null; Z.flying.push({ from: s, at: Z.t + 0.1, dmg: N.boulderHit, boulder: true }); } }
+    for (const f of Z.flying.slice()) {
+      if (Z.t < f.at) continue;
+      Z.flying.splice(Z.flying.indexOf(f), 1);
+      const tgt = Z[f.from === 'me' ? 'foe' : 'me'];
+      if (Z.t <= tgt.duckUntil) { Z.log.push({ t: Z.t, who: f.from === 'me' ? 'foe' : 'me', what: 'duck', boulder: f.boulder }); continue; }
+      const caught = !f.boulder && tgt.packing ? 1 : 0; // caught with your hands full of snow: one more
+      tgt.hp = Math.max(0, tgt.hp - f.dmg - caught); Z.log.push({ t: Z.t, who: f.from === 'me' ? 'foe' : 'me', what: 'hit', dmg: f.dmg + caught, boulder: f.boulder, caught: !!caught });
+    }
+    if (foeAI !== false) snowFoe(Z, dt);
+    if (Z.me.hp <= 0 || Z.foe.hp <= 0) Z.over = Z.foe.hp <= 0 && Z.me.hp > 0 ? 'win' : 'lose';
+    if (Z.t > 120 && !Z.over) Z.over = Z.me.hp > Z.foe.hp ? 'win' : 'lose'; // a stalemate ends at two minutes
+  };
+  G.lnSnowTick = function (dt) {
+    const S = G.S, Z = S.snow; if (!Z || Z.done) return;
+    let a = (Z.acc || 0) + dt; while (a >= 0.1 && !Z.over) { a -= 0.1; G.snowStep(Z, 0.1); } Z.acc = a;
+    if (Z.log.length) { emit('snowLog', Z.log.slice()); Z.log.length = 0; }
+    emit('snow', Z);
+    if (Z.over) lnSnowEnd(Z);
+  };
+  G.lnSnowDo = function (act) { const Z = G.S.snow; if (!Z) return; const why = snowAct(Z, 'me', act); if (why && why !== 'busy' && why !== 'over') toast(why); emit('snow', Z); return why; };
+  G.lnSnowQuit = function () { const Z = G.S.snow; if (!Z) return; if (!Z.over) { Z.over = 'lose'; sys('You walk away from the snowball fight.'); } lnSnowEnd(Z); };
+  function lnSnowEnd(Z) {
+    const S = G.S, st = G.ln(); if (Z.done) return; Z.done = true;
+    const P = S.player;
+    if (Z.over === 'win' && st) {
+      st.prog.wins++;
+      sys(`You win the round against ${Z.name} (${Math.min(st.prog.wins, LN().snow.wins)}/${LN().snow.wins}).`);
+      G.lnGive(LN().earn.elite, 'a snowball round');
+      if (Z.bot) S.pending.push({ at: now() + rnd(1000, 2400), bot: Z.bot, ch: 'say', text: pick([`gg ${P.name}, good arm`, `ok ok you win lol`, `rematch next Longnight!`, `gg, my hands are frozen`]), fromName: Z.name });
+      if (st.prog.wins >= LN().snow.wins) lnDailyDone();
+    } else if (Z.over === 'lose') {
+      sys(`${Z.name} wins the round.`);
+      if (Z.bot) S.pending.push({ at: now() + rnd(1000, 2400), bot: Z.bot, ch: 'say', text: pick([`gotcha ${P.name}!`, `haha gg`, `snow in your boots now`, `gg! duck next time lol`]), fromName: Z.name });
+    }
+    S.snow = null; emit('snow', null); emit('change'); G.save();
+  }
+
+  // ---- the town: people at the great hearth say so (statements, not requests), now and then, in festival towns
+  const HEARTH_SAY = [() => 'added my kindling to the hearth. happy Longnight all', () => 'the great hearth is so warm tonight', () => 'happy Longnight!', () => 'keep your doors shut tonight, the Cold Guest is out', () => 'fed the hearth, back to questing', () => 'anyone else think the hearth got bigger today?'];
+  function lnTownTick() {
+    const S = G.S, P = S.player;
+    if (!G.lnOn() || !G.lnTown() || G.fight || S.run) return;
+    if (now() < (S.flags.lnSay || 0)) return;
+    S.flags.lnSay = now() + rnd(90, 200) * 1000;
+    const near = lnNear();
+    if (near.length) B.post(S, 'say', pick(near), pick(HEARTH_SAY)());
+  }
+  G.lnTick = function () { if (!G.lnOn() || !G.S || !G.S.player) return; try { lnStewTick(); lnTownTick(); } catch (e) { console.error(e); } };
+
+  // ---- toys, used from your bags
+  G.lnUse = function (idx) {
+    const S = G.S, P = S.player, b = P.bags[idx], it = b && D.ITEMS[b.item.id]; if (!it) return;
+    const town = D.PLACES[P.place] && D.PLACES[P.place].safe;
+    if (it.stew) return toast('Hand it to someone in town who asks for a bowl in chat.');
+    if (it.costume) { P.costume = { mob: it.costume, until: now() + 3600000 }; G.removeItem(it.id, 1); sys(`You look like a ${D.MOBS[it.costume].name} for 1 hour.`); }
+    else if (it.snowball) {
+      const near = lnNear();
+      if (!town || !near.length) return toast('Throw snowballs in a town.');
+      const bot = pick(near); G.removeItem(it.id, 1);
+      sys(`You throw a snowball at ${bot.name}. Direct hit!`);
+      S.pending.push({ at: now() + 1200 + Math.random() * 1500, bot: bot.id, ch: 'say', text: pick([`hey!! ${P.name} lol`, `oh it's ON ${P.name}`, `snow down my collar, thanks ${P.name}`, `lol nice throw`, `${P.name}!!! happy Longnight to you too`]), fromName: bot.name });
+    } else if (it.cocoa) { G.removeItem(it.id, 1); sys('You sit by the fire with a cup of Hearthside Cocoa. Warm at last.'); emit('emote', { kind: 'cocoa' }); }
+    else if (it.garland) {
+      if (!town) return toast('Only in a town.');
+      const a = G.lnAccount(), t = lnRec(a).town, key = G.eventSeason('longnight') + ':' + P.place; G.removeItem(it.id, 1);
+      t[key] = (t[key] || 0) + 1; G.saveAccount(a);
+      sys(`Garland hung: ${D.PLACES[P.place].name} (${t[key]} this festival).`);
+    } else if (it.fireworks) {
+      if (!town) return toast('Set them off over a town.');
+      G.removeItem(it.id, 1); sys('Fireworks burst over the town!'); emit('fireworks', {});
+    } else return;
+    emit('change'); G.save();
+  };
+  G.lnGarlands = (place) => (G.lnRec().town[G.eventSeason('longnight') + ':' + place] || 0);
+
+  // ---- the Knocker's and the Cold Guest's loot: once a day each on Normal and on Hard; every daily Normal kill counts
+  // toward the mount (the Frost Hound by the 10th, the Pale Stag by the 3rd: the raid is open five days)
+  G.lnLoot = () => { const st = G.ln(), d = dayKey(); return { knocker: !!st && st.lootDay !== d, knockerHard: !!st && st.hardDay !== d, guest: !!st && st.guestDay !== d, guestHard: !!st && st.guestHardDay !== d }; };
+  G.lnHardOpen = (act) => !!(((G.S.player.codex || {})[act] || {}).clears);
+  G.lnHardLeft = (sfx) => LN().set.filter((id) => !(G.account().looks || []).includes(D.ITEMS[id].look[0] + ':' + D.ITEMS[id].look[1] + sfx));
+  function lnBossLoot(R) {
+    const Ev = LN(), st = G.ln(), d = dayKey(); if (!st) return;
+    const guest = R.act === Ev.guest, season = G.eventSeason('longnight');
+    // each step reads the account fresh: a step before it may have saved it (a title, a rank)
+    { const a = G.lnAccount(), r = lnRec(a); if (!r.keepsakes.includes(season) && !/^test/.test(season)) { r.keepsakes.push(season); G.saveAccount(a); loot(`Keepsake earned: Longnight ${season}.`); } }
+    if (guest && !G.lnOwned('ln_door_title')) { lnOwn('ln_door_title'); loot(`New title: ${G.titleName(D.TITLES.find((t) => t.id === 'ln_door_title'), G.S.player.name)}. Wear it: Hero → Journey → Titles.`); emit('lnGuestFirst'); }
+    const dayK = guest ? (R.hard ? 'guestHardDay' : 'guestDay') : (R.hard ? 'hardDay' : 'lootDay');
+    if (st[dayK] === d) return sys(`${R.hard ? 'Hard loot' : 'Daily loot'} already taken today.`);
+    st[dayK] = d;
+    G.lnGive(guest ? Ev.earn.guest : Ev.earn.knocker, guest ? 'the Cold Guest' : 'the Knocker');
+    if (R.hard) {
+      const sfx = guest ? '_pale' : '_hard', left = G.lnHardLeft(sfx);
+      if (left.length) { const it = D.ITEMS[pick(left)]; lnCollect([it.look[0], it.look[1] + sfx]); loot(`New look: ${B.link(it.name + (guest ? ' (Pale)' : ' (Dark)'), 4)}.`); }
+      else sys(`All ${guest ? 'pale' : 'dark'} looks collected.`);
+      return;
+    }
+    const a = G.lnAccount(), r = lnRec(a);
+    const [flag, kills, at, ch, mount, name] = guest ? ['stag', 'stagKills', Ev.stagAt, Ev.stagChance, 'pale_stag', 'Pale Stag'] : ['hound', 'houndKills', Ev.houndAt, Ev.houndChance, 'frost_hound', 'Frost Hound'];
+    if (r[flag]) return;
+    r[kills]++;
+    if (r[kills] >= at || Math.random() < ch) { r[flag] = true; G.giveTrialswornMount(mount); loot(`New mount: ${B.link(name, 4)}!`); }
+    else sys(`No ${name} (${r[kills]}/${at}).`);
+    G.saveAccount(a);
+  }
+  G.lnBossLoot = lnBossLoot;
+  G.endKnock = endKnock;
 
   root.G = G;
 })(typeof window !== 'undefined' ? window : globalThis);

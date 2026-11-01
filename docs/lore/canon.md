@@ -207,6 +207,7 @@ several sharing a line separated by " / ".
 - **The Shuttered Lane** — a street of barred doors, where the Knocker is fought
 - **The Open Door** — the one house that let the Cold Guest in, frozen through
 - **Kindling** — what is given to a town's great hearth during Longnight
+- **New Year** — the turn of the year at midnight on 31 December, Longnight's finale
 - **Pyre Bastion** — the Order's stronghold in Graymouth
 - **King's Square** — the old market square of Graymouth
 - **Bracken Arms** — the inn at Brackenford

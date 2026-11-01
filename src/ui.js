@@ -563,6 +563,7 @@
     const bg = sc.querySelector('img.bg');
     if (!bg || sc.dataset.k !== key) { sc.innerHTML = ''; sc.append(img(art('scene', key), 'bg'), h('div', { class: 'shade' })); sc.dataset.k = key; }
     else for (const c of [...sc.children]) if (c !== bg && !c.classList.contains('shade')) c.remove();
+    if (G.lnOn && G.lnOn() && !S.run && !S.bg && !S.brawl && G.lnTown(P.place) && window.ART && ART.lnTown) sc.append(img(art('lnTown', G.lnStage()), 'ln-town')); // Longnight: the town's garlands, snow, fireworks
     if (!G.fight) { const b = sc.querySelector('img.bg'); if (b && b.classList.contains('cam')) { b.classList.remove('cam'); b.style.translate = ''; } ui.cam = null; } // out of a fight the view is still
     const place = D.PLACES[P.place];
     const title = S.brawl ? 'The Bloodsand Brawl' : S.bg ? D.BG[S.bg.key].name : S.run ? S.run.name : P.travel ? 'On the road' : place.name;
@@ -846,6 +847,7 @@
       if (e.type === 'tele' && e.what === 'start' && G.pUnit && E.teleFor(C, G.pUnit).some((x) => x.m.uid === e.src)) { const mine = E.teleFor(C, G.pUnit).find((x) => x.m.uid === e.src); if (S_) S_.play('warn', { gap: 0.5, vol: 1 }); teleCard(mine.ans); } // a red bar you can answer (#179)
       if (e.type === 'tele' && e.what === 'dodge' && tgt && tgt.kind === 'player') fct(e.tgt, 'Avoided', 'small');
       if (e.type === 'tele' && e.what === 'cut') fct(e.src, 'Interrupted', 'small');
+      if (e.type === 'countdown') toast(`${e.name}: ${Math.round(e.until - C.t)} sec to kill her`); // Longnight's midnight
       // a slam on the tank (#179): each answer says what it did, where it happened
       if (e.type === 'tele' && e.what === 'kick') fct(e.by, `Kicked −${e.off}x`, 'small');
       if (e.type === 'tele' && e.what === 'mend') fct(e.tgt, `Guarded −${e.off}x`, 'heal small');
@@ -1132,6 +1134,7 @@
   function fightTab(b, place, mobs) {
     const P = G.S.player, Cl = D.CLASSES[P.cls];
     lwLightCard(b); // Lanternwake's Light the Way
+    lnCard(b); // Longnight's daily, where you are
     // pets and demons, compact
     if (P.cls === 'hunter' || Cl.pets) {
       const row = h('div', { class: 'chips' });
@@ -2764,6 +2767,7 @@
       if (/^crafts_/.test(npc)) trainerBlock(b);
       if (/^stable_/.test(npc)) stableBlock(b);
       if (npc === 'lw_keeper') lwKeeperBlock(b);
+      if (npc === 'ln_keeper') lnKeeperBlock(b);
       if (/^auctioneer_/.test(npc)) b.append(h('button', { class: 'btn wide', onclick: () => openAuction() }, 'Browse the auction house'));
       if (npc === 'mentor_alliance' || npc === 'mentor_horde') {
         const acc = G.account();
@@ -2798,7 +2802,7 @@
       }
       if (place.vendor === npc || place.gearVendor === npc) b.append(h('button', { class: 'btn wide', onclick: () => openVendor(npc) }, 'Browse goods'));
       if (npc === 'farley') b.append(h('button', { class: 'btn alt wide', disabled: P.bind === P.place, onclick: () => { G.bindHere(); ui.sheetFn(); } }, P.bind === P.place ? 'This inn is your home' : 'Make this inn your home'));
-      if (!qs.length && place.vendor !== npc && npc !== 'farley' && place.gearVendor !== npc && !/^(mentor|banker|auctioneer|crafts|stable|lw)_/.test(npc)) b.append(h('p', { style: { color: 'var(--muted)' } }, 'Nothing for you right now. Come back when you have grown stronger.'));
+      if (!qs.length && place.vendor !== npc && npc !== 'farley' && place.gearVendor !== npc && !/^(mentor|banker|auctioneer|crafts|stable|lw|ln)_/.test(npc)) b.append(h('p', { style: { color: 'var(--muted)' } }, 'Nothing for you right now. Come back when you have grown stronger.'));
     });
   }
   window.UI_GREETING = (npc) => greeting(npc);
@@ -3094,6 +3098,7 @@
     if (G.rouletteOptions().length) add('hearthstone', G.rouletteReady() ? 'Dungeon Roulette: ready today' : 'Dungeon Roulette: done today', null, () => { closeSheet(); openSocial('groups'); });
     const bh = G.bountiesHeld(); if (bh) add('journal', `${bh} bount${bh === 1 ? 'y' : 'ies'} in progress`, null, null);
     if (G.eventLive('lanternwake')) { const st = G.lw(), Ev = D.EVENTS.lanternwake; add('event_lanternwake', 'Lanternwake', `${lwEndsText()} · candles ${st ? st.today : 0}/${Ev.cap}`, () => openLanternwake()); }
+    if (G.lnOn()) { const st = G.ln(); add('event_longnight', 'Longnight', `${lwEndsText('longnight')} · ${st && st.done ? 'daily done' : G.LN_DAILY[G.lnToday()]}${st && st.ready ? ` · ${st.ready} door${st.ready > 1 ? 's' : ''} to open` : ''}`, () => openLongnight()); }
     { const wb = P.level >= cap && G.worldBoss(); if (wb) add('hearthstone', `World boss: ${D.MOBS[D.ACTIVITIES[wb].boss].name}`, `${D.PLACES[D.ACTIVITIES[wb].where].name}, ${D.PLACES[D.ACTIVITIES[wb].where].zone} · ${G.worldBossLooted(wb) ? 'looted this week' : 'loot open this week'}`, () => { ui.gfTab = 'raid'; closeSheet(); openSocial('groups'); }); }
     if (P.level >= G.BRAWL.minLvl) { const w = G.brawlWindow(), fought = (P.brawl || {}).last === w.id;
       add('sword', w.open && !fought ? `The Bloodsand Brawl: open until ${brawlClock(w.closesAt)}` : `The Bloodsand Brawl: opens at ${brawlClock(w.open ? new Date(w.opensAt.getTime() + G.BRAWL.every * 3600000) : w.opensAt)}`,
@@ -3125,7 +3130,7 @@
     const LK = Object.keys(D.LEGENDS || {});
     if (LK.length) { const done = LK.filter((k) => G.legendUnlocked(k)).length, going = LK.filter((k) => !G.legendUnlocked(k) && legendStarted(k)).length; list.append(nav('Legends', going ? `${going} stor${going === 1 ? 'y' : 'ies'} in progress` : 'Characters with their own story, who then join your groups', `${done} / ${LK.length}`, () => openLegends())); }
     const tOwn = D.TITLES.filter(G.titleUnlocked).length, tNow = P.title && D.TITLES.find((t) => t.id === P.title);
-    if (D.EVENTS) { const on = G.liveEvents(); list.append(nav('Events', on.length ? `${on.map((k) => D.EVENTS[k].name).join(', ')} is on: ${lwEndsText().toLowerCase()}` : `Lanternwake returns ${dayName(G.eventNext('lanternwake'))}`, on.length ? 'On now' : '', () => openEvents(), on.length > 0)); }
+    if (D.EVENTS) { const on = G.liveEvents(); list.append(nav('Events', on.length ? `${on.map((k) => D.EVENTS[k].name).join(', ')} is on: ${lwEndsText(on[0]).toLowerCase()}` : (() => { const k = Object.keys(D.EVENTS).sort((a, b) => G.eventNext(a) - G.eventNext(b))[0]; return `${D.EVENTS[k].name} returns ${dayName(G.eventNext(k))}`; })(), on.length ? 'On now' : '', () => openEvents(), on.length > 0)); }
     if (D.COMPANIONS) list.append(nav('Companions', G.S.player.companion ? 'With you: ' + D.COMPANIONS[G.S.player.companion].name : 'Small friends that follow you', `${G.companions().length} / ${Object.keys(D.COMPANIONS).length}`, () => openCompanions()));
     list.append(nav('Titles', tNow ? 'Wearing: ' + G.titleName(tNow, P.name) : 'No title worn', `${tOwn} / ${D.TITLES.length}`, () => openTitles()));
     list.append(nav('Trophies', 'Level-60 rares and world bosses, shared by all your characters', `${G.trophyCount()} / ${G.trophyList().length}`, () => openTrophies()));
@@ -3176,14 +3181,15 @@
   const nCandles = (n) => `${n} Wake Candle${n === 1 ? '' : 's'}`;
   const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const dayName = (d) => `${d.getDate()} ${MONTHS[d.getMonth()]}`;
-  const lwDates = () => { const Ev = D.EVENTS.lanternwake; return `${Ev.from[1]} ${MONTHS[Ev.from[0] - 1]} – ${Ev.to[1]} ${MONTHS[Ev.to[0] - 1]}`; };
+  const evDates = (k) => { const Ev = D.EVENTS[k]; return `${Ev.from[1]} ${MONTHS[Ev.from[0] - 1]} – ${Ev.to[1]} ${MONTHS[Ev.to[0] - 1]}`; };
+  const lwDates = () => evDates('lanternwake');
   // "Ends in 6d" / "Ends tonight"; a test build keeping it on says so
-  function lwEndsText() {
-    const end = G.eventEnds('lanternwake'); if (!end) return 'On (test build)';
+  function lwEndsText(k) {
+    const end = G.eventEnds(k || 'lanternwake'); if (!end) return 'On (test build)';
     const days = Math.ceil((end.getTime() - Date.now()) / 86400000);
     return days <= 1 ? 'Ends tonight' : `Ends in ${days}d`;
   }
-  const lwStatus = (k) => G.eventLive(k) ? lwEndsText() : `Returns ${dayName(G.eventNext(k))}`;
+  const lwStatus = (k) => G.eventLive(k) ? lwEndsText(k) : `Returns ${dayName(G.eventNext(k))}`;
   // the Wickless Knight's mechanics at your level, as the group finder's briefing gives them
   function lwKnightRows(hard) {
     const A = D.ACTIVITIES[D.EVENTS.lanternwake.act], L = Math.max(A.minLvl, Math.min(G.S.player.level, A.maxLvl));
@@ -3243,8 +3249,8 @@
   function openEvents() {
     openSheet('events', 'Events', 'Yearly festivals', (b) => {
       const list = h('div', { class: 'list' });
-      for (const k in D.EVENTS || {}) list.append(h('button', { class: 'row nav', onclick: () => openLanternwake() }, h('div', { class: 'ic' }, img(art('icon', 'event_' + k))),
-        h('div', { class: 't' }, h('b', null, D.EVENTS[k].name), h('small', null, `${lwDates()} · ${lwStatus(k)}`)), h('div', { class: 'r' }, '›')));
+      for (const k in D.EVENTS || {}) list.append(h('button', { class: 'row nav', onclick: () => (k === 'longnight' ? openLongnight() : openLanternwake()) }, h('div', { class: 'ic' }, img(art('icon', 'event_' + k))),
+        h('div', { class: 't' }, h('b', null, D.EVENTS[k].name), h('small', null, `${evDates(k)} · ${lwStatus(k)}`)), h('div', { class: 'r' }, '›')));
       b.append(list);
     });
   }
@@ -3303,8 +3309,11 @@
   function evLantern() {
     const live = G.S && G.liveEvents().length && !lwPrefs().off && !app.querySelector('.create');
     if (!live) { if (ui.evBtn) { ui.evBtn.remove(); ui.evBtn = null; } return; }
-    const Ev = D.EVENTS.lanternwake, st = G.lw(), daily = G.lwDaily(), frac = st ? Math.min(1, st.today / Ev.cap) : 0;
-    const open = st && (daily.normal || st.lit.length < Ev.light), R = 25, L = 2 * Math.PI * R;
+    const fk = festNow(), isLn = fk === 'longnight';
+    let frac, open;
+    if (isLn) { const st = G.ln(), p = st && G.lnProgress(); frac = !st ? 0 : st.done ? 1 : Math.min(1, p.n / p.of); open = !!st && (!st.done || st.ready > 0); }
+    else { const Ev = D.EVENTS.lanternwake, st = G.lw(), daily = G.lwDaily(); frac = st ? Math.min(1, st.today / Ev.cap) : 0; open = st && (daily.normal || st.lit.length < Ev.light); }
+    const R = 25, L = 2 * Math.PI * R;
     if (!ui.evBtn) {
       const btn = h('button', { class: 'ev-lantern', 'aria-label': 'Lanternwake: today\'s progress' });
       let drag = null;
@@ -3315,13 +3324,13 @@
       });
       btn.addEventListener('pointerup', (e) => {
         if (!drag) return; const moved = drag.moved; drag = null;
-        if (!moved) return lwTracker();
+        if (!moved) return festNow() === 'longnight' ? lnTracker() : lwTracker();
         const r = app.getBoundingClientRect(), p = lwPrefs(); p.side = e.clientX - r.left < r.width / 2 ? 'l' : 'r'; p.y = (e.clientY - r.top) / r.height; lwSavePrefs(p); placeEvLantern();
       });
       ui.evBtn = btn; app.append(btn);
     }
     ui.evBtn.innerHTML = '';
-    ui.evBtn.append(img(art('icon', 'event_lanternwake')));
+    ui.evBtn.append(img(art('icon', 'event_' + (fk || 'lanternwake')))); ui.evBtn.setAttribute('aria-label', `${D.EVENTS[fk || 'lanternwake'].name}: today's progress`);
     ui.evBtn.insertAdjacentHTML('beforeend', `<svg class="ring" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="${R}" class="bg"/><circle cx="28" cy="28" r="${R}" class="fg" stroke-dasharray="${(L * frac).toFixed(1)} ${L.toFixed(1)}" transform="rotate(-90 28 28)"/></svg>`);
     if (open) ui.evBtn.append(h('i', { class: 'dot' }));
     placeEvLantern();
@@ -3343,8 +3352,8 @@
     const key = 'azsolo.evIntro.' + act; try { if (localStorage.getItem(key)) return; localStorage.setItem(key, '1'); } catch (e) { return; }
     const Ev = D.EVENTS[D.ACTIVITIES[act].event];
     setTimeout(() => showDialog([h('h3', null, D.ACTIVITIES[act].name), ...Ev.story.map((t) => h('p', { style: { textAlign: 'left' } }, t)),
-      h('p', { style: { textAlign: 'left', color: 'var(--muted)' } }, 'Tonight the road is dark. The Wickless Knight rides it, and the lanterns go out as he passes. Light them again.'),
-      h('button', { class: 'btn wide', onclick: () => closeDialog() }, 'Walk the road')], true), 500);
+      h('p', { style: { textAlign: 'left', color: 'var(--muted)' } }, D.ACTIVITIES[act].intro || 'Tonight the road is dark. The Wickless Knight rides it, and the lanterns go out as he passes. Light them again.'),
+      h('button', { class: 'btn wide', onclick: () => closeDialog() }, D.ACTIVITIES[act].introBtn || 'Walk the road')], true), 500);
   }
   // the tracker card: today's facts and the two things to do from anywhere
   function lwTracker() {
@@ -3354,6 +3363,189 @@
       h('div', { class: 'ev-facts' }, ...lwTodayFacts()),
       ...lwQueueButtons(() => { closeDialog(); renderAll(); }),
       h('button', { class: 'btn alt wide', onclick: () => { closeDialog(); openLanternwake(); } }, 'Event page')], true);
+  }
+  // ============================================================ Longnight (v10.17): the winter festival
+  // Hero → Journey → Events → Longnight: today's daily, the calendar (16 doors), the town hearth, the two runs. The
+  // floating button opens a tracker; the Hearthwarden cooks the stew and starts snowball rounds; the Fight tab offers
+  // the day's task where you are. Facts only, never advice (docs/design-mindset.md)
+  const LNE = () => D.EVENTS.longnight;
+  const lnDate = (i) => { const st = G.ln(), start = G.eventStart('longnight'); const d = new Date((start ? start.getTime() : (st ? st.first : Date.now())) + i * 86400000); return dayName(d); };
+  // the day's daily: its name, how far, and the help behind the tap
+  const LN_HOW = {
+    snow: (E0) => `Win ${E0.snow.wins} snowball rounds in a festival town (start one at the Hearthwarden or on the Fight tab). Duck what comes at you, throw while they pack, and watch for the Snowboulder's red bar.`,
+    knock: (E0) => `Answer the door at ${E0.knock} different places out in the world (Fight tab). Frost hounds and a frostling: interrupt the frostling's Hearthchill, or the home goes cold and you try again.`,
+    stew: (E0) => `Gather firewood at ${E0.stew.wood} places out in the world (Fight tab), cook it at a great hearth (the Hearthwarden), then give a bowl to ${E0.stew.bowls} people who ask in chat.`,
+  };
+  function lnTodayFacts() {
+    const E0 = LNE(), st = G.ln(), loot = G.lnLoot(), a = G.lnRec(); if (!st) return [];
+    const k = G.lnToday(), p = G.lnProgress(), rk = st.rank, next = E0.ranks[rk];
+    return [
+      factRow(G.LN_DAILY[k], st.done ? 'Done' : p.short, st.done, LN_HOW[k](E0)),
+      factRow('Doors to open', st.ready ? String(st.ready) : st.doors.length >= E0.doors.length ? 'All open' : 'None', !st.ready && st.doors.length >= E0.doors.length, 'Finishing the day\'s daily readies a door; two when you are behind.'),
+      factRow('Kindling given', `${st.kindling}`, false, 'Everything you do adds Kindling to the town hearth: kills that still give XP, quests, dungeon bosses, the dailies. No daily cap.'),
+      factRow('Hearth rank', next ? `${rk}/${E0.ranks.length} · next at ${next.at}` : `${rk}/${E0.ranks.length}`, !next),
+      factRow('Knocker loot', loot.knocker ? 'Ready' : 'Taken', !loot.knocker),
+      G.lnFinale() ? factRow('Cold Guest loot', loot.guest ? 'Ready' : 'Taken', !loot.guest) : factRow('Cold Guest', 'Opens 31 Dec'),
+      factRow('Frost Hound', a.hound ? 'Owned' : `${a.houndKills}/${E0.houndAt}`, a.hound, a.hound ? null : `${Math.round(E0.houndChance * 100)}% each daily Knocker kill. Kill ${E0.houndAt} always drops it.`),
+    ];
+  }
+  // the calendar: 16 doors in date order; tap the glowing one to open it
+  function lnDoorReward(d) {
+    if (d.look) return { icon: d.look, name: D.ITEMS[d.look].name, q: 4 };
+    if (d.companion) return { icon: 'companion_' + d.companion, name: D.COMPANIONS[d.companion].name, q: 4 };
+    return { icon: D.ITEMS[d.item].icon, name: `${D.ITEMS[d.item].name}${d.n > 1 ? ' x' + d.n : ''}`, q: 1 };
+  }
+  function lnCalendar(after) {
+    const E0 = LNE(), st = G.ln(), due = st ? G.lnDoorsDue() : 0, grid = h('div', { class: 'ln-cal', role: 'list' });
+    E0.doors.forEach((d, i) => {
+      const open = st && st.doors.includes(i), next = st && i === st.doors.length, ready = next && st.ready > 0, r = lnDoorReward(d);
+      const big = !!(d.look || d.companion);
+      const state = open ? 'open' : ready ? 'ready' : i < due ? 'shut' : 'later';
+      const label = open ? `Door ${i + 1}: ${r.name}` : ready ? `Door ${i + 1}: ready to open` : i < due ? `Door ${i + 1}: shut` : `Door ${i + 1}: ${lnDate(i)}`;
+      grid.append(h('button', { class: `ln-door ${state}${big ? ' big' : ''}`, role: 'listitem', 'aria-label': label,
+        onclick: () => { if (ready) { const n = G.lnOpenDoor(); if (n != null) toast(`Door ${n + 1}: ${lnDoorReward(E0.doors[n]).name}`); after(); } else if (open) toast(`Door ${i + 1}: ${r.name}`); else toast(i < due ? 'Finish today\'s daily to open a door.' : `Door ${i + 1} opens on ${lnDate(i)}.`); } },
+        open ? img(art('icon', r.icon)) : h('span', { class: 'n' }, String(i + 1)), state === 'later' ? h('small', null, lnDate(i)) : null));
+    });
+    return grid;
+  }
+  // the great hearth: the town's stage and its fill (the whole server's), your share
+  function lnHearth() {
+    const E0 = LNE(), st = G.ln(), sg = G.lnStage(), fill = G.lnHearthFill(), stage = sg ? E0.stages[sg - 1] : null, nextS = E0.stages[sg];
+    return h('div', { class: 'ln-hearth' },
+      h('div', { class: 'ln-fill', role: 'progressbar', 'aria-valuenow': Math.round(fill * 100), 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-label': 'The great hearth' }, h('i', { style: { width: Math.round(fill * 100) + '%' } })),
+      h('div', { class: 'ev-facts' },
+        factRow('Town', stage ? `${stage.name} · ${sg}/${E0.stages.length}` : `0/${E0.stages.length}`, false, 'The great hearths fill with everyone\'s Kindling. The towns change on fixed days: 18 Dec garlands, 22 Dec music, 26 Dec snow, 31 Dec fireworks.'),
+        nextS ? factRow('Next', `${nextS.name} on ${nextS.on[1]} ${MONTHS[nextS.on[0] - 1]}`) : null,
+        st ? factRow('Your Kindling', String(st.kindling)) : null));
+  }
+  function lnRunBlock(act, after) {
+    const A = D.ACTIVITIES[act], L = Math.max(A.minLvl, Math.min(G.S.player.level, A.maxLvl));
+    const rows = (hard) => { const u = E.mobUnit(A.boss, L, hard ? A.hard.bossMult : A.bossMult); u.hardX = (hard ? A.hardExtra : A.extra)[A.boss]; return E.specialRows(u); };
+    const S = G.S, why = G.activityBlock(act), out = [h('div', { class: 'sec-h' }, A.name, h('small', null, `${A.size} players · level ${A.minLvl}–${A.maxLvl}, scaled to you`)),
+      h('p', { class: 'ai-note' }, act === LNE().guest ? 'The Uninvited, then the Cold Guest. Only from 31 December. No gear drops.' : 'Frost hounds, then the Knocker and his hounds. No gear drops.'),
+      h('div', { class: 'ev-facts' }, ...rows(false).map((r) => factRow(r.name, `${r.when}: ${r.what}`))),
+      h('div', { class: 'sec-h' }, 'Hard', h('small', null, 'after one Normal clear')), h('div', { class: 'ev-facts' }, ...rows(true).filter((r) => r.hard).map((r) => factRow(r.name, `${r.when}: ${r.what}`)))];
+    if (!G.lnOn()) return out;
+    if (S.run && S.run.act === act) out.push(h('p', { class: 'ai-note' }, `In ${A.name}`));
+    else if (S.queue && S.queue.act === act) out.push(h('button', { class: 'btn alt wide', onclick: () => { G.leaveQueue(); after(); } }, 'Leave queue'));
+    else if (why) out.push(h('button', { class: 'btn wide', disabled: true }, why === 'hidden' ? 'Not on now' : why));
+    else if (S.run || S.group || S.queue) out.push(h('button', { class: 'btn wide', disabled: true }, 'Leave your group first'));
+    else out.push(h('button', { class: 'btn wide', onclick: () => { G.queueFor(act); after(); } }, `Queue for ${A.name}`),
+      G.lnHardOpen(act) ? h('button', { class: 'btn alt wide', onclick: () => { G.queueFor(act, { hard: true }); after(); } }, 'Queue on Hard') : h('button', { class: 'btn alt wide', disabled: true }, 'Hard: clear Normal first'));
+    return out;
+  }
+  function openLongnight() {
+    openSheet('longnight', 'Longnight', lwStatus('longnight'), (b, title) => {
+      const E0 = LNE(), live = G.lnOn(), st = G.ln(), after = () => ui.sheetFn();
+      title.querySelector('small').textContent = `${evDates('longnight')} · ${lwStatus('longnight')}`;
+      b.append(h('div', { class: 'ev-story ln' }, ...E0.story.map((t) => h('p', null, t))));
+      if (live) b.append(h('div', { class: 'sec-h' }, 'Today', h('small', null, 'resets at midnight')), h('div', { class: 'ev-facts' }, ...lnTodayFacts()));
+      b.append(h('div', { class: 'sec-h' }, 'Calendar', h('small', null, st ? `${st.doors.length}/${E0.doors.length} open` : `${E0.doors.length} doors, 15–30 Dec`)), lnCalendar(after));
+      if (live && st && st.ready) b.append(h('button', { class: 'btn wide', onclick: () => { const n = G.lnOpenDoor(); if (n != null) toast(`Door ${n + 1}: ${lnDoorReward(E0.doors[n]).name}`); after(); } }, `Open door ${st.doors.length + 1}`));
+      b.append(h('div', { class: 'sec-h' }, 'The great hearth', h('small', null, 'shared with the town')), lnHearth());
+      b.append(h('div', { class: 'sec-h' }, 'Hearth ranks', h('small', null, 'Kindling given')), h('div', { class: 'list' }, ...E0.ranks.map((r, i) => {
+        const got = st && st.rank > i, rw = r.reward.title ? { icon: 'journal', name: G.titleName(D.TITLES.find((t) => t.id === r.reward.title), G.S.player.name) } : { icon: D.ITEMS[r.reward.item].icon, name: `${D.ITEMS[r.reward.item].name} x${r.reward.n}` };
+        return h('div', { class: 'row' + (got ? '' : ' dim') }, h('div', { class: 'ic' }, img(art('icon', rw.icon))), h('div', { class: 't' }, h('b', null, `${i + 1}. ${r.name}`), h('small', { style: { whiteSpace: 'normal' } }, rw.name)), h('div', { class: 'r' }, got ? h('span', { class: 'ok' }, 'Earned') : String(r.at)));
+      })));
+      b.append(...lnRunBlock(E0.knocker, after), ...lnRunBlock(E0.guest, after));
+      const a = G.lnRec(), season = st ? st.season.replace(/^test-/, '') : String(new Date().getFullYear());
+      b.append(h('div', { class: 'sec-h' }, 'Rewards', h('small', null, 'account-wide')), h('div', { class: 'list' },
+        h('div', { class: 'row' }, h('div', { class: 'ic' }, img(art('icon', 'mount_frost_hound'))), h('div', { class: 't' }, h('b', { style: { color: D.QUALITY[4].color } }, 'Frost Hound'), h('small', null, 'Mount · the Knocker, daily loot')), h('div', { class: 'r' }, a.hound ? h('span', { class: 'ok' }, 'Owned') : `${a.houndKills}/${E0.houndAt}`)),
+        h('div', { class: 'row' }, h('div', { class: 'ic' }, img(art('icon', 'mount_pale_stag'))), h('div', { class: 't' }, h('b', { style: { color: D.QUALITY[4].color } }, 'Pale Stag'), h('small', null, 'Mount · the Cold Guest, daily loot')), h('div', { class: 'r' }, a.stag ? h('span', { class: 'ok' }, 'Owned') : `${a.stagKills}/${E0.stagAt}`)),
+        h('div', { class: 'row' }, h('div', { class: 'ic' }, img(art('icon', 'ln_coat'))), h('div', { class: 't' }, h('b', { style: { color: D.QUALITY[4].color } }, 'Dark outfit'), h('small', null, 'Cosmetic · the Knocker on Hard')), h('div', { class: 'r' }, `${E0.set.length - G.lnHardLeft('_hard').length}/${E0.set.length}`)),
+        h('div', { class: 'row' }, h('div', { class: 'ic' }, img(art('icon', 'ln_cloak'))), h('div', { class: 't' }, h('b', { style: { color: D.QUALITY[4].color } }, 'Pale outfit'), h('small', null, 'Cosmetic · the Cold Guest on Hard')), h('div', { class: 'r' }, `${E0.set.length - G.lnHardLeft('_pale').length}/${E0.set.length}`)),
+        h('div', { class: 'row' }, h('div', { class: 'ic' }, img(art('icon', 'journal'))), h('div', { class: 't' }, h('b', null, G.titleName(D.TITLES.find((t) => t.id === 'ln_door_title'), G.S.player.name)), h('small', null, 'Title · defeat the Cold Guest')), h('div', { class: 'r' }, G.lnOwned('ln_door_title') ? h('span', { class: 'ok' }, 'Owned') : 'Not yet')),
+        h('div', { class: 'row' }, h('div', { class: 'ic' }, img(art('icon', 'event_longnight'))), h('div', { class: 't' }, h('b', null, `Keepsake: Longnight ${season}`), h('small', null, 'Your first Knocker or Cold Guest kill this festival')), h('div', { class: 'r' }, a.keepsakes.includes(season) ? h('span', { class: 'ok' }, 'Owned') : 'Not yet'))));
+    });
+  }
+  // the Hearthwarden (in the NPC sheet): cook the stew, start a snowball round, a reward a full bag could not take
+  function lnKeeperBlock(b) {
+    const st = G.ln(), E0 = LNE();
+    if (!st) { b.append(h('p', { class: 'ai-note' }, `Longnight is over. ${lwStatus('longnight')}.`)); return; }
+    const k = G.lnToday(), p = st.prog, again = () => ui.sheetFn && ui.sheetFn();
+    b.append(h('div', { class: 'ev-facts' }, factRow(G.LN_DAILY[k], st.done ? 'Done' : G.lnProgress().short, st.done, LN_HOW[k](E0))));
+    if (!st.done && k === 'stew' && p.wood.length >= E0.stew.wood && !p.cooked) b.append(h('button', { class: 'btn wide', onclick: () => { G.lnCook(); again(); } }, 'Cook the stew'));
+    if (!st.done && k === 'snow') b.append(h('button', { class: 'btn wide', disabled: !!G.lnSnowWhy(), onclick: () => { closeSheet(); G.lnSnowStart(); } }, 'Start a snowball round'));
+    if (st.owed && st.owed.length) b.append(h('button', { class: 'btn alt wide', onclick: () => { G.lnClaimOwed(); again(); } }, `Take ${D.ITEMS[st.owed[0].item].name} x${st.owed[0].n}`));
+    b.append(h('button', { class: 'btn alt wide', onclick: () => openLongnight() }, 'Event page'));
+  }
+  // the day's task where you are (the Fight tab): answer the door, gather firewood, cook, start a round
+  function lnCard(b) {
+    const P = G.S.player, st = G.ln(); if (!st || st.done) return;
+    const E0 = LNE(), k = G.lnToday(), card = (title, line, sub, btn) => b.append(h('div', { class: 'task ev-task ln-task' }, h('div', { class: 'task-b' }, h('div', { class: 'ic' }, img(art('icon', 'event_longnight'))),
+      h('div', { class: 't' }, h('b', null, title), h('span', null, line), h('small', null, sub))), btn));
+    const chip = (label, fn, off) => h('button', { class: 'chip gold', disabled: !!G.fight || !!off, onclick: () => { fn(); renderPanel(); } }, label);
+    if (k === 'knock') { const can = G.lnCanKnock(P.place); if (can) card('A Knock at the Door', can === 'kept' ? 'This home is warm' : 'Something scratches at a door', `${st.prog.homes.length}/${E0.knock} homes today · interrupt Hearthchill`, can === 'ready' ? chip('Answer it', G.lnKnock) : null); }
+    if (k === 'stew') {
+      const can = G.lnCanGather(P.place);
+      if (can && can !== 'done') card('Longnight Stew', can === 'taken' ? 'Firewood taken here' : 'Dry firewood under the trees', `${st.prog.wood.length}/${E0.stew.wood} firewood today`, can === 'ready' ? chip('Gather', G.lnGather) : null);
+      if (G.lnTown() && st.prog.wood.length >= E0.stew.wood && !st.prog.cooked) card('Longnight Stew', 'The great hearth is lit', 'Cook the stew here', chip('Cook', G.lnCook));
+      if (G.lnTown() && st.prog.cooked) card('Longnight Stew', 'Hand out bowls', `${st.prog.bowls}/${E0.stew.bowls} · people ask in chat`, null);
+    }
+    if (k === 'snow' && G.lnTown()) card('Snowball Brawl', 'People are packing snowballs', `${Math.min(st.prog.wins, E0.snow.wins)}/${E0.snow.wins} rounds won today`, chip('Start a round', G.lnSnowStart, !!G.lnSnowWhy()));
+  }
+  // the snowball arena: you and them, hits left as snowballs, your snow, their wind-up as a red bar, four buttons
+  const SNOW_BTN = [['throw', 'Throw', 'ln_snow_throw', 'Throw a snowball (1 snow).'], ['pack', 'Pack Snow', 'ln_snow_pack', 'Pack a snowball (1 sec). You can be hit while packing: +1 damage.'], ['duck', 'Duck', 'ln_snow_duck', 'Duck for 0.9 sec: snowballs and Snowboulders miss.'], ['boulder', 'Snowboulder', 'ln_snow_boulder', 'Wind up a Snowboulder (3 snow, 2 sec): 3 damage unless they duck.']];
+  function snowArena(Z) {
+    let el = app.querySelector('.snow-arena');
+    if (!Z) { if (el) el.remove(); return; }
+    const N = G.SNOW;
+    if (!el) {
+      el = h('div', { class: 'snow-arena', role: 'dialog', 'aria-label': 'Snowball fight' },
+        h('div', { class: 'sa-head' }, h('b', null, 'Snowball Brawl'), h('button', { class: 'x-close', 'aria-label': 'Walk away', onclick: () => G.lnSnowQuit() }, '×')),
+        h('div', { class: 'sa-side foe' }, h('b', { class: 'sa-name' }), h('div', { class: 'sa-hp' }), h('div', { class: 'sa-wind' }, h('i')), h('small', { class: 'sa-state' })),
+        h('div', { class: 'sa-mid' }, h('span', { class: 'sa-incoming' }), h('span', { class: 'sa-last' })),
+        h('div', { class: 'sa-side me' }, h('b', null, 'You'), h('div', { class: 'sa-hp' }), h('div', { class: 'sa-wind' }, h('i')), h('small', { class: 'sa-state' })),
+        h('div', { class: 'sa-snow' }),
+        h('div', { class: 'sa-btns' }, ...SNOW_BTN.map(([k, label, icon, tip]) => h('button', { class: 'sa-btn', 'data-k': k, title: tip, 'aria-label': `${label}: ${tip}`, onclick: () => G.lnSnowDo(k) }, img(art('icon', icon)), h('span', null, label)))));
+      app.append(el);
+    }
+    const pips = (n) => Array.from({ length: N.hp }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('');
+    const side = (sel, u) => {
+      const s = el.querySelector(sel); s.querySelector('.sa-hp').innerHTML = pips(u.hp);
+      const w = s.querySelector('.sa-wind'); w.classList.toggle('on', !!u.wind); if (u.wind) w.firstChild.style.width = Math.round(100 * (1 - (u.wind.until - Z.t) / N.wind)) + '%';
+      s.querySelector('.sa-state').textContent = u.wind ? 'Snowboulder!' : Z.t < u.packUntil ? 'Packing snow' : Z.t <= u.duckUntil ? 'Ducking' : '';
+    };
+    el.querySelector('.sa-name').textContent = Z.name;
+    side('.foe', Z.foe); side('.me', Z.me);
+    const inc = Z.flying.find((f) => f.from === 'foe');
+    el.querySelector('.sa-incoming').textContent = inc ? (inc.boulder ? 'Snowboulder incoming!' : 'Snowball incoming!') : '';
+    el.querySelector('.sa-snow').textContent = `Your snow: ${Z.me.snow}/${N.maxSnow}`;
+    for (const btn of el.querySelectorAll('.sa-btn')) {
+      const k = btn.dataset.k, me = Z.me, busy = Z.t < me.packUntil || !!me.wind;
+      btn.disabled = !!Z.over || busy || (k === 'throw' && me.snow < 1) || (k === 'boulder' && me.snow < N.boulder) || (k === 'pack' && me.snow >= N.maxSnow) || (k === 'duck' && Z.t < me.duckCd);
+    }
+  }
+  function snowLog(log) {
+    const el = app.querySelector('.snow-arena .sa-last'); if (!el) return;
+    const e = log[log.length - 1], Z = G.S.snow, them = Z ? Z.name : 'They';
+    el.textContent = e.what === 'duck' ? (e.who === 'me' ? 'You ducked it!' : `${them} ducked it!`) : e.who === 'me' ? `Hit! −${e.dmg}${e.caught ? ' (hands full)' : ''}` : `You hit ${them}! −${e.dmg}${e.caught ? ' (hands full)' : ''}`;
+    if (e.what === 'hit' && e.who === 'me' && window.SND) SND.play && SND.play('hit');
+  }
+  // the tracker (from the floating button): today's facts, the door to open, the event page
+  function lnTracker() {
+    if (!G.lnOn()) return;
+    const st = G.ln();
+    showDialog([h('button', { class: 'x-close', 'aria-label': 'Close', onclick: () => closeDialog() }, '×'),
+      h('h3', null, 'Longnight'), h('p', { class: 'ai-note', style: { margin: 0 } }, lwEndsText('longnight')),
+      h('div', { class: 'ev-facts' }, ...lnTodayFacts()),
+      st && st.ready ? h('button', { class: 'btn wide', onclick: () => { const n = G.lnOpenDoor(); closeDialog(); if (n != null) toast(`Door ${n + 1}: ${lnDoorReward(LNE().doors[n]).name}`); renderAll(); } }, `Open door ${st.doors.length + 1}`) : null,
+      h('button', { class: 'btn alt wide', onclick: () => { closeDialog(); openLongnight(); } }, 'Event page')], true);
+  }
+  // fireworks over the screen (a toy, the finale's first kill): a few bursts, then gone (none with reduced motion)
+  function fireworks(n) {
+    if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const box = h('div', { class: 'ln-fireworks', 'aria-hidden': 'true' });
+    for (let i = 0; i < (n || 5); i++) box.append(h('i', { style: { left: (10 + Math.random() * 80) + '%', top: (8 + Math.random() * 40) + '%', animationDelay: (i * 0.35).toFixed(2) + 's', '--c': ['#ffc24a', '#7ad8ff', '#ff6a8a', '#ffffff', '#9aff8a'][i % 5] } }));
+    app.append(box); setTimeout(() => box.remove(), 4200);
+  }
+  // the Cold Guest's first defeat: midnight, the bells, the fireworks over your capital
+  function lnMidnight() {
+    fireworks(9);
+    setTimeout(() => showDialog([h('h3', null, 'Midnight'),
+      h('p', { style: { textAlign: 'left' } }, 'The bells ring out across Caldreth. In every town the fireworks go up, and the Cold Guest\'s veil tears in the light.'),
+      h('p', { style: { textAlign: 'left', color: 'var(--muted)' } }, 'The house that let her in is only a house again. Its hearth catches. The year has turned.'),
+      h('button', { class: 'btn wide', onclick: () => closeDialog() }, 'Happy Longnight')], true), 1200);
   }
   function openTitles() {
     openSheet('titles', 'Titles', 'Tap an earned title to wear it', (b, title) => {
@@ -4622,7 +4814,7 @@
       return h('div', { class: 'row gf-row tap' + (!doable(x) ? ' gf-locked' : '') + (queued ? ' gf-queued' : ''), onclick: (e) => { if (e.target.closest('button')) return; openBriefing(x.k, false); } }, // tap the row for its briefing (v10.4)
         actPic(A),
         h('div', { class: 't' }, h('b', null, A.name, h('span', { class: 'gf-lvl tnum' }, A.minLvl === A.maxLvl ? String(A.minLvl) : `${A.minLvl}–${A.maxLvl}`)),
-          h('small', null, showKind ? h('span', { class: 'gf-kind k-' + kind }, KIND_LABEL[kind]) : null, x.k === G.featuredRaid() ? h('span', { class: 'gf-kind k-featured' }, 'Featured this week') : null, qa[x.k] ? h('span', { class: 'gf-kind k-featured' }, 'Your quest') : null, A.worldBoss ? h('span', { class: 'gf-kind k-featured' }, G.worldBossLooted(x.k) ? 'World boss · looted this week' : 'World boss this week') : null, A.event ? h('span', { class: 'gf-kind k-featured' }, `${D.EVENTS[A.event].name} · ${G.lwDaily().normal ? 'daily loot ready' : 'loot taken'}`) : null, note)),
+          h('small', null, showKind ? h('span', { class: 'gf-kind k-' + kind }, KIND_LABEL[kind]) : null, x.k === G.featuredRaid() ? h('span', { class: 'gf-kind k-featured' }, 'Featured this week') : null, qa[x.k] ? h('span', { class: 'gf-kind k-featured' }, 'Your quest') : null, A.worldBoss ? h('span', { class: 'gf-kind k-featured' }, G.worldBossLooted(x.k) ? 'World boss · looted this week' : 'World boss this week') : null, A.event ? h('span', { class: 'gf-kind k-featured' }, `${D.EVENTS[A.event].name} · ${(A.event === 'longnight' ? G.lnLoot()[x.k === D.EVENTS.longnight.guest ? 'guest' : 'knocker'] : G.lwDaily().normal) ? 'daily loot ready' : 'loot taken'}`) : null, note)),
         btn);
     };
     const byLevel = (a, c) => a.A.minLvl - c.A.minLvl || kinds.indexOf(actKind(a.A)) - kinds.indexOf(actKind(c.A));
@@ -5345,13 +5537,14 @@
   // while a festival is on, the title screens wear it (v10.13, #226): festSky() behind them, its tagline under the title
   const festNow = () => (window.G && G.liveEvents ? G.liveEvents()[0] : null);
   const titleMark = () => [h('div', { class: 'title-lantern', html: LANTERN_MARK }),
-    h('h1', { class: 'title-word' }, 'Realm ', h('span', { class: 'of' }, 'of'), ' Loner'), h('div', { class: 'tagline' }, festNow() === 'lanternwake' ? 'Lanternwake · 24 Oct – 7 Nov' : 'A World of Your Own')];
+    h('h1', { class: 'title-word' }, 'Realm ', h('span', { class: 'of' }, 'of'), ' Loner'), h('div', { class: 'tagline' }, festNow() ? `${D.EVENTS[festNow()].name} · ${evDates(festNow())}` : 'A World of Your Own')];
   // the menu's one moving piece during Lanternwake: small lanterns drifting slowly up behind the title (still with reduced motion)
   function festSky(root) {
     const k = festNow(); if (!k) return root;
     root.classList.add('fest-' + k);
     const sky = h('div', { class: 'fest-sky', 'aria-hidden': 'true' });
     for (let i = 0; i < 12; i++) sky.append(h('i', { style: { left: (4 + ((i * 37) % 92)) + '%', animationDelay: (-i * 2.3).toFixed(1) + 's', animationDuration: (22 + (i % 4) * 4) + 's', '--s': (0.6 + ((i * 7) % 5) / 10).toFixed(2) } }));
+    if (k === 'longnight' && G.lnFinale()) for (let i = 0; i < 4; i++) sky.append(h('b', { style: { left: (14 + i * 22) + '%', top: (8 + (i % 2) * 14) + '%', animationDelay: (i * 1.3).toFixed(1) + 's', '--c': ['#ffc24a', '#7ad8ff', '#ff6a8a', '#ffffff'][i] } })); // the New Year finale: fireworks over the title
     root.prepend(sky); root._sky = sky;
     return root;
   }
@@ -5362,7 +5555,7 @@
   // which music plays (v10.8): a cutscene's own, else G.musicFor (game.js) with the tracks this build ships
   const musicNow = () => ui.csMusic || G.musicFor((n) => !!(window.SND && SND.has(n)));
   // the main menu has its own theme once approved (before that, the menu stays as it was)
-  const menuMusic = () => { if (!window.SND) return; const f = festNow(); if (f && SND.has(f)) SND.music(f); else if (SND.has('menu')) SND.music('menu'); }; // a festival's own theme once it ships
+  const menuMusic = () => { if (!window.SND) return; const f = festNow(), fm = f && (SND.has(f) ? f : D.EVENTS[f].music); if (fm && SND.has(fm)) SND.music(fm); else if (SND.has('menu')) SND.music('menu'); }; // a festival's own theme once it ships
   // What's new (issue #29): the notes bundled with this build (window.AZ_NOTES), shown once per device on the first open of
   // a new version, and any time from the version tag on the main menu. A brand-new device is marked seen silently.
   const SEEN_KEY = 'azsolo.seenVersion', verNow = () => (window.UPD ? UPD.current() : String(window.AZ_VERSION || ''));
@@ -5570,6 +5763,7 @@
     G.on('questReady', () => tip('questReady'));
     G.on('roll', () => tip('roll'));
     G.on('runUpdate', () => { if (G.S && G.S.run && G.S.run.phase === 'rest') tip('run'); });
+    G.on('snow', (Z) => snowArena(Z)); G.on('snowLog', (l) => snowLog(l)); G.on('fireworks', () => fireworks(5)); G.on('lnGuestFirst', () => setTimeout(lnMidnight, 1500)); // Longnight
     G.on('rehearsal', (R) => rehearsalCallout(R)); G.on('fightStart', () => setTimeout(() => rehearsalCallout(G.rehearsalNow()), 50)); // #256
     G.on('levelup', (d) => { const l = d.learned || [], ks = [['marching_song', 'second'], ['play_drum', 'drum'], ['play_horn', 'horn']].filter(([a]) => l.includes(a)).map(([, k]) => k).concat(d.level === D.TALENT_START ? ['talents'] : []); ks.forEach((k, i) => whenCalm(() => setTimeout(() => bardCard(k), i * 15000))); }); // the Bard's teaching cards (#256)
     G.on('levelup', (d) => { if (d.level === 2) tip('level'); if (d.level === 8) tip('dungeon'); if (d.level === D.TALENT_START) tip('talents'); });

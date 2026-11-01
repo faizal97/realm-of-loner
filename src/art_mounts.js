@@ -772,6 +772,79 @@
     /* the Wickless Steed (Lanternwake, v10.13): the same bones, burning lantern-gold in a night-blue void, a lantern
        hung from the saddle */
     wickless_steed: function (c, o) { return skelHorse(c, o, SKEL_WICK); },
+    /* the Frost Hound (Longnight, the Knocker): a big pale blue-grey wolf-hound, a mane of ice shards, cold eyes and
+       frozen breath, a night-blue saddle cloth trimmed in white fur */
+    frost_hound: function (c, o) {
+      var col = '#b0c4d6', dc = dk(col, 0.3), bel = '#eef4fa', ice = '#bff0ff', cy = '#7ae0ff', s = o.icon ? '' : shadow(c, 82, 56);
+      s += leg([[56, 86], [60, 102, 11], [52, 116, 7.5]], dc) + paw(52, 121, dk(col, 0.45));
+      s += leg([[104, 86], [107, 102, 10], [105, 116, 7.5]], dc) + paw(105, 121, dk(col, 0.45));
+      // plumed tail, tipped with ice
+      var tl = 'M42,62 C32,62 22,70 18,80 L12,83 L17,87 C15,92 14,97 15,101 L10,105 L16,107 C18,111 23,114 29,112 C27,106 28,100 29,94 C30,86 34,78 44,74 Z';
+      s += body(c, tl, col, F('M28,70 C24,80 24,96 28,114 L44,114 L44,70 Z', dk(col, 0.22), 0.8) + F('M12,100 C14,108 20,114 28,114 L30,106 C24,108 18,104 16,98 Z', ice, 0.95) +
+        L('M24,76 l4,4 M20,88 l5,3 M20,98 l5,2', dk(col, 0.3), 1.2), 2.2);
+      // body
+      var bd = shag(76, 77, 44, 19, 16, 0.06, 43);
+      s += body(c, bd, col, F('M28,88 C50,100 100,100 126,88 L126,106 L28,106 Z', bel, 0.85) + F('M36,58 C56,52 90,52 116,60 L116,66 C90,60 56,60 36,66 Z', dk(col, 0.22), 0.7) +
+        L('M44,74 l6,4 M60,82 l6,4 M92,80 l6,4 M104,70 l5,4', dk(col, 0.28), 1.2), 2.4);
+      // the ice-shard mane down the neck and over the shoulders
+      var sh = function (x, y, a, h) { var q = dirQ([x, y], a); return P(pd([q(0, -3), q(h, 0), q(0, 3)], true), c.lg([[0, '#ffffff'], [1, cy]]), 1.3); };
+      s += sh(100, 58, -2.0, 10) + sh(106, 54, -1.8, 12) + sh(112, 50, -1.6, 13) + sh(117, 48, -1.3, 11) + sh(94, 60, -2.2, 8);
+      s += P(shag(114, 74, 14, 18, 9, 0.16, 47), c.cel(lt(col, 0.25)), 2.2) + L('M110,68 l4,4 M112,80 l4,4 M118,72 l3,4', dk(col, 0.2), 1.2);
+      // head
+      var hd = 'M116,50 C120,42 132,40 140,46 L156,55 C160,57 160,62 157,64 L146,68 C138,72 124,72 118,66 C113,62 112,56 116,50 Z';
+      s += P('M126,46 L126,30 L134,42 Z', c.cel(dc), 1.6);
+      s += body(c, hd, col, F('M138,40 L162,40 L162,72 L146,72 C152,62 148,52 138,40 Z', dk(col, 0.2), 0.8) + F('M140,62 C148,64 154,62 160,60 L160,72 L136,72 Z', bel, 0.9), 2.3);
+      s += P('M119,46 L117,30 L127,42 Z', c.cel(col), 1.6) + F('M120,43 L119.4,34 L124.6,41 Z', '#4a6a8a');
+      s += E(157.4, 56.6, 2, 1.6, OL) + L('M144,64 L157,61', OL, 1.4) + P('M148,63 L149,66.6 L150.4,62.6 Z M153,62 L154,65.4 L155.2,61.6 Z', '#fff', 0.7);
+      s += L('M126,49 L140,51', OL, 2.2) + glowEye(c, 135, 52.6, 2, cy);
+      // frozen breath
+      s += C(160, 66, 9, glow(c, '#e8f8ff', 0.55)) + L('M158,68 C162,72 160,76 156,78', '#ffffff', 1.4, 0.6);
+      // bridle
+      s += L('M122,46 L132,60 L146,66 M132,60 L144,58', OL, 3.2) + L('M122,46 L132,60 L146,66 M132,60 L144,58', '#2a3448', 1.6) + C(146, 66, 1.8, '#c8e0f0', 1);
+      // night-blue saddle cloth with a white fur edge and a hearth-gold emblem
+      var em = C(73, 79, 5, c.cel('#e6b450'), 1.4) + P('M73,75.6 L74.4,79 L73,82.4 L71.6,79 Z', '#ff8a2a', 0.8);
+      s += saddle(c, { leather: '#2a2230', blanket: '#22305a', trim: '#f4f6fa', metal: '#c8d0dc', emblem: em, rim: '#e6b450', pattern: L('M52,64 L94,63', '#f4f6fa', 1.4) });
+      s += leg([[46, 86], [52, 102, 13], [44, 116, 8.5]], col) + paw(46, 121, dk(col, 0.4));
+      s += leg([[114, 86], [117, 102, 12], [120, 116, 8.5]], col) + paw(122, 121, dk(col, 0.4)) + claws(122, 121, ice) + claws(46, 121, ice);
+      s += reins([146, 66], [89, 57], '#2a3448', 5);
+      return s;
+    },
+    /* the Pale Stag (Longnight, the Cold Guest): a ghostly snow-white stag with frosted antlers and a faint blue glow,
+       an ice-blue saddle cloth */
+    pale_stag: function (c, o) {
+      var col = '#eef3f8', dc = dk(col, 0.22), sh = '#b8cce4', cy = '#7ae0ff', ant = '#e4ecf4', s = o.icon ? '' : shadow(c, 80, 52);
+      s += o.icon ? '' : E(84, 70, 70, 50, glow(c, '#bfe4ff', 0.35));
+      s += leg([[54, 84], [58, 100, 9], [52, 110, 6], [53, 117, 4.6]], dc) + hoof(53, 121, 6.5, '#5a6a80');
+      s += leg([[104, 84], [106, 100, 9], [106, 110, 6], [107, 117, 4.6]], dc) + hoof(107, 121, 6.5, '#5a6a80');
+      // short white tail
+      s += P('M40,62 C32,60 28,66 30,72 C34,74 40,70 42,66 Z', c.cel(col), 1.8);
+      // body
+      var bd = 'M38,72 C35,60 44,55 56,56 C66,58 78,60 92,57 C100,55 106,52 112,54 C122,58 124,76 118,86 C112,93 101,93 90,92 C76,94 60,94 50,92 C40,88 39,82 38,72 Z';
+      s += body(c, bd, col, F('M30,86 C50,96 96,98 124,84 L126,104 L30,104 Z', sh, 0.75) + L('M56,64 C70,68 86,66 100,62', cy, 1.2, 0.35), 2.4);
+      // neck and head (a deer's: lean, a short muzzle)
+      var N = taper([[104, 78], [112, 62], [120, 50], [128, 40]], 24, 15, 5);
+      s += body(c, N.d, col, F(ribbonBand(N, 0, 0.35), sh, 0.7), 2.3);
+      s += P(fringe(N, 2, 13, 4, 'a'), c.cel('#ffffff'), 1.4);
+      var hd = 'M122,34 C126,26 136,26 141,32 L152,46 C155,50 153,55 147,55 C142,55 138,53 134,50 C128,46 120,40 122,34 Z';
+      s += body(c, hd, col, F('M138,26 L158,26 L158,58 L148,58 C154,48 148,40 138,26 Z', sh, 0.7), 2.3);
+      s += E(150, 51, 2.2, 1.6, '#3a4a60', 1);
+      // antlers, frosted, tipped with ice
+      var a1 = 'M128,30 C124,20 120,14 112,8 M122,18 L114,18 M118,12 L120,4 M128,30 C132,20 136,12 142,6 M134,16 L142,14 M138,10 L136,2';
+      s += C(128, 18, 16, glow(c, cy, 0.35)) + G(L(a1, OL, 5) + L(a1, ant, 2.8) + L('M112,8 l-2,-1 M114,18 l-2,0 M120,4 l0,-2 M142,6 l2,-2 M142,14 l2,0 M136,2 l0,-2', cy, 2.4), at(0.82, 128, 30));
+      // ears
+      s += P('M124,30 C116,26 112,28 110,32 C116,34 120,34 124,32 Z', c.cel(col), 1.4) + P('M132,28 C134,22 138,20 142,22 C140,26 136,28 133,30 Z', c.cel(col), 1.4);
+      s += glowEye(c, 133, 36, 1.8, cy);
+      // halter + saddle
+      s += L('M127,30 L134,42 L146,52', OL, 3) + L('M127,30 L134,42 L146,52', '#7a9ac4', 1.4) + C(146, 52, 1.6, '#e8f0f8', 1);
+      var em = P('M73,74 L76,79 L73,84 L70,79 Z', c.cel('#ffffff'), 1.2) + C(73, 79, 6, glow(c, cy, 0.5));
+      s += saddle(c, { leather: '#5a6a84', blanket: '#a8cce8', trim: '#ffffff', metal: '#e8f0f8', emblem: em, rim: cy });
+      s += leg([[46, 82], [52, 98, 11], [44, 110, 7], [45, 117, 5]], col) + hoof(45, 121, 7, '#5a6a80');
+      s += leg([[112, 82], [115, 100, 10], [116, 110, 6.6], [118, 117, 5]], col) + hoof(118, 121, 7, '#5a6a80');
+      s += reins([146, 52], [89, 57], '#7a9ac4', 7);
+      // snow motes round it
+      [[30, 40], [150, 80], [20, 96], [96, 30], [60, 38]].forEach(function (p) { s += C(p[0], p[1], 1.4, '#ffffff', 0, 0.8); });
+      return s;
+    },
     /* the Trialsworn charger and its Trial 15 and Trial 20 tiers (drawn by twCharger) */
     trialsworn_charger: function (c, o) { return twCharger(c, o, 0); },
     trialsworn_charger_t15: function (c, o) { return twCharger(c, o, 1); },
@@ -815,6 +888,8 @@
     kodo: [132, 70, 0.96, ['#d0a060', '#281808']],
     skeletal_horse: [134, 36, 1.02, ['#7a3ab0', '#0e0418']],
     wickless_steed: [134, 36, 1.02, ['#c07a20', '#0a0e1e']],
+    frost_hound: [134, 56, 1.0, ['#5aa0c8', '#081428']],
+    pale_stag: [130, 30, 0.8, ['#8ab8e0', '#0a1430']],
     trialsworn_charger: [127, 44, 0.8, ['#b8964a', '#101a3c']],
     trialsworn_charger_t15: [127, 44, 0.8, ['#d8b860', '#101a3c']],
     trialsworn_charger_t20: [127, 44, 0.8, ['#fff0b0', '#1a2450']]

@@ -16,7 +16,7 @@ const fromUi = (() => {
 })();
 
 // reads that a handler calls to decide or show something; no state changes, and covered by the actions that use them
-const NOT_ACTIONS = new Set(['rehearsalOpen', 'isHealPick', 'canDiscard', 'canUseItem', 'characters', 'copyItem', 'displayName', 'effectOf', 'enemyTown', 'isUpgrade', 'knownProfIds',
+const NOT_ACTIONS = new Set(['lnHardOpen', 'lnSnowWhy', 'rehearsalOpen', 'isHealPick', 'canDiscard', 'canUseItem', 'characters', 'copyItem', 'displayName', 'effectOf', 'enemyTown', 'isUpgrade', 'knownProfIds',
   'legendOn', 'lwHardOpen', 'moneyText', 'profs', 'rankName', 'role', 'travelSecs', 'treeSpent', 'usable',
   // these end or replace the character (the test world runs one): load, logout and wipeSave have their own test below
   'load', 'logout', 'wipeSave']);
@@ -85,6 +85,14 @@ const ACTIONS = {
   // Lanternwake (v10.13): outside the festival these say so and change nothing; inside it they buy, light and call
   lwBuy: () => G.lwBuy('lw_robe'),
   lwLight: () => G.lwLight(),
+  lnOpenDoor: () => G.lnOpenDoor(),
+  lnCook: () => G.lnCook(),
+  lnSnowStart: () => G.lnSnowStart(),
+  lnSnowDo: () => { G.lnSnowDo('pack'); G.lnSnowDo('throw'); },
+  lnSnowQuit: () => G.lnSnowQuit(),
+  lnClaimOwed: () => G.lnClaimOwed(),
+  lnKnock: () => G.lnKnock(),
+  lnGather: () => G.lnGather(),
   setCompanion: () => G.setCompanion(null),
   learnRiding: () => G.learnRiding(),
   setWardrobe: () => { G.setWardrobe('chest', 'hidden'); G.setWardrobe('chest', null); },

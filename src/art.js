@@ -3143,6 +3143,69 @@
   rsLegs('lw_trousers', lwLegs, LWK, LWK_H);
   rsBack('lw_lantern', lwLantern, LWK, LWK_H);
 
+  /* ---- Longnight (v10.17): the winter festival set from the advent calendar. A thick night-blue wool coat with
+     snow-white fur trim and gold buttons, fleece-lined trousers, a heavy hearth-red cloak with a fur collar. Two
+     recolours: <key>_hard (the Knocker on Hard: his charcoal wool, frost-cyan trim) and <key>_pale (the Cold Guest on
+     Hard: snow-white wool, ice-blue trim). ---- */
+  var LNK = { base: '#26365e', base2: '#1e2c50', dark: '#121a36', fur: '#f4f6fa', furDk: '#b4c4d8', btn: '#e6b450', cloak: '#b8401e', cloak2: '#8a2c14', cloakDk: '#5a1a0a', pants: '#1e2a4e' };
+  var LNK_H = { base: '#2c2e36', base2: '#222329', dark: '#121318', fur: '#a8e6f6', furDk: '#4a94b4', btn: '#7ae0ff', cloak: '#2a2c34', cloak2: '#1e2026', cloakDk: '#0e0f12', pants: '#1e2026' };
+  var LNK_P = { base: '#e6edf6', base2: '#cfdcec', dark: '#9aaeca', fur: '#a8d4f2', furDk: '#5a90c0', btn: '#5a9ad8', cloak: '#e8eef6', cloak2: '#c4d4e8', cloakDk: '#8aa2c4', pants: '#d0dcea' };
+  /* a fluffy band of fur along a path: a dark edge, the fur, a soft light tuft line */
+  function lnFur(d, w, pal) { return S(d, OL, w + 1.8) + S(d, pal.fur, w) + S(d, pal.furDk, w * 0.3, 0.55); }
+  function lnCoat(o, pal) {
+    o.torsoC = pal.base; o.sleeve = pal.base;
+    o.belt = pal.dark; o.buckle = pal.btn;
+    var prevArm = o.armFx;
+    o.armFx = function (c, g, A, oo) {
+      /* a fur cuff at the wrist */
+      var a = lpt(A[1], A[2], 0.72, -g.b.armW * 0.75), b = lpt(A[1], A[2], 0.72, g.b.armW * 0.75);
+      return (prevArm ? prevArm(c, g, A, oo) : '') + lnFur(D`M${a[0]},${a[1]} L${b[0]},${b[1]}`, 4.6, pal);
+    };
+    o.torsoFx = function (c, g) {
+      var cl = c.clip(g.torsoD), a = tq(g, 0.3, -0.1), b = tq(g, 0.36, 1.1), bt = '';
+      [0.25, 0.48, 0.71].forEach(function (v) { var p = tq(g, 0.12, v), q = tq(g, 0.58, v); bt += C(p[0], p[1], 1.5, pal.btn, 1) + C(q[0], q[1], 1.5, pal.btn, 1); });
+      return CG(S(D`M${a[0]},${a[1]} L${b[0]},${b[1]}`, pal.base2, 4) + lnFur(D`M${a[0]},${a[1]} L${b[0]},${b[1]}`, 2.6, pal), cl) + bt;
+    };
+    o.gTorso = function (c, g) {
+      /* the coat's skirt over the thighs, a fur hem; then a fur collar round the neck */
+      var x0 = g.wl - 3, x1 = g.wr + 3.5, y = g.hy - 1, hy2 = g.hy + 17;
+      var d = D`M${x0},${y} L${x1},${y} L${x1 + 4},${hy2} Q${g.sx},${hy2 + 2} ${x0 - 5},${hy2} Z`;
+      var fr = tq(g, 0.33, 1);
+      return P(d, c.cel(pal.base), 1.8) + CG(S(D`M${fr[0] + 1},${y} L${fr[0] + 2.5},${hy2 + 2}`, pal.base2, 1.4) + S(D`M${x0 + 2},${y + 3} L${x0 - 1},${hy2}`, pal.dark, 1.6, 0.6), c.clip(d)) +
+        lnFur(D`M${x0 - 5},${hy2} Q${g.sx},${hy2 + 2} ${x1 + 4},${hy2}`, 4.4, pal) +
+        lnFur(D`M${g.scx - 11},${g.sy + 3} Q${g.scx - 2},${g.sy - 5} ${g.scx + 11},${g.sy + 1}`, 5.4, pal);
+    };
+  }
+  function lnLegs(c, g, L, front, pal) {
+    /* fleece cuffs at the ankle, a seam down the leg */
+    var w = g.b.legW, a = lpt(L[1], L[2], 0.8, -w * 0.62), b = lpt(L[1], L[2], 0.8, w * 0.62), s0 = lpt(L[0], L[1], 0.2, w * 0.18), s1 = lpt(L[1], L[2], 0.7, w * 0.18);
+    return S(D`M${s0[0]},${s0[1]} L${L[1][0] + w * 0.18},${L[1][1]} L${s1[0]},${s1[1]}`, pal.dark, 1, front ? 0.7 : 0.4) + lnFur(D`M${a[0]},${a[1]} L${b[0]},${b[1]}`, front ? 4.4 : 3.8, pal);
+  }
+  function lnCloak(pal) {
+    function cape(g) {
+      return rsCape(g, function (H0, H1, at) {
+        var s = '', n = 4;
+        for (var i = 0; i < n; i++) { var m = at((i + 0.5) / n, 2.4), e = at((i + 1) / n); s += D` Q${m[0]},${m[1] + 2} ${e[0]},${e[1]}`; }
+        return s;
+      });
+    }
+    return {
+      back: function (c, g) {
+        var K = cape(g), d = K.d, cl = c.clip(d), b = g.b;
+        var folds = D`M${g.scx - 4},${g.sy + 4} C${g.sx - 16},${g.hy - 8} ${g.sx - 14},${g.hy + 10} ${g.sx - 22},${g.fy - 18} M${g.scx + 4},${g.sy + 6} C${g.sx - 4},${g.hy} ${g.sx},${g.hy + 12} ${g.sx - 4},${g.fy - 20} M${g.scx - b.shW},${g.sy + 10} C${g.sx - b.waistW - 12},${g.hy} ${g.sx - b.waistW - 18},${g.hy + 16} ${g.sx - b.waistW - 24},${g.fy - 14}`;
+        return P(d, c.lg([[0, pal.cloak], [0.6, pal.cloak2], [1, pal.cloakDk]])) + CG(S(folds, pal.cloakDk, 1.6, 0.7) + lnFur(K.hem, 4, pal), cl) + P(d, 'none');
+      },
+      torso: function (c, g) {
+        var d = collarD(g, 1);
+        return P(d, c.cel(pal.fur), 1.8) + CG(S(D`M${g.scx - 10},${g.sy + 5} Q${g.scx - 2},${g.sy - 1} ${g.scx + 10},${g.sy + 2}`, pal.furDk, 1, 0.7), c.clip(d)) + C(g.scx + 9, g.sy + 3.5, 2.2, c.cel(pal.btn), 1.1);
+      },
+      front: function (c, g) { return drape(c, g, pal.cloak, null, function (c, g) { return lnFur(drapeD(g), 3, pal); }); }
+    };
+  }
+  rsChest('ln_coat', lnCoat, LNK, LNK_H); rsChest('ln_coat_pale', lnCoat, LNK_P, LNK_P);
+  rsLegs('ln_trousers', lnLegs, LNK, LNK_H); rsLegs('ln_trousers_pale', lnLegs, LNK_P, LNK_P);
+  rsBack('ln_cloak', lnCloak, LNK, LNK_H); rsBack('ln_cloak_pale', lnCloak, LNK_P, LNK_P);
+
   /* ---- raid weapon looks: like the armour, each weapon is ONE drawing that takes its raid's palette, registered as
      <key> (Normal) and <key>_hard (Hard). The weapon palettes are the armour palettes plus a few weapon-only colours.
      Drawn grip at the origin, blade up (-y), the same frame as the other weapon looks. ---- */

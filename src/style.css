@@ -1125,3 +1125,61 @@ button.ev-fact { width: 100%; background: none; border: 0; border-bottom: 1px so
 .bar.xpmain::before { content: ''; position: absolute; inset: -8px 0; }
 .frames .bar.xpmain::before { inset: -6px 0 -18px; }
 .row .ic.step { display: grid; place-items: center; font: 700 17px var(--display); color: var(--gold); } .row.dim { opacity: .6; } /* the storm chain's steps (#288) */
+/* ---- Longnight (v10.17): the winter festival. Its warmth is hearth orange (#ff9a3a) on night blue; frost is the
+   cold side (#bfe6ff). The calendar is the one bold piece: 16 arched doors, the ready one glows. */
+.ev-story.ln { border-left-color: #ff9a3a; background: linear-gradient(90deg, rgba(30,46,86,.6), transparent); }
+.ln-cal { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding: 6px 2px 10px; }
+.ln-door { position: relative; aspect-ratio: 3 / 4; padding: 0; border: 2px solid #4a3a26; border-radius: 40% 40% 6px 6px / 28% 28% 6px 6px; background: linear-gradient(180deg, #3a2a1a, #22180e); color: var(--parch); display: grid; place-items: center; overflow: hidden; cursor: pointer; }
+.ln-door::after { content: ''; position: absolute; right: 18%; top: 54%; width: 5px; height: 5px; border-radius: 50%; background: #c9a24a; }
+.ln-door .n { font: 700 20px var(--display); color: #d9b878; }
+.ln-door small { position: absolute; bottom: 4px; left: 0; right: 0; font: 11px var(--body); color: var(--muted); }
+.ln-door.big { border-color: #a5824a; }
+.ln-door.big::before { content: ''; position: absolute; top: 8%; left: 50%; width: 34%; aspect-ratio: 1; transform: translateX(-50%); border: 3px solid #2f6a3a; border-radius: 50%; opacity: .8; } /* a wreath on the doors with an outfit piece or the fox */
+.ln-door.later { opacity: .45; }
+.ln-door.shut .n { color: var(--muted); }
+.ln-door.ready { border-color: #ffb24a; background: linear-gradient(180deg, #5a3416, #2a160a); box-shadow: 0 0 0 2px rgba(255,154,58,.35), 0 0 16px rgba(255,154,58,.55); animation: ln-glow 1.8s ease-in-out infinite; }
+.ln-door.ready .n { color: #ffd68a; }
+.ln-door.open { background: radial-gradient(circle at 50% 60%, #5a3a1a, #1a120a 75%); border-color: #6a5236; }
+.ln-door.open::after { display: none; }
+.ln-door.open img { width: 74%; border-radius: 6px; }
+.ln-door:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+@keyframes ln-glow { 50% { box-shadow: 0 0 0 2px rgba(255,154,58,.55), 0 0 24px rgba(255,154,58,.85); } }
+@media (prefers-reduced-motion: reduce) { .ln-door.ready { animation: none; } }
+.ln-hearth { padding: 4px 2px 8px; }
+.ln-fill { height: 12px; border-radius: 6px; background: rgba(255,255,255,.08); border: 1px solid #4a3a26; overflow: hidden; margin: 4px 0 6px; }
+.ln-fill i { display: block; height: 100%; background: linear-gradient(90deg, #a8401a, #ff9a3a 70%, #ffd68a); }
+.task.ln-task { border-color: #ff9a3a; background: linear-gradient(90deg, rgba(30,46,86,.65), transparent); }
+.scene img.ln-town { position: absolute; inset: 32px 0 0; width: 100%; height: calc(100% - 32px); object-fit: cover; object-position: 50% 70%; pointer-events: none; z-index: 1; }
+/* the snowball arena: a panel over the scene (dialog layer), you at the bottom, them at the top, buttons in reach */
+.snow-arena { position: absolute; z-index: 57; left: 8px; right: 8px; bottom: 8px; max-width: 420px; margin: 0 auto; padding: 10px 12px 12px; border: 2px solid #7a9ab8; border-radius: 12px; background: linear-gradient(180deg, rgba(20,32,64,.97), rgba(10,15,34,.98)); color: var(--text); box-shadow: 0 6px 24px #000; display: grid; gap: 8px; }
+.sa-head { display: flex; align-items: center; justify-content: space-between; font: 16px var(--display); color: #dff1ff; }
+.sa-head .x-close { position: static; }
+.sa-side { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 10px; }
+.sa-side > b { font: 600 14px var(--body); }
+.sa-side .sa-state { grid-column: 1 / -1; min-height: 1.2em; color: #bfe6ff; font: italic 12px var(--body); }
+.sa-hp { display: flex; gap: 4px; justify-content: flex-end; }
+.sa-hp i { width: 14px; height: 14px; border-radius: 50%; background: rgba(255,255,255,.1); border: 1px solid #5a6a80; }
+.sa-hp i.on { background: radial-gradient(circle at 35% 35%, #ffffff, #cfe6ff 60%, #8ab0d8); border-color: #dff1ff; }
+.sa-wind { grid-column: 1 / -1; height: 6px; border-radius: 3px; background: rgba(255,255,255,.06); overflow: hidden; visibility: hidden; }
+.sa-wind.on { visibility: visible; }
+.sa-wind i { display: block; height: 100%; width: 0; background: #ff5a2a; }
+.sa-mid { display: flex; justify-content: space-between; gap: 8px; min-height: 1.3em; font: 600 13px var(--body); }
+.sa-incoming { color: #ff8a5a; }
+.sa-last { color: var(--parch); margin-left: auto; }
+.sa-snow { font: 13px var(--body); color: #bfe6ff; text-align: center; }
+.sa-btns { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.sa-btn { display: grid; justify-items: center; gap: 2px; min-height: 64px; padding: 6px 2px; border: 2px solid #5a7a98; border-radius: 10px; background: linear-gradient(180deg, #24365e, #141e3a); color: var(--text); font: 600 12px var(--body); }
+.sa-btn img { width: 34px; height: 34px; border-radius: 6px; }
+.sa-btn:disabled { opacity: .4; }
+.sa-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+/* fireworks: a few bursts that grow and fade (a toy, the first Cold Guest kill, the finale's title screen) */
+.ln-fireworks { position: absolute; inset: 0; z-index: 59; pointer-events: none; overflow: hidden; }
+.ln-fireworks i, .fest-sky b { position: absolute; width: 90px; height: 90px; margin: -45px 0 0 -45px; border-radius: 50%; background: radial-gradient(circle, var(--c, #ffc24a) 0 6%, transparent 7% 30%, var(--c, #ffc24a) 31% 33%, transparent 34% 52%, var(--c, #ffc24a) 53% 55%, transparent 56%); opacity: 0; animation: ln-burst 1.6s ease-out forwards; }
+.fest-sky b { animation: ln-burst 1.8s ease-out infinite; animation-duration: 5.2s; }
+@keyframes ln-burst { 0% { transform: scale(.1); opacity: 0; } 15% { opacity: 1; } 60% { opacity: .9; } 100% { transform: scale(1.4); opacity: 0; } }
+/* the title screens during Longnight: a winter night, snow falling (the lantern shapes become snowflakes) */
+.create.fest-longnight { box-sizing: border-box; min-height: 100vh; min-height: 100dvh; background: radial-gradient(90% 60% at 50% 18%, #1e3a6a, #0a1426 62%, #050a14); }
+.create.fest-longnight > :not(.fest-sky) { position: relative; z-index: 1; }
+.fest-longnight .fest-sky i { top: -30px; bottom: auto; width: calc(8px * var(--s, 1)); height: calc(8px * var(--s, 1)); border-radius: 50%; background: radial-gradient(circle, #ffffff, #cfe6ff 60%, transparent 70%); box-shadow: none; animation-name: ln-fall; }
+@keyframes ln-fall { 0% { transform: translate(0, 0); opacity: 0; } 8% { opacity: .9; } 50% { transform: translate(-14px, 55vh); } 100% { transform: translate(10px, 110vh); opacity: .2; } }
+@media (prefers-reduced-motion: reduce) { .fest-longnight .fest-sky i { animation: none; top: calc(10% + var(--s) * 60%); } .fest-sky b { animation: none; opacity: .5; transform: scale(.8); } }

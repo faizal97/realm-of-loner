@@ -469,6 +469,7 @@
     const close = (st) => { a.state = st || 'done'; G.emitChange(); };
     const decline = { label: 'No thanks', fn: () => { close('declined'); if (b && (a.whisper || a.guild) && chance(0.6)) reply(tone(b) === 'rude' ? pick(['k whatever', 'ok', 'fine', 'whatever', 'ok then']) : pick(['np', 'ok no worries', 'all good', 'no problem!', 'all good!', 'no stress'])); } };
     const help = () => { weekProgress('help', 1); };
+    if (a.kind === 'ln_stew') return [{ label: 'Give a bowl', primary: true, fn: () => G.lnGiveStew(m) }, decline]; // Longnight Stew
     if (a.kind === 'lfg') {
       return [{ label: `Join as ${roleName(a.role)}`, primary: true, fn: () => { if (G.joinChatGroup(a.act, a.role, { leader: a.leader, guild: a.guild ? P.guild : null, soc: a.guild ? { kind: 'g_run' } : null })) { close(); help(); } } }, decline];
     }
