@@ -107,10 +107,36 @@ const PLAN = [
   { effect: 'tithe_of_battle', classes: ['warlock'], wins: ['boss'], loses: ['boss'], losesClasses: ['mage'] },
 ];
 const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null;
-// SHARD=i/n: only every n-th effect of the plan (from i), and the mixes whose first effect is one of them, so CI can run
-// the sim as n jobs at once (#149: about an hour as one); each fight has its own seed, so a shard's numbers are the full run's
+// the ceiling holds: different effects worn together in the case that suits them stay within +10% of plain gear
+const MIXES = [
+  { name: 'Opening Cut + Stubborn Blood', cs: 'solo', cls: 'rogue', fx: ['opening_cut', 'stubborn_blood'] },
+  { name: 'Opening Cut + Chase the Next + Glass Heart', cs: 'trash', cls: 'rogue', fx: ['opening_cut', 'chase_the_next', 'glass_heart'] },
+  { name: 'Kindled Edge + Steady Fuse + Glass Heart', cs: 'boss', cls: 'warrior', fx: ['kindled_edge', 'steady_fuse', 'glass_heart'] },
+  { name: 'Echoing Mend + Lavish Mend + Tethered Mend', cs: 'groupwide', cls: 'priest', fx: ['echoing_mend', 'lavish_mend', 'tethered_mend'] },
+];
+// SHARD=i/n: CI runs the sim as n jobs at once (#149: about an hour as one). The work is cut into units, each effect and
+// each mix once as dropped and once at full upgrade, packed by their cost (COST, seconds on the dev Mac; TIMES=1 prints
+// them) largest first into the lightest shard, so the shards take about as long. Each fight has its own seed, so the
+// shards together print the full run's numbers
 const SHARD = process.env.SHARD ? process.env.SHARD.split('/').map(Number) : null;
-const mine = (k) => (!ONLY || ONLY.includes(k)) && (!SHARD || PLAN.findIndex((P) => P.effect === k) % SHARD[1] === SHARD[0]);
+const COST = { // TIMES=1, 8 shards at once, at 449418d
+  'lavish_mend@dropped': 217, 'lavish_mend@full': 209, 'echoing_mend@dropped': 204, 'tethered_mend@dropped': 203, 'glass_heart@full': 203,
+  'stubborn_blood@dropped': 195, 'tethered_mend@full': 191, 'echoing_mend@full': 190, 'steady_fuse@full': 157, 'steady_fuse@dropped': 110,
+  'tithe_of_battle@dropped': 82, 'tithe_of_battle@full': 80, 'Echoing Mend + Lavish Mend + Tethered Mend@dropped': 61, 'Echoing Mend + Lavish Mend + Tethered Mend@full': 55,
+  'glass_heart@dropped': 54, 'chase_the_next@full': 54, 'stubborn_blood@full': 48, 'opening_cut@dropped': 32, 'opening_cut@full': 29, 'chase_the_next@dropped': 28,
+  'spiteful_hide@full': 26, 'spiteful_hide@dropped': 25, 'kindled_edge@dropped': 25, 'kindled_edge@full': 24, 'turning_guard@full': 20, 'turning_guard@dropped': 20,
+}; // a unit not listed (a new effect or mix) counts 60 until it is timed
+const unitOf = (k, stage) => `${k}@${stage === 1 ? 'dropped' : 'full'}`;
+const SHARD_OF = SHARD && (() => {
+  const units = [], load = Array(SHARD[1]).fill(0), at = {};
+  for (const stage of [1, 'full']) for (const k of PLAN.map((P) => P.effect).concat(MIXES.map((M) => M.name))) units.push(unitOf(k, stage));
+  const cost = (u) => (COST[u] != null ? COST[u] : 60);
+  for (const u of units.slice().sort((a, b) => cost(b) - cost(a) || units.indexOf(a) - units.indexOf(b))) { const i = load.indexOf(Math.min(...load)); at[u] = i; load[i] += cost(u); }
+  return at;
+})();
+const mine = (k, stage) => (!ONLY || ONLY.includes(k)) && (!SHARD || SHARD_OF[unitOf(k, stage)] === SHARD[0]);
+const mineMix = (M, stage) => (ONLY ? M.fx.some((k) => ONLY.includes(k)) : !SHARD || SHARD_OF[unitOf(M.name, stage)] === SHARD[0]);
+const timed = (u, f) => { const t0 = Date.now(); f(); if (process.env.TIMES) console.error(`effects time: ${u} ${Math.round((Date.now() - t0) / 1000)}`); };
 const SEEDS = [0, 1, 2, 3, 4], NEAR = process.env.NEAR ? +process.env.NEAR : 1; let stageNow = ''; // NEAR=x tries another window // the balance analyst's five seeds (#45)
 // f measured on every seed in SEEDS, given its value on this run's seed: the mean
 const onSeeds = (v0, f) => { const keep = SEED, vs = [v0]; for (const sd of SEEDS) if (sd !== keep) { SEED = sd; vs.push(f()); } SEED = keep; return vs.reduce((a, b) => a + b, 0) / vs.length; };
@@ -126,7 +152,7 @@ const measure = (cs, cls, L, pieces) => { curCls = cls; let s = 0; for (let i = 
 // 1 fight in 10, except where dying is what a case measures (how long you last, or the hard fight above)
 {
   const seen = new Set();
-  for (const P of PLAN) { if (!mine(P.effect)) continue; for (const cs of P.wins.concat(P.loses)) for (const cls of P.classes.concat(P.losesClasses || [])) for (const L of [20, 40, 60]) {
+  for (const P of PLAN) { if (!mine(P.effect, 1)) continue; for (const cs of P.wins.concat(P.loses)) for (const cls of P.classes.concat(P.losesClasses || [])) for (const L of [20, 40, 60]) {
     const key = cs + cls + L; if (DEATH_IS_THE_MEASURE[cs] || seen.has(key)) continue; seen.add(key);
     let died = 0; for (let i = 0; i < 40; i++) { curCls = cls; CASES[cs]({ cls, pieces: [piece(P.effect, L, false)] }, L, 60000 + i); if (lastC && lastC.allies[0].hp <= 0) died++; }
     ok(died <= 4, `the ${cs} case doesn't wipe: the plain item loses ${died} of 40 (${cls} ${L})`);
@@ -142,7 +168,8 @@ for (const stage of [1, FULL]) {
   const ok = (c, m) => okTop(c, STAGE + m);
 const all = [];
   for (const P of PLAN) {
-    if (!mine(P.effect)) continue;
+    if (!mine(P.effect, stage)) continue;
+    timed(unitOf(P.effect, stage), () => {
     const res = { wins: [], loses: [] };
     for (const kind of ['wins', 'loses']) for (const cs of P[kind]) for (const cls of (kind === 'loses' && P.losesClasses) || P.classes) for (const L of [20, 40, 60]) {
       curCls = cls; const plain = measure(cs, cls, L, [piece(P.effect, L, false)]); curCls = cls; const withFx = measure(cs, cls, L, [piece(P.effect, L, true)]), d = POINTS[cs] ? (withFx - plain) * 100 : pct(withFx, plain);
@@ -153,7 +180,7 @@ const all = [];
     const best = pc.length ? Math.max(...pc.map((x) => x.d)) : 0, win = Math.max(...res.wins.map((x) => x.d)), lose = Math.min(...res.loses.map((x) => x.d));
     console.log(`${D.EFFECTS[P.effect].name.padEnd(15)} wins ${res.wins.map((x) => `${x.cs} ${x.cls} ${x.L}: ${x.d >= 0 ? '+' : ''}${x.d.toFixed(1)}${unit(x)}`).join(', ')}`);
     console.log(`${''.padEnd(15)} loses ${res.loses.map((x) => `${x.cs} ${x.cls} ${x.L}: ${x.d >= 0 ? '+' : ''}${x.d.toFixed(1)}${unit(x)}`).join(', ')}`);
-    if (D.EFFECTS[P.effect].review) { console.log(`${''.padEnd(15)} (under review by the game designer: reported, not gated)`); continue; }
+    if (D.EFFECTS[P.effect].review) { console.log(`${''.padEnd(15)} (under review by the game designer: reported, not gated)`); return; }
     // an accepted exception (game designer, #37): healing effects measured by healing done can't show their trade with a
     // healer that only heals; they ship as they are until #40 measures them by capacity. Their misses print, not fail
     const bar = P.provisional ? (c, m) => { if (!c) console.log(`ACCEPTED (${P.provisional}, provisional) ${STAGE}${m}`); } : ok;
@@ -168,23 +195,17 @@ const all = [];
     const loseBar = P.loseBar != null ? P.loseBar : -2; // -2 unless the plan gives the effect its own bar
     g(lose, loseBar, -1, () => Math.min(...res.loses.map(mean)), (v) => `${P.effect} loses somewhere: at least ${loseBar}% in a loses case (worst ${v.toFixed(1)}%)`);
     g(best, 8, -1, () => Math.max(...pc.map(mean)), (v) => `${P.effect} is not too strong: at most +8% in its best case (${v.toFixed(1)}%)`);
+    });
   }
-  // the ceiling holds: different effects worn together in the case that suits them stay within +10% of plain gear
-  const MIXES = [
-    { name: 'Opening Cut + Stubborn Blood', cs: 'solo', cls: 'rogue', fx: ['opening_cut', 'stubborn_blood'] },
-    { name: 'Opening Cut + Chase the Next + Glass Heart', cs: 'trash', cls: 'rogue', fx: ['opening_cut', 'chase_the_next', 'glass_heart'] },
-    { name: 'Kindled Edge + Steady Fuse + Glass Heart', cs: 'boss', cls: 'warrior', fx: ['kindled_edge', 'steady_fuse', 'glass_heart'] },
-    { name: 'Echoing Mend + Lavish Mend + Tethered Mend', cs: 'groupwide', cls: 'priest', fx: ['echoing_mend', 'lavish_mend', 'tethered_mend'] },
-  ];
   for (const M of MIXES) {
-    if (ONLY ? !M.fx.some((k) => ONLY.includes(k)) : !mine(M.fx[0])) continue;
+    if (!mineMix(M, stage)) continue;
     if (M.fx.some((k) => D.EFFECTS[k].review)) continue; // a mix with an effect under review waits for it
-    for (const L of [20, 40, 60]) {
+    timed(unitOf(M.name, stage), () => { for (const L of [20, 40, 60]) {
       curCls = M.cls; const plain = measure(M.cs, M.cls, L, M.fx.map((k) => piece(k, L, false))); curCls = M.cls; const mixed = measure(M.cs, M.cls, L, M.fx.map((k) => piece(k, L, true))), d = pct(mixed, plain);
       console.log(`mixed (${M.name}), ${M.cs} ${M.cls} ${L}: ${d >= 0 ? '+' : ''}${d.toFixed(1)}%`);
       gate(ok, d, 10, -1, () => onSeeds(d, () => { curCls = M.cls; const a = measure(M.cs, M.cls, L, M.fx.map((k) => piece(k, L, false))); curCls = M.cls; return pct(measure(M.cs, M.cls, L, M.fx.map((k) => piece(k, L, true))), a); }),
         (v) => `the best mix of effects stays within +10% of plain gear (${M.name}, ${M.cs} ${M.cls} ${L}: ${v.toFixed(1)}%)`);
-    }
+    } });
   }
 }
 console.log(bad ? `${bad} failures` : 'effects sim OK');
