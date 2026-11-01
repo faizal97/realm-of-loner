@@ -466,6 +466,7 @@
     }
     // cast pushback
     if (tgt.cast && !tgt.cast.channel && dmg > 0 && tgt.cast.pushed < 2) { tgt.cast.end += 0.35; tgt.cast.pushed++; }
+    E.rateAdd(C, tgt, 'in', dmg + absorbed); // damage taken a second, for the bots' looking ahead (#149)
     ev(C, { type: 'dmg', src: src.uid, tgt: tgt.uid, amount: dmg, absorbed, crit: !!o.crit, school: o.school || 'physical', ab: o.ab || null, melee: !!o.melee, tick: !!o.tick, fx: o.fx || null, effect: o.effect || null, tele: o.tele || null, teleMiss: o.teleMiss || null }); // melee/tick/fx: hints for the combat effects (ui.js); tele: the telegraph it came from, teleMiss: the answer the target had and missed (#179)
     if (tgt.hp <= 0) kill(C, tgt, src);
     // item effects on this hit (v10.10)
@@ -872,6 +873,7 @@
   function resolve(C, u, abId, tgt) {
     const ab = D.ABILITIES[abId];
     const L = u.level;
+    if (u.resType === 'mana') E.rateAdd(C, u, 'mana', abCost(ab, u)); // mana spent a second (#149)
     u.res -= abCost(ab, u);
     { const la = litAura(u, abId); if (la) u.auras = u.auras.filter((a) => a !== la); } // a reaction's light is spent
     if (E.isHeal(ab) && !(ab.either && tgt && tgt.side !== u.side)) u.auras = E.dropOnHeal(u.auras);
@@ -1557,6 +1559,92 @@
     if (hp > 0.5 && roll()) for (const id of k.buffs) if (has(id) && !u.soloBuffed[id] && !auraOf(u, id)) { u.soloBuffed[id] = 1; if (try_(id)) return true; }
     return false;
   }
+  // A bot thinks before it acts (#149): it lists every option it has right now with a score (what the option is worth
+  // in this moment), and its skill decides how reliably it takes the best: the best with chance 0.35 + 0.6 x skill
+  // (skill 0.2: 47%, 0.5: 65%, 0.85: 86%), else the next one down with the same chance, and so on. So a mistake is a
+  // real player's mistake (the second-best heal, the wrong one of two hurt allies, a cheaper heal than was needed),
+  // never a random button, and a new ability joins by its data with no new rule.
+  E.botChoose = (opts, skill) => {
+    const o = opts.filter((x) => x.score > 0).sort((a, b) => b.score - a.score), p = 0.35 + 0.6 * (skill == null ? 0.5 : skill);
+    for (let i = 0; i < o.length; i++) if (i === o.length - 1 || Math.random() < p) return o[i];
+    return null;
+  };
+  // Looking ahead (#149): a unit's damage taken and mana spent as rates a second, averaged over the last few seconds
+  // (each hit adds to a total that fades with time), so a bot can tell how long an ally has and how long its mana lasts
+  const RATE_S = { in: 3, mana: 8 };
+  E.rateAdd = (C, u, k, n) => { const r = u.rates || (u.rates = {}), x = r[k] || (r[k] = { v: 0, t: C.t }); x.v = x.v * Math.exp(-(C.t - x.t) / RATE_S[k]) + n / RATE_S[k]; x.t = C.t; };
+  E.rate = (C, u, k) => { const x = u.rates && u.rates[k]; return x ? x.v * Math.exp(-(C.t - x.t) / RATE_S[k]) : 0; };
+  // what a healer reads ahead about an ally: healing already on its way (heals over time still ticking, shields,
+  // another healer's cast on it), a red bar about to hit it, and how long it has at the damage it is taking
+  E.healAhead = (C, u, t) => {
+    let coming = 0, hit = 0;
+    for (const a of t.auras) { if (a.hot != null && a.every) coming += a.hot * Math.max(0, Math.ceil((a.until - C.t) / a.every - 1e-6)); if (a.absorb) coming += a.absorb; }
+    for (const h of alive(friends(C, t))) if (h !== u && h.cast && h.cast.tgt === t.uid && D.ABILITIES[h.cast.ab] && D.ABILITIES[h.cast.ab].heal) coming += E.healAmount(h, h.cast.ab);
+    for (const m of alive(foes(C, t))) { const T = m.tele; if (T && T.who === 'target' && T.victim === t.uid && m.dmg) hit += ((m.dmg[0] + m.dmg[1]) / 2) * E.teleSize(T); }
+    const rate = E.rate(C, t, 'in');
+    return { coming, hit, ttd: rate > 0 ? Math.max(0, t.hp - hit) / rate : 99 };
+  };
+  // how long the fight has left (the enemies' health at the group's damage a second) against how long the healer's mana
+  // lasts at its spend: when the mana would run out first, healing per mana counts more and topping off waits
+  E.manaPace = (C, u) => {
+    if (u.resType !== 'mana' || !u.maxRes) return 0;
+    const en = alive(foes(C, u)), dps = en.reduce((a, e) => a + E.rate(C, e, 'in'), 0), left = dps > 0 ? en.reduce((a, e) => a + e.hp, 0) / dps : 30;
+    const spend = E.rate(C, u, 'mana'), lasts = spend > 0 ? u.res / spend : 99;
+    return clamp((1.2 - lasts / Math.max(5, left)) / 0.8, 0, 1); // 0: mana outlasts the fight; 1: it lasts under 40% of it
+  };
+  const HEAL_TARGETS = 8; // guardrail: a healer weighs the 8 most hurt (and the tank), however big the group
+  // a healer's options, read from its kit: each heal it knows (direct, over time, shield) on each hurt ally. Worth: the
+  // healing that lands where health is missing (after what is already coming, plus a red bar about to land), weighted
+  // by how soon the ally would die (the tank a little more), per second it takes; a cast that would finish after they
+  // die is worth little. As the mana pace tightens, healing per mana counts more and topping off a non-tank waits. A
+  // cooldown of a minute or more is held for someone about to die; a mana tool (Innervate, Mana Tide) when mana is low.
+  // How well a bot reads ahead is its skill: a weaker bot's estimates are noisier and it often forgets what is coming
+  const healKit = (u) => D.CLASSES[u.cls].abilities.filter((id) => { const A = D.ABILITIES[id]; return A && knows(u, id) && (A.target === 'ally' || A.either) && (A.heal || A.hot || A.shield) && !A.defensive; });
+  E.healAmount = (u, id) => { const A = D.ABILITIES[id], L = u.level, sp = (u.st && u.st.sp) || 0; let n = 0;
+    if (A.heal) n += (A.heal.base[0] + A.heal.base[1]) / 2 + (A.heal.perLvl || 0) * L + (A.heal.coef || 0) * sp;
+    if (A.hot) n += (A.hot.heal + A.hot.perLvl * L + (A.hot.coef || 0) * sp) * A.hot.ticks;
+    if (A.shield) n += A.shield.base + A.shield.perLvl * L + (A.shield.coef || 0) * sp; return n; };
+  E.healOptions = (C, u, skill) => {
+    const s = skill == null ? 0.5 : skill, out = [], ready = (id) => !((u.cds[id] || 0) > C.t) && abCost(D.ABILITIES[id], u) <= u.res;
+    const noise = () => 1 + (1 - s) * 0.6 * (Math.random() * 2 - 1), forgets = () => Math.random() < (1 - s) * 0.5;
+    const allies = alive(friends(C, u)).filter((a) => a.kind !== 'pet'), mana = u.resType === 'mana' && u.maxRes ? u.res / u.maxRes : 1;
+    const pace = Math.min(1, E.manaPace(C, u) * noise());
+    if (mana < 0.3) for (const id of D.CLASSES[u.cls].abilities) { const A = D.ABILITIES[id]; if (A && knows(u, id) && A.buff && A.buff.stats && A.buff.stats.spi && (A.cd || 0) >= 60 && (A.buff.castRegen || A.target === 'party') && ready(id)) out.push({ id, tgt: null, score: 1e6 * (0.3 - mana) }); }
+    // the allies worth weighing: still missing health once what's coming lands, most in need first, at most HEAL_TARGETS
+    const need = [], raw = allies.filter((a) => a.hp < a.maxHp || a.role === 'tank').sort((x, y) => x.hp / x.maxHp - y.hp / y.maxHp), look = raw.slice(0, HEAL_TARGETS + 4);
+    const tk = raw.find((a) => a.role === 'tank'); if (tk && !look.includes(tk)) look.push(tk); // guardrail: read ahead only for the most hurt by health, and the tank
+    for (const t of look) {
+      const ah = E.healAhead(C, u, t), coming = forgets() ? 0 : ah.coming, miss = Math.max(0, t.maxHp - t.hp + ah.hit - coming);
+      if (miss < t.maxHp * 0.02) continue;
+      need.push({ t, miss, f: Math.max(0, t.hp - ah.hit) / t.maxHp, ttd: ah.ttd * noise() });
+    }
+    need.sort((a, b) => a.f - b.f); const tankN = need.find((x) => x.t.role === 'tank');
+    const weigh = need.slice(0, HEAL_TARGETS); if (tankN && !weigh.includes(tankN)) weigh.push(tankN);
+    const near = need.map((x) => x.miss); // for heals that jump: the most missing health after the target, sorted once
+    for (const id of healKit(u)) {
+      if (!ready(id)) continue;
+      const A = D.ABILITIES[id], amt = E.healAmount(u, id), cost = Math.max(1, abCost(A, u)), time = Math.max(1.5, A.cast || 0), big = (A.cd || 0) >= 60;
+      for (const x of weigh) {
+        const t = x.t, f = x.f, miss = x.miss, dying = x.ttd < 4 || f < 0.25;
+        if (big && !dying) continue;
+        if (A.hot && auraOf(t, A.hot.id)) continue;
+        if (A.shield && (auraOf(t, id) || auraOf(t, 'weakened_soul'))) continue;
+        if (A.heal && !A.hot && !dying && miss < amt * (0.6 + 0.3 * pace)) continue; // a direct heal waits until it would mostly land (longer when mana is tight)
+        if (!A.heal && f > 0.9 && t.role !== 'tank') continue;
+        if (pace > 0.5 && t.role !== 'tank' && f > 0.6 && !dying) continue; // tight mana: let a non-tank's top-off wait
+        let eff = Math.min(amt, A.heal ? miss : miss + 0.25 * t.maxHp);
+        if (A.heal && A.heal.jumps) { let k = 0; for (const m of near) { if (m === miss) continue; if (k >= A.heal.jumps.length) break; eff += Math.min(amt * A.heal.jumps[k++], m); } }
+        const urgency = (1 + 3 * (1 - f) * (1 - f)) * (t.role === 'tank' ? 1.3 : 1) * (x.ttd < 8 ? 1 + (8 - x.ttd) / 4 : 1);
+        const late = (A.cast || 0) > x.ttd ? 0.15 : 1; // it would land after they die
+        out.push({ id, tgt: t, score: (eff * urgency * late / time) * Math.pow(eff / cost, 0.3 + 1.2 * pace) });
+      }
+    }
+    return out;
+  };
+  function healerPick(C, u, b, try_) {
+    const c = E.botChoose(E.healOptions(C, u, b.skill), b.skill);
+    return !!c && try_(c.id, c.tgt || undefined);
+  }
   E.botThink = (C, u) => botThink(C, u); // the playtest's autoplay plays the player's own unit with the bots' brain (tools/playtest)
   function botThink(C, u) {
     if (u.stepIn) return; // walking in to use a close attack (#245)
@@ -1624,6 +1712,7 @@
         if (!b.healOnly && u.res / u.maxRes > 0.7 && Math.random() < 0.4) { const f = focusTarget(C, u); if (f && has('dirge') && botSong(C, u, b, 'dirge', f, try_, true)) return; if (f) try_('dissonant_note', f); }
         return;
       }
+      if (!b.oldHeals && healerPick(C, u, b, try_)) return; // the heal that fits, from the kit (#149); b.oldHeals: the sims' before
       if (low && low.hp / low.maxHp < thr && has('lesser_heal') && try_('lesser_heal', low)) return;
       if (low && low.hp / low.maxHp < thr && has('holy_shock') && try_('holy_shock', low)) return; // instant, on its cooldown (#245)
       if (low && low.hp / low.maxHp < thr && has('holy_light') && try_('holy_light', low)) return;
@@ -1849,7 +1938,7 @@
           const due = Math.floor((C.t - cast.start) / (cast.channel / 3));
           if (due > cast.ticks) {
             if (cast.ticks === 0) { // the first missile pays, and spends a reaction's light (Arcane Surge) like any other spell
-              u.res -= abCost(ab, u); u.lastCastT = C.t;
+              if (u.resType === 'mana') E.rateAdd(C, u, 'mana', abCost(ab, u)); u.res -= abCost(ab, u); u.lastCastT = C.t;
               const la = litAura(u, cast.ab); if (la) u.auras = u.auras.filter((a) => a !== la);
               if (ab.cd) u.cds[cast.ab] = C.t + Math.max(1, ab.cd - (tmOf(u).abilCd[cast.ab] || 0));
             }
