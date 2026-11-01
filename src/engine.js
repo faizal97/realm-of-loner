@@ -1663,8 +1663,9 @@
   E.fightOptions = (C, u, skill) => {
     const s = skill == null ? 0.5 : skill, out = [], noise = () => 1 + (1 - s) * 0.6 * (Math.random() * 2 - 1);
     const en = alive(foes(C, u)); if (!en.length || !u.cls || u.cls === 'bard') return out; // a bard keeps its own songs on the beat (botSong)
-    const tk = C.units[u.target] && !C.units[u.target].dead && C.units[u.target].side !== u.side ? C.units[u.target] : focusTarget(C, u); if (!tk) return out;
-    const tank = u.role === 'tank', left = E.fightLeft(C, u) * noise(), big = en.some((e) => e.boss || e.elite);
+    const tank = u.role === 'tank', cur = C.units[u.target] && !C.units[u.target].dead && C.units[u.target].side !== u.side ? C.units[u.target] : null;
+    const tk = tank ? cur || focusTarget(C, u) : focusTarget(C, u); if (!tk) return out; // a damage dealer follows the kill order (focus, spread) every choice, as before #149
+    const left = E.fightLeft(C, u) * noise(), big = en.some((e) => e.boss || e.elite);
     const keep = big ? new Set(E.answersOf(u, 'cut')) : new Set(); // kept for the red bars
     const pace = u.resType === 'mana' ? Math.min(1, E.manaPace(C, u) * noise()) : 0;
     const ready = (id) => !((u.cds[id] || 0) > C.t) && abCost(D.ABILITIES[id], u) <= u.res;
@@ -1679,7 +1680,7 @@
       if (!A || !knows(u, id) || !ready(id) || A.form || A.shapeshift || A.opener || A.taunt || A.needAura || A.heal || A.passive) continue;
       if (!(A.dmg || A.dot) || (A.target !== 'enemy' && A.target !== 'aoe')) continue;
       if (keep.has(id) && (A.cd || 0) >= 6) continue;
-      if (A.finisher && (u.cp || 0) < 3 && tk.hp / tk.maxHp > 0.15) continue; // a finisher waits for points, unless the target is nearly dead
+      if (A.finisher && (u.cp || 0) < ((skill || 0.5) >= 0.6 ? 5 : 4) && tk.hp / tk.maxHp > 0.25) continue; // a finisher waits for 5 points (a weaker player 4), unless the target is nearly dead, as before #149
       if (A.stun && !A.dmg) continue;
       const time = Math.max(A.gcdLen || 1.5, A.cast || 0), ttl = (E.rate(C, tk, 'in') > 0 ? tk.hp / E.rate(C, tk, 'in') : 30) * noise();
       let per = E.dmgAmount(u, id);

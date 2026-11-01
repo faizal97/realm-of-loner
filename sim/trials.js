@@ -127,7 +127,7 @@ const drop = (keys) => { for (const k of keys) { delete D.DUNGEONS[k]; delete D.
 // ---- Kill order: spread splits the damage dealers across enemies; one at a time keeps them together
 {
   G.newGame({ name: 'Ko', cls: 'mage', race: 'human' }); G.S.player.level = 60;
-  const targets = (ko) => { const allies = [0, 1, 2, 3].map(() => { const u = E.charUnit(G.S.player, 'ally', 'bot', Date.now()); u.bot = { skill: 0.8, react: 0.3 }; u.role = 'dps'; return u; });
+  const targets = (ko) => { const allies = [0, 1, 2, 3].map(() => { const u = E.charUnit(G.S.player, 'ally', 'bot', Date.now()); u.bot = { skill: 0.8, react: 0.3 }; u.role = 'dps'; u.hp = u.maxHp; return u; }); // at full health: a new character's level-1 health sends bots to their defensives (#149)
     const F = E.fight(allies, [0, 1, 2].map(() => E.mobUnit('mangy_wolf', 60)), { killOrder: ko }); const seen = new Set();
     for (let i = 0; i < 40; i++) { E.tick(F, 0.1); for (const e of F.events) if (e.type === 'dmg' && allies.some((a) => a.uid === e.src)) seen.add(e.tgt); F.events.length = 0; } return seen.size; };
   ok(targets('spread') >= 2, `spread: the damage lands on several enemies (${targets('spread')})`);
