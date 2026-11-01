@@ -895,7 +895,7 @@
     if (ab.rage) u.res = Math.min(100, u.res + ab.rage);
     if ((ab.stun || ab.interrupt) && tgt && tgt.side !== u.side) cutCast(C, u, tgt); // an interrupt or a stun stops a telegraphed cast, a boss's too (#179)
     if (ab.defensive) answerTele(C, u, 'guard');
-    if (tgt && tgt.side === u.side && isMend(ab)) mendTele(C, tgt); // a shield or quick heal on the tank during a slam's red bar (#179)
+    if (tgt && tgt.side === u.side && isMend(ab)) mendTele(C, tgt, u); // a shield or quick heal on the tank during a slam's red bar (#179)
     if (ab.stun && tgt && !tgt.boss) { tgt.stunUntil = C.t + ab.stun; if (ab.fear) { tgt.fleeUntil = C.t + ab.stun; tgt.fleeFrom = u.uid; } ev(C, { type: 'stun', tgt: tgt.uid, dur: ab.stun }); } // fear: it runs from you (Stage Fright, #251)
 
     const centre = ab.target === 'aoe' && aoeAtTarget(ab) ? (C.units[u.target] && !C.units[u.target].dead ? C.units[u.target] : u) : u;
@@ -1189,7 +1189,7 @@
     if (m.tele) return; // one telegraph at a time: a mechanic due while another is cast is skipped this round
     const t = m.tele = Object.assign({}, spec, { tele: true, id: ++teleSeq, start: C.t, until: C.t + (spec.cast || TELE.cast), done: new Set(), kicks: new Set(), mended: false });
     if (t.text) ev(C, { type: 'emote', uid: m.uid, text: t.text });
-    ev(C, { type: 'tele', src: m.uid, what: 'start', name: t.name, who: t.who, victim: t.victim || null, ans: E.teleAnswer(t), until: t.until });
+    ev(C, { type: 'tele', src: m.uid, id: t.id, what: 'start', name: t.name, who: t.who, victim: t.victim || null, ans: E.teleAnswer(t), until: t.until });
   }
   function land(C, m, t) {
     if (t.heal) { const h = (t.healTo && C.units[t.healTo] && !C.units[t.healTo].dead && C.units[t.healTo]) || m; heal(C, m, h, h.maxHp * t.heal * (t.tele ? t.miss || TELE.healMiss : 1), {}); return; }
@@ -1225,7 +1225,7 @@
     if (m.dead) { m.tele = null; return; }
     if (t.who === 'target' && t.brace != null) braceTele(C, m, t); // the tank's defensive was already up
     if (C.t < t.until) return;
-    m.tele = null; ev(C, { type: 'tele', src: m.uid, what: 'land', name: t.name });
+    m.tele = null; ev(C, { type: 'tele', src: m.uid, id: t.id, what: 'land', name: t.name });
     land(C, m, t);
   }
   // a braced slam (#179): the tank's defensive takes t.brace off, once; the screen shows it as the tank's pip
@@ -1240,8 +1240,8 @@
     else if (t.who === 'target' && !t.kicks.has(u.uid) && t.kicks.size < E.teleNum(t, 'kickCap')) { t.kicks.add(u.uid); ev(C, { type: 'tele', src: m.uid, what: 'kick', by: u.uid, name: t.name, size: E.teleSize(t), off: E.teleNum(t, 'kick') }); } // a kick weakens a slam, up to its kickCap
     else if (t.who === 'target') ev(C, { type: 'tele', src: m.uid, what: 'kickfull', by: u.uid, name: t.name }); // a kick after the slam's kicks were full
   }
-  function mendTele(C, v) {
-    for (const m of alive(foes(C, v))) { const t = m.tele; if (t && t.who === 'target' && t.victim === v.uid && !t.mended) { t.mended = true; ev(C, { type: 'tele', src: m.uid, what: 'mend', tgt: v.uid, name: t.name, size: E.teleSize(t), off: E.teleNum(t, 'mend') }); } }
+  function mendTele(C, v, u) {
+    for (const m of alive(foes(C, v))) { const t = m.tele; if (t && t.who === 'target' && t.victim === v.uid && !t.mended) { t.mended = true; ev(C, { type: 'tele', src: m.uid, what: 'mend', by: u && u.uid, tgt: v.uid, name: t.name, size: E.teleSize(t), off: E.teleNum(t, 'mend') }); } }
   }
   function answerTele(C, u, ans) {
     for (const m of alive(foes(C, u))) { const t = m.tele; if (t && E.teleAnswer(t) === ans && (t.who === 'all' || t.victim === u.uid)) { t.done.add(u.uid); if (ans === 'guard' && t.brace != null) braceTele(C, m, t, true); else if (ans === 'guard') ev(C, { type: 'tele', src: m.uid, what: 'block', tgt: u.uid, name: t.name }); } }

@@ -4287,12 +4287,13 @@
         }
         if (C.kind === 'rehearsal' && C.events.length) rehearsalStep(C, C.events);
         if (C.kind === 'knock' && C.events.some((e) => e.type === 'tele' && e.what === 'land' && e.name === 'Hearthchill')) C.chilled = true; // A Knock at the Door: the home went cold
-        if (C.events.length) { G.recapFeed(C, C.events); emit('combat', C.events); C.events.length = 0; }
+        if (C.events.length) { G.recapFeed(C, C.events); if (root.FLOG) FLOG.feed(C, C.events); emit('combat', C.events); C.events.length = 0; } // the fight log (#295) reads the same events
         if (C.over) {
           // a wipe in a run, or your own death out in the world: the recap of who died and why (#192)
           if (C.over === 'lose' && C.recap && C.recap.deaths.length && (C.kind === 'run' || (C.kind === 'solo' && G.pUnit && G.pUnit.dead))) {
             G.recap = { deaths: C.recap.deaths, self: C.kind === 'solo' }; emit('recap', G.recap);
           }
+          if (root.FLOG) try { FLOG.end(C); } catch (e) { console.error(e); } // a lost fight is kept for Share fight log (#295)
           // a fight always ends (#121): if a step of its ending throws, the fight is still closed, so the error shows once
           // instead of the ending being retried every frame (paying the kill again each time) with the game stuck in it
           try { if (C.kind === 'knock') endKnock(C); else if (C.kind === 'rehearsal') endRehearsal(C); else if (C.kind === 'solo') endSolo(C); else if (C.kind === 'pvp') endPvp(C); else if (C.kind === 'duel') endDuel(C); else if (C.kind === 'bg') endBgFight(C); else if (C.kind === 'brawl') endBrawlFight(C); else endRunFight(C); }

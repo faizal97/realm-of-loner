@@ -9,7 +9,7 @@ globalThis.localStorage = (() => { const m = new Map(); return { getItem: (k) =>
 const RealDate = Date; let t = new RealDate(2026, 9, 7, 19).getTime(); // a Wednesday evening
 globalThis.Date = class extends RealDate { constructor(...a) { if (a.length) super(...a); else super(t); } static now() { return t; } };
 // a test that sets globalThis.AZ_DEV before requiring this file runs as a dev build (#92): src/devkeys.js first, as build.py --dev does
-for (const f of (globalThis.AZ_DEV ? ['devkeys'] : []).concat(['data', 'engine', 'bots', 'game', 'trials', 'social', 'report', 'update'])) require(`../src/${f}.js`);
+for (const f of (globalThis.AZ_DEV ? ['devkeys'] : []).concat(['data', 'engine', 'bots', 'game', 'trials', 'social', 'report', 'fightlog', 'update'])) require(`../src/${f}.js`);
 const { G, D, E, B } = globalThis;
 
 // a character at a level, in gear for it, with money, Marks and a few things in the bags; standing at a place of its level

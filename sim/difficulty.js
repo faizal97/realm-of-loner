@@ -20,6 +20,8 @@ const ROOT = process.env.ROOT || require('path').join(__dirname, '..');
 globalThis.localStorage = { getItem() { return null; }, setItem() {}, removeItem() {} };
 for (const f of ['data', 'engine', 'bots', 'game']) require(ROOT + '/src/' + f + '.js');
 require(ROOT + '/src/trials.js');
+// FLOG=<file> writes the fight log (#295) of the last fight lost in these runs, as a player's Share fight log would
+if (process.env.FLOG) { require(ROOT + '/src/fightlog.js'); process.on('exit', () => { const x = globalThis.FLOG.text(); require('fs').writeFileSync(process.env.FLOG, x || '(no fight lost)\n'); console.log(`fight log: ${process.env.FLOG} (${x ? x.length.toLocaleString('en-US') : 0} characters)`); }); }
 // TELESTAT=1: every red bar the runs saw, by its answer and name: started, cut (an interrupt or stun), landed; for a slam on
 // the tank, how many were braced (its defensive), mended (a healer's shield) and kicked (others' interrupts), and how many
 // had no answer at all (a player report, #294)

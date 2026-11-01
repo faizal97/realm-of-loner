@@ -13,10 +13,12 @@
   };
   const call = (cmd, args) => new Promise((res, rej) => { const id = ++seq; waiting[id] = { res, rej }; root.AzFile.postMessage(JSON.stringify({ id, cmd, args: args || {} })); });
 
-  // Share (app) or download (browser) a save. Resolves when the share sheet or download has started.
-  SAVEFILE.save = function (name, text) {
-    if (SAVEFILE.inApp()) return call('share', { name, text });
-    const url = URL.createObjectURL(new Blob([text], { type: 'application/octet-stream' }));
+  // Share (app) or download (browser) a save. Resolves when the share sheet or download has started. opts: { title, mime }
+  // for other files (the fight log, #295); an app older than v10.18 ignores them and shares under its save title
+  SAVEFILE.save = function (name, text, opts) {
+    const o = opts || {};
+    if (SAVEFILE.inApp()) return call('share', Object.assign({ name, text }, o.title ? { title: o.title } : {}, o.mime ? { mime: o.mime } : {}));
+    const url = URL.createObjectURL(new Blob([text], { type: o.mime || 'application/octet-stream' }));
     const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 10000);
     return Promise.resolve(true);

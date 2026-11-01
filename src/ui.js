@@ -2164,6 +2164,13 @@
   function closeSheet() { if (ui.sheetEl) ui.sheetEl.remove(); ui.sheet = null; ui.sheetFn = null; ui.sheetEl = null; ui.sheetDef = null; ui.sheetStack = []; placeEvLantern(); }
   // the death recap (#192): one line per death in order, at most 5 then "+N more": name in class colour and the killing
   // blow, then the facts of the last 5 seconds in small muted text. Facts only.
+  // the fight log (#295): the last lost fight as a text file, shared like a save file (the share sheet in the app, a
+  // download in a browser); null when no lost fight is kept or files can't be saved here
+  function fightLogButton(cls) {
+    if (!window.FLOG || !FLOG.lost() || !window.SAVEFILE) return null;
+    return h('button', { class: cls || 'btn alt', onclick: () => { const name = FLOG.fileName(); SAVEFILE.save(name, FLOG.text(), { title: 'Share fight log', mime: 'text/plain' }).then(() => { if (!SAVEFILE.inApp()) toast('Fight log saved', true); }, (e) => toast('Could not save the fight log: ' + ((e && e.message) || 'error'))); } },
+      SAVEFILE.inApp() ? 'Share fight log' : 'Save fight log');
+  }
   function recapDialog() {
     const R = G.recap; if (!R) return;
     const shown = R.deaths.slice(0, 5), more = R.deaths.length - shown.length;
@@ -2171,7 +2178,7 @@
       h('div', { class: 'recap' }, ...shown.map((d) => { const x = G.recapText(d);
         return h('div', { class: 'recap-row' }, h('div', null, h('b', { class: 'cls-' + d.cls }, d.name), ' ' + x.head), h('small', null, x.facts)); }),
         more > 0 ? h('small', { class: 'recap-more' }, `+${more} more`) : null),
-      h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: closeDialog }, 'Close'))], true);
+      h('div', { class: 'btn-row' }, fightLogButton(), h('button', { class: 'btn', onclick: closeDialog }, 'Close'))], true);
   }
   function showDialog(content, dismissable) {
     closeDialog();
@@ -5302,6 +5309,8 @@
       h('div', { class: 'btn-row' },
         h('button', { class: 'btn', onclick: () => { UPD.open(REPORT.issueUrl(title, what.value)); closeDialog(); } }, 'Open on GitHub'),
         h('button', { class: 'btn alt', onclick: () => { const t = REPORT.text(what.value); try { navigator.clipboard.writeText(t).then(() => toast('Report copied', true), () => toast('Could not copy')); } catch (e) { toast('Could not copy'); } } }, 'Copy report')),
+      window.FLOG && FLOG.lost() ? h('p', { class: 'ai-note', style: { margin: '6px 0 0' } }, 'Lost a fight? Attach its log: every hit, heal and red bar of the last fight you lost.') : null,
+      fightLogButton('btn alt wide'),
       h('button', { class: 'btn alt wide', onclick: closeDialog }, 'Cancel')], true);
   }
   // an error while playing: a small notice (once per kind of error), never a blocking dialog

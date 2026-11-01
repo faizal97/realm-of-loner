@@ -140,12 +140,12 @@ class MainActivity : FlutterActivity() {
                         val f = File(savesDir(), name); f.writeText(text)
                         val uri = FileProvider.getUriForFile(this, "$packageName.updates", f)
                         val send = Intent(Intent.ACTION_SEND).apply {
-                            type = "application/octet-stream"
+                            type = call.argument<String>("mime") ?: "application/octet-stream" // a fight log is text/plain (#295)
                             putExtra(Intent.EXTRA_STREAM, uri)
                             putExtra(Intent.EXTRA_SUBJECT, name)
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         }
-                        startActivity(Intent.createChooser(send, "Share your save"))
+                        startActivity(Intent.createChooser(send, call.argument<String>("title") ?: "Share your save"))
                         result.success(true)
                     } catch (e: Exception) { result.error("share", e.message ?: e.toString(), null) }
                 }
