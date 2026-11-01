@@ -34,6 +34,21 @@ const TS = {}; if (process.env.TELESTAT) {
     if (e.what === 'brace' || e.what === 'dodge') c.brace = 1; else if (e.what === 'mend') c.mend = 1; else if (e.what === 'kick') c.kicks++; else if (e.what === 'cut') { c.cut = 1; row(c.k).cut++; close(e.src); } else if (e.what === 'land') row(c.k).land++; } }); // a bar's tally closes at its caster's next bar (dodges and braces as it lands come after 'land')
   process.on('exit', () => { for (const k of Object.keys(cur)) close(k); console.log('red bars (answer name: started; cut; braced or dodged, mended, kicked at least once; no answer at all):'); for (const [k, r] of Object.entries(TS).sort((a, b) => b[1].start - a[1].start)) { const pc = (n) => `${n} (${r.start ? Math.round((n / r.start) * 100) : 0}%)`; console.log(`  ${k}: ${r.start}; cut ${pc(r.cut)}; braced or dodged ${pc(r.braced)}, mended ${pc(r.mended)}, kicked ${pc(r.kicked)}; no answer ${pc(r.none)}`); } }); }
 const { G, D } = globalThis;
+// ABILSTAT=1: how much of its kit each bot uses in group fights (#149): per class and role, the median of distinct
+// abilities a bot used in a fight of 15 s or more, against what it knows (its class's abilities at its level, not passive),
+// and the abilities it knows but never used across all its fights
+const AS = {}; if (process.env.ABILSTAT) {
+  const live = new Map(); // fight -> { uid: Set }
+  G.on('combat', (evs) => { const C = G.fight; if (!C) return; let m = live.get(C); if (!m) { m = {}; live.set(C, m); } for (const e of evs || []) if (e.type === 'ability' && e.src != null) { const u = C.units[e.src]; if (u && u.kind === 'bot' && !u.isPlayer && u.side === 'ally') (m[e.src] = m[e.src] || new Set()).add(e.ab); } });
+  const close = () => { for (const [C, m] of live) { if (!C.over) continue; live.delete(C); if (C.t < 15) continue;
+    for (const u of C.allies) { if (u.kind !== 'bot' || u.isPlayer || !u.cls) continue; const role = u.role || D.CLASSES[u.cls].role, k = u.cls + ' ' + role, r = AS[k] = AS[k] || { n: [], known: [], seen: {}, kit: {} };
+      const kit = D.CLASSES[u.cls].abilities.filter((id) => D.ABILITIES[id] && !D.ABILITIES[id].passive && (D.ABILITIES[id].lvl || 1) <= u.level); for (const id of kit) r.kit[id] = 1;
+      const used = m[u.uid] || new Set(); r.n.push(used.size); r.known.push(kit.length); for (const id of used) r.seen[id] = (r.seen[id] || 0) + 1; } } };
+  globalThis.__asClose = close; // the run loop closes ended fights between steps
+  process.on('exit', () => { close(); const med = (a) => { const s = a.slice().sort((x, y) => x - y); return s[s.length >> 1]; };
+    console.log('kit use by bots (class role: fights; median distinct abilities a fight / median known; known but never used):');
+    for (const [k, r] of Object.entries(AS).sort()) console.log(`  ${k}: ${r.n.length}; ${med(r.n)} / ${med(r.known)}; never: ${Object.keys(r.kit).filter((id) => !r.seen[id]).map((id) => D.ABILITIES[id].name).join(', ')}`); });
+}
 const RealDate = Date; let t = process.env.DATE ? new RealDate(process.env.DATE).getTime() : new RealDate(2026, 9, 14, 19).getTime(); // DATE=2026-10-28T19:00 plays on that day (a festival run needs its dates, v10.13)
 globalThis.Date = class extends RealDate { constructor(...a) { if (a.length) super(...a); else super(t); } static now() { return t; } };
 const PROFILE = process.env.PROFILE || 'today';
@@ -82,7 +97,7 @@ function clear(act, cls) {
     for (const r of (S.run.rolls || [])) if (!r.done && r.player && r.choice == null) { try { G.roll(S.run.rolls.indexOf(r), 'pass'); } catch (e) {} }
     if (S.run.phase === 'rest' && G.role() === 'tank' && Date.now() >= S.run.restUntil && (G.restState().topped || Date.now() >= S.run.restUntil + 60000) && !S.group.members.some((m) => m.gone)) G.runPull(); // a tank player pulls by the rule a bot tank uses (G.restState: everyone topped up, or after a cap)
     if (S.run.wipes > 12) break;
-    G.update(0.1); t += 100;
+    G.update(0.1); t += 100; if (globalThis.__asClose && !G.fight) globalThis.__asClose();
     const C = G.fight;
     if (C) { if (C !== last) { const pl = R.pulls[R.idx] || {}; last = C; att = { idx: R.idx, boss: !!pl.boss, name: pl.boss ? (D.MOBS[pl.mobs[0]] || {}).name : null, g: 1, m: 1, t: 0, dead: 0, res: null }; atts.push(att); } sample(C); att.res = C.over; }
     else if (last) { att.res = last.over || att.res; last = null; }
