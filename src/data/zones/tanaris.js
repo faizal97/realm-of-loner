@@ -42,7 +42,7 @@
   });
 
   Object.assign(D.PLACES, {
-    gadgetzan: { name: 'Coppergulch', zone: 'Sirocco', region: 'tanaris', scene: 'gadgetzan', lvl: [40, 50], safe: true, inn: true, mobs: [], pool: 0, npcs: ['noggenfogger', 'bilgewhizzle', 'sprinkle', 'fizzledowser', 'innkeeper_fizzgrimble', 'blizrik'], vendor: 'innkeeper_fizzgrimble', gearVendor: 'blizrik',
+    gadgetzan: { name: 'Coppergulch', zone: 'Sirocco', region: 'tanaris', scene: 'gadgetzan', lvl: [40, 50], safe: true, neutral: true, inn: true, mobs: [], pool: 0, npcs: ['noggenfogger', 'bilgewhizzle', 'sprinkle', 'fizzledowser', 'innkeeper_fizzgrimble', 'blizrik'], vendor: 'innkeeper_fizzgrimble', gearVendor: 'blizrik',
       links: { waterspring_field: 16, thistleshrub_valley: 18, lost_rigger_cove: 20, noxious_lair: 18, nesingwary_camp: 50 , coinworks_gate: 8 }, via: { nesingwary_camp: 'Goblin zeppelin' } },
     waterspring_field: { name: 'Pumpworks Field', zone: 'Sirocco', region: 'tanaris', scene: 'waterspring_field', lvl: [40, 42], mobs: [['wastewander_bandit', 5], ['wastewander_shadow_mage', 4]], named: { caliph_scorpidsting: 300, ossa_drywell: 150 }, pool: 10, npcs: [], links: { gadgetzan: 16, eastmoon_ruins: 18 } },
     thistleshrub_valley: { name: 'Spinebush Valley', zone: 'Sirocco', region: 'tanaris', scene: 'thistleshrub_valley', lvl: [40, 42], mobs: [['thistleshrub_rootshaper', 6], ['wastewander_bandit', 2]], pool: 9, npcs: [], links: { gadgetzan: 18, zul_farrak_gate: 18 } },

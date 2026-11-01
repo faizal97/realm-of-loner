@@ -246,6 +246,7 @@
       const startLv = {};
       for (const b of S.bots) startLv[b.id] = b.level;
       report.news = B.advance(S, away);
+      B.catchUpChat(S, t); // #70
       report.dings = S.bots.filter((b) => startLv[b.id] != null && b.level > startLv[b.id]).length;
       // regen fully
       P.hp = null; P.res = null; P.auras = (P.auras || []).filter((a) => a.until > t);
@@ -2581,13 +2582,14 @@
     const role = pick(G.roles());
     const firstTimers = Math.random() < 0.6;
     const myF = (D.RACES[P.race] || {}).faction || 'alliance';
-    const mine = S.bots.filter((b) => B.factionOf(b) === myF), fit = mine.filter((b) => b.level >= A.minLvl - 3); // a poster of the run's level (#69: a bot names content at its own level)
+    const mine = S.bots.filter((b) => B.factionOf(b) === myF), fit = mine.filter((b) => b.level >= A.minLvl - 3 && !B.lfRecent(S, b)); // a poster of the run's level (#69: a bot names content at its own level)
     const poster = pick(fit.length ? fit : mine) || S.bots[0];
     const req = { id: 'hw' + t, act, role, startIdx: stuck, firstTimers, poster: poster.id, posterName: poster.name, expires: t + HW_LIFE };
     S.helpWanted.push(req);
-    const what = stuck ? `stuck on ${Dg.pulls[stuck].label}` : 'full run';
+    const what = stuck ? `stuck on ${Dg.pulls[stuck].label}` : 'from the start'; // (not 'full run': chat says full only of a busy server, #70)
     // a real request in chat too: tapping it joins, same as the Group Finder's Help Wanted
-    const hm = B.post(S, 'lfg', poster, `LF1M ${role} ${A.name}, ${what}${firstTimers ? ', first time here pls be patient' : ''}`);
+    const who = role === 'dps' ? 'a dps' : 'a ' + role, ft = firstTimers ? ', first timers pls be patient' : ''; // #70: its words rotate (B.pickHeard)
+    const hm = B.post(S, 'lfg', poster, B.pickHeard(S, 'hw', [`LF1M ${role} ${A.name}, ${what}${ft}`, `${A.name} needs ${who}, ${what}${ft}`, `need ${who} for ${A.name}, ${what}${ft}`, `${A.name}: one ${role} spot left, ${what}${ft}`, `lf ${role}, ${A.name} ${what}${ft}`, `any ${role}? ${A.name}, ${what}${ft}`]));
     if (hm) hm.act = { kind: 'help_wanted', hw: req.id, bot: poster.id, state: 'open', posted: t, until: req.expires };
     emit('chat'); emit('helpWanted', req);
   }

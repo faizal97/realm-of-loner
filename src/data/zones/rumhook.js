@@ -43,7 +43,7 @@
 
   // places
   Object.assign(D.PLACES, {
-    rumhook_bay: { music: 'rumhook', name: 'Rumhook Bay', zone: 'The Vinewild', region: 'stranglethorn', scene: 'rumhook_bay', lvl: [35, 40], safe: true, inn: true, mobs: [], pool: 0,
+    rumhook_bay: { music: 'rumhook', name: 'Rumhook Bay', zone: 'The Vinewild', region: 'stranglethorn', scene: 'rumhook_bay', lvl: [35, 40], safe: true, neutral: true, inn: true, mobs: [], pool: 0,
       npcs: ['rh_nixa', 'rh_gorvo', 'rh_krant', 'rh_tobble', 'rh_vessa', 'rh_riska', 'rh_zan', 'rh_mabbie', 'rh_snik'], vendor: 'rh_mabbie', gearVendor: 'rh_snik',
       links: { saltpenny_wharf: 8, thunderhowl_rise: 16, bloodsand_arena: 10, bonded_yard: 14, gadgetzan: 50 }, via: { gadgetzan: 'Goblin ship' } },
     saltpenny_wharf: { name: 'The Saltpenny Wharf', zone: 'The Vinewild', region: 'stranglethorn', scene: 'saltpenny_wharf', lvl: [35, 36], mobs: [['blackgull_skimmer', 5], ['surf_crawler', 4]], pool: 10, npcs: [], links: { rumhook_bay: 8, blackgull_cove: 16 } },

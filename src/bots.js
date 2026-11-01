@@ -237,6 +237,7 @@
     () => 'is there a way to reset talents',
     () => 'what level can i ride a mount',
     () => 'server feels packed tonight',
+    () => 'server is so quiet today, love it',
     (c) => `${c.mobName} drop rate is a joke`,
     (c) => `who is camping ${c.namedMob}, i've been waiting 20 min`,
     (c) => `died to ${c.namedMob} again. third time today`,
@@ -338,8 +339,8 @@
     (c) => `anyone else doing ${c.zone} quests? so many`, () => 'oom, sitting', () => 'love this spot', () => 'run!!', (c) => `heading back to ${c.town} after this`,
   ];
   const GUILD = [
-    () => 'evening all', () => 'morning guild', () => 'grats on the ding!', () => 'guild bank when', () => 'lol', () => 'gn guys', (c) => `finally ${c.me.level}!`,
-    () => 'that last run was fun', (c) => `who's in ${c.zone}? just got here`, () => 'brb food', () => 'love this guild', () => 'gz on the drop earlier',
+    () => 'evening all', () => 'morning guild', () => 'grats on the ding!', () => 'guild bank when', () => 'gn guys', (c) => `finally ${c.me.level}!`,
+    () => 'that last run was fun', (c) => `who's in ${c.zone}? just got here`, () => 'love this guild', () => 'gz on the drop earlier',
     () => 'our tank is a legend', () => 'rip my repair bill', (c) => `just saw ${c.namedMob} lol, ran away`, () => 'the AH is crazy today',
     () => 'ty for the help earlier', () => 'long day at work, finally home', () => 'what did everyone get from the roulette today?', () => 'weekly goal is getting close',
   ];
@@ -412,6 +413,8 @@
     const zoneMin = {}, regMin = {};
     for (const P of Object.values(D.PLACES)) { const l = P.lvl ? P.lvl[0] : 1; if (P.zone) zoneMin[P.zone] = Math.min(zoneMin[P.zone] || 99, l); if (P.region) regMin[P.region] = Math.min(regMin[P.region] || 99, l); }
     for (const z in zoneMin) put(z, zoneMin[z]);
+    // #70: a place inside a zone at its own level; capitals and neutral towns (Coppergulch, Rumhook Bay) anyone may name
+    for (const P of Object.values(D.PLACES)) if (P.lvl && !P.city && !P.neutral) put(P.name, P.lvl[0]);
     for (const r in D.REGIONS || {}) if (regMin[r]) put(D.REGIONS[r].name, regMin[r]);
     const alts = [...lv.keys()].sort((a, b) => b.length - a.length).map((x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
     return (contentIdx = { lv, re: alts.length ? new RegExp('(^|[^a-z0-9])(' + alts.join('|') + ')s?(?![a-z0-9])', 'gi') : null });
@@ -422,11 +425,76 @@
     while ((m = C.re.exec(String(text)))) { if (C.lv.get(m[2].toLowerCase()) > lvl + 3) return m[2]; if (m[0].length === 0) C.re.lastIndex++; }
     return null;
   };
-  B.lineFits = function (S, text, from) {
+  B.lineFits = function (S, text, from, ch) {
     const G1 = root.G;
     if (G1 && G1.nameable && S.player && !G1.nameable(String(text), S.player.level)) return false;
     const b = from && (from.level != null ? from : S.bots && S.bots.find((x) => x.id === from.id));
-    return !(b && b.level != null && B.contentAbove(text, b.level));
+    if (b && b.level != null && B.contentAbove(text, b.level)) return false;
+    return B.lineTrue(S, text, from, ch);
+  };
+
+  // #70: a line says only true things. Time-of-day words match the player's clock ('tonight' is evening or night);
+  // a busy or quiet server matches the online count (B.serverMood); and a line that remembers the player (names them,
+  // or 'again', 'earlier', 'last time', 'remember' to them in a whisper, the party or the guild) comes only from someone
+  // with a record of them: in the group now, or a friend (a run, trade or help, SOC.isFriend).
+  const TOD = { morning: ['morning'], afternoon: ['afternoon'], evening: ['evening'], night: ['night'], tonight: ['evening', 'night'], gn: ['night'], dinner: ['evening'], breakfast: ['morning'] };
+  const TOD_RE = /\b(tonight|night|morning|afternoon|evening|gn|dinner|breakfast)\b/g;
+  B.timeOfDay = (h) => (h >= 5 && h < 12 ? 'morning' : h >= 12 && h < 17 ? 'afternoon' : h >= 17 && h < 21 ? 'evening' : 'night');
+  B.lineTrue = function (S, text, from, ch) {
+    const s = String(text).toLowerCase(), t = Date.now();
+    const now = B.timeOfDay(new Date(t).getHours());
+    for (const m of s.matchAll(TOD_RE)) if (!TOD[m[1]].includes(now)) return false;
+    if (/\b(server|realm|tonight|today|here)\b/.test(s)) {
+      const busy = /\b(packed|busy|full)\b/.test(s), quiet = /\b(dead|empty|quiet)\b/.test(s);
+      if (busy || quiet) { const mood = B.serverMood(S, t); if (mood !== (busy ? 'busy' : 'quiet')) return false; }
+    }
+    const P = S.player, named = P && P.name && new RegExp('\\b' + P.name.toLowerCase() + '\\b').test(s);
+    if (from && (named || (/\b(again|earlier|last time|remember)\b/.test(s) && ['whisper', 'party', 'guild'].includes(ch)))) {
+      const inGroup = S.group && S.group.members.some((m) => (m.bot && m.bot.id === from.id) || m.name === from.name);
+      const SOC1 = root.SOC;
+      if (!inGroup && !(SOC1 && SOC1.isFriend && SOC1.isFriend(from.id))) return false;
+    }
+    // a bot that posted a group in LFG in the last 10 minutes doesn't post another, or say it found a group (B.lfRecent)
+    if (ch === 'lfg' && from && B.lfRecent(S, from, t) && (LF_RE.test(s) || /\b(already (?:in|got)|full group|grouped|in a run|found a group)\b/.test(s))) return false;
+    return true;
+  };
+  const LF_RE = /\b(lf\d?m|lfg|wanted|missing|need)\b/;
+  B.lfRecent = (S, b, t) => ((S.lfAt || {})[b.id] || 0) > (t || Date.now()) - 600000;
+  // how full the server is: 'busy' with half of it or more online (an evening peak), 'quiet' with 25% or less (night or
+  // morning), else null. From the schedules alone, so a server that grows or shrinks over the week stays honest.
+  B.serverMood = function (S, t) {
+    const all = S.bots.length; if (!all) return null;
+    const f = B.onlineCount(S, new Date(t)) / all;
+    return f >= 0.5 ? 'busy' : f <= 0.25 ? 'quiet' : null;
+  };
+
+  // #70: each template has a stable key ('ga3': GENERAL_ANY's fourth). A template the player heard in the last hour,
+  // or one this bot said among its last 12, isn't picked again; with nothing fresh left, nothing is said.
+  const HEARD_MS = 60 * 60000, BOT_SAID = 12;
+  const keyed = (k, arr) => arr.map((f, i) => [k + i, f]);
+  const wordsKey = (s) => 'w:' + String(s).toLowerCase().replace(/[.!?]+$/, '').trim(); // the same words, from any pool
+  const bandOf = (b) => { const L = b.level || 1; return L < 15 ? 0 : L < 30 ? 1 : L < 45 ? 2 : 3; };
+  B.freshLine = function (S, b, ch, list, c, raw) {
+    const cd = S.chatHeard || {}, t = Date.now(), mine = ((S.botSaid || {})[b.id] || '').split(',');
+    const ok = list.filter(([k]) => !(cd[k] > t - HEARD_MS) && !mine.includes(k));
+    for (let i = 0; i < 6 && ok.length; i++) {
+      const [k, f] = ok.splice(Math.floor(Math.random() * ok.length), 1)[0];
+      const text = raw ? f(c) : sloppy(b, f(c));
+      if (!(cd[wordsKey(text)] > t - HEARD_MS) && B.lineFits(S, text, b, ch)) return { k, text };
+    }
+    return null;
+  };
+  // a reply's or request's words (no bot memory): one not heard in the last hour if any is left, else the one heard longest ago
+  B.pickHeard = function (S, k, arr) {
+    const H = S.chatHeard || (S.chatHeard = {}), t = Date.now(), idx = arr.map((_, i) => i), when = (i) => Math.max(H[k + i] || 0, H[wordsKey(arr[i])] || 0);
+    const fresh = idx.filter((i) => !(when(i) > t - HEARD_MS)), i = fresh.length ? pick(fresh) : idx.reduce((a, b) => (when(b) < when(a) ? b : a));
+    H[k + i] = H[wordsKey(arr[i])] = t; return arr[i];
+  };
+  B.heard = function (S, b, k, text) {
+    const cd = S.chatHeard || (S.chatHeard = {}), t = Date.now();
+    cd[k] = t; if (text) cd[wordsKey(text)] = t; for (const x in cd) if (cd[x] <= t - HEARD_MS) delete cd[x];
+    const said = S.botSaid || (S.botSaid = {});
+    said[b.id] = ((said[b.id] ? said[b.id] + ',' : '') + k).split(',').slice(-BOT_SAID).join(',');
   };
 
   // the content a speaker names (#69): a dungeon or raid near ITS level (raids only at their level), its last boss, and
@@ -441,13 +509,21 @@
 
   // Emit one chat message into S.chat. from: bot | null (system). A bot's line that doesn't fit (#69) is not sent: null
   B.post = function (S, ch, from, text) {
-    if (from && !from.legend && !(S.player && from.name === S.player.name) && !B.lineFits(S, text, from)) return null;
+    if (from && !from.legend && !(S.player && from.name === S.player.name) && !B.lineFits(S, text, from, ch)) return null;
     const m = { id: (S.chatSeq = (S.chatSeq || 0) + 1), t: Date.now(), ch, from: from ? from.name : null, cls: from ? from.cls : null, fromId: from ? from.id : null, text };
     if (from && from.legend) m.legend = true; // a Legend speaks in their own colour
     S.chat.push(m);
+    if (ch === 'lfg' && from && from.id != null && LF_RE.test(String(text).toLowerCase())) { const L = S.lfAt || (S.lfAt = {}); L[from.id] = m.t; for (const k in L) if (L[k] <= m.t - 600000) delete L[k]; } // #70
     if (ch === 'whisper' && from && from.name) S.lastWhisper = from.name;
     if (S.chat.length > 160) S.chat.splice(0, S.chat.length - 160);
     return m;
+  };
+
+  // #70: back from time away. Chat timers (these and social.js's) that came due while you were gone fire over your first
+  // two minutes back instead of all in the first second; what bots said is forgotten for bots that left the server.
+  B.catchUpChat = function (S, t) {
+    for (const T of [S.chatTimers, S.soc && S.soc.next]) if (T) for (const k in T) if (T[k] && T[k] <= t) T[k] = t + Math.random() * 120000;
+    if (S.botSaid) { const ids = new Set(S.bots.map((b) => String(b.id))); for (const k in S.botSaid) if (!ids.has(k)) delete S.botSaid[k]; }
   };
 
   // Called every second. Schedules chatter.
@@ -465,7 +541,8 @@
     // #69: a line names content at the speaker's level (its dungeon or raid, its boss, its level band), and one that
     // still doesn't fit (B.lineFits) is picked again; after six tries nothing is said
     const speak = (b) => { c.me = b; Object.assign(c, botContent(S, b)); return c; };
-    const gen = (b, make) => { for (let i = 0; i < 6; i++) { const t = make(); if (B.lineFits(S, t, b)) return t; } return null; };
+    // one line from b on ch: a fresh template (B.freshLine) filled for b, posted; its text, or null when nothing fits
+    const line = (b, ch, lists, raw) => { speak(b); const r = B.freshLine(S, b, ch, [].concat(...lists), c, raw); if (!r || !B.post(S, ch, b, r.text)) return null; B.heard(S, b, r.k, r.text); return r.text; };
 
     if (S.pending && S.pending.length) {
       const ready = S.pending.filter((p) => p.at <= now);
@@ -478,42 +555,35 @@
         if (p.onPost) p.onPost(bot);
       }
     }
-    if (due('general', 9, 22)) {
-      const b = onl(); speak(b);
-      const pool = GENERAL_ANY.concat(c.horde ? GENERAL_HORDE : GENERAL_ALLI, GENERAL_BAND[c.band], GENERAL_BAND[c.band]);
-      const text = gen(b, () => sloppy(b, pick(pool)(c))) || '';
-      if (text) B.post(S, 'general', b, text);
+    // #70: about half the old volume (General every 18–44 s at a quiet hour, not 9–22), and each line a fresh template
+    if (due('general', 18, 44)) {
+      const b = onl();
+      const text = line(b, 'general', [keyed('ga', GENERAL_ANY), c.horde ? keyed('gh', GENERAL_HORDE) : keyed('gl', GENERAL_ALLI), keyed('gb' + bandOf(b) + '.', GENERAL_BAND[bandOf(b)])]) || '';
       // sometimes someone answers
       for (const A of ANSWERS) {
         const mm = lower(text).match(A.q);
         if (mm && chance(0.75)) {
           const r = onl();
           S.pending = S.pending || [];
-          S.pending.push({ at: now + 2500 + Math.random() * 5000, bot: r.id, ch: 'general', text: sloppy(r, pick(A.a(mm))) });
+          S.pending.push({ at: now + 2500 + Math.random() * 5000, bot: r.id, ch: 'general', text: sloppy(r, B.pickHeard(S, 'an' + ANSWERS.indexOf(A) + '.', A.a(mm))) });
           break;
         }
       }
     }
-    if (S.player.level >= 8 && due('lfg', 40, 90)) {
-      const b = onl(); speak(b);
-      const text = b.level >= 6 ? gen(b, () => sloppy(b, pick(LFG_CHATTER)(c))) : null;
-      if (text) {
-        B.post(S, 'lfg', b, text);
-        for (const A of ANSWERS) { const mm = lower(text).match(A.q); if (mm && chance(0.6)) { const r = onl(); S.pending = S.pending || []; S.pending.push({ at: now + 3000 + Math.random() * 5000, bot: r.id, ch: 'lfg', text: sloppy(r, pick(A.a(mm))) }); break; } }
-      }
+    if (S.player.level >= 8 && due('lfg', 80, 180)) {
+      const b = onl();
+      const text = b.level >= 6 ? line(b, 'lfg', [keyed('lf', LFG_CHATTER)]) : null;
+      if (text) for (const A of ANSWERS) { const mm = lower(text).match(A.q); if (mm && chance(0.6)) { const r = onl(); S.pending = S.pending || []; S.pending.push({ at: now + 3000 + Math.random() * 5000, bot: r.id, ch: 'lfg', text: sloppy(r, B.pickHeard(S, 'an' + ANSWERS.indexOf(A) + '.', A.a(mm))) }); break; } }
     }
-    if (due('say', 16, 38)) {
+    if (due('say', 32, 76)) {
       const near = B.onlineIn(S, S.player.place, date).filter((b) => B.factionOf(b) === B.factionOf(S.player));
-      if (near.length && !D.PLACES[S.player.place].safe || near.length > 2) { const b = pick(near.length ? near : [onl()]); speak(b); const t = gen(b, () => sloppy(b, pick(SAY_NEAR)(c))); if (t) B.post(S, 'say', b, t); }
+      if (near.length && !D.PLACES[S.player.place].safe || near.length > 2) line(pick(near.length ? near : [onl()]), 'say', [keyed('sn', SAY_NEAR)]);
     }
-    if (S.player.guild != null && S.player.guild >= 0 && due('guild', 30, 70)) {
+    if (S.player.guild != null && S.player.guild >= 0 && due('guild', 60, 140)) {
       const mates = S.bots.filter((b) => b.guild === S.player.guild && B.isOnline(b, date));
-      if (mates.length) { const b = pick(mates); speak(b); const t = gen(b, () => sloppy(b, pick(GUILD)(c))); if (t) B.post(S, 'guild', b, t); }
+      if (mates.length) line(pick(mates), 'guild', [keyed('gu', GUILD)]);
     }
-    if (due('whisper', 200, 480)) {
-      const b = onl(); speak(b);
-      const t = gen(b, () => pick(WHISPER)(c)); if (t) B.post(S, 'whisper', b, t);
-    }
+    if (due('whisper', 400, 960)) line(onl(), 'whisper', [keyed('wh', WHISPER)], true);
   };
 
   // The player typed something. Bots may react.
