@@ -114,6 +114,7 @@ for (const act of ACTS) for (const cls of CLS) {
   if (!rs.length) continue;
   const won = rs.map((r) => r.atts.filter((a) => a.res === 'win')), allWon = won.flat(), fights = rs.map((r) => r.atts).flat();
   const closest = rs.map((r, i) => won[i].slice().sort((a, b) => a.g - b.g)[0]).filter(Boolean);
+  if (process.env.LOSTAT) { const by = {}; for (const a of fights) if (a.res === 'lose') { const pl = (D.ACTIVITIES[act].dungeon ? D.DUNGEONS[D.ACTIVITIES[act].dungeon] : D.ACTIVITIES[act]).pulls[a.idx] || {}, k = `${a.idx + 1} ${pl.label || '?'}`; by[k] = (by[k] || 0) + 1; } console.log(`lost fights by pull (${act} ${cls}): ${JSON.stringify(by)}`); } // LOSTAT=1: where a run's lost fights happen, by pull
   const worst = closest.slice().sort((a, b) => a.g - b.g)[0];
   const row = { act, cls, profile: PROFILE, runs: rs.length, cleared: rs.filter((r) => r.done).length, wipeRuns: rs.filter((r) => r.wipes > 0).length, wipes: rs.reduce((a, r) => a + r.wipes, 0) / rs.length,
     fights: fights.length, lost: fights.filter((a) => a.res === 'lose').length, deathInWin: allWon.filter((a) => a.dead > 0).length, won: allWon.length,

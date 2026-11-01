@@ -70,7 +70,7 @@
       commander_serathis: [{ kind: 'hit', tele: true, miss: 4, name: 'Courtyard Wave', every: 14, mult: 0.45, who: 'all', school: 'frost', text: 'Serathis raises a wave over the courtyard!' }],
       tide_twin_myrel: [{ kind: 'heal', tele: true, miss: 2.5, name: 'Rising Tide', every: 18, heal: 0.03, text: 'The rising tide gathers around Myrel!' }],
       tide_twin_sorin: [{ kind: 'enrage', at: 0.3, mult: 1.3, text: 'Sorin fights harder as the tide falls!' }],
-      coralheart_colossus: [{ kind: 'adds', at: 0.5, mob: 'abyssal_spawn', n: 2, lvl: 0, text: 'Two spawn of the deep crawl out of the Colossus!' }],
+      coralheart_colossus: [{ kind: 'adds', at: 0.5, mob: 'abyssal_spawn', n: 1, lvl: 0, text: 'A spawn of the deep crawls out of the Colossus!' }], // one add: two made the Colossus 166 of 182 lost Hard fights (#298 sim, Hard 78% -> 60%)
       prince_aeldran: [{ kind: 'enrage', at: 0.3, mult: 1.25, text: 'Aeldran fights with ten thousand years of grief!' }],
       nalveshra: [{ kind: 'hit', tele: true, miss: 4, name: 'Deep Tendril', every: 12, mult: 1, who: 'random', school: 'shadow', text: 'A tendril rises from the deep!' }],
     } } },
