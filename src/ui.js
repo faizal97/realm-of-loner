@@ -1503,7 +1503,7 @@
     const go = () => { closeDialog(); G.leaveGroup(); renderAll(); if (typeof after === 'function') after(); };
     if (!R || R.phase === 'done') return go();
     const left = R.pulls.length - R.idx;
-    showDialog([h('h3', null, `Leave ${R.name}?`), h('p', null, `${left} pull${left === 1 ? '' : 's'} left. Leaving now gives Deserter: no groups for 10 min.`),
+    showDialog([h('h3', null, `Leave ${R.name}?`), h('p', null, `${left} pull${left === 1 ? '' : 's'} left. ${G.deserterFor(R) ? `Leaving now gives Deserter: no groups for ${G.deserterFor(R) / 60000} min.` : 'No Deserter: the group has wiped.'}`),
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: go }, 'Leave'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Stay'))], true);
   }
   function runPanel(p) {

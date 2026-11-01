@@ -3236,8 +3236,9 @@
   G.setRole = function (r) { if (G.roles().includes(r) && !G.S.queue && !G.S.run) { G.S.player.role = r; emit('change'); } };
   // Group finder rules (2026-09-27): any faction may run any dungeon or elite, but only from its zone:
   // you have to be there. Places you have no road to yet stay hidden (the factions' roads meet in later zones).
-  // Leaving a run early = deserter.
-  const DESERTER = 10 * 60000;
+  // Leaving a run early = deserter: 5 min, none once the group has wiped (#283: a wipe is a fair reason to go)
+  const DESERTER = 5 * 60000;
+  G.deserterFor = (R) => (!R || R.phase === 'done' || R.wipes > 0 ? 0 : DESERTER);
   const reach = {};
   G.reachableRegions = function (from) {
     const key = from + ':' + G.myFaction() + ':' + (G.stormBroken() ? 1 : 0);
@@ -4113,8 +4114,9 @@
       if (S.run.phase !== 'done' && S.group) {
         const m = S.group.members.find((x) => !x.gone);
         if (m) partySay(m, pick(['wait what', 'bye then', 'k', 'rip']));
-        S.flags.deserterUntil = now() + DESERTER;
-        sys('You left before the end: Deserter for 10 minutes.');
+        const ms = G.deserterFor(S.run);
+        if (ms) { S.flags.deserterUntil = now() + ms; sys(`You left before the end: Deserter for ${ms / 60000} minutes.`); }
+        else sys('You left after a wipe: no Deserter.');
       }
       S.player.place = S.run.returnTo || 'goldshire';
     }
