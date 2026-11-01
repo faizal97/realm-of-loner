@@ -157,10 +157,10 @@ test('the engine: a heal on another creature and a countdown that starts at a he
   for (let i = 0; i < 40; i++) E.tick(C, 0.1);
   assert.ok(hound.dead || hound.hp > before, 'Frost Mend heals the hound');
   const g = E.mobUnit('ln_cold_guest', 30); g.hardX = [{ kind: 'countdown', at: 0.3, secs: 5, mult: 3 }];
-  const C2 = E.fight([E.charUnit(G.S.player, 'ally', 'player', 0)], [g], {});
+  const me = E.charUnit(G.S.player, 'ally', 'player', 0), C2 = E.fight([me], [g], {});
   g.hp = g.maxHp * 0.25; E.tick(C2, 0.1); assert.ok(g.hardX[0].start != null, 'the countdown starts below 30%');
-  g.hp = g.maxHp; // kept alive
-  for (let i = 0; i < 60; i++) { E.tick(C2, 0.1); g.hp = g.maxHp; }
+  g.hp = g.maxHp; // both kept alive: the test is the countdown, not who wins
+  for (let i = 0; i < 60; i++) { E.tick(C2, 0.1); g.hp = g.maxHp; me.hp = me.maxHp; }
   assert.ok((g.enrage || 1) >= 3, 'midnight: the enrage');
 });
 

@@ -40,8 +40,9 @@
         race, pet: (C.pets || []).includes('imp') ? { type: 'imp', name: pick(D.PETS.imp.names), hp: null } : null, // only a class whose pets include the imp (#34: Hunters started with one); a Hunter tames at 10
         quests: {}, done: {}, auras: [], hearthAt: 0, guild: -1, kills: 0, deaths: 0, visited: { [start]: true }, played: 0,
       },
-      world: {}, bots: B.makePopulation(260), chat: [], news: [], pending: [], group: null, queue: null, run: null, flags: {},
+      world: {}, bots: null, chat: [], news: [], pending: [], group: null, queue: null, run: null, flags: {},
     };
+    joinRoster(S); // #71: the account's realm (made here, as before, the first time)
     G.S = S;
     const u = E.charUnit(G.charOf(), 'ally', 'player', t);
     S.player.hp = u.maxHp; S.player.res = u.resType === 'rage' ? 0 : u.maxRes;
@@ -69,12 +70,54 @@
     const P = S.player;
     return { id: S.id, name: P.name, cls: P.cls, race: P.race || 'human', gear: G.gearLooks(P), level: P.level, place: P.place, skin: P.skin, hair: P.hair, gender: P.gender, lastSeen: S.lastSeen || now(), created: S.created };
   }
+  // #71: one realm per account. The bots (the roster), the server's records and its clock live once under azsolo.roster,
+  // so every character meets the same people (each sees its own faction's half, as before). A character's save still
+  // carries a copy of the bots (older builds and save codes read it); on load it only brings that character's friends
+  // into the roster by name, so a friend from another character, another device or an older save is never lost.
+  // The first time, the oldest character's realm becomes the account's. Same name, same person: ids are remapped by name.
+  const ROSTER_KEY = 'azsolo.roster';
+  const readRoster = () => { try { return JSON.parse(ls.get(ROSTER_KEY) || 'null'); } catch (e) { return null; } };
+  function joinRoster(S) {
+    const own = Array.isArray(S.bots) ? S.bots : [];
+    let R = readRoster();
+    if (!R || !Array.isArray(R.bots)) {
+      const saves = readIndex().filter((c) => c.id !== S.id).map((c) => G.readSave(c.id)).concat([S]).filter((x) => x && Array.isArray(x.bots) && x.bots.length);
+      const src = saves.sort((a, b) => (a.created || 0) - (b.created || 0))[0];
+      R = src ? { v: 1, from: src.id, bots: src.bots, nextBotId: src.nextBotId || 1000, lastSim: src.lastSim || now(), server: src.server || {} }
+        : { v: 1, from: S.id, bots: B.makePopulation(260), nextBotId: 1000, lastSim: S.lastSim || now(), server: {} };
+    }
+    const byName = new Map(R.bots.map((b) => [b.name, b])), byId = new Map(own.map((b) => [String(b.id), b]));
+    const soc = S.soc, f = soc && soc.friends;
+    if (f) {
+      const nf = {};
+      for (const id of Object.keys(f)) {
+        const o = byId.get(id); let b = o ? byName.get(o.name) : R.bots.find((x) => String(x.id) === id);
+        if (!b && o) { b = Object.assign({}, o, { id: R.nextBotId++ }); R.bots.push(b); byName.set(b.name, b); } // a friend never vanishes: they join the realm
+        if (b) nf[b.id] = f[id];
+      }
+      soc.friends = nf;
+    }
+    // anything this save remembers by a bot's id now names the roster's person of that name (or no one)
+    if (own.some((o) => { const b = byName.get(o.name); return !b || b.id !== o.id; })) {
+      delete S.botSaid; delete S.lfAt;
+      for (const m of S.chat || []) { if (m.fromId != null) { const b = byName.get(m.from); m.fromId = b ? b.id : null; } if (m.act && m.act.state === 'open') m.act.state = 'expired'; }
+    }
+    S.bots = R.bots; S.server = R.server || (R.server = {}); S.lastSim = R.lastSim; S.nextBotId = Math.max(R.nextBotId, 1000);
+    S.flags = S.flags || {}; S.flags.roster = true;
+    G.R = R; saveRoster(S);
+  }
+  function saveRoster(S) {
+    const R = G.R; if (!R || R.bots !== S.bots) return;
+    R.lastSim = S.lastSim; R.nextBotId = S.nextBotId; R.server = S.server;
+    ls.set(ROSTER_KEY, JSON.stringify(R));
+  }
   G.characters = function () { migrate(); return readIndex().sort((a, b) => b.lastSeen - a.lastSeen); };
   G.save = function () {
     if (!G.S) return;
     G.S.lastSeen = now();
     if (G.fight && G.pUnit) E.writeBack(G.fight, G.pUnit, now(), true); // the fight goes on: don't shift it out (#217)
     ls.set(CHAR_KEY(G.S.id), JSON.stringify(G.S));
+    saveRoster(G.S);
     const idx = readIndex().filter((c) => c.id !== G.S.id); idx.push(summary(G.S)); writeIndex(idx);
   };
   G.hasSave = function () { return G.characters().length > 0; };
@@ -105,6 +148,7 @@
     if (!S.id) S.id = id;
     G.fight = null; G.pUnit = null;
     S.pending = []; S.chatTimers = {};
+    joinRoster(S); // #71
     if (S.run && S.run.phase === 'fight') S.run.phase = 'rest', S.run.restUntil = now() + 3000;
     try { G.refreshHeirlooms(); } catch (e) { /* older save */ }
     pruneBounties(); // #154
@@ -248,7 +292,7 @@
       report.rested = Math.round(P.rested - before);
       const startLv = {};
       for (const b of S.bots) startLv[b.id] = b.level;
-      report.news = B.advance(S, away);
+      report.news = B.advance(S, Math.max(0, t - S.lastSim)); // #71: the realm's own clock: another character may have moved it on
       B.catchUpChat(S, t); // #70
       report.dings = S.bots.filter((b) => startLv[b.id] != null && b.level > startLv[b.id]).length;
       // regen fully

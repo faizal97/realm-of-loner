@@ -36,7 +36,7 @@ test('the pull rule is the old one: topped matches the pre-#159 check on 300 ran
 test('marks: a member short of mana has none and the line names them with the numbers; topped up, everyone gets one', () => {
   const { P, S, R } = resting('mage'); R.pace = 'normal'; fill(S, P);
   const m = manaMember(S); assert.ok(m, 'a mana user in the group');
-  const st0 = E.statsFor(m); m.res = st0.maxMana * 0.32;
+  const st0 = E.statsFor(m); m.res = Math.ceil(st0.maxMana * 0.32); // whole points, so 32% reads 32% for any max mana (0.32 × an odd max can fall a hair short)
   let st = G.restState();
   const row = st.rows.find((r) => r.char === m);
   assert.strictEqual(row.ready, false);
