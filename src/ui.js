@@ -1229,6 +1229,8 @@
   const clockAt = (kind) => { const w = G.whenText(G.nextChange(kind)); return (w === 'midnight' || w.includes(':') ? 'at ' : 'on ') + w; };
   // a rare hunt that isn't up: still due in this window, or back in the next one
   const huntNext = (key) => { const t = Date.now(), hn = G.huntNow(key, t), P = G.S.player, gone = t >= hn.end || (P.huntKilled && P.huntKilled[key] === hn.w); return gone ? `next window ${G.whenText(G.nextChange('hunt', t), t)}` : `due by ${G.whenText(G.nextChange('hunt', t), t)}`; };
+  // a bounty's pay as one line (#184): XP below 60, an extra Mentor Mark at 60
+  const bountyPaidText = (rw, money, weekly) => { const pay = G.bountyPay(rw, weekly); return [pay.xp ? `${pay.xp} XP` : null, G.moneyText(money), pay.marks ? `${pay.marks} Mentor Mark${pay.marks === 1 ? '' : 's'}` : null, weekly ? 'bonus gear' : null].filter(Boolean).join(' · '); };
   // the hub's board: 3 daily bounties and 1 weekly, rotating with the real date
   function openBountyBoard() {
     openSheet('bounty', 'Bounty Board', `${D.PLACES[G.S.player.place].name} · new ${clockAt('day')} · weekly ${clockAt('week')} · hold up to 6`, (b) => {
@@ -1242,7 +1244,7 @@
           if (st !== 'available' && st !== 'complete') { const x = G.myBounties().find((m) => m.id === bb.id); if (x) return openSheet('quest', `${x.weekly ? 'Weekly bounty' : 'Bounty'}: ${D.MOBS[x.mob].name}`, x.hubName, (bd) => bd.append(...bountyDetail(x))); }
           if (st === 'available') G.acceptBounty(bb); else if (st === 'complete') G.turnInBounty(bb); ui.sheetFn(); renderPanel(); } },
           h('div', { class: 'ic mob' }, img(mobArt(bb.mob))),
-          h('div', { class: 't' }, h('b', null, `${bb.weekly ? 'Weekly: ' : ''}${bb.n} ${D.MOBS[bb.mob].name}`), h('small', { style: { whiteSpace: 'normal' } }, `${bb.xp} XP · ${G.moneyText(bb.money)} · ${bb.marks} Mentor Marks${bb.weekly ? ' · bonus gear' : ''}`)),
+          h('div', { class: 't' }, h('b', null, `${bb.weekly ? 'Weekly: ' : ''}${bb.n} ${D.MOBS[bb.mob].name}`), h('small', { style: { whiteSpace: 'normal' } }, bountyPaidText(bb, bb.money, bb.weekly))),
           h('div', { class: 'r' }, h('span', { class: st === 'complete' ? 'pill ready' : 'pill' }, label))));
       }
       b.append(list, h('p', { class: 'ai-note' }, 'Taken bounties track in your Quest Log. Hunt anywhere in this zone, then hand in here.'));
@@ -2197,6 +2199,7 @@
     t.append(h('div', { class: 'nm q' + it.q }, it.name));
     const upi = D.GEAR_SLOTS.includes(it.slot) ? G.upgradeInfo(it) : null;
     if (it.hard) t.append(h('div', { class: 'st', style: { color: '#ff8a5a' } }, `Dropped on Hard: ${G.HARD_STEPS} upgrade steps up`));
+    if (it.trial60) t.append(h('div', { class: 'st', style: { color: 'var(--gold)' } }, 'Trial find: level 60'));
     if (upi && upi.ok) { // #284: says what 100% is, and how it rises
       t.append(h('div', { class: 'st', style: { color: '#7fd4ff' } }, `Power: ${upi.pct}% of newest raid gear${upi.room ? (upi.capPct < 100 ? ` · max ${upi.capPct}%` : '') : ' (max)'}`));
       if (upi.room) t.append(h('div', { class: 'st', style: { color: '#7fd4ff', opacity: 0.75 } }, 'Mentor Marks raise it, up to the max.'));
@@ -2725,7 +2728,7 @@
         x.hub !== P.place || P.travel ? h('button', { class: 'chip gold', style: { marginLeft: '6px' }, onclick: () => routeDialog(x.hub) }, 'Show the way') : null) : null,
       h('p', { class: 'ai-note' }, x.weekly ? `Lapses ${clockAt('week')}.` : `Lapses ${clockAt('day')}.`),
       h('h4', null, 'Rewards'),
-      h('div', { class: 'money', html: `${rw.xp || 0} experience · ` + moneyHtml(rw.money || 0) + (rw.marks ? ` · ${rw.marks} Mentor Marks` : '') + (x.weekly ? ' · bonus gear' : '') }));
+      h('div', { class: 'money', html: (() => { const pay = G.bountyPay(rw, x.weekly); return (pay.xp ? `${pay.xp} experience · ` : '') + moneyHtml(rw.money || 0) + (pay.marks ? ` · ${pay.marks} Mentor Mark${pay.marks === 1 ? '' : 's'}` : '') + (x.weekly ? ' · bonus gear' : ''); })() }));
     const back = () => sheetBack(openQuests);
     const btns = h('div', { class: 'btn-row' });
     if (x.complete && x.hub === P.place && !P.travel) btns.append(h('button', { class: 'btn', onclick: () => { G.turnInBounty({ id: x.id }); back(); renderPanel(); } }, 'Hand in'));

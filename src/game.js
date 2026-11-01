@@ -1433,18 +1433,18 @@
     P.bounty[b.id] = { mob: b.mob, n: b.n, prog: 0, done: false, weekly: b.weekly, day: b.weekly ? weekKey() : dayKey(), reward: { xp: b.xp, money: b.money, marks: b.marks } };
     sys(`Bounty accepted: ${b.n} ${D.MOBS[b.mob].name}.`); toast('Bounty accepted: added to your Quest Log.'); emit('change'); // #135: a sign where you tapped
   };
+  // what a bounty pays besides money (#184): XP below 60; at 60 the XP becomes +1 Mentor Mark, so nothing says "0 XP"
+  G.bountyPay = (rw, weekly) => (G.S.player.level >= D.LEVEL_CAP ? { xp: 0, marks: (rw.marks || 0) + 1 } : { xp: rw.xp || 0, marks: rw.marks || 0 });
   G.turnInBounty = function (b) {
     const P = G.S.player, st = (P.bounty || {})[b.id]; if (!st || st.prog < st.n || st.done) return;
-    // a weekly bounty gives gear: with no room it pays nothing and stays Ready, as a quest with an item reward does (#128)
-    if (st.weekly && G.bagsFull()) return toast('Make room in your bags first: this bounty gives an item.');
     st.done = true;
     P.money += st.reward.money; sys(`Bounty complete: ${D.MOBS[st.mob].name}. You receive ${G.moneyText(st.reward.money)}.`);
-    const xp = G.gainXp(st.reward.xp, false) || 0;
-    if (st.reward.marks) G.addMarks(st.reward.marks, st.weekly ? 'weekly bounty' : 'bounty');
-    let gear = false; // chat and the toast name the gear only once it is in the bags (#128)
-    if (st.weekly) { const it = G.genGear(pick(D.GEAR_SLOTS), P.level, 2); gear = G.addItem(it, 1); if (gear) loot(`Weekly bounty bonus: ${B.link(it.name, it.q)}.`); }
+    const pay = G.bountyPay(st.reward, st.weekly), xp = pay.xp ? G.gainXp(pay.xp, false) || 0 : 0;
+    if (pay.marks) G.addMarks(pay.marks, st.weekly ? 'weekly bounty' : 'bounty');
+    let gear = false; // the weekly's bonus fits your class (#184): a level-60 blue at 60, else a green; full bags send it to the bank
+    if (st.weekly) { const it = P.level >= D.LEVEL_CAP ? G.fittedGear(D.LEVEL_CAP, 3, P.cls) : G.fittedGear(P.level, 2, P.cls); G.giveReward(it, 'Weekly bounty bonus'); gear = true; loot(`Weekly bounty bonus: ${B.link(it.name, it.q)}.`); }
     // the line the screen shows (#115): a bounty says so, with what it paid; it used to show "Quest complete"
-    const paid = [xp ? `${xp} XP` : null, G.moneyText(st.reward.money), st.reward.marks ? `${st.reward.marks} Mentor Marks` : null, gear ? 'bonus gear' : null].filter(Boolean);
+    const paid = [xp ? `${xp} XP` : null, G.moneyText(st.reward.money), pay.marks ? `${pay.marks} Mentor Mark${pay.marks === 1 ? '' : 's'}` : null, gear ? 'bonus gear' : null].filter(Boolean);
     emit('questDone', { bounty: true, text: `Bounty complete: ${D.MOBS[st.mob].name} · ${paid.join(' · ')}` }); emit('change'); G.save();
   };
   // v10.1.1: the board shows like a quest giver (! something to take, ? something to hand in), and the bounties you
@@ -2641,7 +2641,7 @@
       S.flags.rouletteDay = dayKey(); S.flags.rouletteLocal = true;
       G.addMarks(15, 'daily Roulette');
       const A = D.ACTIVITIES[R.act], Dg = D.DUNGEONS[A.dungeon];
-      { const it = G.fittedBossBlue(Dg, L, P.cls); G.giveReward(it, 'Roulette bonus'); loot(`Roulette bonus: ${B.link(it.name, it.q)}.`); } // fits your class, never lost (issue #13)
+      { const it = P.level >= D.LEVEL_CAP ? G.fittedGear(D.LEVEL_CAP, 3, P.cls) : G.fittedBossBlue(Dg, L, P.cls); G.giveReward(it, 'Roulette bonus'); loot(`Roulette bonus: ${B.link(it.name, it.q)}.`); } // fits your class, never lost (issue #13)
       P.money += L * 150; loot(`Roulette bonus: ${G.moneyText(L * 150)}.`);
     }
   }
@@ -3506,6 +3506,21 @@
     if (it.look) out.look = [it.look[0], it.look[1] + '_hard']; // the Hard recolour of the raid's set
     return out;
   };
+  // Trial loot (#184): a Trial's final boss drops its blue-or-better items as level-60 items, the dungeon's own (name, look,
+  // stat mix) scaled to the power of a level-60 dungeon blue of that slot and kind, never above it (raids stay the top, #180)
+  G.trialCopy = function (id) {
+    const it = G.copyItem(id), L = D.LEVEL_CAP;
+    if (!(it.q >= 3) || (it.lvl || 0) >= L || !D.GEAR_SLOTS.includes(it.slot)) return it;
+    const ref = G.genGear(it.slot, L, 3, it.wtype ? { wtype: it.wtype } : it.atype ? { atype: it.atype } : {}), p0 = G.itemPoints(it), f = p0 > 0 ? G.itemPoints(ref) / p0 : 1;
+    if (f > 1) {
+      for (const k in it.stats || {}) it.stats[k] = Math.max(1, Math.round(it.stats[k] * f));
+      if (it.sp) it.sp = Math.round(it.sp * f);
+    }
+    if (it.armor && ref.armor > it.armor) it.armor = ref.armor; // armour and weapon damage: a level-60 blue's, at the item's own speed
+    if (it.dmg && ref.dmg) { const dps = (ref.dmg[0] + ref.dmg[1]) / 2 / ref.speed, sp = it.speed || ref.speed, d = [Math.max(1, Math.round(dps * sp * 0.7)), Math.max(2, Math.round(dps * sp * 1.3))]; if (d[0] + d[1] > it.dmg[0] + it.dmg[1]) it.dmg = d; }
+    it.lvl = L; it.sell = Math.max(it.sell || 0, ref.sell); it.trial60 = true;
+    return it;
+  };
   G.queueFor = function (act, opts) {
     const S = G.S, A = D.ACTIVITIES[act], hard = !!(opts && opts.hard);
     const why = G.activityBlock(act);
@@ -3831,7 +3846,8 @@
         const wbA = D.ACTIVITIES[R.act].worldBoss, wbFirst = wbA && !G.worldBossLooted(R.act);
         if (wbA) { if (wbFirst) { const w = G.raidWeek(); (w.wb = w.wb || {})[R.act] = true; G.addMarks(G.WB_MARKS, 'this week\'s world boss'); } else sys(`${M.name}'s loot is taken this week: it drops again on Monday.`); }
         if (wbA) G.takeTrophy(D.ACTIVITIES[R.act].boss); // first kill by any character (#44)
-        const drops = wbA && !wbFirst ? [] : table.slice(0, 2).map(bonus ? G.hardCopy : G.copyItem);
+        const lastBoss = R.pulls.map((p) => !!p.boss).lastIndexOf(true) === R.idx;
+        const drops = wbA && !wbFirst ? [] : table.slice(0, 2).map(bonus ? G.hardCopy : R.trial && lastBoss ? G.trialCopy : G.copyItem); // a Trial's final boss: level 60 (#184)
         if (R.hard) { if (bonus) { G.raidWeek().got[R.act + ':' + pull.mobs[0]] = true; sys(`Hard bonus: ${M.name}'s loot is ${G.HARD_STEPS} upgrade steps higher (weekly).`); } else sys(`${M.name}: Hard bonus already taken this week. Resets Monday.`); }
         for (const it of drops) addRoll(it);
         const rr = G.rareRecipeDrop(G.syncLevel(R.act)); if (rr) addRoll(rr);

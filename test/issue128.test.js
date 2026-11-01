@@ -1,6 +1,6 @@
 // A weekly bounty's bonus gear is never lost to full bags (#128). As a quest turn-in with an item reward does, and the
-// heirloom vendor since #87: with no room, the hand-in pays nothing, the bounty stays Ready and the player is told to make
-// room; with room, everything is paid and the gear is in the bags. Chat and the hand-in toast only name what arrived.
+// heirloom vendor since #87; since #184 full bags send the gear to the bank (the #164 rule); with room, everything is
+// paid and the gear is in the bags. Chat and the hand-in toast only name what arrived.
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert');
@@ -19,15 +19,15 @@ function weeklyDone(free) {
   return { P, b, acct: () => G.account().marks };
 }
 
-test('full bags: a weekly bounty with bonus gear pays nothing, stays Ready, and says to make room', () => {
+test('full bags: a weekly bounty hands in and its bonus gear goes to the bank (#184, the #164 rule)', () => {
   const { P, b, acct } = weeklyDone(0);
-  const money = P.money, xp = P.xp, lvl = P.level, marks = acct(), bags = P.bags.length, chat = G.S.chat.length;
+  const money = P.money, marks = acct(), bags = P.bags.length, bank = (P.bank || []).length;
   G.turnInBounty(b);
-  assert.deepStrictEqual([P.money, P.xp, P.level, acct(), P.bags.length], [money, xp, lvl, marks, bags], 'nothing paid, nothing taken');
-  assert.strictEqual(G.bountyState(b), 'complete', 'still Ready to hand in');
-  assert.deepStrictEqual(toasts, ['Make room in your bags first: this bounty gives an item.']);
-  assert.deepStrictEqual(lines, [], 'no "Bounty complete"');
-  assert.ok(!G.S.chat.slice(chat).some((m) => /bounty/i.test(m.text || '')), 'chat claims nothing');
+  assert.strictEqual(G.bountyState(b), 'done');
+  assert.ok(P.money > money && acct() > marks, 'money and Marks paid');
+  assert.strictEqual(P.bags.length, bags, 'bags unchanged');
+  assert.strictEqual(P.bank.length, bank + 1, 'the gear is in the bank');
+  assert.ok(G.S.chat.some((m) => /went to your bank/.test(m.text || '')), 'chat says where it went');
 });
 
 test('one free slot: everything is paid and the gear is in the bags, and chat and the toast name it', () => {
