@@ -20,6 +20,17 @@ const ROOT = process.env.ROOT || require('path').join(__dirname, '..');
 globalThis.localStorage = { getItem() { return null; }, setItem() {}, removeItem() {} };
 for (const f of ['data', 'engine', 'bots', 'game']) require(ROOT + '/src/' + f + '.js');
 require(ROOT + '/src/trials.js');
+// TELESTAT=1: every red bar the runs saw, by its answer and name: started, cut (an interrupt or stun), landed; for a slam on
+// the tank, how many were braced (its defensive), mended (a healer's shield) and kicked (others' interrupts), and how many
+// had no answer at all (a player report, #294)
+const TS = {}; if (process.env.TELESTAT) {
+  const cur = {}, row = (k) => (TS[k] = TS[k] || { start: 0, cut: 0, land: 0, braced: 0, mended: 0, kicked: 0, none: 0 });
+  const close = (src) => { const c = cur[src]; if (!c) return; const r = row(c.k); r.braced += c.brace; r.mended += c.mend; r.kicked += c.kicks > 0 ? 1 : 0; if (!c.brace && !c.mend && !c.kicks && !c.cut) r.none++; delete cur[src]; };
+  globalThis.G.on('combat', (evs) => { for (const e of evs || []) { if (e.type !== 'tele') continue;
+    if (e.what === 'start') { close(e.src); cur[e.src] = { k: (e.ans || '?') + ' ' + e.name, brace: 0, mend: 0, kicks: 0, cut: 0 }; row(cur[e.src].k).start++; continue; }
+    const c = cur[e.src]; if (!c) continue;
+    if (e.what === 'brace' || e.what === 'dodge') c.brace = 1; else if (e.what === 'mend') c.mend = 1; else if (e.what === 'kick') c.kicks++; else if (e.what === 'cut') { c.cut = 1; row(c.k).cut++; close(e.src); } else if (e.what === 'land') row(c.k).land++; } }); // a bar's tally closes at its caster's next bar (dodges and braces as it lands come after 'land')
+  process.on('exit', () => { for (const k of Object.keys(cur)) close(k); console.log('red bars (answer name: started; cut; braced or dodged, mended, kicked at least once; no answer at all):'); for (const [k, r] of Object.entries(TS).sort((a, b) => b[1].start - a[1].start)) { const pc = (n) => `${n} (${r.start ? Math.round((n / r.start) * 100) : 0}%)`; console.log(`  ${k}: ${r.start}; cut ${pc(r.cut)}; braced or dodged ${pc(r.braced)}, mended ${pc(r.mended)}, kicked ${pc(r.kicked)}; no answer ${pc(r.none)}`); } }); }
 const { G, D } = globalThis;
 const RealDate = Date; let t = process.env.DATE ? new RealDate(process.env.DATE).getTime() : new RealDate(2026, 9, 14, 19).getTime(); // DATE=2026-10-28T19:00 plays on that day (a festival run needs its dates, v10.13)
 globalThis.Date = class extends RealDate { constructor(...a) { if (a.length) super(...a); else super(t); } static now() { return t; } };

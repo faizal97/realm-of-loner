@@ -79,10 +79,10 @@
     name: 'The Snuffed Road', where: 'stormwind', size: 5, minLvl: 10, maxLvl: 60, event: 'lanternwake', scale: true, music: 'lanternwake', since: '2026-10-24',
     desc: 'Lanternwake. 5 players, fought at your own level. The Wickless Knight puts out every lantern he passes.',
     boss: 'wickless_knight',
-    trashMult: { hp: 2.2, dmg: 2.2 }, bossMult: { hp: 7, dmg: 3.6 },
-    hard: { trashMult: { hp: 2.4, dmg: 2.4 }, bossMult: { hp: 7.4, dmg: 3.6 } },
+    trashMult: { hp: 2.2, dmg: 1.9 }, bossMult: { hp: 7, dmg: 3.1 },
+    hard: { trashMult: { hp: 2.4, dmg: 2.0 }, bossMult: { hp: 7.4, dmg: 3.1 } },
     // at the level cap groups wear raid gear, so from level 40 the numbers rise to these at 60
-    atCap: { from: 40, trashMult: { hp: 2.8, dmg: 2.2 }, bossMult: { hp: 9, dmg: 3.6 }, hard: { trashMult: { hp: 3, dmg: 2.8 }, bossMult: { hp: 9.3, dmg: 4.2 } } },
+    atCap: { from: 40, trashMult: { hp: 2.8, dmg: 2.2 }, bossMult: { hp: 9, dmg: 3.6 }, hard: { trashMult: { hp: 3, dmg: 2.4 }, bossMult: { hp: 9.3, dmg: 3.6 } } },
     extra: { wickless_knight: [gallop, wisps(0.66, 2, false), wisps(0.33, 2, false), midnight(100, false)] },
     hardExtra: { wickless_knight: [Object.assign({}, gallop, { every: 14, hard: true }), wisps(0.7, 2, true, 0.7), wisps(0.45, 2, true, 0.7), wisps(0.2, 2, true, 0.7), midnight(90, true)] },
     pulls: [
