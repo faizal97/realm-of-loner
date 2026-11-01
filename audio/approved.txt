@@ -105,3 +105,6 @@ bard_horn_high
 bard_horn_low
 bard_horn_march
 bard_horn_riff
+longnight
+ln_knocker
+ln_guest

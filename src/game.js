@@ -2970,7 +2970,8 @@
     const pl = D.PLACES[P.place], outdoor = pick((D.REGIONS[pl.region] || {}).music, 'ambermoor');
     if (S.bg) return pick((D.ACTIVITIES[S.bg.act] || {}).music, outdoor);
     if (P.travel || !pl.safe) return outdoor;
-    return pick(pl.music, (D.REGIONS[pl.region] || {}).town, 'town'); // a capital's theme, else the zone's town track
+    const fest = G.lnOn && G.lnOn() && G.lnTown(P.place) && G.lnStage() >= 2 ? D.EVENTS.longnight.music : null; // Longnight's music stage (22 December) plays its theme in the festival towns
+    return pick(fest, pl.music, (D.REGIONS[pl.region] || {}).town, 'town'); // a capital's theme, else the zone's town track
   };
 
   // ============================================================ battlegrounds (v10.7, D.BG; design in zones/highmoor.js)

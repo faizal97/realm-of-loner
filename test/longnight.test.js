@@ -175,3 +175,13 @@ test('a test build keeps it on, with the finale; what it gives stays in test bui
   } finally { LN.force = was; globalThis.AZ_VERSION = vWas; }
   G.lnRevokeTest(); assert.ok(!G.lnAccount().lnTest, 'gone outside a test season');
 });
+
+test('music: the festival towns play the Longnight theme from the music stage (22 December), the runs their own', () => {
+  character(30); const P = G.S.player, all = () => true;
+  P.place = town();
+  at(2026, 12, 20); assert.notStrictEqual(G.musicFor(all), 'longnight', 'not before the music stage');
+  at(2026, 12, 22); assert.strictEqual(G.musicFor(all), 'longnight');
+  at(2027, 1, 10); assert.notStrictEqual(G.musicFor(all), 'longnight', 'not after the festival');
+  assert.strictEqual(D.ACTIVITIES[LN.knocker].music, 'ln_knocker');
+  assert.strictEqual(D.ACTIVITIES[LN.guest].music, 'ln_guest');
+});

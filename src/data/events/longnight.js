@@ -52,7 +52,7 @@
     houndAt: 10, houndChance: 0.1, // the Frost Hound: 1 in 10 a daily Knocker kill, and the 10th always drops it
     stagAt: 3, stagChance: 0.25, // the Pale Stag: the raid is open five days, so the 3rd daily kill always drops it
     keeper: 'ln_keeper',
-    music: 'icewold_town', // the menu and the festival towns, until Longnight has its own theme (new music needs a listen first)
+    music: 'longnight', // the menu, and the festival towns from the music stage (22 December)
   };
 
   // ---- the outfit: three looks from the calendar; the Knocker on Hard drops the dark recolour, the raid on Hard the pale
@@ -105,7 +105,7 @@
   const doorOpens = (after, hard) => ({ kind: 'enrage', after, mult: 2.5, hard, text: 'The door opens! The cold gets in!' });
   const houndWave = (at, n, hard) => ({ kind: 'adds', at, mob: 'ln_frost_hound', n, lvl: 0, hard, text: 'The Knocker whistles: more hounds come out of the snow!' });
   D.ACTIVITIES.ev_shuttered_lane = {
-    name: 'The Shuttered Lane', where: 'stormwind', size: 5, minLvl: 10, maxLvl: 60, event: 'longnight', scale: true, music: 'snow', since: '2026-12-15',
+    name: 'The Shuttered Lane', where: 'stormwind', size: 5, minLvl: 10, maxLvl: 60, event: 'longnight', scale: true, music: 'ln_knocker', since: '2026-12-15',
     desc: 'Longnight. 5 players, fought at your own level. The Knocker and his hounds go ahead of the Cold Guest.',
     intro: 'Every shutter on the lane is barred, every hearth behind them burning. Then the knocking starts, slow and heavy, door after door. The Knocker goes ahead of her. Send him back into the snow.', introBtn: 'Walk the lane',
     boss: 'ln_knocker',
@@ -129,7 +129,7 @@
   const uninvited = (n, every, hard) => ({ kind: 'adds', at: 0.6, mob: 'ln_uninvited', n, lvl: 0, hard, extra: [letMeIn(every, hard)], text: 'The Cold Guest throws the doors open. The Uninvited come in!' });
   const yearTurns = (secs, hard) => ({ kind: 'countdown', at: 0.3, secs, mult: 3, hard, name: 'The Year Turns', text: `The bells start to ring. Midnight in ${secs} seconds!`, endText: 'Midnight passes in the dark. The cold takes the house!' });
   D.ACTIVITIES.ev_open_door = {
-    name: 'The Open Door', where: 'stormwind', size: 10, minLvl: 10, maxLvl: 60, event: 'longnight', finale: true, raid: true, scale: true, music: 'worldboss', since: '2026-12-31',
+    name: 'The Open Door', where: 'stormwind', size: 10, minLvl: 10, maxLvl: 60, event: 'longnight', finale: true, raid: true, scale: true, music: 'ln_guest', since: '2026-12-31',
     desc: 'Longnight, New Year. A 10-player raid, fought at your own level. The Cold Guest herself.',
     intro: 'One house opened its door to her. Its hearth is ash, its people stand frozen where they let her in, and she is waiting by the fire that went out. Hold her until midnight, when the bells ring and the fireworks go up.', introBtn: 'Shut the door behind you',
     boss: 'ln_cold_guest',

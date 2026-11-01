@@ -532,5 +532,24 @@
   "key": "D minor",
   "meter": "3/4",
   "loop_s": 34.2857
+ },
+ "longnight": {
+  "bpm": 92,
+  "bars": 16,
+  "key": "F major",
+  "meter": "3/4",
+  "loop_s": 31.3043
+ },
+ "ln_knocker": {
+  "bpm": 132,
+  "bars": 16,
+  "key": "E minor",
+  "loop_s": 29.0909
+ },
+ "ln_guest": {
+  "bpm": 112,
+  "bars": 16,
+  "key": "C minor",
+  "loop_s": 34.2857
  }
 }

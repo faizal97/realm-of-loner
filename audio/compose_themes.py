@@ -438,6 +438,45 @@ TRACKS = {
         {'type': 'lead', 'voice': 'flute', 'gain': 0.14, 'mel':
             'A4:1 D5:1 F5:1 | F5:1.5 E5:.5 D5:1 | C5:1 F5:1 A5:1 | G5:1.5 F5:.5 E5:1 | D5:1 F5:1 A5:1 | Bb5:1.5 A5:.5 G5:1 | A5:1 E5:1 C#5:1 | A4:3 |A4:1 D5:1 F5:1 | F5:1.5 G5:.5 F5:1 | E5:1 C5:1 A4:1 | G4:1.5 C5:.5 E5:1 | D5:1 Bb4:1 G4:1 | F5:1.5 E5:.5 D5:1 | r:.5 C#5:1 B4:.5 A4:1 | D5:3'}],
         'room': 0.42},
+    # Longnight (v10.17): the winter festival, an F major carol in 3/4 by the hearth; flute over bells and harp, sleigh bells,
+    # a soft choir on the second half. Plays in the festival towns from the music stage (22 December) and on the festival menu
+    'longnight': {'bpm': 92, 'beats': 3, 'key': 'F major', 'meter': '3/4', 'prog': 'F C Dm Bb F Gm C C Dm Bb F C Bb F C F', 'layers': [
+        {'type': 'pad', 'cut': 1100, 'gain': 0.1, 'a': 0.8, 'r': 0.9},
+        {'type': 'bass', 'pat': [(0, 0, 1)], 'gain': 0.22, 'square': 0.1},
+        {'type': 'stab', 'at': [1, 2], 'gain': 0.04, 'len': 0.25, 'bright': 2000},
+        {'type': 'arp', 'voice': 'bell', 'pat': [2, 4, 3, 4, 5, 4], 'gain': 0.05, 'len': 1.4, 'from': 2},
+        {'type': 'drums', 'pat': 'h.h.h.h.h.h.', 'gain': 0.35},
+        {'type': 'choir', 'from': 9, 'gain': 0.08, 'cut': 800},
+        {'type': 'lead', 'voice': 'flute', 'gain': 0.14, 'mel':
+            'C5:1 F5:1 A5:1 | G5:1.5 F5:.5 E5:1 | F5:1 D5:1 A4:1 | Bb4:2 D5:1 | C5:1 F5:1 A5:1 | Bb5:1.5 A5:.5 G5:1 | E5:1 G5:1 E5:1 | C5:3 |'
+            'D5:1 F5:1 A5:1 | Bb5:1.5 A5:.5 F5:1 | A5:1 G5:1 F5:1 | E5:1.5 D5:.5 C5:1 | D5:1 F5:1 Bb5:1 | A5:1.5 G5:.5 F5:1 | G5:1 E5:1 C5:1 | F5:3'}],
+        'fx': [fx_wind(2, 200, 700, 0.025)], 'room': 0.45},
+
+    # The Shuttered Lane (v10.17): the Knocker's street, E minor; heavy drum knocks under a tense fiddle, a bell at each half
+    'ln_knocker': {'bpm': 132, 'beats': 4, 'key': 'E minor', 'prog': 'Em Em C B Em Em Am B C D Em C Am B Em B', 'layers': [
+        {'type': 'pad', 'cut': 900, 'gain': 0.1},
+        {'type': 'bass', 'pat': [(i * 0.5, 0, 0.45) for i in range(8)], 'gain': 0.2, 'square': 0.45, 'wrap': True},
+        {'type': 'drums', 'pat': ['D..D..D.D..D..D.', 'D..D..D.D..DTTTT'], 'gain': 0.75},
+        {'type': 'drums', 'from': 5, 'pat': ['..h.s.h...h.s.h.', '..h.s.h...h.s.ss'], 'gain': 0.6},
+        {'type': 'toll', 'bars': [1, 9], 'gain': 0.22},
+        {'type': 'lead', 'voice': 'fiddle', 'gain': 0.12, 'mel':
+            'E5:1 G5:1 B5:1.5 A5:.5 | G5:1 F#5:1 E5:2 | E5:1 G5:1 E5:1 C5:1 | D#5:1.5 E5:.5 F#5:2 | B4:1 E5:1 G5:1.5 F#5:.5 | E5:1 D5:1 B4:2 | C5:1 E5:1 A5:1.5 G5:.5 | F#5:2 D#5:2 |'
+            'G5:1.5 F#5:.5 E5:1 G5:1 | A5:1.5 G5:.5 F#5:1 D5:1 | G5:1 B5:1 A5:1 G5:1 | E5:3 r:1 | A5:1 G5:1 E5:1 C5:1 | B4:1 D#5:1 F#5:2 | E5:1 G5:1 F#5:1 E5:1 | D#5:2 B4:2'}],
+        'fx': [fx_wind(4, 200, 800, 0.035)], 'room': 0.3},
+
+    # The Open Door (v10.17): the Cold Guest, a C minor raid theme; choir and tolling bells over driving drums and a horn,
+    # a cymbal swell into the second half as the year turns
+    'ln_guest': {'bpm': 112, 'beats': 4, 'key': 'C minor', 'prog': 'Cm Cm Ab G Cm Fm G G Ab Bb Cm Ab Fm G Cm G', 'layers': [
+        {'type': 'pad', 'cut': 900, 'gain': 0.1},
+        {'type': 'choir', 'gain': 0.1, 'cut': 850},
+        {'type': 'bass', 'pat': [(i * 0.5, 0, 0.45) for i in range(8)], 'gain': 0.2, 'square': 0.4, 'wrap': True},
+        {'type': 'arp', 'voice': 'pluck', 'step': 0.25, 'pat': [0, 1, 2, 1] * 4, 'gain': 0.045, 'len': 0.14, 'spread': 0.3},
+        {'type': 'drums', 'from': 5, 'pat': ['k.h.s.hkk.h.s.h.', 'k.h.s.hkk.h.s.ss'], 'gain': 0.6},
+        {'type': 'toll', 'bars': [1, 9], 'gain': 0.16},
+        {'type': 'lead', 'voice': 'horn', 'gain': 0.14, 'mel':
+            'G4:1 C5:1 Eb5:1.5 D5:.5 | C5:2 G4:2 | Ab4:1 C5:1 Eb5:1 Ab5:1 | G5:1.5 F5:.5 D5:2 | Eb5:1 G5:1 F5:1 Eb5:1 | F5:1.5 Eb5:.5 C5:2 | D5:1 B4:1 G4:2 | B4:1 D5:1 G5:2 |'
+            'Ab5:1.5 G5:.5 F5:1 Eb5:1 | F5:1.5 G5:.5 Bb5:2 | G5:2 Eb5:2 | C5:4 | F5:1 Ab5:1 G5:1 F5:1 | D5:1.5 Eb5:.5 F5:2 | Eb5:1 D5:1 C5:1 B4:1 | G4:2 B4:1 D5:1'}],
+        'fx': [fx_swell([9]), fx_crash([9]), fx_wind(2, 200, 700, 0.03)], 'room': 0.36},
 }
 
 
