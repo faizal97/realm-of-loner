@@ -4,6 +4,9 @@
   const B = {};
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
   const chance = (p) => Math.random() < p;
+  // #74: chat, its timing and speakers, and the news's flavour draw from the cosmetic stream (E.crand); who the bots
+  // are (names, classes, levels, new players) stays on Math.random
+  const crand = () => root.E.crand(), cpick = (a) => root.E.cpick(a), cchance = (p) => root.E.cchance(p);
 
   // Stable pseudo-random from ints (so "is X online at hour H" doesn't flicker).
   function hash(a, b) {
@@ -159,11 +162,11 @@
       // dungeon and raid clears (issue #18): any dungeon or raid in the data that enough bots are the level for, so a new
       // one shows up with no change here; a server first per dungeon or raid, named after its last boss
       const capped = S.bots.filter((b) => b.level >= 10).length;
-      if (capped >= 5 && Math.random() < Math.min(0.9, capped / 40) * (stepMs / 3600000)) {
+      if (capped >= 5 && crand() < Math.min(0.9, capped / 40) * (stepMs / 3600000)) {
         const fits = Object.keys(D.ACTIVITIES).filter((k) => { const A = D.ACTIVITIES[k]; if (!A.dungeon || A.worldBoss || A.needQuest || !D.DUNGEONS[A.dungeon]) return false;
           return S.bots.filter((b) => b.level >= A.minLvl && b.level <= (A.maxLvl || D.LEVEL_CAP) + 5).length >= (A.size || 5); });
         if (fits.length) {
-          const act = pick(fits), g = pick(GUILDS), F = S.server.firsts = S.server.firsts || {};
+          const act = cpick(fits), g = cpick(GUILDS), F = S.server.firsts = S.server.firsts || {};
           if (S.server.firstVC && !F.deadmines) F.deadmines = S.server.firstVC; // the one first older saves recorded
           const first = !F[act]; if (first) F[act] = g; // recorded even when it can't be told yet, so it's right when you get there
           const last = lastBoss(act);
@@ -221,8 +224,8 @@
   B.link = link;
   const lower = (s) => s.toLowerCase();
   function sloppy(bot, s) {
-    if (bot.skill < 0.4 && chance(0.6)) s = lower(s).replace(/[.!]$/, '');
-    if (bot.toxic > 0.6 && chance(0.3)) s = s.toUpperCase();
+    if (bot.skill < 0.4 && cchance(0.6)) s = lower(s).replace(/[.!]$/, '');
+    if (bot.toxic > 0.6 && cchance(0.3)) s = s.toUpperCase();
     return s;
   }
   B.sloppy = (bot, s) => sloppy(bot, s);
@@ -380,20 +383,20 @@
     if (!namedAll.length) namedAll.push(region === 'elwynn' ? 'hogger' : Object.keys(D.MOBS).find((k) => D.MOBS[k].named) || 'hogger');
     const q = Object.keys(S.player.quests || {});
     const zoneNpcs = Object.values(D.PLACES).filter((p) => (p.region || 'elwynn') === (P.region || 'elwynn')).flatMap((p) => p.npcs || []);
-    const npc = q.length ? D.NPCS[D.QUESTS[q[0]].turnin].name : D.NPCS[pick(zoneNpcs.length ? zoneNpcs : Object.keys(D.NPCS))].name;
+    const npc = q.length ? D.NPCS[D.QUESTS[q[0]].turnin].name : D.NPCS[cpick(zoneNpcs.length ? zoneNpcs : Object.keys(D.NPCS))].name;
     const L = S.player.level;
     const inns = Object.values(D.PLACES).filter((p) => (p.region || 'elwynn') === region && p.inn);
     const G0 = root.G;
     // dungeons near your level; raids only once you are their level (Veshmira's name is a level-60 reveal)
     const acts = Object.keys(D.ACTIVITIES).filter((k) => { const A = D.ACTIVITIES[k]; return !A.needQuest && A.minLvl <= L + 3 && A.maxLvl >= L - 3 && !(A.size >= 10 && L < A.minLvl) && !(G0 && G0.activityBlock && G0.activityBlock(k) === 'hidden'); });
-    const A = D.ACTIVITIES[acts.length ? pick(acts) : 'hogger'];
+    const A = D.ACTIVITIES[acts.length ? cpick(acts) : 'hogger'];
     const Dg = A.dungeon && D.DUNGEONS[A.dungeon]; const lastBoss = Dg && Dg.pulls.filter((p) => p.boss).pop();
     const bossKey = A.boss || (lastBoss && lastBoss.mobs[0]);
     const clsNames = Object.values(D.CLASSES).map((x) => x.name.toLowerCase());
     return {
-      zone: P.zone || 'the wilds', town: inns.length ? pick(inns).name : 'the', band: L < 15 ? 0 : L < 30 ? 1 : L < 45 ? 2 : 3,
-      act: A.name, boss: bossKey && D.MOBS[bossKey] ? D.MOBS[bossKey].name : 'the last boss', classA: pick(clsNames), classB: pick(clsNames),
-      mobName: mobs.length ? D.MOBS[pick(mobs)].name : 'Kobold', namedMob: D.MOBS[pick(namedAll)].name, questNpc: npc,
+      zone: P.zone || 'the wilds', town: inns.length ? cpick(inns).name : 'the', band: L < 15 ? 0 : L < 30 ? 1 : L < 45 ? 2 : 3,
+      act: A.name, boss: bossKey && D.MOBS[bossKey] ? D.MOBS[bossKey].name : 'the last boss', classA: cpick(clsNames), classB: cpick(clsNames),
+      mobName: mobs.length ? D.MOBS[cpick(mobs)].name : 'Kobold', namedMob: D.MOBS[cpick(namedAll)].name, questNpc: npc,
       hogger: S.player.level >= 8,
     };
   }
@@ -478,7 +481,7 @@
     const cd = S.chatHeard || {}, t = Date.now(), mine = ((S.botSaid || {})[b.id] || '').split(',');
     const ok = list.filter(([k]) => !(cd[k] > t - HEARD_MS) && !mine.includes(k));
     for (let i = 0; i < 6 && ok.length; i++) {
-      const [k, f] = ok.splice(Math.floor(Math.random() * ok.length), 1)[0];
+      const [k, f] = ok.splice(Math.floor(crand() * ok.length), 1)[0];
       const text = raw ? f(c) : sloppy(b, f(c));
       if (!(cd[wordsKey(text)] > t - HEARD_MS) && B.lineFits(S, text, b, ch)) return { k, text };
     }
@@ -487,7 +490,7 @@
   // a reply's or request's words (no bot memory): one not heard in the last hour if any is left, else the one heard longest ago
   B.pickHeard = function (S, k, arr) {
     const H = S.chatHeard || (S.chatHeard = {}), t = Date.now(), idx = arr.map((_, i) => i), when = (i) => Math.max(H[k + i] || 0, H[wordsKey(arr[i])] || 0);
-    const fresh = idx.filter((i) => !(when(i) > t - HEARD_MS)), i = fresh.length ? pick(fresh) : idx.reduce((a, b) => (when(b) < when(a) ? b : a));
+    const fresh = idx.filter((i) => !(when(i) > t - HEARD_MS)), i = fresh.length ? cpick(fresh) : idx.reduce((a, b) => (when(b) < when(a) ? b : a));
     H[k + i] = H[wordsKey(arr[i])] = t; return arr[i];
   };
   B.heard = function (S, b, k, text) {
@@ -503,7 +506,7 @@
     const L = (b && b.level) || S.player.level, G0 = root.G;
     const acts = Object.keys(D.ACTIVITIES).filter((k) => { const A = D.ACTIVITIES[k]; return !A.needQuest && !A.worldBoss && A.minLvl <= L + 3 && A.maxLvl >= L - 3 && !(A.size >= 10 && L < A.minLvl) && !(G0 && G0.activityBlock && G0.activityBlock(k) === 'hidden'); });
     if (!acts.length) return { band: L < 15 ? 0 : L < 30 ? 1 : L < 45 ? 2 : 3 };
-    const A = D.ACTIVITIES[pick(acts)], Dg = A.dungeon && D.DUNGEONS[A.dungeon], lb = Dg && Dg.pulls.filter((p) => p.boss).pop(), bk = A.boss || (lb && lb.mobs[0]);
+    const A = D.ACTIVITIES[cpick(acts)], Dg = A.dungeon && D.DUNGEONS[A.dungeon], lb = Dg && Dg.pulls.filter((p) => p.boss).pop(), bk = A.boss || (lb && lb.mobs[0]);
     return { act: A.name, boss: bk && D.MOBS[bk] ? D.MOBS[bk].name : 'the last boss', band: L < 15 ? 0 : L < 30 ? 1 : L < 45 ? 2 : 3 };
   }
 
@@ -522,7 +525,7 @@
   // #70: back from time away. Chat timers (these and social.js's) that came due while you were gone fire over your first
   // two minutes back instead of all in the first second; what bots said is forgotten for bots that left the server.
   B.catchUpChat = function (S, t) {
-    for (const T of [S.chatTimers, S.soc && S.soc.next]) if (T) for (const k in T) if (T[k] && T[k] <= t) T[k] = t + Math.random() * 120000;
+    for (const T of [S.chatTimers, S.soc && S.soc.next]) if (T) for (const k in T) if (T[k] && T[k] <= t) T[k] = t + crand() * 120000;
     if (S.botSaid) { const ids = new Set(S.bots.map((b) => String(b.id))); for (const k in S.botSaid) if (!ids.has(k)) delete S.botSaid[k]; }
   };
 
@@ -535,9 +538,9 @@
     const c = ctx(S);
     const myF = (D.RACES[S.player.race] || {}).faction || 'alliance';
     const mineBots = S.bots.filter((b) => B.factionOf(b) === myF);
-    const onl = () => { for (let i = 0; i < 12; i++) { const b = pick(mineBots); if (B.isOnline(b, date)) return b; } return pick(mineBots.length ? mineBots : S.bots); };
+    const onl = () => { for (let i = 0; i < 12; i++) { const b = cpick(mineBots); if (B.isOnline(b, date)) return b; } return cpick(mineBots.length ? mineBots : S.bots); };
     c.horde = myF === 'horde';
-    const due = (k, a, b) => { if (!T[k]) T[k] = now + (a + Math.random() * (b - a)) * 1000 / busy; if (now >= T[k]) { T[k] = 0; return true; } return false; };
+    const due = (k, a, b) => { if (!T[k]) T[k] = now + (a + crand() * (b - a)) * 1000 / busy; if (now >= T[k]) { T[k] = 0; return true; } return false; };
     // #69: a line names content at the speaker's level (its dungeon or raid, its boss, its level band), and one that
     // still doesn't fit (B.lineFits) is picked again; after six tries nothing is said
     const speak = (b) => { c.me = b; Object.assign(c, botContent(S, b)); return c; };
@@ -562,10 +565,10 @@
       // sometimes someone answers
       for (const A of ANSWERS) {
         const mm = lower(text).match(A.q);
-        if (mm && chance(0.75)) {
+        if (mm && cchance(0.75)) {
           const r = onl();
           S.pending = S.pending || [];
-          S.pending.push({ at: now + 2500 + Math.random() * 5000, bot: r.id, ch: 'general', text: sloppy(r, B.pickHeard(S, 'an' + ANSWERS.indexOf(A) + '.', A.a(mm))) });
+          S.pending.push({ at: now + 2500 + crand() * 5000, bot: r.id, ch: 'general', text: sloppy(r, B.pickHeard(S, 'an' + ANSWERS.indexOf(A) + '.', A.a(mm))) });
           break;
         }
       }
@@ -573,15 +576,15 @@
     if (S.player.level >= 8 && due('lfg', 80, 180)) {
       const b = onl();
       const text = b.level >= 6 ? line(b, 'lfg', [keyed('lf', LFG_CHATTER)]) : null;
-      if (text) for (const A of ANSWERS) { const mm = lower(text).match(A.q); if (mm && chance(0.6)) { const r = onl(); S.pending = S.pending || []; S.pending.push({ at: now + 3000 + Math.random() * 5000, bot: r.id, ch: 'lfg', text: sloppy(r, B.pickHeard(S, 'an' + ANSWERS.indexOf(A) + '.', A.a(mm))) }); break; } }
+      if (text) for (const A of ANSWERS) { const mm = lower(text).match(A.q); if (mm && cchance(0.6)) { const r = onl(); S.pending = S.pending || []; S.pending.push({ at: now + 3000 + crand() * 5000, bot: r.id, ch: 'lfg', text: sloppy(r, B.pickHeard(S, 'an' + ANSWERS.indexOf(A) + '.', A.a(mm))) }); break; } }
     }
     if (due('say', 32, 76)) {
       const near = B.onlineIn(S, S.player.place, date).filter((b) => B.factionOf(b) === B.factionOf(S.player));
-      if (near.length && !D.PLACES[S.player.place].safe || near.length > 2) line(pick(near.length ? near : [onl()]), 'say', [keyed('sn', SAY_NEAR)]);
+      if (near.length && !D.PLACES[S.player.place].safe || near.length > 2) line(cpick(near.length ? near : [onl()]), 'say', [keyed('sn', SAY_NEAR)]);
     }
     if (S.player.guild != null && S.player.guild >= 0 && due('guild', 60, 140)) {
       const mates = S.bots.filter((b) => b.guild === S.player.guild && B.isOnline(b, date));
-      if (mates.length) line(pick(mates), 'guild', [keyed('gu', GUILD)]);
+      if (mates.length) line(cpick(mates), 'guild', [keyed('gu', GUILD)]);
     }
     if (due('whisper', 400, 960)) line(onl(), 'whisper', [keyed('wh', WHISPER)], true);
   };
@@ -595,23 +598,23 @@
     let near = ch === 'say' ? B.onlineIn(S, S.player.place, date).filter((b) => B.factionOf(b) === B.factionOf(S.player)) : ch === 'guild' ? S.bots.filter((b) => b.guild === S.player.guild && B.isOnline(b, date)) : ch === 'party' && S.group ? S.group.members.map((id) => S.bots.find((b) => b.id === id)).filter(Boolean) : S.bots.filter((b) => B.isOnline(b, date));
     if (ch === 'whisper') { const w = S.bots.find((b) => b.name === S.lastWhisper); near = w ? [w] : []; }
     if (!near.length) return;
-    const say = (txt, delay, who) => { const b = who || pick(near); S.pending.push({ at: now + (delay || 1500 + Math.random() * 4000), bot: b.id, ch: ch === 'whisper' ? 'whisper' : ch, text: sloppy(b, txt) }); };
-    if (/\b(hi|hello|hey|halo|sup|yo)\b/.test(t)) { say(pick(['hi', 'hey', 'sup', 'o/', 'hello', 'halo bang'])); if (chance(0.4)) say(pick(['hey there', 'hiya', 'yo']), 5000); return; }
-    if (/\b(gz|grats|congrats)\b/.test(t)) { say(pick(['ty', 'thx', 'ty ty', ':)'])); return; }
-    if (/\b(ty|thx|thanks|makasih)\b/.test(t)) { say(pick(['np', 'yw', 'anytime'])); return; }
-    if (/\b(lol|lmao|wkwk)\b/.test(t)) { if (chance(0.5)) say(pick(['lol', 'haha', 'wkwkwk', 'xD'])); return; }
+    const say = (txt, delay, who) => { const b = who || cpick(near); S.pending.push({ at: now + (delay || 1500 + crand() * 4000), bot: b.id, ch: ch === 'whisper' ? 'whisper' : ch, text: sloppy(b, txt) }); };
+    if (/\b(hi|hello|hey|halo|sup|yo)\b/.test(t)) { say(cpick(['hi', 'hey', 'sup', 'o/', 'hello', 'halo bang'])); if (cchance(0.4)) say(cpick(['hey there', 'hiya', 'yo']), 5000); return; }
+    if (/\b(gz|grats|congrats)\b/.test(t)) { say(cpick(['ty', 'thx', 'ty ty', ':)'])); return; }
+    if (/\b(ty|thx|thanks|makasih)\b/.test(t)) { say(cpick(['np', 'yw', 'anytime'])); return; }
+    if (/\b(lol|lmao|wkwk)\b/.test(t)) { if (cchance(0.5)) say(cpick(['lol', 'haha', 'wkwkwk', 'xD'])); return; }
     if (/\?/.test(t)) {
       const m = t.match(/where (?:is|are) (?:the )?(.+?)\?/);
       if (m) { say(B.whereIs(m[1])); return; }
-      say(pick(['no idea sorry', 'idk', 'check the lore journal lol', 'ask in general', 'not sure', 'same question']));
+      say(cpick(['no idea sorry', 'idk', 'check the lore journal lol', 'ask in general', 'not sure', 'same question']));
       return;
     }
     if (/\b(inv|group|lfg|lfsd|snaggle|sd|smugglers)\b/.test(t)) {
-      if (S.player.level >= 8) say(pick(['queue up in group finder, i will join', 'yeah sure, use the finder', 'i am in queue already']));
-      else say(pick(['you are too low lol', 'come back at 8+', 'old snaggle will eat you']));
+      if (S.player.level >= 8) say(cpick(['queue up in group finder, i will join', 'yeah sure, use the finder', 'i am in queue already']));
+      else say(cpick(['you are too low lol', 'come back at 8+', 'old snaggle will eat you']));
       return;
     }
-    if (chance(0.45)) say(pick(['k', 'lol', 'ok', '?', 'true', 'fr', 'nice', 'same']));
+    if (cchance(0.45)) say(cpick(['k', 'lol', 'ok', '?', 'true', 'fr', 'nice', 'same']));
   };
 
   // A short profile when you tap someone.
@@ -625,7 +628,7 @@
   // A Legend speaks in their own voice (D.LEGENDS[key].cameo[kind]), never in bot shorthand
   const LEGEND_VOICE = { hello: ['Well met.'], pull: ['On me.', 'Ready when you are.', 'Steady. Now.'], wipe: ['Up. We go again, slower.', 'Breathe. Again.'], win: ['Well fought.', 'Good.', 'That will do.'], loot: ['Take it. It suits you.', 'Keep it. I travel light.'], bye: ['Go well.'] };
   B.partyLine = function (bot, kind) {
-    if (bot && bot.legend && root.D && D.LEGENDS && D.LEGENDS[bot.legend]) { const c = D.LEGENDS[bot.legend].cameo || {}; const L = c[kind] || LEGEND_VOICE[kind] || LEGEND_VOICE.hello; return L[Math.floor(Math.random() * L.length)]; }
+    if (bot && bot.legend && root.D && D.LEGENDS && D.LEGENDS[bot.legend]) { const c = D.LEGENDS[bot.legend].cameo || {}; const L = c[kind] || LEGEND_VOICE[kind] || LEGEND_VOICE.hello; return L[Math.floor(crand() * L.length)]; }
     const T = {
       hello: ['hi', 'hey all', 'yo', 'sup', 'hello', 'o/', 'halo'],
       pull: ['pulling', 'go go', 'inc', 'lets go'], // no "ready?": nothing on screen answers it (#159)
@@ -638,7 +641,7 @@
       rage: ['this is a waste of time', 'im out', 'gg bad group'],
       afk: ['brb 1 min', 'phone sry', 'afk sec'],
     };
-    return pick(T[kind] || ['...']);
+    return cpick(T[kind] || ['...']);
   };
 
   root.B = B;

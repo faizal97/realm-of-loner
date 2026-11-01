@@ -6,8 +6,11 @@
   const SOC = root.SOC = {};
   const D = root.D, B = root.B, G = root.G;
   const now = () => Date.now();
-  const rnd = (a, b) => a + Math.random() * (b - a), rint = (a, b) => Math.floor(rnd(a, b + 1)), pick = (a) => a[Math.floor(Math.random() * a.length)];
-  const chance = (p) => Math.random() < p;
+  // #74: the working chat is chat, so all of it (which requests appear, when, who asks, what they say) draws from the
+  // cosmetic stream (E.crand): reshaping chat never moves the dice of a fight, a drop or a group
+  const crand = () => root.E.crand();
+  const rnd = (a, b) => a + crand() * (b - a), rint = (a, b) => Math.floor(rnd(a, b + 1)), pick = (a) => a[Math.floor(crand() * a.length)];
+  const chance = (p) => crand() < p;
   const link = (it) => B.link(it.name, it.q || 1);
   const coin = (c) => G.moneyText(c);
   const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -473,8 +476,8 @@
     if (!places.length) return null;
     const k = pick(places), p = D.PLACES[k];
     const zones = [...new Set(Object.values(D.PLACES).map((x) => x.zone).filter((z) => z && z !== p.zone))];
-    const wrong = []; while (wrong.length < 2 && zones.length) wrong.push(zones.splice(Math.floor(Math.random() * zones.length), 1)[0]);
-    return { place: k, name: p.name, answer: p.zone, answers: [p.zone, ...wrong].sort(() => Math.random() - 0.5) };
+    const wrong = []; while (wrong.length < 2 && zones.length) wrong.push(zones.splice(Math.floor(crand() * zones.length), 1)[0]);
+    return { place: k, name: p.name, answer: p.zone, answers: [p.zone, ...wrong].sort(() => crand() - 0.5) };
   }
 
   // ------------------------------------------------------------ doing what a message asks
