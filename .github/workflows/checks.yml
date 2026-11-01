@@ -3,8 +3,8 @@
 # --dev and the pass/fail sims it doesn't run (tools/ci-sim-gates.txt, seed 0), split in three jobs at once (build, and gates
 # for effects and for prof, social, brawl), and is skipped when only docs or notes changed (#88). On main, once all but the
 # effects gate pass, publish-dev puts that dev build on the site's /dev/ page: https://faizal97.github.io/realm-of-loner/dev/
-# The effects gate (about an hour since the bots think, #149) still runs on every push and turns the run red when it fails,
-# but /dev/ doesn't wait for it; every beta and release runs it again in build.py.
+# The effects gate (about an hour as one job since the bots think, #149) runs as 6 shards at once on every push and turns
+# the run red when it fails, but /dev/ doesn't wait for it; every beta and release runs it again in build.py.
 # Security: pull_request (never pull_request_target), read-only, no secrets, actions pinned to a commit, so a fork's
 # code can't reach anything. Only publish-dev may write, only on main, and only gh-pages' dev/ folder.
 name: checks
@@ -145,16 +145,16 @@ jobs:
             node "sim/$s.js" $args || { echo "::error title=Gate::sim/$s.js failed"; exit 1; }
             echo "::endgroup::$s: $(( $(date +%s) - start ))s"
           done
-  effects: # its own job, so publish-dev doesn't wait for it (an hour since #149)
+  effects: # its own job, so publish-dev doesn't wait for it, in 6 shards at once (SHARD=i/n in sim/effects.js; about an hour as one since #149)
     needs: changes
     if: needs.changes.outputs.full == 'true'
-    name: gates (${{ matrix.sims }})
+    name: gates (effects ${{ matrix.shard }}/6)
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        sims: ['effects']
+        shard: [0, 1, 2, 3, 4, 5]
     env:
       TZ: Asia/Jakarta
     steps:
@@ -164,16 +164,13 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 26
-      - name: The gates, as build.py runs them
+      - name: The effects gate, one shard (together the same numbers as build.py's single run)
         env:
-          SIMS: ${{ matrix.sims }}
+          SHARD: ${{ matrix.shard }}/6
         run: |
-          for s in $SIMS; do
-            args=""; [ "$s" = brawl ] && args=48 # build.py runs brawl with 48
-            echo "::group::$s"; start=$(date +%s)
-            node "sim/$s.js" $args || { echo "::error title=Gate::sim/$s.js failed"; exit 1; }
-            echo "::endgroup::$s: $(( $(date +%s) - start ))s"
-          done
+          start=$(date +%s)
+          node sim/effects.js || { echo "::error title=Gate::sim/effects.js (shard $SHARD) failed"; exit 1; }
+          echo "effects shard $SHARD: $(( $(date +%s) - start ))s"
   # the dev page (#92): main only, after every check passes (skipped with the build when only docs changed); the one
   # job that writes, and only gh-pages' dev/ folder (never the main page or /beta/)
   publish-dev:

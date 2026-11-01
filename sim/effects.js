@@ -107,6 +107,10 @@ const PLAN = [
   { effect: 'tithe_of_battle', classes: ['warlock'], wins: ['boss'], loses: ['boss'], losesClasses: ['mage'] },
 ];
 const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null;
+// SHARD=i/n: only every n-th effect of the plan (from i), and the mixes whose first effect is one of them, so CI can run
+// the sim as n jobs at once (#149: about an hour as one); each fight has its own seed, so a shard's numbers are the full run's
+const SHARD = process.env.SHARD ? process.env.SHARD.split('/').map(Number) : null;
+const mine = (k) => (!ONLY || ONLY.includes(k)) && (!SHARD || PLAN.findIndex((P) => P.effect === k) % SHARD[1] === SHARD[0]);
 const SEEDS = [0, 1, 2, 3, 4], NEAR = process.env.NEAR ? +process.env.NEAR : 1; let stageNow = ''; // NEAR=x tries another window // the balance analyst's five seeds (#45)
 // f measured on every seed in SEEDS, given its value on this run's seed: the mean
 const onSeeds = (v0, f) => { const keep = SEED, vs = [v0]; for (const sd of SEEDS) if (sd !== keep) { SEED = sd; vs.push(f()); } SEED = keep; return vs.reduce((a, b) => a + b, 0) / vs.length; };
@@ -122,7 +126,7 @@ const measure = (cs, cls, L, pieces) => { curCls = cls; let s = 0; for (let i = 
 // 1 fight in 10, except where dying is what a case measures (how long you last, or the hard fight above)
 {
   const seen = new Set();
-  for (const P of PLAN) { if (ONLY && !ONLY.includes(P.effect)) continue; for (const cs of P.wins.concat(P.loses)) for (const cls of P.classes.concat(P.losesClasses || [])) for (const L of [20, 40, 60]) {
+  for (const P of PLAN) { if (!mine(P.effect)) continue; for (const cs of P.wins.concat(P.loses)) for (const cls of P.classes.concat(P.losesClasses || [])) for (const L of [20, 40, 60]) {
     const key = cs + cls + L; if (DEATH_IS_THE_MEASURE[cs] || seen.has(key)) continue; seen.add(key);
     let died = 0; for (let i = 0; i < 40; i++) { curCls = cls; CASES[cs]({ cls, pieces: [piece(P.effect, L, false)] }, L, 60000 + i); if (lastC && lastC.allies[0].hp <= 0) died++; }
     ok(died <= 4, `the ${cs} case doesn't wipe: the plain item loses ${died} of 40 (${cls} ${L})`);
@@ -138,7 +142,7 @@ for (const stage of [1, FULL]) {
   const ok = (c, m) => okTop(c, STAGE + m);
 const all = [];
   for (const P of PLAN) {
-    if (ONLY && !ONLY.includes(P.effect)) continue;
+    if (!mine(P.effect)) continue;
     const res = { wins: [], loses: [] };
     for (const kind of ['wins', 'loses']) for (const cs of P[kind]) for (const cls of (kind === 'loses' && P.losesClasses) || P.classes) for (const L of [20, 40, 60]) {
       curCls = cls; const plain = measure(cs, cls, L, [piece(P.effect, L, false)]); curCls = cls; const withFx = measure(cs, cls, L, [piece(P.effect, L, true)]), d = POINTS[cs] ? (withFx - plain) * 100 : pct(withFx, plain);
@@ -173,7 +177,7 @@ const all = [];
     { name: 'Echoing Mend + Lavish Mend + Tethered Mend', cs: 'groupwide', cls: 'priest', fx: ['echoing_mend', 'lavish_mend', 'tethered_mend'] },
   ];
   for (const M of MIXES) {
-    if (ONLY && !M.fx.some((k) => ONLY.includes(k))) continue;
+    if (ONLY ? !M.fx.some((k) => ONLY.includes(k)) : !mine(M.fx[0])) continue;
     if (M.fx.some((k) => D.EFFECTS[k].review)) continue; // a mix with an effect under review waits for it
     for (const L of [20, 40, 60]) {
       curCls = M.cls; const plain = measure(M.cs, M.cls, L, M.fx.map((k) => piece(k, L, false))); curCls = M.cls; const mixed = measure(M.cs, M.cls, L, M.fx.map((k) => piece(k, L, true))), d = pct(mixed, plain);
