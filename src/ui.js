@@ -971,7 +971,7 @@
     els.chatLines.innerHTML = lines.map(chatLineHtml).join('');
     const nReq = G.S.chat.filter(isOpenReq).length;
     els.chatOpen.innerHTML = `<span>Chat</span><small>${esc(chatTabName(chatPrefs().active))}</small>${nReq ? `<b class="tnum">${nReq}</b>` : ''}`;
-    if (ui.sheet === 'social' && ui.socialTab === 'chat') refreshChatLog();
+    if (ui.sheet === 'social' && ui.socialTab === 'chat') { refreshChatLog(); const rt = app.querySelector('.tabs .req-tab'); if (rt) rt.textContent = nReq ? `Requests (${nReq})` : 'Requests'; } // the count keeps up while the tab is open (#394)
   }
 
   // ============================================================ panel
@@ -5008,7 +5008,7 @@
     const tabs = h('div', { class: 'tabs' });
     const p = chatPrefs();
     const nReq = G.S.chat.filter(isOpenReq).length;
-    tabs.append(h('button', { class: p.active === 'requests' ? 'on' : '', onclick: () => setChatTab('requests') }, nReq ? `Requests (${nReq})` : 'Requests'));
+    tabs.append(h('button', { class: 'req-tab' + (p.active === 'requests' ? ' on' : ''), onclick: () => setChatTab('requests') }, nReq ? `Requests (${nReq})` : 'Requests'));
     p.tabs.forEach((tab, i) => tabs.append(h('button', { class: p.active === i ? 'on' : '', onclick: () => setChatTab(i) }, tab.name)));
     tabs.append(h('button', { class: 'tab-edit', onclick: () => editChatTabs(), 'aria-label': 'Edit chat tabs' }, 'Edit'));
     (ui.socialHead && ui.socialHead.isConnected ? ui.socialHead : b).append(tabs);
