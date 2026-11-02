@@ -243,6 +243,7 @@
     { const t = now(), P = S.player; if (P.ghostUntil > t + 15000) P.ghostUntil = t + 15000; if (P.hearthAt > t + 15 * 60000) P.hearthAt = t + 15 * 60000; if ((S.flags.deserterUntil || 0) > t + DESERTER) S.flags.deserterUntil = t + DESERTER; }
     // a duel or brawl round left by closing the app is lost, never undone (#380, #381)
     if (S.duelOn) { const d = S.duelOn; delete S.duelOn; S.player.hp = Math.max(1, Math.round(G.vitals().maxHp * 0.05)); if (d.wager) S.player.money = Math.max(0, S.player.money - d.wager); sys(`You left the duel with ${d.name}: it counts as lost.${d.wager ? ' You paid ' + G.moneyText(d.wager) + '.' : ''}`); }
+    for (const k in S.world || {}) { const w = S.world[k]; for (const m of (w.mobs || []).concat(Object.values(w.named || {}))) if (m.state === 'fight') m.state = 'alive'; } // a fight the app closed on ended with it (#409)
     if (S.bg && S.bg.phase === 'fight') { const go = S.bg.go; if (go) { sys('You left the battleground fight: it counts as lost.'); endBgFight({ over: 'loss', enemies: [], bg: { banner: go.group, name: bgName(S.bg, go.group) } }); } else S.bg.phase = 'choose'; } // a battleground, the same (#408)
     if (S.brawl && S.brawl.phase === 'fight') { S.brawl.phase = 'choose'; const foe = G.brawlOpponent(); if (foe) endBrawlFight({ over: 'loss', brawl: { foe: foe.name } }); else S.brawl.phase = 'done'; }
     try { G.refreshHeirlooms(); } catch (e) { /* older save */ }

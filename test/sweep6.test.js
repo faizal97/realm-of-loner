@@ -81,3 +81,11 @@ test('a battleground fight left by closing the app is a lost round, and the batt
   }
   assert.ok(done, 'reached a battleground fight');
 });
+
+test('a creature you were fighting when the app closed is back on the next load (#409)', () => {
+  W.character(5); const id = G.S.id; G.S.player.place = 'northshire_abbey';
+  const m = G.placeMobs().find((x) => x.state === 'alive' && !x.id.startsWith('n_')); G.engage(m.id);
+  W.advance(2); assert.ok(G.fight);
+  G.save(); G.S = null; G.fight = null; G.pUnit = null; W.setNow(W.now() + 20000); G.load(id);
+  assert.strictEqual(G.S.world.northshire_abbey.mobs.filter((y) => y.state === 'fight').length, 0);
+});
