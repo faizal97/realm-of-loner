@@ -97,6 +97,9 @@
   B.BREAK_DAYS = [3, 14]; B.BREAK_EVERY = 30;
   B.trimRoster = function (S, t) {
     const SV = S.server || (S.server = {}), keep = SV.keep || {}, mine = S.player ? S.player.guild : -1;
+    // the guilds of the account's other characters (S.server.homes, #305): their members say goodbye too, in that
+    // character's guild chat the next time it is played
+    const theirs = {}; for (const [c, g] of Object.entries(SV.homes || {})) if (g >= 0 && c !== S.id && g !== mine) (theirs[g] = theirs[g] || []).push(c);
     // a weighted draw with no dice (the outcome stream stays as it was): each person's key is hash^(1/weight), highest go
     const hr = Math.floor(t / 3600000), key = (b) => Math.pow(hash(b.id, hr) || 1e-9, 1 / B.quitWeight(b, t));
     const queue = (f) => S.bots.filter((b) => f(b) && !(keep[b.name] && b.away > t)).sort((x, y) => key(y) - key(x));
@@ -110,7 +113,9 @@
         if (S.player) B.post(S, 'whisper', b, cpick(['hey, taking a break for a few days. see you when i am back', 'gonna be away a bit, talk soon', 'short break for me, back in a few days']));
         return false;
       }
-      if (S.player && mine >= 0 && b.guild === mine) B.post(S, 'guild', b, cpick(['ok i am done with this game for now. gl everyone o/', 'quitting for a while, thanks for the runs all', 'logging off for good i think. was fun, cya']));
+      const bye = (mine >= 0 && b.guild === mine) || theirs[b.guild] ? cpick(['ok i am done with this game for now. gl everyone o/', 'quitting for a while, thanks for the runs all', 'logging off for good i think. was fun, cya']) : null;
+      if (bye && S.player && b.guild === mine) B.post(S, 'guild', b, bye);
+      else if (bye) { const L = SV.byes || (SV.byes = []); for (const c of theirs[b.guild]) L.push({ c, t, n: b.name, cls: b.cls, text: bye }); if (L.length > 200) L.splice(0, L.length - 200); }
       gone.add(b); return true;
     };
     // under the cap: while over B.ROSTER_CAP, the band furthest over its share loses its newest
@@ -283,11 +288,13 @@
   // members are the player's people (#71) and whose runs draw from it
   B.GUILD_MOVE_DAYS = 60;
   B.guildMoves = function (S, ms, t) {
-    const mine = S.player && S.player.guild != null && S.player.guild >= 0 ? S.player.guild : -2;
+    // every guild a character on the account is in (S.server.homes, #305), not only the one being played
+    const homes = new Set(Object.values((S.server && S.server.homes) || {}).filter((g) => g >= 0));
+    if (S.player && S.player.guild != null && S.player.guild >= 0) homes.add(S.player.guild);
     const p = Math.min(1, ms / (B.GUILD_MOVE_DAYS * 86400000));
     for (const b of S.bots) {
-      if (b.guild === mine || !(crand() < p)) continue;
-      const opts = GUILDS.map((g, i) => i).filter((i) => GUILD_FACTION[i] === B.factionOf(b) && i !== b.guild && i !== mine);
+      if (homes.has(b.guild) || !(crand() < p)) continue;
+      const opts = GUILDS.map((g, i) => i).filter((i) => GUILD_FACTION[i] === B.factionOf(b) && i !== b.guild && !homes.has(i));
       const to = b.guild >= 0 && crand() < 0.25 ? -1 : opts.length ? opts[Math.floor(crand() * opts.length)] : -1;
       if (to === b.guild) continue;
       B.note(b, t, to < 0 ? 'left' : 'joined', to < 0 ? b.guild : to); b.guild = to;

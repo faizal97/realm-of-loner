@@ -86,3 +86,41 @@ test('Remove friend: off this character; the account keeps them while another ch
   G.logout(); G.load(a); assert.ok(G.unfriend(pal.id));
   assert.ok(!G.S.server.keep[pal.name], 'nobody has them now: they can quit like anyone');
 });
+
+test('another character\'s guild: nobody moves out of it, and its members\' goodbyes reach it later (#305)', () => {
+  fresh();
+  const a = make('Ana'); const g = G.S.bots.find((b) => b.guild >= 0 && B.factionOf(b) === G.myFaction()).guild; G.S.player.guild = g; G.save();
+  const mates = new Set(G.S.bots.filter((b) => b.guild === g).map((b) => b.name));
+  make('Bel'); const S = G.S;
+  for (const b of S.bots) if (b.guild === g) b.born = now(); // the newest quit first: give the trim a reason to pick them
+  B.guildMoves(S, 120 * 86400000, now());
+  assert.ok(S.bots.filter((b) => b.guild === g).every((b) => mates.has(b.name)), 'no one moved in or out of Ana\'s guild');
+  for (let i = 0; i < 6; i++) B.advance(S, 86400000);
+  const gone = [...mates].filter((n) => !S.bots.some((b) => b.name === n));
+  G.logout(); G.load(a);
+  const byes = G.S.chat.filter((m) => m.ch === 'guild' && gone.includes(m.from));
+  assert.ok(gone.length && byes.length === gone.length, `${gone.length} left, ${byes.length} said goodbye in Ana's guild chat`);
+});
+
+test('a deleted character\'s friends stop being kept, unless another character has them (#306)', () => {
+  fresh();
+  const a = make('Ana'), f1 = G.S.bots[5], f2 = G.S.bots[6];
+  G.S.soc = G.S.soc || {}; G.S.soc.friends = { [f1.id]: { n: 1 }, [f2.id]: { n: 1 } }; G.save();
+  make('Bel'); G.S.soc = G.S.soc || {}; G.S.soc.friends = { [f2.id]: { n: 1 } }; G.save();
+  assert.ok(G.S.server.keep[f1.name] && G.S.server.keep[f2.name]);
+  G.deleteCharacter(a);
+  assert.ok(!G.S.server.keep[f1.name], 'only Ana had them');
+  assert.ok(G.S.server.keep[f2.name], 'Bel still has them');
+  assert.ok(!JSON.parse(store.getItem('azsolo.roster')).server.keep[f1.name], 'and the stored realm agrees');
+});
+
+test('migration: a friend missing from a younger save never becomes a stranger with the same id (#306)', () => {
+  fresh();
+  const a = make('Ana'), b = make('Bel');
+  oldStyle(a, { created: 1 });
+  oldStyle(b, { created: 2, bots: B.makePopulation(10), soc: { friends: { 5000: { n: 1 }, 7: { n: 1 } } } });
+  const B7 = G.readSave(b).bots.find((x) => x.id === 7); const S0 = G.readSave(b); S0.bots = S0.bots.filter((x) => x.id !== 7); S0.soc.friends = { 7: { n: 1 } }; G.writeSave(S0);
+  store.removeItem('azsolo.roster'); G.R = null;
+  G.load(b);
+  assert.deepStrictEqual(Object.keys(G.S.soc.friends), [], `Ana's id 7 is someone else, not Bel's lost friend (${B7 && B7.name})`);
+});

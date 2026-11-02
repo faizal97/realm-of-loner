@@ -91,7 +91,8 @@
     if (f) {
       const nf = {};
       for (const id of Object.keys(f)) {
-        const o = byId.get(id); let b = o ? byName.get(o.name) : R.bots.find((x) => String(x.id) === id);
+        // a friend this save's copy doesn't hold: by id only in the realm this save made, where ids are its own (#306)
+        const o = byId.get(id); let b = o ? byName.get(o.name) : R.from === S.id ? R.bots.find((x) => String(x.id) === id) : null;
         if (!b && o) { b = Object.assign({}, o, { id: R.nextBotId++ }); R.bots.push(b); byName.set(b.name, b); } // a friend never vanishes: they join the realm
         if (b) nf[b.id] = f[id];
       }
@@ -106,11 +107,31 @@
     S.flags = S.flags || {}; S.flags.roster = true;
     G.R = R; saveRoster(S);
   }
+  // guildmates who quit while another character was played said goodbye: their lines reach this guild chat (#305)
+  function deliverByes(S) {
+    const byes = ((S.server && S.server.byes) || []).filter((e) => e.c === S.id); if (!byes.length) return;
+    S.chat = S.chat || [];
+    for (const e of byes) S.chat.push({ id: (S.chatSeq = (S.chatSeq || 0) + 1), t: e.t, ch: 'guild', from: e.n, cls: e.cls, fromId: null, text: e.text });
+    if (S.chat.length > 160) S.chat.splice(0, S.chat.length - 160);
+    S.server.byes = S.server.byes.filter((e) => e.c !== S.id);
+  }
   // every character's friends, by name, so the realm never lets one quit without a goodbye (B.trimRoster)
+  // and every character's guild (S.server.homes, #305), so its members never move guild and say goodbye if they quit
   function keepFriends(S) {
+    const H = S.server.homes || (S.server.homes = {}); H[S.id] = S.player && S.player.guild != null ? S.player.guild : -1;
     const f = S.soc && S.soc.friends; if (!f) return;
     const k = S.server.keep || (S.server.keep = {});
     for (const id of Object.keys(f)) { const b = S.bots.find((x) => String(x.id) === id); if (b) k[b.name] = 1; }
+  }
+  // a character deleted (#306): its guild and its friends stop counting, unless another character has them too
+  function forget(id) {
+    const R = G.S && G.R && G.S.bots === G.R.bots ? G.R : readRoster(); if (!R || !R.server) return;
+    const SV = R.server; if (SV.homes) delete SV.homes[id];
+    if (SV.byes) SV.byes = SV.byes.filter((e) => e.c !== id);
+    const k = {}, names = new Map(R.bots.map((b) => [String(b.id), b.name]));
+    for (const c of readIndex()) { if (c.id === id) continue; const s = G.S && G.S.id === c.id ? G.S : G.readSave(c.id); for (const fid of Object.keys(((s || {}).soc || {}).friends || {})) if (names.has(fid)) k[names.get(fid)] = 1; }
+    SV.keep = k;
+    ls.set(ROSTER_KEY, JSON.stringify(R));
   }
   // Remove friend (#84): off this character's list; the account stops keeping them (#71: friends never quit) only when
   // no other character has them as a friend either
@@ -143,6 +164,7 @@
   G.hasSave = function () { return G.characters().length > 0; };
   G.logout = function () { G.save(); G.S = null; G.fight = null; G.pUnit = null; };
   G.deleteCharacter = function (id) {
+    forget(id);
     ls.del(CHAR_KEY(id));
     writeIndex(readIndex().filter((c) => c.id !== id));
     if (G.S && G.S.id === id) { G.S = null; G.fight = null; G.pUnit = null; }
@@ -244,6 +266,7 @@
     for (const b of (S.player.bags || []).concat(S.player.bank || [])) { const base = D.ITEMS[b.item.id]; if (base && base.slot === 'mat' && b.item.slot !== 'mat') { b.item.slot = 'mat'; b.item.icon = base.icon; } }
     G.rehearsalLetter(); // a Bard already past level 4 gets the Rehearsal's letter once (#256)
     G.honorLooks(true); // rank looks a character already earned (Honor ranks, #57), without a message
+    deliverByes(S); // after the save's own fixes (an older one keeps only open requests)
     return G.catchUp();
   };
   // Save codes (v9.7.1): "AZS2.<length>.<base64 of the deflated save>", about a fifth of the old size, so a code fits in a
