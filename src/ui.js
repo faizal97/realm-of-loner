@@ -5854,7 +5854,7 @@
     G.on('snow', (Z) => snowArena(Z)); G.on('snowLog', (l) => snowLog(l)); G.on('fireworks', () => fireworks(5)); G.on('lnGuestFirst', () => setTimeout(lnMidnight, 1500)); // Longnight
     G.on('rehearsal', (R) => rehearsalCallout(R)); G.on('fightStart', () => setTimeout(() => rehearsalCallout(G.rehearsalNow()), 50)); // #256
     G.on('levelup', (d) => { const l = d.learned || [], ks = [['marching_song', 'second'], ['play_drum', 'drum'], ['play_horn', 'horn']].filter(([a]) => l.includes(a)).map(([, k]) => k).concat(d.level === D.TALENT_START ? ['talents'] : []); ks.forEach((k, i) => whenCalm(() => setTimeout(() => bardCard(k), i * 15000))); }); // the Bard's teaching cards (#256)
-    G.on('levelup', (d) => { if (d.level === 2) tip('level'); if (d.level === 8) tip('dungeon'); if (d.level === D.TALENT_START) tip('talents'); });
+    G.on('levelup', (d) => { if (d.level === 2) tip('level'); if (d.level === G.firstDungeonLvl()) tip('dungeon'); if (d.level === D.TALENT_START) tip('talents'); });
     G.on('chat', () => { if (G.S && G.S.chat.some((m) => m.act && m.act.state === 'open' && !m.act.accepted)) tip('request'); });
     G.on('fightEnd', (d) => { fightEndAt = performance.now(); if (ui.singing) { ui.singing = false; if (window.SND && SND.songOut) SND.songOut(); } renderAll(); if (d.result === 'lose' && !G.S.run) banner('You died'); });
     G.on('runUpdate', renderAll);

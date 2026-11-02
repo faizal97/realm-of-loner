@@ -1051,6 +1051,8 @@
     return (p.safe || p.city) && f && f !== 'contested' ? f : null;
   };
   G.enemyTown = (id) => { const f = G.placeFaction(id); return !!f && f !== G.myFaction(); };
+  // the level your side's first dungeon opens at (#317: the "Dungeons are open" tip came at 8, the other side's)
+  G.firstDungeonLvl = () => Math.min(...Object.values(D.ACTIVITIES).filter((A) => A.dungeon && !A.worldBoss && !A.needQuest && (A.size || 5) <= 5 && !(A.where && G.enemyTown(A.where))).map((A) => A.minLvl || 1));
   // ---- riding (v5.1)
   G.mounted = () => { const P = G.S.player; return !!(P.riding && P.mount && D.MOUNTS[P.mount]); };
   G.travelSecs = function (from, dest) {
