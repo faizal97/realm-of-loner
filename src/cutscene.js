@@ -652,9 +652,9 @@
       skipBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         const now = performance.now();
-        // the first tap always arms (#319: one in the first moments did nothing, so Skip took three); only the second,
-        // after the moment for stray taps, skips
-        if (armed && now - armed < ARM && now - t0 >= GRACE) { clearTimeout(armTimer); return finish(); }
+        // the first tap always arms (#319: one in the first moments did nothing, so Skip took three); the second skips,
+        // unless it is the same stray burst (within 0.3 s of the first, in the first moments)
+        if (armed && now - armed < ARM && (now - t0 >= GRACE || now - armed >= 300)) { clearTimeout(armTimer); return finish(); }
         armed = now; skipBtn.classList.add('armed'); skipBtn.textContent = 'Tap again to skip';
         clearTimeout(armTimer); armTimer = setTimeout(disarm, ARM);
       });
