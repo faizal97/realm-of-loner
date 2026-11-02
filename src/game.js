@@ -3332,6 +3332,7 @@
     sys(`${ch.name} joins the party.`);
     S.pending.push({ at: now() + 1500, bot: b.id, ch: 'party', text: B.partyLine(b, 'hello'), fromName: ch.name });
     emit('change');
+    return true; // joined: the caller may say so (#386)
   }
   G.addToParty = (bot, opts) => addToParty(bot, opts);
   // A group from chat (LFG post or guild request) summons you, like Help Wanted. opts: { leader, guild, soc }
@@ -3403,7 +3404,7 @@
     const yes = Math.random() < (diff <= 3 ? 0.75 : diff <= 5 ? 0.35 : 0.05);
     sys(`You invite ${b.name} to your group.`);
     S.pending.push({ at: now() + rnd(1500, 3500), bot: b.id, ch: 'whisper', text: yes ? cpick(['sure', 'ok!', 'yeah why not', 'sure, same quest']) : cpick(['no ty', 'soloing sry', 'nah', 'too low lol']),
-      onPost: () => { if (!G.S) return; if (yes && !G.S.run) { addToParty(b); toast(`${b.name} joined your party.`); } else if (!yes) toast(`${b.name} said no.`); } }); // the answer on screen, not only in a whisper (#369)
+      onPost: () => { if (!G.S) return; if (!yes) return toast(`${b.name} said no.`); if (G.S.run) return toast(`${b.name} can't join during a run.`); toast(addToParty(b) ? `${b.name} joined your party.` : 'Your party is full.'); } }); // the answer on screen, not only in a whisper (#369); a join only when it happened (#386)
   };
   G.acceptPartyInvite = function (botId) {
     const S = G.S; const b = S.bots.find((x) => x.id === botId); if (!b) return;

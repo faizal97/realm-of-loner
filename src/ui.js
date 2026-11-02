@@ -1476,8 +1476,8 @@
     const here = on && !withMe && B.placeFor(live, new Date()) === P.place; // only someone where you are (#304)
     // Invite, or why not (#322): greyed with the reason, so a missing button never reads as a bug
     if (mine && !inParty && !withMe && !who.equip) {
-      const why = !on ? (live.away > Date.now() ? 'On a break' : 'Offline') : !here ? 'Not here' : S.run ? 'In a run' : S.queue ? 'In queue' : G.partySize() >= 3 ? 'Party full' : Math.abs(live.level - P.level) > 5 ? 'Level gap' : ''; // more than 5 levels apart, they all but always say no (#369)
-      btns.append(why ? h('button', { class: 'btn', disabled: true }, `Invite · ${why}`) : h('button', { class: 'btn', onclick: () => { closeDialog(); G.invite(b.id); toast(`Invited ${b.name}.`); } }, 'Invite'));
+      const why = !on ? (live.away > Date.now() ? 'On a break' : 'Offline') : !here ? 'Not here' : S.run ? 'In a run' : S.queue ? 'In queue' : G.partySize() >= 3 ? 'Party full' : Math.abs(live.level - P.level) > 5 ? 'Level gap' : (S.flags.invitedAt || {})[b.id] > Date.now() - 20000 ? 'Invited' : ''; // more than 5 levels apart, they all but always say no (#369)
+      btns.append(why ? h('button', { class: 'btn', disabled: true }, `Invite · ${why}`) : h('button', { class: 'btn', onclick: () => { closeDialog(); if (!G.invite(b.id)) toast(`Invited ${b.name}.`); } }, 'Invite')); // a refusal says its own reason, never next to a success (#387)
     }
     // the cost said in full (#322): only a friend no other character has can then quit the realm
     if (friend) btns.append(h('button', { class: 'btn alt', onclick: () => { showDialog([h('h3', null, `Remove ${b.name} as a friend?`), h('p', null, G.friendElsewhere(b.id) ? 'They stop counting as your friend on this character. Help them again to be friends.' : 'They stop counting as your friend, and may quit the realm. Help them again to be friends.'),
