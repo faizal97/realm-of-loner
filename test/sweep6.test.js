@@ -89,3 +89,22 @@ test('a creature you were fighting when the app closed is back on the next load 
   G.save(); G.S = null; G.fight = null; G.pUnit = null; W.setNow(W.now() + 20000); G.load(id);
   assert.strictEqual(G.S.world.northshire_abbey.mobs.filter((y) => y.state === 'fight').length, 0);
 });
+
+test('a clock set back between sessions keeps every timer at the time it had left (#410)', () => {
+  W.character(20); const id = G.S.id, P = G.S.player; P.place = 'sentinel_hill';
+  G.queueFor('deadmines'); const waitLeft = G.S.queue.popAt - W.now();
+  P.cds = { x: W.now() + 120000 }; P.auras = [{ id: 'test', until: W.now() + 600000 }];
+  G.save(); G.logout(); W.setNow(W.now() - 86400000); G.load(id);
+  const t = W.now(), Q = G.S.player;
+  assert.ok(G.S.queue.popAt - t <= waitLeft, 'queue');
+  assert.ok(Q.cds.x - t <= 120000, 'cooldown'); assert.ok(Q.auras[0].until - t <= 600000, 'buff');
+});
+
+test('a clock set back mid-run never gives a negative run time or a day-long wait (#422, #410)', () => {
+  W.character(20); const S = G.S; S.player.place = D.ACTIVITIES.deadmines.where;
+  G.queueFor('deadmines'); S.queue.popAt = W.now() - 1; G.update(0.5); G.acceptPop();
+  W.advance(3); const c0 = G.runClock();
+  W.setNow(W.now() - 2 * 3600000); W.advance(1);
+  assert.ok(G.runClock() >= c0, `run clock ${G.runClock()}`);
+  assert.ok(S.run.restUntil - W.now() < 60000, 'rest');
+});

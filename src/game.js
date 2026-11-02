@@ -237,6 +237,8 @@
     G.fight = null; G.pUnit = null;
     S.pending = []; S.chatTimers = {};
     joinRoster(S); // #71
+    if (S.lastSeen > now()) shiftClock(S, now() - S.lastSeen); // before anything below sets a fresh time
+    lastTick = now();
     // a reload mid-pull is a wipe (#349): the pull isn't undone for free, so a lost boss fight counts as lost
     if (S.run && S.run.phase === 'fight') { S.run.wipes = (S.run.wipes || 0) + 1; S.run.momentum = 0; S.run.phase = 'wipe'; S.run.restUntil = now() + 12000; S.player.hp = null; S.player.res = null; if (S.group) for (const m of S.group.members) { m.hp = null; m.res = null; } sys('You left mid-fight: it counts as a wipe. Running back...'); }
     // a clock that went back never leaves a timer longer than its full length (#393): a day as a ghost, or on hearth
@@ -368,6 +370,22 @@
     G.S = S; G.fight = null; G.save(); return S.id;
   };
   G.wipeSave = function () { if (G.S) G.deleteCharacter(G.S.id); G.S = null; };
+
+  // a clock moved back between sessions (#410): the queue, trip, cooldowns, buffs, respawns and run timers keep the time
+  // they had left when the app closed, so none of them waits a day. Only times inside this character's own short-lived
+  // state move; the realm's history and the weekly and daily keys never do (#336, #402)
+  function shiftClock(S, d) {
+    const P = S.player;
+    const move = (o, depth) => {
+      if (!o || typeof o !== 'object' || depth > 6) return;
+      for (const k in o) {
+        const v = o[k];
+        if (typeof v === 'number' && v > 1e12 && v < S.lastSeen + 30 * 86400000) o[k] = v + d;
+        else if (v && typeof v === 'object') move(v, depth + 1);
+      }
+    };
+    for (const o of [S.queue, S.run, S.group, S.wparty, S.world, S.bg, S.brawl, P.travel, P.cds, P.auras, P.costume]) move(o, 0);
+  }
 
   // Time away: rested XP, the server moving on, a news digest.
   G.catchUp = function () {
@@ -4350,7 +4368,7 @@
   }
   // ---------- dungeon bonuses: beat par time (fast pays), clear flawless (careful pays); a good group can get both
   const MOMENTUM_WINDOW = 5000, MOMENTUM_MAX = 5;
-  G.runClock = function () { const R = G.S.run; return R ? ((R.finishedAt || now()) - R.started) / 1000 + (R.fastSecs || 0) : 0; }; // fastSecs: fight time gained at 2x or 3x
+  G.runClock = function () { const R = G.S.run; return R ? Math.max(0, ((R.finishedAt || now()) - R.started) / 1000) + (R.fastSecs || 0) : 0; }; // fastSecs: fight time gained at 2x or 3x
   // v10.3: level-60 clears pay Mentor Marks, the currency for gear upgrades (Trials will pay more)
   G.clearMarks = (act) => { const A = D.ACTIVITIES[act], Dg = A && A.dungeon && D.DUNGEONS[A.dungeon]; return !Dg || (A.maxLvl || D.LEVEL_CAP) < D.LEVEL_CAP ? 0 : Dg.raid ? 15 : 5; };
   // Par times (v10.4): the data's par was set when every run also waited for loot rolls; rolls no longer hold the group,
@@ -4503,9 +4521,11 @@
   });
   G.recap = null;
   G.on('fightStart', () => { G.recap = null; }); // until the next pull
+  let lastTick = 0;
   G.update = function (dt) {
     const S = G.S;
     if (!S) return;
+    { const t = now(); if (lastTick && t < lastTick - 5000) shiftClock(S, t - lastTick); lastTick = t; } // the clock moved back while playing (#410, #422)
     const fast = G.fight && G.speed > 1 && !G.isPvp(G.fight) ? G.speed : 1;
     if (G.speed > 1 && G.isPvp(G.fight) && !pvpSpeedTold) { pvpSpeedTold = true; emit('infoToast', 'PvP fights run at normal speed.'); }
     if (fast > 1 && S.run && !S.run.finishedAt) S.run.fastSecs = (S.run.fastSecs || 0) + dt * (fast - 1);
