@@ -208,6 +208,16 @@
   // A character's stored save without loading it (no catch-up, no fixes), and storing one that is not being played.
   // Cloud save uses these to back up every character and to bring one in under its own id.
   G.readSave = function (id) { try { return JSON.parse(ls.get(CHAR_KEY(id)) || 'null'); } catch (e) { return null; } };
+  // a save with the realm-only history put back from the shared roster (#383), for cloud files: a realm rebuilt from
+  // the cloud on a new device keeps everyone's story and who has quit
+  G.fullSave = function (id) {
+    if (G.S && G.S.id === id) { G.save(); return JSON.parse(JSON.stringify(G.S)); }
+    const S = G.readSave(id), R = S && readRoster(); if (!R || !Array.isArray(R.bots)) return S;
+    const by = new Map(R.bots.map((b) => [b.id, b]));
+    for (const b of S.bots || []) { const r = by.get(b.id); if (r && r.name === b.name) for (const k of ['hist', 'pals', 'rival']) if (r[k] !== undefined) b[k] = r[k]; }
+    if (R.server) { S.server = S.server || {}; for (const k of ['gone', 'byes']) if (Array.isArray(R.server[k])) S.server[k] = R.server[k]; }
+    return S;
+  };
   G.writeSave = function (S) {
     if (!S || !S.id) return false;
     if (G.S && G.S.id === S.id) { G.S = null; G.fight = null; G.pUnit = null; } // the caller loads it again with G.load

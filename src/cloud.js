@@ -91,7 +91,7 @@
     if (!asCopy) record(c.id, { fileId: c.fileId, rev: c.rev, played: Math.floor(S.player.played || 0), mark: CLOUD.mark(S), at: Date.now() });
     return S;
   }
-  const local = (id) => { if (G.S && G.S.id === id) G.save(); return G.readSave(id); };
+  const local = (id) => G.fullSave(id); // with the realm's history, which the device's own save leaves to the roster (#383)
   const brief = (S) => S && { id: S.id, name: S.player.name, level: S.player.level, xp: Math.floor(S.player.xp || 0), cls: S.player.cls, played: S.player.played || 0, at: S.lastSeen || 0 };
 
   // One character: does whatever is safe and reports it. A 'conflict' changes nothing; the caller asks the player and

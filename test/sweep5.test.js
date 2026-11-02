@@ -49,3 +49,16 @@ test('Longnight rewards still waiting at the Hearthwarden arrive by mail when it
   const mail = G.mail().filter(G.mailWaiting);
   for (const r of owed) assert.ok(mail.some((m) => m.kind === 'reward' && m.item.id === r.item && m.n === (r.n || 1)), r.item);
 });
+
+test("a cloud file keeps the realm's history and who has quit (#383)", async () => {
+  W.character(30); const id = G.S.id;
+  W.setNow(W.now() + 20 * 86400000); G.logout(); G.load(id); G.save();
+  const R = JSON.parse(W.store.getItem('azsolo.roster'));
+  const cnt = (S) => ({ hist: S.bots.filter((b) => b.hist && b.hist.length).length, gone: (S.server.gone || []).length });
+  const want = cnt(R); assert.ok(want.hist > 0 && want.gone > 0, JSON.stringify(want));
+  for (const loaded of [true, false]) {
+    if (!loaded) G.logout();
+    const back = await G.decodeSave(await G.encodeSave(G.fullSave(id)));
+    assert.deepStrictEqual(cnt(back), want, loaded ? 'the character being played' : 'another character');
+  }
+});
