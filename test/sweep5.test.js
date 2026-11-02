@@ -70,3 +70,12 @@ test('a clock set back never leaves a timer longer than its full length (#393)',
   const t = W.now(), Q = G.S.player;
   assert.ok(Q.ghostUntil <= t + 15000, 'revive'); assert.ok(Q.hearthAt <= t + 15 * 60000, 'hearth'); assert.ok(G.S.flags.deserterUntil <= t + 5 * 60000, 'deserter');
 });
+
+test('weekly lockouts and daily chests never reset when the clock moves back (#402)', () => {
+  W.setNow(new Date(2026, 9, 7, 12).getTime()); W.character(60);
+  W.setNow(W.now() + 7 * 86400000); G.raidWeek().got.molten_core = 1; // next week's lockout
+  G.S.player.brawl = Object.assign(G.S.player.brawl || {}, { chestDay: '2026-10-14' });
+  W.setNow(W.now() - 7 * 86400000);
+  assert.strictEqual(G.raidWeek().got.molten_core, 1, 'the lockout stays');
+  assert.ok(!G.brawlChestOpen(), 'the chest stays taken');
+});

@@ -2798,7 +2798,7 @@
   // Daily Roulette: once a day, a random dungeon you can do, with bonus rewards. The group summons you.
   // the day is the player's own (#96): it resets at local midnight, as the bounties have since v10.1.1 (it was UTC's). A
   // save from before keeps its UTC day until its next Roulette, so nobody gains or loses a run at the switch
-  G.rouletteReady = () => { const f = G.S.flags; return f.rouletteLocal ? f.rouletteDay !== dayKey() : f.rouletteDay !== oldDayKey(); };
+  G.rouletteReady = () => { const f = G.S.flags; return f.rouletteLocal ? !(f.rouletteDay >= dayKey()) : f.rouletteDay !== oldDayKey(); }; // a later day only (#402)
   G.rouletteOptions = () => Object.keys(D.ACTIVITIES).filter((k) => { const A = D.ACTIVITIES[k]; return A.dungeon && (A.size || 5) === 5 && G.S.player.level >= A.minLvl && G.activityBlock(k) !== 'hidden' && !(A.where && G.stormBlocks(A.where) && G.S.player.level >= 60); }); // a 5-player dungeon: no raid, nothing the storm hides (#385)
   G.startRoulette = function () {
     const S = G.S;
@@ -3102,7 +3102,7 @@
     L = L || G.S.player.level;
     return { money: L * 50 * r, xp: L < D.LEVEL_CAP ? Math.round((D.XP_TO_LEVEL[L] || 0) * [0.02, 0.03, 0.05][r - 1]) : 0, marks: L >= D.LEVEL_CAP ? [2, 3, 5][r - 1] : 0 };
   };
-  G.brawlChestOpen = function () { return ((G.S.player.brawl || {}).chestDay) !== brawlDay(new Date(now())); }; // the chest pays once a day
+  G.brawlChestOpen = function () { return !(((G.S.player.brawl || {}).chestDay) >= brawlDay(new Date(now()))); }; // the chest pays once a day; only a later day opens it again (#402)
   G.brawlFight = function () {
     const S = G.S, P = S.player, br = S.brawl; if (!br || br.phase !== 'choose' || G.fight) return;
     const foe = G.brawlOpponent(); if (!foe) return;
@@ -3146,7 +3146,7 @@
     if (champion) {
       P.brawl.champs = (P.brawl.champs || 0) + 1;
       const today = brawlDay(new Date(now()));
-      if (P.brawl.chestDay !== today) { // the chest: once a day, a choice of three blues for your level
+      if (!(P.brawl.chestDay >= today)) { // the chest: once a day, a choice of three blues for your level
         const C = D.CLASSES[P.cls], L = P.level, slots = ['weapon', pick(['chest', 'legs', 'hands', 'feet', 'waist', 'wrist']), pick(['back', 'finger'])];
         br.chest = slots.map((sl) => G.genGear(sl, L, 3, sl === 'weapon' ? { wtype: C.weapons[0] } : { atype: C.armorType }));
       }
@@ -3646,7 +3646,7 @@
     return !!(Dg && Dg.hard && G.S.player.level >= D.LEVEL_CAP && cx.clears);
   };
   // this week's Hard bonus: each boss drops its loot two upgrade steps up once per week (P.raidWeek, reset on Monday)
-  G.raidWeek = function () { const P = G.S.player; if (!P.raidWeek || P.raidWeek.week !== weekKey()) P.raidWeek = { week: weekKey(), got: {} }; return P.raidWeek; };
+  G.raidWeek = function () { const P = G.S.player; if (!P.raidWeek || !(P.raidWeek.week >= weekKey())) P.raidWeek = { week: weekKey(), got: {} }; return P.raidWeek; }; // only a later week resets it: a clock moved back and forth never does (#402)
   G.hardBonusLeft = (act, boss) => !G.raidWeek().got[act + ':' + boss];
   G.HARD_STEPS = 2;
   // The featured raid (v10.7): one raid a week, worked out from the date and the data so every device agrees and it
@@ -4708,7 +4708,7 @@
   G.lwTownLanterns = (place) => (G.lwRec().town[G.eventSeason('lanternwake') + ':' + place] || 0);
   G.costumeOf = (P) => (P && P.costume && P.costume.until > now() && D.MOBS[P.costume.mob] ? P.costume.mob : null);
   // the Snuffed Road's loot, once a day each on Normal and on Hard; every daily Normal kill counts toward the Steed
-  G.lwDaily = () => { const st = G.lw(); return { normal: !!st && st.lootDay !== dayKey(), hard: !!st && st.hardDay !== dayKey() }; };
+  G.lwDaily = () => { const st = G.lw(), d = dayKey(); return { normal: !!st && !(st.lootDay >= d), hard: !!st && !(st.hardDay >= d) }; }; // a later day only (#402)
   G.lwHardOpen = () => !!(((G.S.player.codex || {})[LW().act] || {}).clears);
   G.lwHardLeft = () => LW().set.filter((id) => !(G.account().looks || []).includes(D.ITEMS[id].look[0] + ':' + D.ITEMS[id].look[1] + '_hard'));
   function lwBossLoot(R) {
@@ -5099,7 +5099,7 @@
 
   // ---- the Knocker's and the Cold Guest's loot: once a day each on Normal and on Hard; every daily Normal kill counts
   // toward the mount (the Frost Hound by the 10th, the Pale Stag by the 3rd: the raid is open five days)
-  G.lnLoot = () => { const st = G.ln(), d = dayKey(); return { knocker: !!st && st.lootDay !== d, knockerHard: !!st && st.hardDay !== d, guest: !!st && st.guestDay !== d, guestHard: !!st && st.guestHardDay !== d }; };
+  G.lnLoot = () => { const st = G.ln(), d = dayKey(); return { knocker: !!st && !(st.lootDay >= d), knockerHard: !!st && !(st.hardDay >= d), guest: !!st && !(st.guestDay >= d), guestHard: !!st && !(st.guestHardDay >= d) }; }; // a later day only (#402)
   G.lnHardOpen = (act) => !!(((G.S.player.codex || {})[act] || {}).clears);
   G.lnHardLeft = (sfx) => LN().set.filter((id) => !(G.account().looks || []).includes(D.ITEMS[id].look[0] + ':' + D.ITEMS[id].look[1] + sfx));
   function lnBossLoot(R) {
