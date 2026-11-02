@@ -134,3 +134,8 @@ test('an imported save finds its party members on the realm by name (#413)', () 
   G.load(id);
   assert.strictEqual(G.S.wparty.members[0].bot.id, 99999);
 });
+
+test('an empty save code asks for one (#414)', async () => {
+  W.character(5);
+  await assert.rejects(G.decodeSave('  '), /Paste a save code/);
+});

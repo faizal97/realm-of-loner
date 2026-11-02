@@ -350,6 +350,7 @@
   G.exportSave = async function () { G.save(); return G.encodeSave(G.S, true); };
   G.decodeSave = async function (str) {
     let code = String(str || '').replace(/\s+/g, ''); // messaging apps add line breaks and spaces
+    if (!code) throw new Error('Paste a save code.'); // #414
     let json;
     const at = code.indexOf(SAVE_TAG + '.');
     if (at >= 0) {
