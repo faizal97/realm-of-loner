@@ -27,3 +27,14 @@ test('a Longnight reward taken from the mail after the festival stays in the bag
   G.save(); G.logout(); G.load(id);
   assert.strictEqual(count(m.item.id), n);
 });
+
+test('festival dailies never reset when the clock moves to another day and back (#404)', () => {
+  const t0 = new Date(2026, 9, 30, 12).getTime(); W.setNow(t0); W.character(30);
+  const cap = D.EVENTS.lanternwake.cap;
+  G.lwEarn(cap * 2, 'test', true); assert.strictEqual(G.lw().today, cap);
+  W.setNow(t0 - 86400000); G.lw(); W.setNow(t0);
+  assert.strictEqual(G.lwEarn(cap, 'test', true), 0, 'no candles past the cap');
+  const t1 = new Date(2026, 11, 20, 12).getTime(); W.setNow(t1); G.ln().done = true;
+  W.setNow(t1 - 86400000); G.ln(); W.setNow(t1);
+  assert.ok(G.ln().done, 'the Longnight daily stays done');
+});

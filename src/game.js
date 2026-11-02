@@ -4630,7 +4630,7 @@
     const season = G.eventSeason('lanternwake');
     if (P.lw && P.lw.season !== season && /^test/.test(P.lw.season)) G.lwRevokeTest(); // the real season starts while playing
     if (!P.lw || P.lw.season !== season) P.lw = { season, candles: 0, day: null, today: 0, lit: [], lootDay: null, hardDay: null };
-    if (P.lw.day !== dayKey()) Object.assign(P.lw, { day: dayKey(), today: 0, lit: [] });
+    if (!P.lw.day || P.lw.day < dayKey()) Object.assign(P.lw, { day: dayKey(), today: 0, lit: [] });
     return P.lw;
   };
   // candles left out of a festival that has ended go (they are worth nothing after it)
@@ -4797,7 +4797,7 @@
     if (P.ln && P.ln.season !== season && /^test/.test(P.ln.season)) G.lnRevokeTest();
     if (P.ln && P.ln.season !== season) lnMailOwed(P.ln);
     if (!P.ln || P.ln.season !== season) P.ln = { season, first: lnMid(now()), kindling: 0, rank: 0, doors: [], ready: 0, day: null, done: false, prog: {}, lootDay: null, hardDay: null, guestDay: null, guestHardDay: null };
-    if (P.ln.day !== dayKey()) Object.assign(P.ln, { day: dayKey(), done: false, prog: { wins: 0, homes: [], wood: [], cooked: false, bowls: 0 } });
+    if (!P.ln.day || P.ln.day < dayKey()) Object.assign(P.ln, { day: dayKey(), done: false, prog: { wins: 0, homes: [], wood: [], cooked: false, bowls: 0 } });
     return P.ln;
   };
   // rewards still waiting at the Hearthwarden go to the mail when the festival ends, never lost with it (#382); a test
