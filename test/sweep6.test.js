@@ -198,3 +198,16 @@ test('Buy, Thank them and Take the order are greyed with full bags (#419)', () =
     .map((a) => globalThis.SOC.actions({ ch: 'whisper', act: Object.assign({ state: 'open', bot: b.id, until: W.now() + 60000 }, a) })[0]);
   for (const x of acts) assert.ok(x.disabled && x.why, x.label);
 });
+
+test('a chat group joined and left at once never counts toward the weekly requests goal (#420)', () => {
+  const { S, P } = W.character(30); P.guild = 1; const SOC = globalThis.SOC;
+  let w = SOC.week(); let tries = 0; while (w.kind !== 'help' && tries++ < 8) { P.guild = (P.guild + 1) % 5; S.soc.week = null; w = SOC.week(); }
+  assert.strictEqual(w.kind, 'help'); const got = w.got;
+  let joins = 0;
+  for (let i = 0; i < 3; i++) {
+    const b = S.bots.find((y) => B.factionOf(y) === G.myFaction());
+    const m = { id: 9100 + i, ch: 'lfg', from: b.name, text: 'LFM', act: { kind: 'lfg', act: 'gnomeregan', role: 'dps', leader: b.id, state: 'open', until: W.now() + 240000 } }; S.chat.push(m);
+    SOC.actions(m)[0].fn(); if (S.run) { joins++; assert.ok(S.run.soc.help, 'counted at the end'); } G.leaveGroup(); S.flags.deserterUntil = 0;
+  }
+  assert.strictEqual(joins, 3); assert.strictEqual(SOC.week().got, got);
+});

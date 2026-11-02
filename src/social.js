@@ -517,21 +517,22 @@
     const close = (st) => { a.state = st || 'done'; G.emitChange(); };
     const decline = { label: 'No thanks', fn: () => { close('declined'); if (b && (a.whisper || a.guild) && chance(0.6)) reply(tone(b) === 'rude' ? pick(['k whatever', 'ok', 'fine', 'whatever', 'ok then']) : pick(['np', 'ok no worries', 'all good', 'no problem!', 'all good!', 'no stress'])); } };
     const help = () => { weekProgress('help', 1); };
+    const helpOnFinish = () => { const R = G.S.run; if (R) R.soc = Object.assign({}, R.soc, { help: true }); }; // a group joined from chat counts once its run is done (#420)
     if (a.kind === 'ln_stew') return [{ label: 'Give a bowl', primary: true, fn: () => G.lnGiveStew(m) }, decline]; // Longnight Stew
     if (a.kind === 'lfg') {
-      return [{ label: `Join as ${roleName(a.role)}`, primary: true, fn: () => { if (G.joinChatGroup(a.act, a.role, { leader: a.leader, guild: a.guild ? P.guild : null, soc: { kind: a.guild ? 'g_run' : 'lfg', leader: a.leader } })) { close(); help(); } } }, decline]; // the leader remembers you once it's done (#338)
+      return [{ label: `Join as ${roleName(a.role)}`, primary: true, fn: () => { if (G.joinChatGroup(a.act, a.role, { leader: a.leader, guild: a.guild ? P.guild : null, soc: { kind: a.guild ? 'g_run' : 'lfg', leader: a.leader } })) { close(); helpOnFinish(); } } }, decline]; // the leader remembers you once it's done (#338)
     }
     if (a.kind === 'trial_lfg') {
-      return [{ label: `Join Trial ${a.lvl} as ${roleName(a.role)}`, primary: true, fn: () => { if (G.joinChatTrial(a.act, a.lvl, a.role, { leader: a.leader })) { close(); help(); } } }, decline];
+      return [{ label: `Join Trial ${a.lvl} as ${roleName(a.role)}`, primary: true, fn: () => { if (G.joinChatTrial(a.act, a.lvl, a.role, { leader: a.leader })) { close(); helpOnFinish(); } } }, decline];
     }
     if (a.kind === 'help_wanted') {
       const r = (S.helpWanted || []).find((x) => x.id === a.hw);
       if (!r) return [{ label: 'Someone else took this spot', disabled: true, why: true, fn: () => null }]; // says what happened (#166)
       // the request closes only when the join worked; a refusal is told and the request stays (#166)
-      return [{ label: `Help as ${roleName(r.role)}`, primary: true, fn: () => { if (G.groupBusy()) return 'Leave your current group first.'; const why = G.joinHelpWanted(r.id); if (why) return why; close(); help(); } }, decline];
+      return [{ label: `Help as ${roleName(r.role)}`, primary: true, fn: () => { if (G.groupBusy()) return 'Leave your current group first.'; const why = G.joinHelpWanted(r.id); if (why) return why; close(); helpOnFinish(); } }, decline];
     }
     if (a.kind === 'carry') {
-      return [{ label: `Run it (tip ${coin(a.tip)})`, primary: true, fn: () => { if (G.joinChatGroup(a.act, G.role(), { leader: a.bot, soc: { kind: 'carry', tip: a.tip, bot: a.bot } })) { close(); help(); } } }, decline];
+      return [{ label: `Run it (tip ${coin(a.tip)})`, primary: true, fn: () => { if (G.joinChatGroup(a.act, G.role(), { leader: a.bot, soc: { kind: 'carry', tip: a.tip, bot: a.bot } })) { close(); helpOnFinish(); } } }, decline];
     }
     if (a.kind === 'help_kill' || a.kind === 'quest_team') {
       if (a.accepted) return [{ label: 'Cancel', fn: () => { if (a.kind === 'help_kill') finishHelp(m, false); else finishTeam(m, false); close('declined'); } }];
@@ -726,6 +727,7 @@
     const S = G.S;
     if (d && d.soc && d.soc.kind === 'carry') { S.player.money += d.soc.tip; G.sys(`Your carry is done: +${coin(d.soc.tip)} tip.`); const b = botById(d.soc.bot); if (b) { S.pending.push({ at: now() + 2500, bot: b.id, ch: 'whisper', text: voice(b, pick(['ty so much, tip sent!', 'that was amazing, thx', 'u carried hard, ty'])) }); befriend(b); } }
     if (d && d.soc && d.soc.leader != null) { const b = botById(d.soc.leader); if (b) befriend(b); } // you joined their group and finished it (#338)
+    if (d && d.soc && d.soc.help) weekProgress('help', 1);
     if (d && d.soc && (d.soc.kind === 'g_run' || d.soc.kind === 'g_event')) { addStanding(d.soc.kind === 'g_event' ? 60 : 40, d.soc.kind === 'g_event' ? 'guild night' : 'a guild run'); const bonus = SOC.perk('marks'); if (bonus && G.addMarks) G.addMarks(bonus, 'guild run'); }
     const A = d && D.ACTIVITIES[d.act];
     if (A && A.dungeon && S.player.guild >= 0) {
