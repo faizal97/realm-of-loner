@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const W = require('./world');
-const { G, D } = W;
+const { G, D, B } = W;
 const count = (id) => G.S.player.bags.filter((b) => b.item.id === id).reduce((n, b) => n + (b.n || 1), 0);
 
 test('Longnight items stay in the bags across a reload while Longnight is on (#403)', () => {
@@ -124,4 +124,13 @@ test('a group pop left unanswered times out and says so (#412)', () => {
   W.advance(G.POP_WAIT / 1000 + 2);
   assert.ok(!G.S.queue, 'the pop is gone');
   assert.ok(G.S.chat.some((m) => /didn't answer in time/.test(m.text || '')));
+});
+
+test('an imported save finds its party members on the realm by name (#413)', () => {
+  W.character(20); const S = G.S, id = S.id, b = S.bots.find((x) => B.factionOf(x) === G.myFaction());
+  S.wparty = { members: [G.botChar(b)], place: S.player.place, until: W.now() + 300000 };
+  G.save(); G.logout();
+  const R = JSON.parse(W.store.getItem('azsolo.roster')); R.bots.find((x) => x.id === b.id).id = 99999; W.store.setItem('azsolo.roster', JSON.stringify(R));
+  G.load(id);
+  assert.strictEqual(G.S.wparty.members[0].bot.id, 99999);
 });

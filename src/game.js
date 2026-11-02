@@ -120,6 +120,10 @@
         for (const id of Object.keys(met)) { const o = byId.get(id), b = o ? byName.get(o.name) : null; if (b) nm[b.id] = met[id]; }
         S.player.met = nm;
       }
+      // the people in a group, a queue's group and a world party follow by name too (#413); one not on this realm
+      // leaves a world party (a run or a queue's group keeps its copy, which plays on)
+      for (const ms of [S.group && S.group.members, S.queue && S.queue.group && S.queue.group.members, S.wparty && S.wparty.members]) for (const m of ms || []) { const b = m && m.bot && byName.get(m.bot.name); if (b) m.bot.id = b.id; }
+      if (S.wparty) { S.wparty.members = S.wparty.members.filter((m) => m.bot && byName.get(m.bot.name)); if (!S.wparty.members.length) S.wparty = null; }
     }
     S.bots = R.bots; S.server = R.server || (R.server = {}); S.lastSim = R.lastSim; S.nextBotId = Math.max(R.nextBotId, 1000);
     // nobody on the realm has a character's name (#314): such a person gets another, and stays kept if they were
