@@ -211,3 +211,12 @@ test('a chat group joined and left at once never counts toward the weekly reques
   }
   assert.strictEqual(joins, 3); assert.strictEqual(SOC.week().got, got);
 });
+
+test('queueing during a world fight is refused and the party stays (#423)', () => {
+  const { S } = W.character(20); const act = 'deadmines'; S.player.place = D.ACTIVITIES[act].where;
+  for (const b of S.bots.filter((x) => B.factionOf(x) === G.myFaction() && x.level >= 18 && x.level <= 22).slice(0, 2)) G.addToParty(b);
+  assert.ok(G.partySize() > 1);
+  G.placeMobs(); const m = (S.world[S.player.place] || {}).mobs.find((x) => x.state === 'alive'); G.engage(m.id); assert.ok(G.fight);
+  G.queueFor(act);
+  assert.ok(!S.queue); assert.ok(G.partySize() > 1, 'the party stays');
+});

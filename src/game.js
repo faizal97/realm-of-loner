@@ -3756,8 +3756,9 @@
     if (why) return toast(why === 'hidden' ? 'Only for the other faction.' : why + '.');
     if (hard && A.event && !(A.event === 'longnight' ? G.lnHardOpen(act) : G.lwHardOpen())) return toast('Hard opens after one Normal clear of ' + A.name + '.');
     if (hard && !A.event && !G.hardOpen(act)) return toast('Hard opens after a Normal clear at level ' + D.LEVEL_CAP + '.');
+    if (G.fight) return toast('Finish the fight first.'); // refused before the party breaks up (#423)
+    if (S.run || S.group || G.bgBusy() || (S.brawl && S.brawl.phase !== 'done')) return toast('Leave your current group first.');
     if (S.wparty) disbandParty('You left your party to use the group finder.');
-    if (S.run || S.group || G.bgBusy() || G.fight || (S.brawl && S.brawl.phase !== 'done')) return toast('Leave your current group first.');
     if (S.bg) G.leaveBg(); // a finished battleground's result closes as you queue
     const role = G.role();
     const wait = role === 'tank' ? rnd(4, 12) : role === 'healer' ? rnd(8, 20) : rnd(25, 70);
