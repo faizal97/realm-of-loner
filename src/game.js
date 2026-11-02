@@ -4275,7 +4275,8 @@
       for (const m of S.group.members.filter((x) => x.gone && x.replacing && t >= x.replacing)) {
         const used = new Set(S.group.members.map((x) => x.bot.id));
         const nb = G.botChar(recruit(m.role, G.syncLevel(R.act), used, new Set(S.group.members.filter((x) => !x.gone).map((x) => x.cls).concat([P.cls])), null, !!R.trial));
-        nb.syncLevel = D.ACTIVITIES[R.act].maxLvl || D.LEVEL_CAP;
+        nb.syncLevel = P.syncLevel || D.ACTIVITIES[R.act].maxLvl || D.LEVEL_CAP; // the group's own level: a Trial's cap, a festival run's yours (#384)
+        if (R.trial && !R.hard) nb.bot.skill = clamp(TR().botSkill(G.trialRating()) + rnd(-0.08, 0.05), 0.3, 0.95); // drawn from your Trial rating, like the first group
         if (R.hard) nb.bot.skill = clamp(TR().botSkill(G.trialRating()) + 0.05 + rnd(-0.06, 0.05), 0.3, 0.95); // a Hard group refills with skilled players too
         const i = S.group.members.indexOf(m);
         S.group.members[i] = nb;
