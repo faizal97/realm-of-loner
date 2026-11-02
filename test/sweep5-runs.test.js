@@ -15,3 +15,9 @@ test("a replacement who joins mid-Trial fights at the Trial's level (#384)", () 
   assert.ok(!S.group.members.includes(m), 'someone replaced them');
   for (const x of S.group.members) assert.strictEqual(E.levelOf(x), D.LEVEL_CAP, `${x.name} fights at ${E.levelOf(x)}`);
 });
+
+test('Roulette picks only 5-player dungeons the storm does not hide (#385)', () => {
+  character(60, 'warrior', 'human');
+  const opts = G.rouletteOptions(); assert.ok(opts.length);
+  for (const k of opts) { const A = D.ACTIVITIES[k]; assert.strictEqual(A.size || 5, 5, k); assert.ok(!(A.where && G.stormBlocks(A.where)), k); }
+});

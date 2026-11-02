@@ -2797,7 +2797,7 @@
   // the day is the player's own (#96): it resets at local midnight, as the bounties have since v10.1.1 (it was UTC's). A
   // save from before keeps its UTC day until its next Roulette, so nobody gains or loses a run at the switch
   G.rouletteReady = () => { const f = G.S.flags; return f.rouletteLocal ? f.rouletteDay !== dayKey() : f.rouletteDay !== oldDayKey(); };
-  G.rouletteOptions = () => Object.keys(D.ACTIVITIES).filter((k) => { const A = D.ACTIVITIES[k]; return A.dungeon && G.S.player.level >= A.minLvl && G.activityBlock(k) !== 'hidden'; });
+  G.rouletteOptions = () => Object.keys(D.ACTIVITIES).filter((k) => { const A = D.ACTIVITIES[k]; return A.dungeon && (A.size || 5) === 5 && G.S.player.level >= A.minLvl && G.activityBlock(k) !== 'hidden' && !(A.where && G.stormBlocks(A.where) && G.S.player.level >= 60); }); // a 5-player dungeon: no raid, nothing the storm hides (#385)
   G.startRoulette = function () {
     const S = G.S;
     if (!G.rouletteReady()) return toast('You did the Roulette today. It resets at midnight.');
