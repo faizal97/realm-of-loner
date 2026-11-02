@@ -1503,6 +1503,7 @@
     showDialog([h('h3', null, `${b.name} invites you to a group`), h('p', null, `Level ${b.level} ${(D.RACES[b.race] || D.RACES.human).name} ${D.CLASSES[b.cls].name}, ${d.why}.`),
       h('p', { style: { color: 'var(--muted)', fontSize: '13px' } }, 'XP is shared with a group bonus, pulls get bigger, and gear drops are rolled.'),
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { closeDialog(); G.acceptPartyInvite(b.id); } }, 'Accept'), h('button', { class: 'btn alt', onclick: () => { closeDialog(); G.declinePartyInvite(b.id); } }, 'Decline'))]);
+    ui.dialogLost = () => { if (G.S && G.S.flags.pendingInvite === b.id) G.S.flags.pendingInvite = null; };
   }
   // battle speed (v10.3): a chip on the battle scene, 1x → 2x → 3x, remembered on this device; shown in PvE fights only
   const speedFight = () => !!(G.fight && !G.isPvp(G.fight)); // no chip in a PvP fight: it always runs at 1× (#193)
@@ -2192,7 +2193,7 @@
     if (ui.rollEl) {
       ui.rollEl.querySelectorAll('[data-roll]').forEach((b) => { const r = S.run && S.run.rolls[b.dataset.roll]; if (r) b.style.width = Math.max(0, (r.until - now()) / 25000 * 100) + '%'; });
       // a stopped clock says so, on the bar (muted) and under it (#170)
-      const why = G.rollPaused(), pl = ui.rollEl.querySelector('[data-roll-paused]'), txt = why === 'fight' ? 'Paused while you fight' : why === 'look' ? 'Paused while you look' : '';
+      const why = G.rollPaused(), pl = ui.rollEl.querySelector('[data-roll-paused]'), txt = why === 'fight' ? 'Paused while you fight' : why === 'look' ? 'Paused while you look' : why === 'scene' ? 'Paused' : '';
       if (pl && pl.textContent !== txt) { pl.textContent = txt; ui.rollEl.classList.toggle('paused', !!why); }
     }
   }
@@ -2268,12 +2269,15 @@
       h('div', { class: 'btn-row' }, fightLogButton(), h('button', { class: 'btn', onclick: closeDialog }, 'Close'))], true);
   }
   // dismissable: true closes on a tap outside; a function runs instead (a card opened from the group pop goes back to it, #325)
+  // a dialog that asks something (an invite) says what happens if another dialog replaces it unanswered (#353)
   function showDialog(content, dismissable) {
+    const lost = ui.dialog && ui.dialogLost; ui.dialogLost = null;
     closeDialog();
+    if (lost) lost();
     const d = h('div', { class: 'dialog', onclick: () => { if (typeof dismissable === 'function') dismissable(); else if (dismissable) closeDialog(); } }, h('div', { class: 'card', onclick: (e) => e.stopPropagation() }, content));
     app.append(d); ui.dialog = d;
   }
-  function closeDialog() { G.looking = false; if (ui.dialog) ui.dialog.remove(); ui.dialog = null; if (ui.updPending) { const r = ui.updPending; setTimeout(() => { if (!ui.dialog && ui.updPending === r) offerUpdate(r); }, 600); } }
+  function closeDialog() { G.looking = false; ui.dialogLost = null; if (ui.dialog) ui.dialog.remove(); ui.dialog = null; if (ui.updPending) { const r = ui.updPending; setTimeout(() => { if (!ui.dialog && ui.updPending === r) offerUpdate(r); }, 600); } }
 
   // an effect item's strength from its upgrades, as a percentage (#42): the same for every effect, one decimal so every step moves it
   const fxPct = (it) => { const v = Math.round(D.fxGrow(it.fxScale, it.effect) * 1000) / 10; return (v % 1 ? v.toFixed(1) : String(v)) + '%'; };
@@ -5239,18 +5243,20 @@
   function showInvite(d) {
     showDialog([h('h3', null, 'Guild invitation'), h('p', null, `${d.from} invites you to join <${d.guildName}>.`), d.line ? h('p', { class: 'ai-note' }, `"${d.line}"`) : null,
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { G.joinGuild(d.guild); closeDialog(); renderChat(); } }, 'Accept'), h('button', { class: 'btn alt', onclick: () => { G.declineGuild(d.guild); closeDialog(); } }, 'Decline'))]);
+    ui.dialogLost = () => G.S && G.reofferGuild(); // the group pop took its place: asked again later
   }
   function playChapter(id) {
     const ch = window.CS && CS.byId(id);
+    if (!ch || !ch.shots || !G.S) return Promise.resolve(); // nothing to play never pauses the game (#355)
     G.paused = true;
-    if (!ch || !ch.shots || !G.S) return Promise.resolve();
     const P = G.S.player;
     const startPlace = D.PLACES[D.RACES[P.race || 'human'].start];
     return CS.play(ch, {
       art, heroUrl: art('hero', looks(P)), name: P.name, zone: startPlace.zone,
       startScene: startPlace.scene, hereScene: D.PLACES[P.place].scene,
       setMusic: (m) => { ui.csMusic = m; G.paused = !!m || !!(window.CS && CS.playing); },
-    }).then(() => { G.paused = false; P.story = P.story || {}; P.story[id] = true; G.save(); if (ch.then && CS.byId(ch.then) && !CS.unlocked().has(ch.then)) ui.pendingChapter = ch.then; });
+    }).then(() => { G.paused = false; P.story = P.story || {}; P.story[id] = true; G.save(); if (ch.then && CS.byId(ch.then) && !CS.unlocked().has(ch.then)) ui.pendingChapter = ch.then; },
+      () => { G.paused = false; }); // a chapter that fails to play lets the game go on (#355)
   }
   // a Legend's first cameo: about 5 seconds in the run's own first scene; they walk in and say one line
   function playCameoScene(key) {
@@ -5265,7 +5271,7 @@
     ] };
     G.paused = true;
     return CS.play(ch, { art, heroUrl: art('hero', looks(G.S.player)), name: G.S.player.name, zone: place ? place.zone : '', setMusic: () => {} })
-      .then(() => { G.paused = false; });
+      .then(() => { G.paused = false; }, () => { G.paused = false; });
   }
   // ---------- first-hour tips: one short card at the moment it helps, once per device, always skippable
   const TIPS = {
@@ -5390,7 +5396,7 @@
   }
   // One rule for every popup that interrupts (issue #24): it waits for a calm moment, with no fight, no run, no open sheet,
   // dialog or cutscene, so it never takes a tap meant for something else. A new popup uses whenCalm and gets the rule.
-  const isCalm = () => !!G.S && !G.fight && !G.S.run && !G.paused && !ui.sheet && !ui.dialog && !(window.CS && CS.playing);
+  const isCalm = () => !!G.S && !G.fight && !G.S.run && !G.S.queue && !G.paused && !ui.sheet && !ui.dialog && !(window.CS && CS.playing);
   function whenCalm(fn) { if (!G.S) return; if (!isCalm()) return setTimeout(() => whenCalm(fn), 2000); fn(); }
   // tips wait only for no sheet, dialog or cutscene (#35): a tip about the fight or the run shows during it; invites keep
   // whenCalm's full calm (#12, #24)

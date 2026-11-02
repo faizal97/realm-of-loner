@@ -503,7 +503,7 @@
       const r = (S.helpWanted || []).find((x) => x.id === a.hw);
       if (!r) return [{ label: 'Someone else took this spot', disabled: true, why: true, fn: () => null }]; // says what happened (#166)
       // the request closes only when the join worked; a refusal is told and the request stays (#166)
-      return [{ label: `Help as ${roleName(r.role)}`, primary: true, fn: () => { if (S.run || S.queue || G.fight) return 'Leave your current group first.'; const why = G.joinHelpWanted(r.id); if (why) return why; close(); help(); } }, decline];
+      return [{ label: `Help as ${roleName(r.role)}`, primary: true, fn: () => { if (G.groupBusy()) return 'Leave your current group first.'; const why = G.joinHelpWanted(r.id); if (why) return why; close(); help(); } }, decline];
     }
     if (a.kind === 'carry') {
       return [{ label: `Run it (tip ${coin(a.tip)})`, primary: true, fn: () => { if (G.joinChatGroup(a.act, G.role(), { leader: a.bot, soc: { kind: 'carry', tip: a.tip, bot: a.bot } })) { close(); help(); } } }, decline];
@@ -665,7 +665,7 @@
   function startGuildEvent(m) {
     const a = m.act, S = G.S;
     a.started = true;
-    if (S.run || S.queue || G.fight) { a.state = 'expired'; G.sys('The guild run started without you.'); return; }
+    if (G.groupBusy()) { a.state = 'expired'; G.sys('The guild run started without you.'); return; }
     if (G.joinChatGroup(a.act, G.role(), { leader: a.bot, guild: S.player.guild, soc: { kind: 'g_event' } })) a.state = 'done';
   }
   SOC.onKill = function (mob) {

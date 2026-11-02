@@ -227,7 +227,8 @@
     G.fight = null; G.pUnit = null;
     S.pending = []; S.chatTimers = {};
     joinRoster(S); // #71
-    if (S.run && S.run.phase === 'fight') S.run.phase = 'rest', S.run.restUntil = now() + 3000;
+    // a reload mid-pull is a wipe (#349): the pull isn't undone for free, so a lost boss fight counts as lost
+    if (S.run && S.run.phase === 'fight') { S.run.wipes = (S.run.wipes || 0) + 1; S.run.momentum = 0; S.run.phase = 'wipe'; S.run.restUntil = now() + 12000; S.player.hp = null; S.player.res = null; if (S.group) for (const m of S.group.members) { m.hp = null; m.res = null; } sys('You left mid-fight: it counts as a wipe. Running back...'); }
     try { G.refreshHeirlooms(); } catch (e) { /* older save */ }
     pruneBounties(); // #154
     G.lwRevokeTest(); // rewards from a test build's season stay in test builds
@@ -381,6 +382,7 @@
       S.world = {};
       if (S.queue) { S.queue = null; }
       if (S.run && away > 600000) {
+        settleRolls();
         P.place = S.run.returnTo || 'goldshire'; S.run = null; S.group = null; delete P.syncLevel;
         sys('Your group disbanded while you were away.');
       }
@@ -1030,6 +1032,7 @@
   }
   const questKeys = () => G.questMobs();
   // a guild you said no to does not ask again (social.js skips it for recruiting whispers)
+  G.reofferGuild = function () { const f = G.S.flags; if (G.S.player.guild < 0) { f.guildOffer = false; f.guildOfferAt = now() + 300000; } };
   G.declineGuild = function (g) { const f = G.S.flags; f.declinedGuilds = (f.declinedGuilds || []).filter((x) => x !== g).concat([g]); G.save(); };
   G.joinGuild = function (g) {
     const S = G.S;
@@ -2757,7 +2760,7 @@
   G.joinHelpWanted = function (id) {
     const S = G.S, req = (S.helpWanted || []).find((r) => r.id === id);
     if (!req) return toast('That group already found someone.');
-    if (S.run || S.queue || G.fight) return toast('Leave your current group first.');
+    if (G.groupBusy()) return toast('Leave your current group first.');
     if ((S.flags.deserterUntil || 0) > now()) return toast('You are a Deserter for a few more minutes.');
     S.helpWanted = S.helpWanted.filter((r) => r !== req);
     if (S.wparty) disbandParty('You left your party to help another group.');
@@ -2779,10 +2782,12 @@
   G.startRoulette = function () {
     const S = G.S;
     if (!G.rouletteReady()) return toast('You did the Roulette today. It resets at midnight.');
-    if (S.run || S.queue || G.fight) return toast('Leave your current group first.');
+    if (G.groupBusy()) return toast('Leave your current group first.');
     if ((S.flags.deserterUntil || 0) > now()) return toast('You are a Deserter for a few more minutes.');
     const opts = G.rouletteOptions(); if (!opts.length) return toast(`Dungeons open at level ${Math.min(...Object.values(D.ACTIVITIES).filter((a) => a.dungeon).map((a) => a.minLvl))}.`);
-    const act = pick(opts);
+    // the day's dungeon is drawn once (#350): leaving after a wipe and starting again brings the same one
+    const drawn = pick(opts), kept = S.flags.roulettePick, act = kept && kept.day === dayKey() && opts.includes(kept.act) ? kept.act : drawn;
+    S.flags.roulettePick = { day: dayKey(), act };
     if (S.wparty) disbandParty('You left your party for the Roulette.');
     stopActions();
     formGroup(act);
@@ -3041,7 +3046,7 @@
     if (P.place !== BRAWL.place) return 'Go to the Bloodsand Arena in Rumhook Bay.';
     if (!w.open) return 'The arena is closed.';
     if ((P.brawl || {}).last === w.id) return 'You have fought in this brawl. The next one opens later.';
-    if (G.fight || S.run || S.bg || P.travel || P.ghostUntil) return "You can't fight right now.";
+    if (G.fight || S.run || S.bg || S.queue || P.travel || P.ghostUntil) return "You can't fight right now.";
     return null;
   };
   // one fighter each: pets wait outside the pit (a plain arena rule, said on the panel; they fight everywhere else)
@@ -3281,6 +3286,8 @@
     sys(`${C.name}: ${won ? 'victory' : draw ? 'a draw' : 'defeat'}, ${bg.score.us} to ${bg.score.them}. +${honor} Honor.`);
     emit('bgEnd', { result: bg.result }); emit('change'); G.save();
   }
+  // in a group, a queue, a fight, a battleground or a brawl still going: no other group can start (#354)
+  G.groupBusy = () => { const S = G.S; return !!(S.run || S.queue || G.fight || G.bgBusy() || (S.brawl && S.brawl.phase !== 'done')); };
   G.bgBusy = () => !!(G.S.bg && G.S.bg.phase !== 'done'); // a finished battleground (the result screen) never blocks invites or groups (#30)
   G.leaveBg = function () { const S = G.S; if (!S.bg) return; if (G.fight && G.fight.kind === 'bg') return toast('Finish the fight first.'); S.bg = null; emit('instanceLeave', {}); emit('change'); G.save(); };
   G.bgStart = startBg; // sims
@@ -3310,7 +3317,7 @@
   // A group from chat (LFG post or guild request) summons you, like Help Wanted. opts: { leader, guild, soc }
   G.joinChatGroup = function (act, role, opts) {
     const S = G.S; opts = opts || {};
-    if (S.run || S.queue || G.bgBusy() || G.fight) { toast('Leave your current group first.'); return false; }
+    if (G.groupBusy()) { toast('Leave your current group first.'); return false; }
     if (S.bg) G.leaveBg(); // the result screen of a finished battleground closes as you go
     if ((S.flags.deserterUntil || 0) > now()) { toast('You are a Deserter for a few more minutes.'); return false; }
     if (S.wparty) disbandParty('You left your party to join another group.');
@@ -3332,7 +3339,7 @@
   // a Trial group from chat (v10.7, Trials stage 4): a level-60 bot's real post, joinable at a level you have open
   G.joinChatTrial = function (act, lvl, role, opts) {
     const S = G.S; opts = opts || {};
-    if (S.run || S.queue || G.fight) { toast('Leave your current group first.'); return false; }
+    if (G.groupBusy()) { toast('Leave your current group first.'); return false; }
     const why = G.trialBlock(act); if (why) { toast(why + '.'); return false; }
     if (lvl > G.trialMax(act)) { toast(`You have Trial ${G.trialMax(act)} open on ${D.ACTIVITIES[act].name}.`); return false; }
     if (S.wparty) disbandParty('You left your party to join another group.');
@@ -3398,6 +3405,8 @@
       for (const m of S.wparty.members) if (m.hp != null) { const st = E.statsFor(m); m.hp = Math.min(st.maxHp, m.hp + st.maxHp * 0.06); if (m.hp >= st.maxHp) m.hp = null; if (m.res != null) m.res = null; }
       return;
     }
+    // an invite never answered (a reload, a dialog that replaced it) stops waiting after 2 minutes (#353)
+    if (S.flags.pendingInvite && t - (S.flags.pendingAt || 0) > 120000) S.flags.pendingInvite = null;
     // invites: rare, never while busy, never twice from someone you declined
     if (S.flags.noInvites || G.fight || S.run || S.queue || P.travel || P.ghostUntil || S.flags.pendingInvite) return;
     const pl = D.PLACES[P.place]; if (!pl || pl.safe) return;
@@ -3409,7 +3418,7 @@
     const cand = B.onlineIn(S, P.place, new Date(t)).filter((b) => Math.abs(b.level - P.level) <= 3 && !declined.has(b.id) && B.factionOf(b) === myF);
     if (!cand.length || Math.random() > 0.85) return;
     const b = pick(cand);
-    S.flags.pendingInvite = b.id;
+    S.flags.pendingInvite = b.id; S.flags.pendingAt = t;
     emit('partyInvite', { bot: b, why: `also hunting in ${pl.name}` });
   }
   G.partyTick = partyTick;
@@ -3470,7 +3479,7 @@
   G.queueTrial = function (act, lvl) {
     const S = G.S, why = G.trialBlock(act);
     if (why) { toast(why + '.'); return false; }
-    if (S.run || S.group || S.queue) { toast('Leave your current group first.'); return false; }
+    if (S.group || G.groupBusy()) { toast('Leave your current group first.'); return false; }
     lvl = clamp(Math.round(lvl || 1), 1, G.trialMax(act));
     if (S.wparty) disbandParty('You left your party for a Trial.');
     const role = G.role(), wait = role === 'tank' ? rnd(4, 10) : role === 'healer' ? rnd(6, 15) : rnd(15, 45);
@@ -3692,7 +3701,7 @@
     if (hard && A.event && !(A.event === 'longnight' ? G.lnHardOpen(act) : G.lwHardOpen())) return toast('Hard opens after one Normal clear of ' + A.name + '.');
     if (hard && !A.event && !G.hardOpen(act)) return toast('Hard opens after a Normal clear at level ' + D.LEVEL_CAP + '.');
     if (S.wparty) disbandParty('You left your party to use the group finder.');
-    if (S.run || S.group || G.bgBusy()) return toast('Leave your current group first.');
+    if (S.run || S.group || G.bgBusy() || G.fight || (S.brawl && S.brawl.phase !== 'done')) return toast('Leave your current group first.');
     if (S.bg) G.leaveBg(); // a finished battleground's result closes as you queue
     const role = G.role();
     const wait = role === 'tank' ? rnd(4, 12) : role === 'healer' ? rnd(8, 20) : rnd(25, 70);
@@ -4119,6 +4128,7 @@
   G.rollPaused = function () {
     const R = G.S.run; if (!R) return null;
     if (R.phase === 'fight') return 'fight';
+    if (G.paused) return 'scene'; // a story chapter is playing (#347): nobody passes for you while you watch
     return R.rollPause && now() - (R.rollPauseAt || 0) < 60000 ? 'look' : null;
   };
   function rollsTick() {
@@ -4333,9 +4343,17 @@
   const fmtClock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
   G.fmtClock = fmtClock;
   G.runReady = function () { const R = G.S.run; if (R && R.phase === 'rest') { if (G.role() === 'tank') G.runPull(); else R.restUntil = Math.min(R.restUntil, now()); } };
+  // leaving with loot still out (#346): your open rolls are a pass, the group rolls now, and Loot says who won
+  function settleRolls() {
+    const R = G.S.run; if (!R || !R.rolls) return;
+    const t = now(), open = R.rolls.filter((r) => !r.done); if (!open.length) return;
+    for (const r of open) { if (!r.player) r.player = { c: 'pass', v: 0 }; for (const c of Object.values(r.choices)) c.at = Math.min(c.at, t); }
+    R.rollPause = false; rollsTick();
+  }
   G.leaveGroup = function () {
     const S = G.S;
     if (G.fight && G.fight.kind === 'run') return toast('Finish the fight first.');
+    settleRolls();
     if (S.run) {
       if (S.run.phase !== 'done' && S.group) {
         const m = S.group.members.find((x) => !x.gone);
