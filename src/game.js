@@ -239,6 +239,7 @@
     joinRoster(S); // #71
     if (S.lastSeen > now()) shiftClock(S, now() - S.lastSeen); // before anything below sets a fresh time
     lastTick = now();
+    if (S.flags.guildOfferOpen != null) { delete S.flags.guildOfferOpen; G.reofferGuild(); } // the level-5 invitation the app closed on (#411)
     // a reload mid-pull is a wipe (#349): the pull isn't undone for free, so a lost boss fight counts as lost
     if (S.run && S.run.phase === 'fight') { S.run.wipes = (S.run.wipes || 0) + 1; S.run.momentum = 0; S.run.phase = 'wipe'; S.run.restUntil = now() + 12000; S.player.hp = null; S.player.res = null; if (S.group) for (const m of S.group.members) { m.hp = null; m.res = null; } sys('You left mid-fight: it counts as a wipe. Running back...'); }
     // a clock that went back never leaves a timer longer than its full length (#393): a day as a ghost, or on hearth
@@ -1064,6 +1065,7 @@
       const opts = B.GUILDS.map((x, i) => i).filter((i) => B.GUILD_FACTION[i] === myF);
       const g = opts[rint(0, opts.length - 1)];
       const inviter = S.bots.find((b) => b.guild === g) || pick(S.bots);
+      S.flags.guildOfferOpen = g; // unanswered until Accept or Decline: a reload asks again (#411)
       // the pitch is part of the invitation (issue #8: a whisper posted with it read as a pitch after you declined)
       emit('invite', { guild: g, guildName: B.GUILDS[g], from: inviter.name, line: cpick(['hey, want to join our guild? chill ppl, we run dungeons', 'we are recruiting, want an invite?']) });
     }
@@ -1071,7 +1073,7 @@
   const questKeys = () => G.questMobs();
   // a guild you said no to does not ask again (social.js skips it for recruiting whispers)
   G.reofferGuild = function () { const f = G.S.flags; if (G.S.player.guild < 0) { f.guildOffer = false; f.guildOfferAt = now() + 300000; } };
-  G.declineGuild = function (g) { const f = G.S.flags; f.declinedGuilds = (f.declinedGuilds || []).filter((x) => x !== g).concat([g]); G.save(); };
+  G.declineGuild = function (g) { const f = G.S.flags; if (f.guildOfferOpen === g) delete f.guildOfferOpen; f.declinedGuilds = (f.declinedGuilds || []).filter((x) => x !== g).concat([g]); G.save(); };
   G.joinGuild = function (g) {
     const S = G.S;
     S.player.guild = g;

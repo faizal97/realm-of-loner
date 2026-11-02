@@ -108,3 +108,12 @@ test('a clock set back mid-run never gives a negative run time or a day-long wai
   assert.ok(G.runClock() >= c0, `run clock ${G.runClock()}`);
   assert.ok(S.run.restUntil - W.now() < 60000, 'rest');
 });
+
+test('the level-5 guild invitation the app closed on is asked again (#411)', () => {
+  W.character(5); const id = G.S.id; G.S.player.guild = -1; G.S.flags.guildOffer = false; G.S.flags.guildOfferAt = W.now() + 1000;
+  let invites = 0; const off = G.on('invite', () => invites++);
+  W.advance(3); assert.strictEqual(invites, 1);
+  G.save(); G.S = null; G.fight = null; G.pUnit = null; W.setNow(W.now() + 30000); G.load(id);
+  W.advance(600); assert.strictEqual(invites, 2, 'asked again');
+  if (typeof off === 'function') off();
+});
