@@ -112,6 +112,9 @@
     const k = S.server.keep || (S.server.keep = {});
     for (const id of Object.keys(f)) { const b = S.bots.find((x) => String(x.id) === id); if (b) k[b.name] = 1; }
   }
+  // a person's own story (#72) lives in the account's roster only: each character's copy of the bots (for older builds
+  // and save codes) leaves it out, so ten characters don't carry ten copies of it
+  const ROSTER_ONLY = (k, v) => (k === 'hist' || k === 'pals' || k === 'rival' ? undefined : v);
   function saveRoster(S) {
     const R = G.R; if (!R || R.bots !== S.bots) return;
     keepFriends(S); R.lastSim = S.lastSim; R.nextBotId = S.nextBotId; R.server = S.server;
@@ -122,7 +125,7 @@
     if (!G.S) return;
     G.S.lastSeen = now();
     if (G.fight && G.pUnit) E.writeBack(G.fight, G.pUnit, now(), true); // the fight goes on: don't shift it out (#217)
-    ls.set(CHAR_KEY(G.S.id), JSON.stringify(G.S));
+    ls.set(CHAR_KEY(G.S.id), JSON.stringify(G.S, ROSTER_ONLY));
     saveRoster(G.S);
     const idx = readIndex().filter((c) => c.id !== G.S.id); idx.push(summary(G.S)); writeIndex(idx);
   };
