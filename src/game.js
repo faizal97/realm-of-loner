@@ -239,6 +239,8 @@
     joinRoster(S); // #71
     // a reload mid-pull is a wipe (#349): the pull isn't undone for free, so a lost boss fight counts as lost
     if (S.run && S.run.phase === 'fight') { S.run.wipes = (S.run.wipes || 0) + 1; S.run.momentum = 0; S.run.phase = 'wipe'; S.run.restUntil = now() + 12000; S.player.hp = null; S.player.res = null; if (S.group) for (const m of S.group.members) { m.hp = null; m.res = null; } sys('You left mid-fight: it counts as a wipe. Running back...'); }
+    // a clock that went back never leaves a timer longer than its full length (#393): a day as a ghost, or on hearth
+    { const t = now(), P = S.player; if (P.ghostUntil > t + 15000) P.ghostUntil = t + 15000; if (P.hearthAt > t + 15 * 60000) P.hearthAt = t + 15 * 60000; if ((S.flags.deserterUntil || 0) > t + DESERTER) S.flags.deserterUntil = t + DESERTER; }
     // a duel or brawl round left by closing the app is lost, never undone (#380, #381)
     if (S.duelOn) { const d = S.duelOn; delete S.duelOn; S.player.hp = Math.max(1, Math.round(G.vitals().maxHp * 0.05)); if (d.wager) S.player.money = Math.max(0, S.player.money - d.wager); sys(`You left the duel with ${d.name}: it counts as lost.${d.wager ? ' You paid ' + G.moneyText(d.wager) + '.' : ''}`); }
     if (S.brawl && S.brawl.phase === 'fight') { S.brawl.phase = 'choose'; const foe = G.brawlOpponent(); if (foe) endBrawlFight({ over: 'loss', brawl: { foe: foe.name } }); else S.brawl.phase = 'done'; }

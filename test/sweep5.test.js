@@ -62,3 +62,11 @@ test("a cloud file keeps the realm's history and who has quit (#383)", async () 
     assert.deepStrictEqual(cnt(back), want, loaded ? 'the character being played' : 'another character');
   }
 });
+
+test('a clock set back never leaves a timer longer than its full length (#393)', () => {
+  W.character(20); const S = G.S, P = S.player, id = S.id;
+  P.ghostUntil = W.now() + 15000; P.hearthAt = W.now() + 15 * 60000; S.flags.deserterUntil = W.now() + 5 * 60000;
+  G.save(); G.logout(); W.setNow(W.now() - 86400000); G.load(id);
+  const t = W.now(), Q = G.S.player;
+  assert.ok(Q.ghostUntil <= t + 15000, 'revive'); assert.ok(Q.hearthAt <= t + 15 * 60000, 'hearth'); assert.ok(G.S.flags.deserterUntil <= t + 5 * 60000, 'deserter');
+});
