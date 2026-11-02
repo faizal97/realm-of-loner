@@ -17,6 +17,21 @@ test('no syllable name is a forbidden name unless it is blocked', () => {
   assert.deepStrictEqual(leak, []);
 });
 
+// the longer names handed out once every short one is taken (#302)
+const long = () => { const out = new Set(); const { a, b } = B.NAME_PARTS; for (const x of a) for (const y of b) for (const z of b) for (const w of [''].concat(b)) out.add(cap(x + y + z.replace(/^[aeiou](?=..)/, '') + w)); return out; };
+
+test('no long name is a forbidden name unless it is blocked', () => {
+  const forbidden = new Set(Object.keys(MAP).map((k) => k.toLowerCase()));
+  assert.deepStrictEqual([...long()].filter((n) => forbidden.has(n.toLowerCase()) && !B.NAME_BLOCK.has(n)), []);
+});
+
+test('names stay unique when every short name is taken', () => {
+  const used = new Set(every()); for (const m of ['Arrowxx', 'Gankalot']) used.add(m);
+  const got = []; for (let i = 0; i < 3000; i++) got.push(B.makeName(used));
+  assert.strictEqual(new Set(got).size, got.length);
+  assert.ok(!got.some((n) => /^Alt\d/.test(n) || B.NAME_BLOCK.has(n)));
+});
+
 test('the name maker never hands out a blocked name', () => {
   const used = new Set();
   for (let i = 0; i < 20000; i++) { const n = B.makeName(used); assert.ok(!B.NAME_BLOCK.has(n), n); used.clear(); }

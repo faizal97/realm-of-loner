@@ -52,5 +52,24 @@ for (const seed of SEEDS) {
   check(R.lostFriends === 0 && R.lostMates === 0, `seed ${seed}: no friend removed, no guildmate gone without a goodbye (${R.lostFriends}, ${R.lostMates})`);
   check(R.maxN <= globalThis.B.ROSTER_CAP + globalThis.B.VETERANS + 10, `seed ${seed}: the roster stays at its size (at most ${R.maxN})`);
 }
+// #302: one long absence keeps the realm's spread (a catch-up of 180 days once emptied it to ~126 people, 40 under 20),
+// live play brings new players too (each minute added its share as 0), and names stay unique and real
+for (const seed of SEEDS) {
+  let s = (0x5eed + seed * 7919) >>> 0;
+  Math.random = () => { s = (s + 0x6D2B79F5) >>> 0; let x = s; x = Math.imul(x ^ (x >>> 15), x | 1); x ^= x + Math.imul(x ^ (x >>> 7), x | 61); return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
+  for (const k of Object.keys(require.cache)) if (k.includes('/src/')) delete require.cache[k];
+  globalThis.localStorage = (() => { const m = new Map(); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k) }; })();
+  for (const f of ['data', 'engine', 'bots', 'game', 'trials', 'social']) require(`../src/${f}.js`);
+  const { G, B, D } = globalThis;
+  G.newGame({ name: 'Pop', cls: 'warrior', race: 'human' });
+  const S = G.S, n0 = S.bots.length;
+  let live = 0; for (let i = 0; i < 360; i++) { const before = S.nextBotId; B.advance(S, 60000); live += S.nextBotId - before; } // six hours a minute at a time
+  B.advance(S, 180 * 86400000);
+  const lv = (a, b) => S.bots.filter((x) => x.level >= a && x.level <= b).length, names = S.bots.map((x) => x.name);
+  console.log(`seed ${seed}: live 6 h: ${live} new players; after 180 days away: ${S.bots.length} people, levels 1-20 ${lv(1, 20)}, 21-39 ${lv(21, 39)}, 40-59 ${lv(40, 59)}, 60 ${lv(60, 60)}`);
+  check(live >= 12, `seed ${seed}: six hours of live play bring new players (${live})`);
+  check(S.bots.length >= n0 - 10 && lv(1, 20) >= 200 && lv(21, 39) >= 20 && lv(40, 59) >= 20, `seed ${seed}: 180 days away keeps the realm's spread`);
+  check(new Set(names).size === names.length && !names.some((x) => /^Alt\d/.test(x)), `seed ${seed}: names unique, none a placeholder`);
+}
 console.log(`population: ${ok}/${ok + bad} checks pass`);
 process.exitCode = bad ? 1 : 0;

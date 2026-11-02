@@ -36,7 +36,12 @@
       if (n.length > 12) n = n.slice(0, 12);
       if (!used.has(n) && !NAME_BLOCK.has(n)) { used.add(n); return n; }
     }
-    return 'Alt' + Math.floor(Math.random() * 9999);
+    // every short name taken: a longer one, still unique (#302: 'Alt' + a number repeated and read as a placeholder)
+    const take = (n) => { const c = n.slice(0, 12).charAt(0).toUpperCase() + n.slice(1, 12).toLowerCase(); if (used.has(c) || NAME_BLOCK.has(c)) return null; used.add(c); return c; };
+    for (let i = 0; i < 50; i++) { const c = take(pick(SYL_A) + pick(SYL_B) + pick(SYL_B).replace(/^[aeiou](?=..)/, '')); if (c) return c; }
+    // the dice can't find one (or are fixed): the first free one in order, which always ends
+    for (const x of SYL_A) for (const y of SYL_B) for (const z of SYL_B) for (const w of [''].concat(SYL_B)) { const c = take(x + y + z.replace(/^[aeiou](?=..)/, '') + w); if (c) return c; }
+    return 'Alt' + used.size;
   };
 
   const GUILDS = ['Brackenford Legends', 'Crimson Vanguard', 'Knights of Ambermoor', 'Pumpkin Patrol', 'Grey Hood Dropouts', 'Lions Pride', 'Mireling Mafia', 'Starlight Vanguard',
@@ -84,9 +89,11 @@
   // day, then a first week), so those who stay level up and the top fills over time. Nobody someone knows vanishes
   // silently: a friend of any character on the account (S.server.keep, by name) takes a break instead (at most once a
   // month), says so, and comes back after a few days; a guildmate of yours who quits says goodbye in guild chat first.
-  B.ROSTER_CAP = 420; B.VETERANS = 80;
-  B.BANDS = [{ max: 20, n: 325 }, { max: 59, n: 95 }]; // levels 1-20 and 21-59: today's roster from day 15 on (sim/population.js TODAY)
-  B.quitWeight = (b, t) => { const days = (t - (b.born || 0)) / 86400000; return days < 2 ? 1 : days < 7 ? 0.2 : 0.02; };
+  B.ROSTER_CAP = 420; B.VETERANS = 80; B.NEW_PER_HOUR = 3;
+  // levels 1-20, 21-39 and 40-59: today's roster from day 15 on (sim/population.js TODAY); 21-59 as one band emptied
+  // 40-59 (the newest there are the ones who just reached 21, so few lasted to 40, #312)
+  B.BANDS = [{ max: 20, n: 325 }, { max: 39, n: 45 }, { max: 59, n: 50 }];
+  B.quitWeight = (b, t) => { const days = (t - (b.born || 0)) / 86400000; return days < 2 ? 1 : days < 7 ? 0.2 : days < 21 ? 0.02 : 0.002; }; // three weeks in, few quit (#312)
   B.BREAK_DAYS = [3, 14]; B.BREAK_EVERY = 30;
   B.trimRoster = function (S, t) {
     const SV = S.server || (S.server = {}), keep = SV.keep || {}, mine = S.player ? S.player.guild : -1;
@@ -115,17 +122,19 @@
     for (let over = vets.length - B.VETERANS; over > 0 && vets.length;) if (leave(vets.shift())) over--;
     if (!gone.size) return;
     for (let i = S.bots.length - 1; i >= 0; i--) if (gone.has(S.bots[i])) S.bots.splice(i, 1);
-    SV.gone = (SV.gone || []).concat([...gone].map((b) => b.name)).slice(-5000);
+    // a name that quit is never someone else's: kept for anyone around a week or more (someone may know them); a first-week
+    // quitter's name goes back to the pool, or the names run out (#302)
+    SV.gone = (SV.gone || []).concat([...gone].filter((b) => t - (b.born || 0) >= 7 * 86400000).map((b) => b.name)).slice(-5000);
   };
 
   // #71: a new realm starts as a lived-in one: today's spread under the cap (B.BANDS) and B.START_VETERANS at it, each
   // with a start date as far back as their level (so the newest arrivals, not they, are the ones who quit first)
   B.START_VETERANS = 75;
   B.makeRealm = function () {
-    const used = new Set(), bots = [], t = Date.now(), lo = B.BANDS[0], mid = B.BANDS[1];
+    const used = new Set(), bots = [], t = Date.now(), lo = B.BANDS[0];
     const add = (level) => { const b = B.assignGuild(B.makeBot(bots.length + 1, used, { level })); b.born = t - (2 + level * 0.6 + Math.random() * 4) * 86400000; bots.push(b); };
     for (let i = 0; i < lo.n; i++) add(1 + Math.floor(Math.random() * Math.random() * lo.max));
-    for (let i = 0; i < mid.n; i++) add(lo.max + 1 + Math.floor(Math.random() * (mid.max - lo.max)));
+    B.BANDS.forEach((mid, k) => { if (k) for (let i = 0; i < mid.n; i++) add(B.BANDS[k - 1].max + 1 + Math.floor(Math.random() * (mid.max - B.BANDS[k - 1].max))); });
     for (let i = 0; i < B.START_VETERANS; i++) add(D.LEVEL_CAP);
     return bots;
   };
@@ -139,6 +148,10 @@
     const base = dist <= bot.hours / 2 ? 0.8 : dist <= bot.hours ? 0.35 : 0.06;
     return hash(bot.id, d) < base;
   };
+
+  // the share of a day someone is online, as B.isOnline draws it (0.8 within half their hours of their peak, 0.35 within
+  // their hours, else 0.06)
+  B.onlineShare = (bot) => { const h = Math.min(12, bot.hours); return (h * 0.8 + h * 0.35 + (24 - 2 * h) * 0.06) / 24; };
 
   // Bots level in their own race's starting region; from 10 some roam the other one.
   B.regionFor = function (bot, slot) {
@@ -197,12 +210,22 @@
     const news = [], clears = {}; let beyond = 0; // beyond: clears the news can't name at your level (issue #18)
     const steps = Math.min(48, Math.max(1, Math.ceil(ms / 1800000)));
     const stepMs = ms / steps;
+    const SV = S.server || (S.server = {}), used = new Set(S.bots.map((b) => b.name).concat(SV.gone || [])); // #71: a name that quit is never someone else's
+    let arrived = 0;
     for (let s = 0; s < steps; s++) {
       const when = new Date(S.lastSim + stepMs * (s + 1));
+      // new players keep rolling alts, so the starting zones never empty: B.NEW_PER_HOUR, arriving through the absence
+      // (not all at its end, #302) and the fraction carried over, so a minute of live play adds its share too
+      const owed = (SV.newAcc || 0) + (stepMs / 3600000) * B.NEW_PER_HOUR, n = Math.floor(owed);
+      SV.newAcc = owed - n; arrived += n;
+      for (let i = 0; i < n; i++) { const nb = B.assignGuild(B.makeBot(S.nextBotId++, used, { level: 1 })); nb.born = when.getTime() - stepMs * (i / n); S.bots.push(nb); }
       for (const b of S.bots) {
         if (b.level >= D.LEVEL_CAP) continue;
-        if (!B.isOnline(b, when)) continue;
-        b.xpf += rate(b) * (stepMs / 3600000);
+        // a step of a few hours or more (a long absence): their usual share of it online, not all or nothing (one look at
+        // 'online now' over a 4-day step jumped people 30 levels or none, and emptied 21-39, #302)
+        const share = stepMs > 3 * 3600000 ? (b.away > when.getTime() ? 0 : B.onlineShare(b)) : B.isOnline(b, when) ? 1 : 0;
+        if (!share) continue;
+        b.xpf += rate(b) * (stepMs / 3600000) * share;
         while (b.xpf >= 1 && b.level < D.LEVEL_CAP) {
           b.xpf -= 1; b.level++;
           if (b.level % 10 === 0 || b.level === D.LEVEL_CAP) B.note(b, when.getTime(), 'lvl', b.level); // their own history (#72)
@@ -230,20 +253,13 @@
           else clears[g + '|' + act] = (clears[g + '|' + act] || 0) + 1;
         }
       }
+      B.guildMoves(S, stepMs, when.getTime()); // #72: now and then someone changes guild
+      B.trimRoster(S, when.getTime()); // #71: people quit, the realm stays at its size (each step, so a long absence keeps its spread, #302)
     }
     // repeated clears read as one line each ("cleared The Smugglers' Deep ×3"), so a long absence isn't one sentence 40 times
     for (const [k, n] of Object.entries(clears)) { const [g, act] = k.split('|'); news.push({ t: S.lastSim + ms, text: `<${g}> cleared ${D.ACTIVITIES[act].name}${n > 1 ? ` ×${n}` : ''}.` }); }
     if (beyond) news.push({ t: S.lastSim + ms, text: `Veteran groups cleared ${beyond} more ${beyond === 1 ? 'place' : 'places'} beyond your level.` });
-    // new players keep rolling alts, so the starting zone never empties
-    const newbies = Math.floor((ms / 3600000) * 3);
-    const used = new Set(S.bots.map((b) => b.name).concat((S.server && S.server.gone) || [])); // #71: a name that quit is never someone else's
-    for (let i = 0; i < Math.min(newbies, 40); i++) {
-      const nb = B.assignGuild(B.makeBot(S.nextBotId++, used, { level: 1 }));
-      S.bots.push(nb);
-    }
-    if (newbies > 0) news.push({ t: S.lastSim + ms, text: `${Math.min(newbies, 40)} new adventurer${Math.min(newbies, 40) === 1 ? '' : 's'} started out across Caldreth.` }); // every start, not only the Human one (issue #18)
-    B.guildMoves(S, ms, S.lastSim + ms); // #72: now and then someone changes guild
-    B.trimRoster(S, S.lastSim + ms); // #71: people quit, the realm stays at its size
+    if (arrived > 0 && ms >= 3600000) news.push({ t: S.lastSim + ms, text: `${arrived} new adventurer${arrived === 1 ? '' : 's'} started out across Caldreth.` }); // every start, not only the Human one (issue #18); not each minute of live play
     S.lastSim += ms;
     const G1 = root.G; // and nothing the reader's level may not read (#69, the #54 rule)
     return G1 && G1.nameable && S.player ? news.filter((n) => G1.nameable(n.text, S.player.level)) : news;
