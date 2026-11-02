@@ -49,3 +49,11 @@ test('a low-level reader is never told of a raid, a level-60 place or a high-lev
   // a month of the realm: every line a level-10 reader gets passes the news's rule
   for (const b of S.bots) for (const e of b.hist || []) if (e.k === 'clear' && B.histText(e, 10)) assert.ok(B.newsNames({ player: { level: 10 } }, e.v), e.v);
 });
+
+test('friends and a rival are from their own side (#309)', () => {
+  const S = G.S;
+  for (const b of S.bots) { const c = B.circle(S, b); for (const x of c.pals.concat(c.rival ? [c.rival] : [])) assert.strictEqual(B.factionOf(x), B.factionOf(b), `${b.name}: ${x.name}`); }
+  const b = S.bots.find((x) => B.factionOf(x) === 'alliance'), enemy = S.bots.find((x) => B.factionOf(x) === 'horde');
+  b.pals = [enemy.id, enemy.id]; b.rival = enemy.id;
+  assert.ok(B.circle(S, b).pals.every((x) => B.factionOf(x) === 'alliance'), 'an older pick from the other side is made again');
+});

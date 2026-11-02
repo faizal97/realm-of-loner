@@ -303,9 +303,9 @@
   // two friends and a rival of their own, kept until one of them quits: their guildmates first (else people near their
   // level), picked by hash; the rival is the same class within 5 levels
   B.circle = function (S, b) {
-    const here = (id) => id != null && S.bots.some((x) => x.id === id);
+    const f = B.factionOf(b), here = (id) => id != null && S.bots.some((x) => x.id === id && B.factionOf(x) === f); // their own side only (#309): an older pick from the other side is made again
     if (!(b.pals && b.pals.every(here) && (b.rival == null || here(b.rival)))) {
-      const near = (x) => x !== b && Math.abs(x.level - b.level) <= 5, by = (a, c) => hash(b.id, a.id) - hash(b.id, c.id);
+      const near = (x) => x !== b && B.factionOf(x) === f && Math.abs(x.level - b.level) <= 5, by = (a, c) => hash(b.id, a.id) - hash(b.id, c.id);
       const mates = b.guild >= 0 ? S.bots.filter((x) => x !== b && x.guild === b.guild) : [];
       b.pals = (mates.length >= 2 ? mates : S.bots.filter(near)).sort(by).slice(0, 2).map((x) => x.id);
       const rv = S.bots.filter((x) => near(x) && x.cls === b.cls && !b.pals.includes(x.id)).sort(by)[0];
