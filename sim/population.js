@@ -19,7 +19,7 @@ const runSeed = (seed) => {
   for (const f of ['data', 'engine', 'bots', 'game', 'trials', 'social']) require(`../src/${f}.js`);
   const { G, B, D } = globalThis;
   G.newGame({ name: 'Pop', cls: 'warrior', race: 'human' });
-  const byes = { n: 0, bye: new Set() }, post = B.post; B.post = (S1, ch, b, text) => { if (/taking a break|short break|off for a few days|away about a week|week off|week or so|couple weeks|two weeks or so|long break/.test(text)) byes.n++; if (/done with this game|quitting for a while|for good/.test(text)) byes.bye.add(b.name); return post(S1, ch, b, text); }; // counted as said (chat keeps only the latest lines)
+  const byes = { n: 0, bye: new Set() }, post = B.post; B.post = (S1, ch, b, text) => { if (/taking a break|short break|off for a few days|away about a week|week off|week or so|couple weeks|two weeks or so|long break/.test(text)) byes.n++; if (/done with this game|quitting|for good/.test(text)) byes.bye.add(b.name); return post(S1, ch, b, text); }; // counted as said (chat keeps only the latest lines)
   const S = G.S, start = new Set(S.bots.map((b) => b.name)), est = new Set(S.bots.filter((b) => b.level > 20).map((b) => b.name)); // est: the established, above the levelling zones
   // the player's friends and guild: ten of the starting people, and a guild of their own
   const friends = S.bots.slice(0, 10); S.soc = S.soc || {}; S.soc.friends = {}; for (const b of friends) S.soc.friends[b.id] = { n: 3, where: null, last: t };
