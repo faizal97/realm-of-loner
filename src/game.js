@@ -229,6 +229,9 @@
     joinRoster(S); // #71
     // a reload mid-pull is a wipe (#349): the pull isn't undone for free, so a lost boss fight counts as lost
     if (S.run && S.run.phase === 'fight') { S.run.wipes = (S.run.wipes || 0) + 1; S.run.momentum = 0; S.run.phase = 'wipe'; S.run.restUntil = now() + 12000; S.player.hp = null; S.player.res = null; if (S.group) for (const m of S.group.members) { m.hp = null; m.res = null; } sys('You left mid-fight: it counts as a wipe. Running back...'); }
+    // a duel or brawl round left by closing the app is lost, never undone (#380, #381)
+    if (S.duelOn) { const d = S.duelOn; delete S.duelOn; S.player.hp = Math.max(1, Math.round(G.vitals().maxHp * 0.05)); if (d.wager) S.player.money = Math.max(0, S.player.money - d.wager); sys(`You left the duel with ${d.name}: it counts as lost.${d.wager ? ' You paid ' + G.moneyText(d.wager) + '.' : ''}`); }
+    if (S.brawl && S.brawl.phase === 'fight') { S.brawl.phase = 'choose'; const foe = G.brawlOpponent(); if (foe) endBrawlFight({ over: 'loss', brawl: { foe: foe.name } }); else S.brawl.phase = 'done'; }
     try { G.refreshHeirlooms(); } catch (e) { /* older save */ }
     pruneBounties(); // #154
     G.lwRevokeTest(); // rewards from a test build's season stay in test builds
@@ -2944,6 +2947,7 @@
     const allies = [pu]; const pet = G.petUnitFor(pu); if (pet) allies.push(pet);
     G.fight = E.fight(allies, [eu], { soloUid: pu.uid, puller: pu, apart: G.DUEL_APART });
     G.fight.kind = 'duel'; G.fight.duel = { bot: bot.id, name: bot.name, wager: wager || 0, hp0: P.hp };
+    S.duelOn = { bot: bot.id, name: bot.name, wager: wager || 0 }; // saved: a duel left by closing the app counts as lost (#380)
     sys(`Duel with ${bot.name} begins! ${wager ? 'Wager: ' + G.moneyText(wager) + '.' : ''}`);
     emit('fightStart'); emit('change');
     return true;
@@ -2951,7 +2955,7 @@
   function endDuel(C) {
     const S = G.S, P = S.player, d = C.duel;
     recordFx(C, G.pUnit); E.writeBack(C, G.pUnit, now()); petWriteBack(C);
-    const won = C.over === 'win';
+    const won = C.over === 'win'; delete S.duelOn;
     if (!won) P.hp = Math.max(1, Math.round(G.vitals().maxHp * 0.05));
     if (d.wager) { if (won) P.money += d.wager; else P.money = Math.max(0, P.money - d.wager); }
     sys(won ? `You won the duel against ${d.name}!${d.wager ? ' +' + G.moneyText(d.wager) + '.' : ''}` : `${d.name} won the duel.${d.wager ? ' You paid ' + G.moneyText(d.wager) + '.' : ''}`);
