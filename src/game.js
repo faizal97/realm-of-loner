@@ -430,7 +430,7 @@
       if (atype) it.atype = atype;
       const Ab = atype ? D.GEAR_BASES[atype] : { mats: [['Simple', 'Fine']], grey: ['Frayed'], arm: 0.3 };
       const baseName = pick(D.SLOT_NAMES[slot]);
-      const mat = q === 0 ? pick(Ab.grey) : pick(Ab.mats[Math.min(Ab.mats.length - 1, Math.floor(lvl / 20))]); // one draw either way, so the random numbers don't move
+      const mat = q === 0 ? pick(Ab.grey) : pick(Ab.mats[Math.min(Ab.mats.length - 1, Math.floor((lvl || 1) / 20))]); // one draw either way, so the random numbers don't move
       it.name = slot === 'finger' ? `${pick(['Copper', 'Silver', 'Simple'])} ${baseName}` : `${mat} ${baseName}`;
       it.armor = slot === 'finger' ? 0 : Math.max(1, Math.round((D.SLOT_ARMOR[slot] || 3) * (atype ? Ab.arm : 0.3) * (lvl + 2) * 0.9 * qm));
       it.icon = slot === 'chest' ? 'chest_' + (atype || 'cloth') : D.SLOT_ICON[slot];
@@ -3601,6 +3601,17 @@
     emit('change');
   };
   G.leaveQueue = function () { G.S.queue = null; sys('You left the queue.'); emit('change'); };
+  // Who you ran with (#72): each roster person keeps what they did with this character, for the player card (#84) and the
+  // chat (#73): runs finished together, the last one, where, and whether they ninja'd your loot. Bounded at 300 people.
+  G.MET_MAX = 300;
+  G.remember = function (bot, what) {
+    const S = G.S, P = S.player; if (!bot || !(bot.id >= 0) || !S.bots.some((b) => b.id === bot.id)) return; // not someone from the realm
+    const M = P.met = P.met || {}, m = M[bot.id] = M[bot.id] || { n: 0 };
+    if (what.run) { m.n++; m.last = now(); m.where = what.run; if (what.wipes) m.wipes = (m.wipes || 0) + what.wipes; }
+    if (what.ninja) m.ninja = (m.ninja || 0) + 1;
+    const ids = Object.keys(M); if (ids.length > G.MET_MAX) { ids.sort((a, b) => (M[a].last || 0) - (M[b].last || 0)); for (const id of ids.slice(0, ids.length - G.MET_MAX)) delete M[id]; }
+  };
+  G.metWith = (botId) => ((G.S.player.met || {})[botId]) || null;
   const OTHER_REALMS = ['Mistral', 'Hearthwick', 'Thornbury', 'Copperbell', 'Saltwind', 'Longwinter']; // our own realm names (v10)
   function recruit(role, lvl, used, usedCls, guild, exact) { // exact: only players at this level (Trials: the cap)
     const S = G.S, date = new Date();
@@ -3948,6 +3959,7 @@
         sys(`${R.name} complete!`);
         runBonuses(R);
         emit('runComplete', { act: R.act, soc: R.soc || null, wipes: R.wipes });
+        for (const m of S.group.members) if (!m.gone && !m.cameo) G.remember(m.bot, { run: R.act, wipes: R.wipes });
         S.group.members.filter((m) => !m.gone).forEach((m, i) => S.pending.push({ at: now() + 2000 + i * 1600, bot: m.bot.id, ch: 'party', text: m.cameo ? G.legendLine(m.legend, 'bye') : B.partyLine(m.bot, 'bye'), fromName: m.name }));
         for (const m of S.group.members) if (m.cameo && !m.gone) { const P = S.player; P.legendMem = P.legendMem || {}; const mem = G.legendMemory(m.legend); P.legendMem[m.legend] = Object.assign(mem, { n: (mem.n || 0) + 1, where: R.name }); } // the memory on the Hero screen
       } else { R.phase = 'rest'; R.restUntil = now() + 6500 * (PACE[R.pace || 'normal'].rest); }
@@ -4043,6 +4055,7 @@
         loot(`${win.name} won: ${B.link(r.item.name, r.item.q)}`);
         const usable = G.canUseItem(r.item, win.m.cls);
         if (win.m.bot.ninja && !usable) {
+          G.remember(win.m.bot, { ninja: 1 });
           const other = S.group.members.find((m) => !m.gone && m !== win.m);
           if (other) S.pending.push({ at: t + 2000, bot: other.bot.id, ch: 'party', text: cpick(['ninja...', 'wtf that is not even your armor', 'reported lol', 'bruh']), fromName: other.name });
           S.pending.push({ at: t + 4500, bot: win.m.bot.id, ch: 'party', text: B.partyLine(win.m.bot, 'loot'), fromName: win.m.name });
