@@ -109,6 +109,8 @@
     G.sys(`You have left ${name}.`);
     G.emitChange();
   };
+  // a request still waiting for an answer (#341): one you took on (a team-up, a kill) is a task now, not a request
+  SOC.isOpenRequest = (m) => !!(m && m.act && m.act.state === 'open' && !m.act.accepted);
   // a request's time left, as the chat line shows it (#166): "4m", "<1m", or "expired"; null for a line with no request
   SOC.timeLeft = function (a) {
     if (!a || (a.state !== 'open' && a.state !== 'expired')) return null;
@@ -537,11 +539,13 @@
         P.money -= a.price; G.addItem(JSON.parse(JSON.stringify(a.itemData)), 1);
         G.sys(`You bought ${a.itemData.name} from ${b ? b.name : 'them'} for ${coin(a.price)}.`);
         reply(pick(['ty!', 'enjoy', 'gl with it', 'nice doing business'])); befriend(b, P.place); close(); // a trade both ways makes a friend (#338)
-      } }, { label: 'Haggle', fn: () => {
-        const ok = chance(tone(b) === 'nice' ? 0.7 : tone(b) === 'rude' ? 0.2 : 0.45);
-        if (ok) { a.price = Math.round(a.price * 0.8); reply(pick([`ok ${coin(a.price)} then`, `fine, ${coin(a.price)}`, `deal at ${coin(a.price)}`])); return `They drop it to ${coin(a.price)}.`; }
-        reply(pick(['nah thats the price', 'no, firm', 'lol no'])); return 'They won\'t go lower.';
-      } }, decline];
+      } }, a.haggled ? { label: a.haggled === 'down' ? 'Haggled' : 'Price is firm', disabled: true, why: true, fn: () => null } // one try, then greyed with how it went (#342)
+        : { label: 'Haggle', fn: () => {
+          const ok = chance(tone(b) === 'nice' ? 0.7 : tone(b) === 'rude' ? 0.2 : 0.45);
+          a.haggled = ok ? 'down' : 'firm';
+          if (ok) { a.price = Math.round(a.price * 0.8); reply(pick([`ok ${coin(a.price)} then`, `fine, ${coin(a.price)}`, `deal at ${coin(a.price)}`])); return `They drop it to ${coin(a.price)}.`; }
+          reply(pick(['nah thats the price', 'no, firm', 'lol no'])); return 'They won\'t go lower.';
+        } }, decline];
     }
     if (a.kind === 'swap') {
       const have = G.countItem(a.item);

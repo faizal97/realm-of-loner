@@ -54,3 +54,12 @@ test('a refused guild Apply leaves the request open; a good one closes it', () =
   assert.ok(!ok, 'no refusal');
   assert.strictEqual(m.act.state, 'done');
 });
+
+test('a team-up or kill you took on leaves the Requests count (#341)', () => {
+  const m = { act: { kind: 'quest_team', state: 'open', until: Date.now() + 60000 } };
+  assert.ok(SOC.isOpenRequest(m), 'waiting for an answer');
+  m.act.accepted = true;
+  assert.ok(!SOC.isOpenRequest(m), 'taken on: a task, not a request');
+  m.act.accepted = false; m.act.state = 'done';
+  assert.ok(!SOC.isOpenRequest(m));
+});
