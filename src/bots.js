@@ -89,7 +89,7 @@
   // day, then a first week), so those who stay level up and the top fills over time. Nobody someone knows vanishes
   // silently: a friend of any character on the account (S.server.keep, by name) takes a break instead (at most once a
   // month), says so, and comes back after a few days; a guildmate of yours who quits says goodbye in guild chat first.
-  B.ROSTER_CAP = 420; B.VETERANS = 80; B.NEW_PER_HOUR = 3;
+  B.ROSTER_CAP = 420; B.VETERANS = 80; B.NEW_PER_HOUR = 3; B.GUILD_SHARE = 0.42; // the share in a guild on a new realm (#328)
   // levels 1-20, 21-39 and 40-59: today's roster from day 15 on (sim/population.js TODAY); 21-59 as one band emptied
   // 40-59 (the newest there are the ones who just reached 21, so few lasted to 40, #312)
   B.BANDS = [{ max: 20, n: 325 }, { max: 39, n: 45 }, { max: 59, n: 50 }];
@@ -232,7 +232,14 @@
       // a newcomer joins a guild only once they have stayed a week (#328): most who quit do so in their first days, and
       // a guild of yours filled with people who said goodbye before you ever met them
       for (let i = 0; i < n; i++) { const nb = B.makeBot(S.nextBotId++, used, { level: 1 }); nb.born = when.getTime() - stepMs * (i / n); nb.gj = 1; S.bots.push(nb); }
-      for (const b of S.bots) if (b.gj && when.getTime() - b.born >= 7 * 86400000) { delete b.gj; B.assignGuild(b); }
+      // they fill the guilds people left (the smallest of their side first) while fewer than the realm's share are in one
+      for (const b of S.bots) if (b.gj && when.getTime() - b.born >= 7 * 86400000) {
+        delete b.gj;
+        if (S.bots.filter((x) => x.guild >= 0).length >= S.bots.length * B.GUILD_SHARE) continue;
+        const size = {}; for (const x of S.bots) if (x.guild >= 0) size[x.guild] = (size[x.guild] || 0) + 1;
+        const f = B.factionOf(b), opts = GUILDS.map((g, i) => i).filter((i) => GUILD_FACTION[i] === f).sort((x, y) => (size[x] || 0) - (size[y] || 0) || x - y);
+        b.guild = opts[0];
+      }
       for (const b of S.bots) {
         if (b.level >= D.LEVEL_CAP) continue;
         // a step of a few hours or more (a long absence): their usual share of it online, not all or nothing (one look at
@@ -701,7 +708,9 @@
     const mineBots = S.bots.filter((b) => B.factionOf(b) === myF);
     const onl = () => { for (let i = 0; i < 12; i++) { const b = cpick(mineBots); if (B.isOnline(b, date)) return b; } return cpick(mineBots.length ? mineBots : S.bots); };
     c.horde = myF === 'horde';
-    const due = (k, a, b) => { if (!T[k]) T[k] = now + (a + crand() * (b - a)) * 1000 / busy; if (now >= T[k]) { T[k] = 0; return true; } return false; };
+    // pool: how many lines the channel has; a line heard is held back an hour (HEARD_MS), so the channel never talks
+    // faster than its pool lasts an hour (#337: a burst for 15 minutes, then near silence for 45)
+    const due = (k, a, b, pool) => { if (!T[k]) T[k] = now + Math.max((a + crand() * (b - a)) / busy, pool ? (HEARD_MS / 1000 / pool) * (0.6 + crand() * 0.8) : 0) * 1000; if (now >= T[k]) { T[k] = 0; return true; } return false; };
     // #69: a line names content at the speaker's level (its dungeon or raid, its boss, its level band), and one that
     // still doesn't fit (B.lineFits) is picked again; after six tries nothing is said
     const speak = (b) => { c.me = b; Object.assign(c, botContent(S, b)); return c; };
@@ -720,7 +729,7 @@
       }
     }
     // #70: about half the old volume (General every 18–44 s at a quiet hour, not 9–22), and each line a fresh template
-    if (due('general', 18, 44)) {
+    if (due('general', 18, 44, GENERAL_ANY.length + (c.horde ? GENERAL_HORDE : GENERAL_ALLI).length + GENERAL_BAND[1].length)) {
       const b = onl();
       const text = line(b, 'general', [keyed('ga', GENERAL_ANY), c.horde ? keyed('gh', GENERAL_HORDE) : keyed('gl', GENERAL_ALLI), keyed('gb' + bandOf(b) + '.', GENERAL_BAND[bandOf(b)])]) || '';
       // sometimes someone answers
@@ -734,16 +743,16 @@
         }
       }
     }
-    if (S.player.level >= 8 && due('lfg', 80, 180)) {
+    if (S.player.level >= 8 && due('lfg', 80, 180, LFG_CHATTER.length)) {
       const b = onl();
       const text = b.level >= 6 ? line(b, 'lfg', [keyed('lf', LFG_CHATTER)]) : null;
       if (text) for (const A of ANSWERS) { const mm = lower(text).match(A.q); if (mm && cchance(0.6)) { const r = onl(); S.pending = S.pending || []; S.pending.push({ at: now + 3000 + crand() * 5000, bot: r.id, ch: 'lfg', text: sloppy(r, B.pickHeard(S, 'an' + ANSWERS.indexOf(A) + '.', A.a(mm))) }); break; } }
     }
-    if (due('say', 32, 76)) {
+    if (due('say', 32, 76, SAY_NEAR.length)) {
       const near = B.onlineIn(S, S.player.place, date).filter((b) => B.factionOf(b) === B.factionOf(S.player));
       if (near.length && !D.PLACES[S.player.place].safe || near.length > 2) line(cpick(near.length ? near : [onl()]), 'say', [keyed('sn', SAY_NEAR)]);
     }
-    if (S.player.guild != null && S.player.guild >= 0 && due('guild', 60, 140)) {
+    if (S.player.guild != null && S.player.guild >= 0 && due('guild', 60, 140, GUILD.length)) {
       const mates = S.bots.filter((b) => b.guild === S.player.guild && B.isOnline(b, date));
       if (mates.length) line(cpick(mates), 'guild', [keyed('gu', GUILD)]);
     }
