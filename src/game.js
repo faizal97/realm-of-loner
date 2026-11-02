@@ -3639,7 +3639,7 @@
       return F && roles.includes(F.role) && ['chest', 'legs', 'feet', 'hands'].includes(it.slot) && (!it.atype || it.atype === C.armorType) && G.canUseItem(it, b.cls) && L <= b.level && L >= b.level - 10; });
     return ids.length ? G.copyItem(pick(ids)) : null;
   };
-  G.botChar = function (b) {
+  function rollBotChar(b) {
     const C = D.CLASSES[b.cls];
     const q = b.skill > 0.72 ? (Math.random() < 0.4 ? 3 : 2) : b.skill > 0.4 ? 2 : 1;
     const wt = b.cls === 'paladin' ? 'mace' : b.role === 'healer' || b.cls === 'mage' || b.cls === 'warlock' ? 'staff' : C.weapons[0];
@@ -3658,6 +3658,18 @@
     { const fx = G.botEffectItem(b); if (fx) equip[fx.slot] = fx; } // sometimes an effect item, in place of one of those (#56)
     const talents = G.autoTalents(b.cls, b.role || (D.CLASSES[b.cls] || {}).role || 'dps', b.level, Math.abs(b.id || 0));
     return { name: b.name + (b.realm ? '-' + b.realm.replace(' ', '') : ''), cls: b.cls, race: b.race || 'human', level: b.level, equip, role: b.role, hp: null, res: null, auras: [], bot: b, talents };
+  }
+  // A person wears the same gear every time you meet them (#72): everything rolled for a bot's gear (quality, the named
+  // look, the cape, an effect item, the item's own rolls) comes from a stream seeded by who they are, their level and
+  // role, so a new level is a new set and the next run with them is the same one. Same chances as before, so the same
+  // power band; a bot with no id (a guard) still rolls freely.
+  const ROLE_N = { tank: 1, healer: 2, dps: 3 };
+  G.botChar = function (b) {
+    if (!(b && b.id >= 0)) return rollBotChar(b);
+    let s = (B.hash(b.id, b.level * 4 + (ROLE_N[b.role] || 0)) * 4294967296) >>> 0;
+    const real = Math.random;
+    Math.random = () => { s = (s + 0x6D2B79F5) >>> 0; let x = s; x = Math.imul(x ^ (x >>> 15), x | 1); x ^= x + Math.imul(x ^ (x >>> 7), x | 61); return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
+    try { return rollBotChar(b); } finally { Math.random = real; }
   };
   // ------------------------------------------------------------ Legends
   // Before you know him, a legend may step into a hard solo fight in disguise: at most once an hour, 3 times per zone.
