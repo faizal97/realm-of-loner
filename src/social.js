@@ -535,6 +535,7 @@
     }
     if (a.kind === 'help_kill' || a.kind === 'quest_team') {
       if (a.accepted) return [{ label: 'Cancel', fn: () => { if (a.kind === 'help_kill') finishHelp(m, false); else finishTeam(m, false); close('declined'); } }];
+      if (!b) return [{ label: "They're gone", disabled: true, why: true, fn: () => null }]; // they left the realm (#421)
       return [{ label: a.kind === 'quest_team' ? 'Team up' : 'Help', primary: true, fn: () => {
         if (G.partyBlock()) return G.partyBlock(); // the group finder or PvP (#415)
         if (G.partySize() >= 3) return 'Your party is full.';

@@ -182,3 +182,9 @@ test('a second Help task in another place waits until the first is done (#418)',
   assert.match(String(globalThis.SOC.actions(b)[0].fn()), /Finish the task at/);
   assert.ok(!b.act.accepted);
 });
+
+test('Help from someone no longer on the realm is greyed: They\'re gone (#421)', () => {
+  const { S, P } = W.character(20); const m = helpTask(S, huntPlaces(P, 20)[0], 9005, 999999);
+  const x = globalThis.SOC.actions(m)[0];
+  assert.strictEqual(x.label, "They're gone"); assert.ok(x.disabled);
+});
