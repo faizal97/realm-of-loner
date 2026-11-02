@@ -728,6 +728,7 @@
       const ready = S.pending.filter((p) => p.at <= now);
       S.pending = S.pending.filter((p) => p.at > now);
       for (const p of ready) {
+        if (p.unless && p.unless()) continue; // a line whose reason went away (a guild application withdrawn, #416)
         let bot;
         if (p.fromName) { const gm = S.group && S.group.members.find((m) => m.name === p.fromName); bot = { name: p.fromName, cls: gm ? gm.cls : null, id: p.bot, legend: !!(gm && gm.legend) }; }
         else bot = S.bots.find((b) => b.id === p.bot) || onl();

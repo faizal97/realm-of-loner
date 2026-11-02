@@ -128,13 +128,21 @@
     if (soc.applied && soc.applied.until > now()) return G.toast(`You already applied to <${B.GUILDS[soc.applied.g]}>. Wait for an answer.`);
     soc.applied = { g, until: now() + 5 * 60000 };
     G.sys(`You applied to <${info.name}>.`);
+    answerApply(g);
+    G.emitChange();
+  };
+
+  // the officer's answer; queued again after a reload, which drops chat still to come (#417)
+  function answerApply(g) {
+    const S = G.S, P = S.player, info = SOC.guildInfo(g);
     const off = info.officer || pick(myBots()) || pick(S.bots); // someone online answers (#390)
     const yes = P.level >= info.min;
     S.pending.push({ at: now() + rnd(15000, 45000), bot: off.id, ch: 'whisper',
       text: voice(off, yes ? pick([`hey, saw your application to <${info.name}>. welcome aboard!`, `accepted! welcome to <${info.name}>`, 'welcome in, sending the invite now', `you're in! say hi in guild chat`]) : pick([`sorry, <${info.name}> is ${info.min}+ only. come back later!`, `thanks for applying but we need level ${info.min}+`, `not yet, ${info.min}+ for us. good luck out there`])),
-      onPost: () => { soc.applied = null; if (yes && G.S.player.guild < 0) G.joinGuild(g); } });
-    G.emitChange();
-  };
+      unless: () => { const a = state().applied; return !a || a.g !== g; }, // joining another guild withdrew it (#416)
+      onPost: () => { state().applied = null; if (yes && G.S.player.guild < 0) G.joinGuild(g); } });
+  }
+  SOC.resumeApply = function () { const a = state().applied; if (!a) return; if (G.S.player.guild >= 0 || a.until <= now()) state().applied = null; else answerApply(a.g); };
 
   // ------------------------------------------------------------ friends: bots you helped remember you
   function befriend(bot, where) {

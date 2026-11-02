@@ -152,3 +152,20 @@ test('no world party forms while queued or in PvP (#415)', () => {
   G.leaveQueue(); S.duelOn = { bot: x.id, name: x.name, wager: 0 };
   assert.strictEqual(G.partyBlock(), 'Not during PvP.');
 });
+
+test('joining another guild withdraws an application, and its answer never comes (#416)', () => {
+  const { S, P } = W.character(60); P.guild = -1;
+  const SOC = globalThis.SOC, mine = B.GUILDS.map((x, i) => i).filter((i) => B.GUILD_FACTION[i] === G.myFaction());
+  SOC.apply(mine[0]); const n0 = S.chat.length; G.joinGuild(mine[1]);
+  W.advance(60);
+  assert.strictEqual(P.guild, mine[1]);
+  assert.ok(!S.chat.slice(n0).some((m) => /application/.test(m.text || '')), 'no answer');
+});
+
+test('a guild application is still answered after a reload (#417)', () => {
+  const { S, P } = W.character(60); P.guild = -1; const id = S.id;
+  const SOC = globalThis.SOC, mine = B.GUILDS.map((x, i) => i).filter((i) => B.GUILD_FACTION[i] === G.myFaction());
+  SOC.apply(mine[0]); G.save(); G.logout(); G.load(id);
+  W.advance(60);
+  assert.strictEqual(G.S.player.guild, mine[0]);
+});

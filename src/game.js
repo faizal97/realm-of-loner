@@ -243,6 +243,7 @@
     joinRoster(S); // #71
     if (S.lastSeen > now()) shiftClock(S, now() - S.lastSeen); // before anything below sets a fresh time
     lastTick = now();
+    if (root.SOC && S.soc && S.soc.applied) SOC.resumeApply(); // #417
     if (S.flags.guildOfferOpen != null) { delete S.flags.guildOfferOpen; G.reofferGuild(); } // the level-5 invitation the app closed on (#411)
     // a reload mid-pull is a wipe (#349): the pull isn't undone for free, so a lost boss fight counts as lost
     if (S.run && S.run.phase === 'fight') { S.run.wipes = (S.run.wipes || 0) + 1; S.run.momentum = 0; S.run.phase = 'wipe'; S.run.restUntil = now() + 12000; S.player.hp = null; S.player.res = null; if (S.group) for (const m of S.group.members) { m.hp = null; m.res = null; } sys('You left mid-fight: it counts as a wipe. Running back...'); }
@@ -1081,7 +1082,7 @@
   G.declineGuild = function (g) { const f = G.S.flags; if (f.guildOfferOpen === g) delete f.guildOfferOpen; f.declinedGuilds = (f.declinedGuilds || []).filter((x) => x !== g).concat([g]); G.save(); };
   G.joinGuild = function (g) {
     const S = G.S;
-    S.player.guild = g;
+    S.player.guild = g; if (S.soc) S.soc.applied = null; // joining withdraws an application elsewhere (#416)
     sys(`You have joined ${B.GUILDS[g]}.`);
     const mates = S.bots.filter((b) => b.guild === g && B.isOnline(b, new Date()));
     mates.slice(0, 3).forEach((b, i) => S.pending.push({ at: now() + 1200 + i * 2200, bot: b.id, ch: 'guild', text: cpick(['welcome!', 'welcome :)', 'hi!', 'o/', 'welcome to the guild']) }));
