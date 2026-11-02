@@ -4326,7 +4326,7 @@
     const rows = h('div', { class: 'list' }), all = list.slice().sort((p, q) => rank(p) - rank(q) || q.n - p.n), shown = ui.allFriends ? all : all.slice(0, 10);
     for (const x of shown) {
       const bot = x.bot;
-      rows.append(h('button', { class: 'row', onclick: () => playerCard(bot) }, h('div', { class: 't' }, h('b', { class: 'cls-' + bot.cls }, bot.name), h('small', null, `${bot.level} ${D.CLASSES[bot.cls].name} · ${party.has(bot.id) ? 'In your party' : whereText(bot)}`))));
+      rows.append(h('button', { class: 'row nav', onclick: () => playerCard(bot) }, h('div', { class: 't' }, h('b', { class: 'cls-' + bot.cls }, bot.name), h('small', null, `${bot.level} ${D.CLASSES[bot.cls].name} · ${party.has(bot.id) ? 'In your party' : whereText(bot)}`)))); // no icon: the text takes the whole row (#377)
     }
     b.append(rows);
     if (shown.length < all.length) b.append(h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', onclick: () => { ui.allFriends = true; ui.sheetFn(); } }, `Show all (${all.length})`)));
