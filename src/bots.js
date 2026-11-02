@@ -99,7 +99,7 @@
     const SV = S.server || (S.server = {}), keep = SV.keep || {}, mine = S.player ? S.player.guild : -1;
     // the guilds of the account's other characters (S.server.homes, #305): their members say goodbye too, in that
     // character's guild chat the next time it is played
-    const theirs = {}; for (const [c, g] of Object.entries(SV.homes || {})) if (g >= 0 && c !== S.id && g !== mine) (theirs[g] = theirs[g] || []).push(c);
+    const theirs = {}; for (const [c, g] of Object.entries(SV.homes || {})) if (g >= 0 && c !== S.id) (theirs[g] = theirs[g] || []).push(c); // your own guild too, when another character shares it (#331)
     // a weighted draw with no dice (the outcome stream stays as it was): each person's key is hash^(1/weight), highest go
     const hr = Math.floor(t / 3600000), key = (b) => Math.pow(hash(b.id, hr) || 1e-9, 1 / B.quitWeight(b, t));
     const queue = (f) => S.bots.filter((b) => f(b) && !(keep[b.name] && b.away > t)).sort((x, y) => key(y) - key(x));
@@ -112,14 +112,16 @@
         const days = B.BREAK_DAYS[0] + crand() * (B.BREAK_DAYS[1] - B.BREAK_DAYS[0]);
         b.broke = t; b.away = t + days * 86400000;
         // the line says how long (#321: "a few days" for two weeks read as a lie)
-        if (S.player) B.post(S, 'whisper', b, cpick(days < 5 ? ['hey, taking a break for a few days. see you when i am back', 'short break for me, back in a few days', 'off for a few days, talk soon']
+        // only to a character they are a friend of (#332): another character's friend is a stranger here
+        if (S.player && S.soc && S.soc.friends && S.soc.friends[b.id]) B.post(S, 'whisper', b, cpick(days < 5 ? ['hey, taking a break for a few days. see you when i am back', 'short break for me, back in a few days', 'off for a few days, talk soon']
           : days < 10 ? ['gonna be away about a week, talk soon', 'taking a week off, see you after', 'away for a week or so. dont have too much fun without me']
             : ['taking a couple weeks off. see you when i am back', 'gone for two weeks or so, real life stuff. cya', 'long break for me, a couple of weeks. take care']));
         return false;
       }
       const bye = (mine >= 0 && b.guild === mine) || theirs[b.guild] ? cpick(['ok i am done with this game for now. gl everyone o/', 'quitting for a while, thanks for the runs all', 'logging off for good i think. was fun, cya']) : null;
       if (bye && S.player && b.guild === mine) B.post(S, 'guild', b, bye);
-      else if (bye) { const L = SV.byes || (SV.byes = []); for (const c of theirs[b.guild]) L.push({ c, t, n: b.name, cls: b.cls, text: bye }); if (L.length > 200) L.splice(0, L.length - 200); }
+      if (bye && theirs[b.guild]) { const L = SV.byes || (SV.byes = []); for (const c of theirs[b.guild]) L.push({ c, t, n: b.name, cls: b.cls, text: bye }); if (L.length > 200) L.splice(0, L.length - 200); }
+      if (bye) b.bye = true; // said goodbye: their name is never someone else's (#333)
       gone.add(b); return true;
     };
     // under the cap: while over B.ROSTER_CAP, the band furthest over its share loses its newest
@@ -133,7 +135,7 @@
     for (let i = S.bots.length - 1; i >= 0; i--) if (gone.has(S.bots[i])) S.bots.splice(i, 1);
     // a name that quit is never someone else's: kept for anyone around a week or more (someone may know them); a first-week
     // quitter's name goes back to the pool, or the names run out (#302)
-    SV.gone = (SV.gone || []).concat([...gone].filter((b) => t - (b.born || 0) >= 7 * 86400000).map((b) => b.name)).slice(-5000);
+    SV.gone = (SV.gone || []).concat([...gone].filter((b) => b.bye || t - (b.born || 0) >= 7 * 86400000).map((b) => b.name)).slice(-5000);
   };
 
   // #71: a new realm starts as a lived-in one: today's spread under the cap (B.BANDS) and B.START_VETERANS at it, each
@@ -220,24 +222,30 @@
     const steps = Math.min(48, Math.max(1, Math.ceil(ms / 1800000)));
     const stepMs = ms / steps;
     const SV = S.server || (S.server = {}), used = new Set(S.bots.map((b) => b.name).concat(SV.gone || [], S.player ? [S.player.name] : [])); // #71: a name that quit is never someone else's; #314: nor yours
-    let arrived = 0;
+    const firstNew = S.nextBotId;
     for (let s = 0; s < steps; s++) {
       const when = new Date(S.lastSim + stepMs * (s + 1));
       // new players keep rolling alts, so the starting zones never empty: B.NEW_PER_HOUR, arriving through the absence
       // (not all at its end, #302) and the fraction carried over, so a minute of live play adds its share too
       const owed = (SV.newAcc || 0) + (stepMs / 3600000) * B.NEW_PER_HOUR, n = Math.floor(owed);
-      SV.newAcc = owed - n; arrived += n;
-      for (let i = 0; i < n; i++) { const nb = B.assignGuild(B.makeBot(S.nextBotId++, used, { level: 1 })); nb.born = when.getTime() - stepMs * (i / n); S.bots.push(nb); }
+      SV.newAcc = owed - n;
+      // a newcomer joins a guild only once they have stayed a week (#328): most who quit do so in their first days, and
+      // a guild of yours filled with people who said goodbye before you ever met them
+      for (let i = 0; i < n; i++) { const nb = B.makeBot(S.nextBotId++, used, { level: 1 }); nb.born = when.getTime() - stepMs * (i / n); nb.gj = 1; S.bots.push(nb); }
+      for (const b of S.bots) if (b.gj && when.getTime() - b.born >= 7 * 86400000) { delete b.gj; B.assignGuild(b); }
       for (const b of S.bots) {
         if (b.level >= D.LEVEL_CAP) continue;
         // a step of a few hours or more (a long absence): their usual share of it online, not all or nothing (one look at
         // 'online now' over a 4-day step jumped people 30 levels or none, and emptied 21-39, #302)
         const share = stepMs > 3 * 3600000 ? (b.away > when.getTime() ? 0 : B.onlineShare(b)) : B.isOnline(b, when) ? 1 : 0;
         if (!share) continue;
-        b.xpf += rate(b) * (stepMs / 3600000) * share;
+        const gain = rate(b) * (stepMs / 3600000) * share; let need = 1 - b.xpf;
+        b.xpf += gain;
         while (b.xpf >= 1 && b.level < D.LEVEL_CAP) {
           b.xpf -= 1; b.level++;
-          if (b.level % 10 === 0 || b.level === D.LEVEL_CAP) B.note(b, when.getTime(), 'lvl', b.level); // their own history (#72)
+          // their own history (#72), at the time in the step they got there (#335: all at its end read "just now")
+          if (b.level % 10 === 0 || b.level === D.LEVEL_CAP) B.note(b, Math.round(when.getTime() - stepMs + stepMs * Math.min(1, need / gain)), 'lvl', b.level);
+          need += 1;
           if (b.level === D.LEVEL_CAP) {
             const firstCap = !S.server.firstCap;
             if (firstCap) S.server.firstCap = b.name;
@@ -273,7 +281,8 @@
     // repeated clears read as one line each ("cleared The Smugglers' Deep ×3"), so a long absence isn't one sentence 40 times
     for (const [k, n] of Object.entries(clears)) { const [g, act] = k.split('|'); news.push({ t: S.lastSim + ms, text: `<${g}> cleared ${D.ACTIVITIES[act].name}${n > 1 ? ` ×${n}` : ''}.` }); }
     if (beyond) news.push({ t: S.lastSim + ms, text: `Veteran groups cleared ${beyond} more ${beyond === 1 ? 'place' : 'places'} beyond your level.` });
-    if (arrived > 0 && ms >= 3600000) news.push({ t: S.lastSim + ms, text: `${arrived} new adventurer${arrived === 1 ? '' : 's'} started out across Caldreth.` }); // every start, not only the Human one (issue #18); not each minute of live play
+    const stayed = S.bots.filter((b) => b.id >= firstNew).length; // the ones still here, not every start (#334)
+    if (stayed > 0 && ms >= 3600000) news.push({ t: S.lastSim + ms, text: `${stayed} new adventurer${stayed === 1 ? '' : 's'} started out across Caldreth.` }); // every start, not only the Human one (issue #18); not each minute of live play
     S.lastSim += ms;
     const G1 = root.G; // and nothing the reader's level may not read (#69, the #54 rule)
     return G1 && G1.nameable && S.player ? news.filter((n) => G1.nameable(n.text, S.player.level)) : news;
@@ -302,7 +311,7 @@
     if (S.player && S.player.guild != null && S.player.guild >= 0) homes.add(S.player.guild);
     const p = Math.min(1, ms / (B.GUILD_MOVE_DAYS * 86400000));
     for (const b of S.bots) {
-      if (homes.has(b.guild) || !(crand() < p)) continue;
+      if (homes.has(b.guild) || !(crand() < p) || b.gj) continue; // a newcomer has no guild yet (#328)
       const opts = GUILDS.map((g, i) => i).filter((i) => GUILD_FACTION[i] === B.factionOf(b) && i !== b.guild && !homes.has(i));
       const to = b.guild >= 0 && crand() < 0.25 ? -1 : opts.length ? opts[Math.floor(crand() * opts.length)] : -1;
       if (to === b.guild) continue;

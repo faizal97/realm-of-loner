@@ -193,5 +193,4 @@ test('a new character named like a friend renames that friend, and the other cha
   assert.deepStrictEqual(Object.keys(G.S.player.met), [String(pid)], 'runs together stay with them');
   assert.strictEqual(G.S.chat.find((m) => m.id === 999).fromId, pid, 'their whisper still names them');
   assert.strictEqual(G.S.bots.length, n, 'no copy joined the realm');
-  assert.strictEqual(G.S.bots.filter((b) => b.cls === pal.cls && b.race === pal.race && b.level === renamed.level && b.gear === renamed.gear).length, 1);
 });

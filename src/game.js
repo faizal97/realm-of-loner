@@ -369,7 +369,9 @@
       for (const b of S.bots) startLv[b.id] = b.level;
       report.news = B.advance(S, Math.max(0, t - S.lastSim)); // #71: the realm's own clock: another character may have moved it on
       B.catchUpChat(S, t); // #70
-      report.dings = S.bots.filter((b) => startLv[b.id] != null && b.level > startLv[b.id]).length;
+      // the realm as it is now (#334): everyone here who gained a level, newcomers included; newcomers who stayed
+      report.dings = S.bots.filter((b) => b.level > (startLv[b.id] != null ? startLv[b.id] : 1)).length;
+      report.joined = S.bots.filter((b) => startLv[b.id] == null).length;
       // regen fully
       P.hp = null; P.res = null; P.auras = (P.auras || []).filter((a) => a.until > t);
       S.world = {};
@@ -383,10 +385,8 @@
         if (mates.length) B.post(S, 'guild', cpick(mates), cpick(['wb!', 'welcome back', 'oh hey you are back', 'yo']));
       }
       S.news = report.news.slice().sort((a, b) => b.t - a.t).concat(S.news).slice(0, 40); // newest first, as Social → News reads: a long absence drops its oldest lines, not the summary at its end (#18)
-    } else {
-      S.lastSim = t;
     }
-    S.lastSim = t;
+    S.lastSim = Math.max(S.lastSim, t); // a realm clock ahead of the device's (a clock moved back) waits, never runs twice (#336)
     S.lastSeen = t;
     report.online = B.onlineCount(S, new Date(t));
     return report;
@@ -4791,7 +4791,8 @@
   // a festival town: one with the Hearthwarden and a great hearth (every city and hub with a profession trainer)
   G.lnTown = (place) => { const Pl = D.PLACES[place || G.S.player.place]; return !!Pl && Pl.safe && (Pl.npcs || []).includes(LN().keeper); };
   // people in this town for the festival's chat (anyone online of your faction when the town is quiet)
-  const lnNear = () => { const S = G.S, P = S.player, d = new Date(now()), mine = (x) => B.factionOf(x) === B.factionOf(P); const here = (B.onlineIn(S, P.place, d) || []).filter(mine); return here.length ? here : S.bots.filter((b) => mine(b) && B.isOnline(b, d)); };
+  // skip: ids already served (fed), left out before falling back to the realm, so a town of only them still finds someone
+  const lnNear = (skip) => { const S = G.S, P = S.player, d = new Date(now()), ok = (x) => B.factionOf(x) === B.factionOf(P) && !(skip || []).includes(x.id); const here = (B.onlineIn(S, P.place, d) || []).filter(ok); return here.length ? here : S.bots.filter((b) => ok(b) && B.isOnline(b, d)); };
   // a place out in the world for the dailies (homes, firewood): not a town, no run or battleground
   const lnWild = (place) => { const Pl = D.PLACES[place]; return !!Pl && !Pl.safe && !G.S.run && !G.S.bg; };
 
@@ -4867,7 +4868,7 @@
     if (!(P.bags || []).some((b) => b.item.id === 'ln_stew')) return;
     if (S.chat.some((m) => m.act && m.act.kind === 'ln_stew' && m.act.state === 'open')) return;
     if (now() < (S.flags.lnAsk || 0)) return;
-    const near = lnNear().filter((x) => !(st.prog.fed || []).includes(x.id));
+    const near = lnNear(st.prog.fed);
     if (!near.length) return;
     const b = cpick(near), m = B.post(S, 'say', b, cpick(STEW_ASK)());
     S.flags.lnAsk = now() + rnd(20, 45) * 1000;
