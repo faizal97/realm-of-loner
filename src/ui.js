@@ -1501,8 +1501,8 @@
   }
   function showPartyInvite(d) {
     const b = d.bot;
-    showDialog([h('h3', null, `${b.name} invites you to a group`), h('p', null, `Level ${b.level} ${(D.RACES[b.race] || D.RACES.human).name} ${D.CLASSES[b.cls].name}, ${d.why}.`),
-      h('p', { style: { color: 'var(--muted)', fontSize: '13px' } }, 'XP is shared with a group bonus, pulls get bigger, and gear drops are rolled.'),
+    showDialog([h('h3', null, `${b.name} invites you to a party`), h('p', null, `Level ${b.level} ${(D.RACES[b.race] || D.RACES.human).name} ${D.CLASSES[b.cls].name}, ${d.why}.`),
+      h('p', { style: { color: 'var(--muted)', fontSize: '13px' } }, 'XP is shared with a party bonus, pulls get bigger, and gear drops are rolled.'),
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { closeDialog(); G.acceptPartyInvite(b.id); } }, 'Accept'), h('button', { class: 'btn alt', onclick: () => { closeDialog(); G.declinePartyInvite(b.id); } }, 'Decline'))]);
     ui.dialogLost = () => { if (G.S && G.S.flags.pendingInvite === b.id) G.S.flags.pendingInvite = null; };
   }

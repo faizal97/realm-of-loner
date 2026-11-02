@@ -3404,7 +3404,7 @@
     ia[botId] = now(); S.flags.invitedAt = ia;
     const diff = Math.abs(b.level - P.level);
     const yes = Math.random() < (diff <= 3 ? 0.75 : diff <= 5 ? 0.35 : 0.05);
-    sys(`You invite ${b.name} to your group.`);
+    sys(`You invite ${b.name} to your party.`); // the world party is a party; a group is the group finder (#400)
     S.pending.push({ at: now() + rnd(1500, 3500), bot: b.id, ch: 'whisper', text: yes ? cpick(['sure', 'ok!', 'yeah why not', 'sure, same quest']) : cpick(['no ty', 'soloing sry', 'nah', 'too low lol']),
       onPost: () => { if (!G.S) return; if (!yes) return toast(`${b.name} said no.`); if (G.S.run) return toast(`${b.name} can't join during a run.`); toast(addToParty(b) ? `${b.name} joined your party.` : 'Your party is full.'); } }); // the answer on screen, not only in a whisper (#369); a join only when it happened (#386)
   };
