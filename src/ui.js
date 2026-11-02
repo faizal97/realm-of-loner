@@ -5097,7 +5097,7 @@
       for (const gi of SOC.myGuilds()) {
         const ok = P.level >= gi.min;
         b.append(h('div', { class: 'row', style: { gridTemplateColumns: '1fr auto' } },
-          h('div', { class: 't' }, h('b', null, '<' + gi.name + '>'), h('small', { style: { whiteSpace: 'normal' } }, `${gi.style[0].toUpperCase() + gi.style.slice(1)} · ${gi.members} members, ${gi.online} online · level ${gi.min}+. ${gi.blurb}`)),
+          h('div', { class: 't' }, h('b', null, '<' + gi.name + '>'), h('small', { style: { whiteSpace: 'normal' } }, `${gi.style[0].toUpperCase() + gi.style.slice(1)} · ${gi.online}/${gi.members} online · level ${gi.min}+. ${gi.blurb}`)),
           h('button', { class: 'chip gold', disabled: !!ap || !ok, onclick: () => { SOC.apply(gi.g); ui.sheetFn(); } }, ok ? 'Apply' : `Level ${gi.min}+`)));
       }
       return;
@@ -5105,17 +5105,17 @@
     const gi = SOC.guildInfo(P.guild), st = SOC.standing(), r = SOC.rank(), R = SOC.RANKS, nx = R[r + 1];
     const mates = S.bots.filter((x) => x.guild === P.guild);
     const on = mates.filter((x) => B.isOnline(x, new Date()));
-    b.append(h('div', { class: 'sec-h' }, '<' + gi.name + '>', h('small', null, `${gi.style} · ${on.length} of ${mates.length} online`)));
+    b.append(h('div', { class: 'sec-h' }, '<' + gi.name + '>', h('small', null, `${gi.style} · ${on.length}/${mates.length} online`)));
     b.append(h('div', { class: 'ai-box' },
       h('div', { class: 'ai-row' }, h('span', null, 'Your rank'), h('b', null, R[r].name)),
-      h('div', { class: 'ai-row' }, h('span', null, 'Guild standing'), h('b', { class: 'tnum' }, nx ? `${st} / ${nx.at}` : String(st))),
+      h('div', { class: 'ai-row' }, h('span', null, 'Guild standing'), h('b', { class: 'tnum' }, nx ? `${st}/${nx.at}` : String(st))), // n/max, as everywhere (#399)
       h('div', { class: 'xpbar', style: { height: '6px', background: '#1a140c', borderRadius: '3px', overflow: 'hidden', margin: '6px 0' } }, h('i', { style: { display: 'block', height: '100%', width: (nx ? Math.min(100, Math.round((st - R[r].at) / (nx.at - R[r].at) * 100)) : 100) + '%', background: 'var(--gold)' } })),
       h('p', { class: 'ai-note', style: { margin: 0 } }, 'Perks: ' + (R.slice(1, r + 1).map((k) => k.perk).join(' · ') || 'none yet') + (nx ? `. Next, ${nx.name}: ${nx.perk}.` : '.')),
       h('p', { class: 'ai-note', style: { margin: '4px 0 0' } }, 'Earn standing by helping guildmates: their requests appear in guild chat. Tap one to help.')));
     b.append(h('p', { style: { margin: 0, fontStyle: 'italic', color: '#c9b88a' } }, 'Message of the day: ' + SOC.motd(P.guild)));
     const wk = SOC.week();
     if (wk) b.append(h('div', { class: 'ai-box' },
-      h('div', { class: 'ai-row' }, h('span', null, 'Weekly goal'), h('b', { class: 'tnum' }, wk.done ? 'Done!' : `${Math.min(wk.got, wk.goal)} / ${wk.goal}`)),
+      h('div', { class: 'ai-row' }, h('span', null, 'Weekly goal'), h('b', { class: 'tnum' }, wk.done ? 'Done' : `${Math.min(wk.got, wk.goal)}/${wk.goal}`)),
       h('div', { style: { height: '6px', background: '#1a140c', borderRadius: '3px', overflow: 'hidden', margin: '6px 0' } }, h('i', { style: { display: 'block', height: '100%', width: Math.min(100, Math.round(wk.got / wk.goal * 100)) + '%', background: wk.done ? '#6b8f3a' : 'var(--gold)' } })),
       h('p', { class: 'ai-note', style: { margin: 0 } }, `The guild wants ${wk.goal} ${wk.what} this week. Everything you do counts. Reward: gold and +100 standing.`)));
     const reqs = S.chat.filter((m) => m.act && m.act.guild && m.act.state === 'open').slice(-6).reverse();
