@@ -35,3 +35,16 @@ test('a friend visits at most once in 20 minutes (#389)', () => {
   assert.strictEqual(visits, 1);
   assert.ok(S.soc.friends[b.id].last > 0);
 });
+
+test('guild invites and officers come from someone online (#390)', () => {
+  const { S, P } = character(30); P.guild = -1; const SOC = globalThis.SOC;
+  for (let h = 0; h < 24; h++) { W.setNow(new Date(2026, 9, 7, h).getTime()); for (const gi of SOC.myGuilds()) if (gi.officer) assert.ok(B.isOnline(gi.officer, new Date()), `${gi.name} at ${h}:00`); }
+  let n = 0;
+  for (let i = 0; i < 400 && n < 10; i++) {
+    W.setNow(W.now() + 3600000 * 0.37); for (const m of S.chat) if (m.act) m.act.state = 'done';
+    S.soc = S.soc || { next: {}, recent: [] }; S.soc.invites = 0; S.soc.recent = []; S.flags.declinedGuilds = [];
+    const n0 = S.chat.length; SOC.makeWhisper();
+    for (const m of S.chat.slice(n0)) if (m.act && m.act.kind === 'guild_invite') { n++; assert.ok(B.isOnline(S.bots.find((x) => x.id === m.act.bot), new Date()), m.from); }
+  }
+  assert.ok(n >= 5, `${n} invites`);
+});

@@ -37,8 +37,8 @@
     const style = STYLE[x % STYLE.length];
     const min = style === 'raiding' ? 40 : style === 'dungeons' ? 15 : style === 'pvp' ? 20 : style === 'leveling' ? 5 : 1;
     const members = S.bots.filter((b) => b.guild === g);
-    const online = members.filter((b) => B.isOnline(b, new Date())).length;
-    const officer = members.slice().sort((a, b) => b.level - a.level)[0] || null;
+    const on = members.filter((b) => B.isOnline(b, new Date())), online = on.length;
+    const officer = on.slice().sort((a, b) => b.level - a.level)[0] || null; // the highest-level one online speaks for the guild; nobody online, nobody (#390)
     const blurb = { casual: 'Chill people, no pressure. We help each other level.', leveling: 'New and levelling players welcome. We run low dungeons every night.', dungeons: 'Dungeon runs every evening. Bring your role, we bring the rest.', raiding: 'Endgame raids three nights a week. Level 40+.', pvp: 'War Mode on, always. For the glory.', social: 'A friendly bunch who mostly talk and sometimes quest.' }[style];
     return { g, name, style, min, members: members.length, online, officer, blurb, faction: B.GUILD_FACTION[g] };
   };
@@ -128,7 +128,7 @@
     if (soc.applied && soc.applied.until > now()) return G.toast(`You already applied to <${B.GUILDS[soc.applied.g]}>. Wait for an answer.`);
     soc.applied = { g, until: now() + 5 * 60000 };
     G.sys(`You applied to <${info.name}>.`);
-    const off = info.officer || pick(S.bots);
+    const off = info.officer || pick(myBots()) || pick(S.bots); // someone online answers (#390)
     const yes = P.level >= info.min;
     S.pending.push({ at: now() + rnd(15000, 45000), bot: off.id, ch: 'whisper',
       text: voice(off, yes ? pick([`hey, saw your application to <${info.name}>. welcome aboard!`, `accepted! welcome to <${info.name}>`, 'welcome in, sending the invite now', `you're in! say hi in guild chat`]) : pick([`sorry, <${info.name}> is ${info.min}+ only. come back later!`, `thanks for applying but we need level ${info.min}+`, `not yet, ${info.min}+ for us. good luck out there`])),
