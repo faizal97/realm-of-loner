@@ -39,10 +39,14 @@
     // every short name taken: a longer one, still unique (#302: 'Alt' + a number repeated and read as a placeholder)
     const take = (n) => { const c = n.slice(0, 12).charAt(0).toUpperCase() + n.slice(1, 12).toLowerCase(); if (used.has(c) || NAME_BLOCK.has(c)) return null; used.add(c); return c; };
     for (let i = 0; i < 50; i++) { const c = take(pick(SYL_A) + pick(SYL_B) + pick(SYL_B).replace(/^[aeiou](?=..)/, '')); if (c) return c; }
-    // the dice can't find one (or are fixed): the first free one in order, which always ends
-    for (const x of SYL_A) for (const y of SYL_B) for (const z of SYL_B) for (const w of [''].concat(SYL_B)) { const c = take(x + y + z.replace(/^[aeiou](?=..)/, '') + w); if (c) return c; }
+    // the dice can't find one (or are fixed): the first free one in order, which always ends. The walk goes on from where
+    // the last name stopped, so thousands of names after a long time away stay quick (#379); a name it passed is taken for good
+    const at = walks.get(used) || walks.set(used, walk()).get(used);
+    for (let r = at.next(); !r.done; r = at.next()) { const c = take(r.value); if (c) return c; }
     return 'Alt' + used.size;
   };
+  const walks = new WeakMap();
+  function* walk() { for (const x of SYL_A) for (const y of SYL_B) for (const z of SYL_B) for (const w of [''].concat(SYL_B)) yield x + y + z.replace(/^[aeiou](?=..)/, '') + w; }
 
   const GUILDS = ['Brackenford Legends', 'Crimson Vanguard', 'Knights of Ambermoor', 'Pumpkin Patrol', 'Grey Hood Dropouts', 'Lions Pride', 'Mireling Mafia', 'Starlight Vanguard',
     'Blood and Thunder', 'Sons of the Storm', 'Dust Eaters', 'Bonewall Raiders', 'Kessari Hexers'];
@@ -89,7 +93,7 @@
   // day, then a first week), so those who stay level up and the top fills over time. Nobody someone knows vanishes
   // silently: a friend of any character on the account (S.server.keep, by name) takes a break instead (at most once a
   // month), says so, and comes back after a few days; a guildmate of yours who quits says goodbye in guild chat first.
-  B.ROSTER_CAP = 420; B.VETERANS = 80; B.NEW_PER_HOUR = 3; B.GUILD_SHARE = 0.42; // the share in a guild on a new realm (#328)
+  B.ROSTER_CAP = 420; B.VETERANS = 80; B.NEW_PER_HOUR = 3; B.NEW_FOR_MS = 90 * 86400000; B.GUILD_SHARE = 0.42; // the share in a guild on a new realm (#328)
   // levels 1-20, 21-39 and 40-59: today's roster from day 15 on (sim/population.js TODAY); 21-59 as one band emptied
   // 40-59 (the newest there are the ones who just reached 21, so few lasted to 40, #312)
   B.BANDS = [{ max: 20, n: 325 }, { max: 39, n: 45 }, { max: 59, n: 50 }];
@@ -227,7 +231,7 @@
       const when = new Date(S.lastSim + stepMs * (s + 1));
       // new players keep rolling alts, so the starting zones never empty: B.NEW_PER_HOUR, arriving through the absence
       // (not all at its end, #302) and the fraction carried over, so a minute of live play adds its share too
-      const owed = (SV.newAcc || 0) + (stepMs / 3600000) * B.NEW_PER_HOUR, n = Math.floor(owed);
+      const owed = (SV.newAcc || 0) + (Math.min(stepMs, B.NEW_FOR_MS / steps) / 3600000) * B.NEW_PER_HOUR, n = Math.floor(owed); // at most 90 days of them (#379): the realm has turned over long before, and the rest would only be made to quit
       SV.newAcc = owed - n;
       // a newcomer joins a guild only once they have stayed a week (#328; the guild draw still happens, so the random
       // stream every sim measures stays as it was): most who quit do so in their first days, and
