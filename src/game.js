@@ -183,15 +183,16 @@
   }
   // a write the browser refused (its storage is full): said, not swallowed, at most every 10 minutes (#311)
   let cantSaidAt = 0;
-  function cantSave() { if (now() - cantSaidAt < 600000) return; cantSaidAt = now(); toast("Couldn't save: this browser's storage is full."); }
+  function cantSave() { if (now() - cantSaidAt < 600000) return; cantSaidAt = now(); toast("Couldn't save: this device's storage is full."); }
   G.characters = function () { migrate(); return readIndex().sort((a, b) => b.lastSeen - a.lastSeen); };
   G.save = function () {
     if (!G.S) return;
     G.S.lastSeen = now();
     if (G.fight && G.pUnit) E.writeBack(G.fight, G.pUnit, now(), true); // the fight goes on: don't shift it out (#217)
-    if (!ls.set(CHAR_KEY(G.S.id), JSON.stringify(G.S, ROSTER_ONLY))) cantSave();
+    const ok = ls.set(CHAR_KEY(G.S.id), JSON.stringify(G.S, ROSTER_ONLY)); if (!ok) cantSave();
     saveRoster(G.S);
-    const idx = readIndex().filter((c) => c.id !== G.S.id); idx.push(summary(G.S)); writeIndex(idx);
+    // the list says only what the save holds (#329): a refused write leaves its last entry, and a character never written isn't listed
+    if (ok) { const idx = readIndex().filter((c) => c.id !== G.S.id); idx.push(summary(G.S)); writeIndex(idx); }
   };
   G.hasSave = function () { return G.characters().length > 0; };
   G.logout = function () { G.save(); G.S = null; G.fight = null; G.pUnit = null; };
