@@ -63,3 +63,21 @@ test('the auction house sells into a stack the bags already have, even when they
   G.ahBuy(L.id);
   assert.strictEqual(G.countItem(L.item.id), 1 + (L.n || 1));
 });
+
+test('a battleground fight left by closing the app is a lost round, and the battleground goes on (#408)', () => {
+  let done = false;
+  for (let tries = 0; tries < 20 && !done; tries++) {
+    W.character(20); const id = G.S.id;
+    G.queueFor('bg_highmoor'); W.advance(90); G.acceptPop();
+    const bg = G.S.bg, bn = D.BG[bg.key].banners.map((b) => b[0]);
+    const target = bn.slice().sort((a, b) => (bg.plan[b] || 0) - (bg.plan[a] || 0))[0];
+    G.bgGo(target, bn.find((x) => x !== target));
+    if (!(G.fight && G.fight.kind === 'bg')) continue;
+    done = true; W.advance(1); const round = G.S.bg.round;
+    G.save(); G.S = null; G.fight = null; G.pUnit = null; W.setNow(W.now() + 30000); G.load(id);
+    const b2 = G.S.bg;
+    assert.ok(!b2 || b2.phase === 'choose' || b2.phase === 'done', 'phase ' + (b2 && b2.phase));
+    assert.ok(!b2 || b2.phase === 'done' || b2.round === round + 1, 'the round was played out');
+  }
+  assert.ok(done, 'reached a battleground fight');
+});
