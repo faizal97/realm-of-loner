@@ -249,6 +249,10 @@
         else if (a.kind === 'quest_team' && a.accepted) finishTeam(m, false);
         else if (a.whisper && !a.accepted && chance(0.6) && asks) { /* the roll happens either way: the outcome stream stays as it was */ const b = botById(a.bot); if (b) { const n = post('whisper', b, pickT('s227', ['nvm, found someone', 'nvm got it', 'all good, someone else helped', 'np, maybe next time', 'all sorted, ty anyway'])); if (n) n.ref = m.id; } }
       }
+      // a gift was sent: it arrives even if you never tapped Thank them, the gold at once, an item by mail (#392)
+      if (a.state === 'expired' && a.kind === 'gift') { a.state = 'done'; const b = botById(a.bot), who = b ? b.name : 'A friend';
+        if (a.gold) { P.money += a.gold; G.sys(`${who}'s gift arrived: ${coin(a.gold)}.`); }
+        if (a.itemData) { G.mailSend({ kind: 'reward', gift: true, from: who, item: JSON.parse(JSON.stringify(a.itemData)), n: 1 }); G.sys(`${who}'s gift waits in your mail.`); } }
       if (a.kind === 'quest_team' && a.accepted && P.quests[a.qid] && G.questComplete(a.qid)) { a.state = 'done'; finishTeam(m, true); }
       else if (a.kind === 'quest_team' && a.accepted && !P.quests[a.qid]) { a.state = 'expired'; finishTeam(m, false); } // dropped: no reward (#352)
       if (a.kind === 'g_event' && a.signed && !a.started && t >= a.startAt) startGuildEvent(m);

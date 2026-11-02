@@ -48,3 +48,15 @@ test('guild invites and officers come from someone online (#390)', () => {
   }
   assert.ok(n >= 5, `${n} invites`);
 });
+
+test('a gift arrives even if Thank them is never tapped: gold at once, an item by mail (#392)', () => {
+  const { S, P } = character(20); const SOC = globalThis.SOC;
+  const b = S.bots.find((x) => B.factionOf(x) === G.myFaction()), it = G.genGear('chest', 20, 2);
+  const gold = { id: 9700, ch: 'whisper', from: b.name, text: 'sent u gold', act: { kind: 'gift', whisper: true, bot: b.id, gold: 500, state: 'open', posted: W.now(), until: W.now() + 600000 } };
+  const item = { id: 9701, ch: 'whisper', from: b.name, text: 'have this', act: { kind: 'gift', whisper: true, bot: b.id, itemData: it, gold: 0, state: 'open', posted: W.now(), until: W.now() + 600000 } };
+  S.chat.push(gold, item); const m0 = P.money;
+  W.setNow(W.now() + 11 * 60000); SOC.tick();
+  assert.strictEqual(P.money, m0 + 500);
+  assert.ok(G.mail().some((m) => G.mailWaiting(m) && m.gift && m.item.name === it.name));
+  assert.strictEqual(gold.act.state, 'done'); assert.strictEqual(item.act.state, 'done');
+});
