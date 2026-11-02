@@ -175,3 +175,23 @@ test('a friend back from a break says so, once; the break line says how long (#3
   B.advance(S, 2 * 3600000);
   assert.strictEqual(S.chat.filter((m) => m.ch === 'whisper' && m.from === f.name && /back/.test(m.text)).length, 1, 'and only once');
 });
+
+test('a new character named like a friend renames that friend, and the other character keeps the same person (#326)', () => {
+  fresh();
+  const a = make('Ana');
+  const pal = G.S.bots.find((b) => B.factionOf(b) === G.myFaction() && b.level > 5);
+  const pname = pal.name, pid = pal.id;
+  G.S.soc = G.S.soc || {}; G.S.soc.friends = { [pid]: { n: 2, last: now() } }; G.S.player.met = { [pid]: { n: 3, last: now() } };
+  G.S.chat.push({ id: 999, t: now(), ch: 'whisper', from: pname, fromId: pid, text: 'hi' });
+  G.save();
+  make(pname); // a new character takes their name
+  const renamed = G.S.bots.find((b) => b.id === pid);
+  assert.ok(renamed && renamed.name !== pname, 'the realm player got another name');
+  const n = G.S.bots.length;
+  G.logout(); G.load(a);
+  assert.deepStrictEqual(Object.keys(G.S.soc.friends), [String(pid)], 'the same person is still the friend');
+  assert.deepStrictEqual(Object.keys(G.S.player.met), [String(pid)], 'runs together stay with them');
+  assert.strictEqual(G.S.chat.find((m) => m.id === 999).fromId, pid, 'their whisper still names them');
+  assert.strictEqual(G.S.bots.length, n, 'no copy joined the realm');
+  assert.strictEqual(G.S.bots.filter((b) => b.cls === pal.cls && b.race === pal.race && b.level === renamed.level && b.gear === renamed.gear).length, 1);
+});

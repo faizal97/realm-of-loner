@@ -86,7 +86,10 @@
       R = src ? { v: 1, from: src.id, bots: src.bots, nextBotId: src.nextBotId || 1000, lastSim: src.lastSim || now(), server: src.server || {} }
         : { v: 1, from: S.id, bots: B.makeRealm(), nextBotId: 1000, lastSim: S.lastSim || now(), server: {} };
     }
-    const byName = new Map(R.bots.map((b) => [b.name, b])), byId = new Map(own.map((b) => [String(b.id), b]));
+    const names = new Map(R.bots.map((b) => [b.name, b])), byId = new Map(own.map((b) => [String(b.id), b]));
+    // a name the realm changed (#314) still finds its person: a save may know them by the old one (#326)
+    const ren = (R.server && R.server.renamed) || {};
+    const byName = { get: (n) => { for (let i = 0; i < 5 && n != null; i++) { if (names.has(n)) return names.get(n); n = ren[n]; } return undefined; }, set: (n, b) => names.set(n, b) };
     const soc = S.soc, f = soc && soc.friends;
     if (f) {
       const nf = {};
@@ -123,7 +126,8 @@
     const clash = R.bots.filter((b) => mine.has(b.name));
     if (clash.length) {
       const used = new Set(R.bots.map((b) => b.name).concat(S.server.gone || [], [...mine])), k = S.server.keep;
-      for (const b of clash) { const n = B.makeName(used); if (k && k[b.name]) { delete k[b.name]; k[n] = 1; } b.name = n; }
+      const ren = S.server.renamed = S.server.renamed || {};
+      for (const b of clash) { const n = B.makeName(used); if (k && k[b.name]) { delete k[b.name]; k[n] = 1; } ren[b.name] = n; b.name = n; }
     }
     S.flags = S.flags || {}; S.flags.roster = true;
     G.R = R; saveRoster(S);
