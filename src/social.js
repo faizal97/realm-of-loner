@@ -563,7 +563,8 @@
     if (a.kind === 'wts') {
       // a disabled button says why (#169): the label is the shortfall
       const short = a.price - P.money;
-      return [{ label: short > 0 ? `Need ${coin(short)}` : `Buy for ${coin(a.price)}`, primary: true, disabled: short > 0, why: short > 0, need: short > 0 ? short : 0, fn: () => {
+      const full = short <= 0 && !!G.slotsShort([[a.itemData, 1]]); // greyed before the tap, as Swap is (#419)
+      return [{ label: short > 0 ? `Need ${coin(short)}` : full ? 'Bags full' : `Buy for ${coin(a.price)}`, primary: true, disabled: short > 0 || full, why: short > 0 || full, need: short > 0 ? short : 0, fn: () => {
         if (P.money < a.price) return 'Not enough money.';
         if (G.bagsFull()) return 'Your bags are full.';
         P.money -= a.price; G.addItem(JSON.parse(JSON.stringify(a.itemData)), 1);
@@ -589,7 +590,8 @@
     }
     if (a.kind === 'craft_order') {
       const r = D.RECIPES[a.rid], it = D.ITEMS[r.makes];
-      if (!a.sent) return [{ label: 'Take the order', primary: true, fn: () => {
+      const room = G.slotsShort(Object.keys(r.mats).map((k) => [D.ITEMS[k], r.mats[k]]));
+      if (!a.sent) return [{ label: room ? `Need ${room} free slot${room === 1 ? '' : 's'}` : 'Take the order', primary: true, disabled: !!room, why: !!room, fn: () => {
         // every material must fit before any is added; otherwise the order stays open (#162: they used to be lost)
         const short = G.slotsShort(Object.keys(r.mats).map((k) => [D.ITEMS[k], r.mats[k]]));
         if (short) return `Make room for ${short} material${short === 1 ? '' : 's'} first.`;
@@ -620,7 +622,8 @@
       return [{ label: P.place === a.place ? `${M.name} is here` : 'Go there', primary: true, disabled: P.place === a.place, why: P.place === a.place, fn: () => (P.place === a.place ? null : 'route:' + a.place) }, { label: 'Not interested', fn: () => close('declined') }];
     }
     if (a.kind === 'gift') {
-      return [{ label: 'Thank them', primary: true, fn: () => {
+      const full = !!(a.itemData && G.slotsShort([[a.itemData, 1]]));
+      return [{ label: full ? 'Bags full' : 'Thank them', primary: true, disabled: full, why: full, fn: () => {
         if (a.itemData) { if (G.bagsFull()) return 'Your bags are full.'; G.addItem(JSON.parse(JSON.stringify(a.itemData)), 1); G.sys(`${b ? b.name : 'They'} gave you ${a.itemData.name}.`); }
         if (a.gold) { P.money += a.gold; G.sys(`${b ? b.name : 'They'} sent you ${coin(a.gold)}.`); }
         G.say('whisper', pick(['aw thanks!', 'ty, u didnt have to!', 'thank u :)']), b && b.name); befriend(b); close();

@@ -11,7 +11,7 @@ function order() {
   const { P, S } = character(30, 'warrior', 'human');
   const r = Object.values(D.RECIPES).find((x) => Object.keys(x.mats).length >= 2 && Object.keys(x.mats).every((k) => !G.isQuestItem(k)));
   const m = { ch: 'whisper', act: { kind: 'craft_order', rid: r.id, tip: 100, sent: false, until: now() + 60000, state: 'open', bot: S.bots[0].id } };
-  const take = () => SOC.actions(m).find((x) => x.label === 'Take the order').fn();
+  const take = () => SOC.actions(m)[0].fn(); // greyed while the bags are short (#419), and still refuses if tapped
   return { P, S, r, m, take };
 }
 const fillBags = (P) => { while (!G.bagsFull()) P.bags.push({ item: G.genGear('legs', 30, 1), n: 1 }); };
@@ -23,7 +23,7 @@ test('full bags: the order is refused, stays open, and nothing is lost', () => {
   assert.strictEqual(said, `Make room for ${n} materials first.`);
   assert.strictEqual(m.act.sent, false, 'not taken');
   assert.strictEqual(m.act.state, 'open', 'still open');
-  assert.ok(SOC.actions(m).some((x) => x.label === 'Take the order'), 'can be taken once there is room');
+  assert.strictEqual(SOC.actions(m)[0].label, `Need ${n} free slots`, 'the button says what it needs');
 });
 
 test('one slot short: it says how many', () => {

@@ -188,3 +188,13 @@ test('Help from someone no longer on the realm is greyed: They\'re gone (#421)',
   const x = globalThis.SOC.actions(m)[0];
   assert.strictEqual(x.label, "They're gone"); assert.ok(x.disabled);
 });
+
+test('Buy, Thank them and Take the order are greyed with full bags (#419)', () => {
+  const { S, P } = W.character(30); P.money = 1e7; const b = S.bots[0];
+  while (!G.bagsFull()) P.bags.push({ item: G.genGear('legs', 30, 1), n: 1 });
+  const itemData = G.genGear('chest', 30, 2, { atype: 'mail' });
+  const r = Object.values(D.RECIPES).find((x) => Object.keys(x.mats).every((k) => !G.isQuestItem(k)));
+  const acts = [{ kind: 'wts', price: 100, itemData }, { kind: 'gift', itemData }, { kind: 'craft_order', rid: r.id, tip: 100, sent: false }]
+    .map((a) => globalThis.SOC.actions({ ch: 'whisper', act: Object.assign({ state: 'open', bot: b.id, until: W.now() + 60000 }, a) })[0]);
+  for (const x of acts) assert.ok(x.disabled && x.why, x.label);
+});
