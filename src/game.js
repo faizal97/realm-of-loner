@@ -2138,7 +2138,7 @@
   // The newest MAIL_KEEP letters are kept; past that the oldest read letters with no item waiting go first.
   G.MAIL_KEEP = 50;
   G.mail = () => G.S.mail || (G.S.mail = []);
-  G.mailWaiting = (m) => !!m.item && m.kind === 'expired' && !m.taken; // an item still to take
+  G.mailWaiting = (m) => !!m.item && (m.kind === 'expired' || m.kind === 'reward') && !m.taken; // an item still to take: an expired auction, or a festival reward that didn't fit (#382)
   G.mailSend = function (m) {
     const L = G.mail(); G.S.mailNext = (G.S.mailNext || 0) + 1;
     L.push(Object.assign({ id: G.S.mailNext, at: now(), read: false }, m));
@@ -4765,11 +4765,15 @@
     const P = G.S && G.S.player; if (!P || !G.lnOn()) return null;
     const season = G.eventSeason('longnight');
     if (P.ln && P.ln.season !== season && /^test/.test(P.ln.season)) G.lnRevokeTest();
+    if (P.ln && P.ln.season !== season) lnMailOwed(P.ln);
     if (!P.ln || P.ln.season !== season) P.ln = { season, first: lnMid(now()), kindling: 0, rank: 0, doors: [], ready: 0, day: null, done: false, prog: {}, lootDay: null, hardDay: null, guestDay: null, guestHardDay: null };
     if (P.ln.day !== dayKey()) Object.assign(P.ln, { day: dayKey(), done: false, prog: { wins: 0, homes: [], wood: [], cooked: false, bowls: 0 } });
     return P.ln;
   };
-  G.lnExpire = function () { const P = G.S && G.S.player; if (P && P.ln && !G.lnOn()) delete P.ln; };
+  // rewards still waiting at the Hearthwarden go to the mail when the festival ends, never lost with it (#382); a test
+  // build's season keeps nothing
+  function lnMailOwed(st) { if (st && st.owed && !/^test/.test(st.season || '')) for (const r of st.owed) if (D.ITEMS[r.item]) G.mailSend({ kind: 'reward', from: D.EVENTS.longnight.name, item: G.copyItem(r.item), n: r.n || 1 }); }
+  G.lnExpire = function () { const P = G.S && G.S.player; if (P && P.ln && !G.lnOn()) { lnMailOwed(P.ln); delete P.ln; } };
   // today's daily: snow (Snowball Brawl), knock (A Knock at the Door) or stew (Longnight Stew), in turn
   G.lnToday = () => LN().dailies[G.lnDay() % LN().dailies.length];
   G.LN_DAILY = { snow: 'Snowball Brawl', knock: 'A Knock at the Door', stew: 'Longnight Stew' };

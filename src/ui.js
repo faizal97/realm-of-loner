@@ -4490,7 +4490,7 @@
       const list = h('div', { class: 'list' });
       for (const m of L) {
         if (m.kind === 'letter') { const row = h('button', { class: 'row', onclick: () => openLetter(m) }, h('div', { class: 'ic' }, img(abIcon('song_of_rest'))), h('div', { class: 't' }, h('b', null, m.title), h('small', null, `${m.from}, ${agoText(m.at)}`)), h('div', { class: 'r' }, '›')); if (fresh.has(m.id)) row.classList.add('mail-new'); list.append(row); continue; } // a letter (#256)
-        const sub = (m.kind === 'sold' ? `Sold to ${m.buyer}, ` : m.taken ? 'Expired, taken, ' : 'Expired, waiting, ') + agoText(m.at);
+        const sub = (m.kind === 'sold' ? `Sold to ${m.buyer}, ` : m.kind === 'reward' ? `${m.from} reward, ${m.taken ? 'taken' : 'waiting'}, ` : m.taken ? 'Expired, taken, ' : 'Expired, waiting, ') + agoText(m.at);
         const right = m.kind === 'sold' ? G.moneyText((m.got || 0) + (m.dep || 0)) : G.mailWaiting(m) && here ? 'Take' : '';
         const row = itemRow(m.item, m.n || 1, right, () => openLetter(m), sub);
         if (fresh.has(m.id)) row.classList.add('mail-new');
@@ -4503,9 +4503,10 @@
     if (m.kind === 'letter') return showDialog([h('h3', null, m.title), h('p', { class: 'dim' }, m.from), h('p', null, m.text),
       h('div', { class: 'btn-row' }, G.rehearsalOpen() && m.title === 'The Rehearsal' ? h('button', { class: 'btn', onclick: () => { const w = G.rehearse(); if (w) return toast(w); closeDialog(); closeSheet(); } }, 'Rehearse') : null,
         h('button', { class: 'btn alt', onclick: () => { G.mailDelete(m.id); closeDialog(); if (ui.sheetFn) ui.sheetFn(); } }, 'Delete'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Close'))], true);
-    const rows = [h('h3', null, (m.kind === 'sold' ? 'Sold: ' : 'Expired: ') + m.item.name + ((m.n || 1) > 1 ? ` ×${m.n}` : ''))];
+    const rows = [h('h3', null, (m.kind === 'sold' ? 'Sold: ' : m.kind === 'reward' ? 'Reward: ' : 'Expired: ') + m.item.name + ((m.n || 1) > 1 ? ` ×${m.n}` : ''))];
     if (m.kind === 'sold') rows.push(h('p', null, `Bought by ${m.buyer}, ${agoText(m.at)}.`),
       h('p', { html: 'Received: ' + moneyHtml(m.got || 0, false, true) + ' after the 5% cut' + (m.dep ? ', plus ' + moneyHtml(m.dep, false, true) + ' deposit back' : '') + '.' }));
+    else if (m.kind === 'reward') rows.push(h('p', null, `From ${m.from}: your bags were full when it ended. ${m.taken ? 'You took it.' : 'It waits here until you take it.'}`));
     else rows.push(h('p', null, `Nobody bought it in a day. ${m.dep ? `The deposit of ${G.moneyText(m.dep)} was kept. ` : ''}${m.taken ? 'You took it back.' : 'It waits here until you take it.'}`));
     const btns = h('div', { class: 'btn-row' });
     if (G.mailWaiting(m)) {

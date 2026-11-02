@@ -36,3 +36,16 @@ test('a brawl round left by closing the app is a lost round, and the brawl is no
   assert.strictEqual(br.results.length, 1, 'the round was played out as lost');
   assert.ok(!G.groupBusy());
 });
+
+test('Longnight rewards still waiting at the Hearthwarden arrive by mail when it ends (#382)', () => {
+  W.setNow(new Date(2026, 11, 20, 19).getTime());
+  W.character(30); const id = G.S.id;
+  for (let i = 0; i < 500 && !G.bagsFull(); i++) G.addItem(G.genGear('chest', 30, 2, { atype: 'mail' }), 1);
+  G.ln(); G.lnGive(100000, 'test', true);
+  const owed = G.ln().owed || []; assert.ok(owed.length, 'some rewards wait');
+  G.save(); G.logout();
+  W.setNow(new Date(2027, 0, 6, 19).getTime()); G.load(id);
+  assert.ok(!G.S.player.ln, 'the festival has ended');
+  const mail = G.mail().filter(G.mailWaiting);
+  for (const r of owed) assert.ok(mail.some((m) => m.kind === 'reward' && m.item.id === r.item && m.n === (r.n || 1)), r.item);
+});
