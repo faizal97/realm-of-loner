@@ -3966,7 +3966,7 @@
     if (G.fight) return toast('Finish the fight first.'), false; // the pop stays open (#189)
     const act = S.queue.act, trial = S.queue.trial || 0, hard = !!S.queue.hard, picked = S.queue.group; S.queue = null;
     stopActions();
-    if (D.ACTIVITIES[act].bg) return startBg(act); // a battleground forms its own two teams
+    if (D.ACTIVITIES[act].bg) { S.player.travel = null; S.player.route = null; return startBg(act); } // a battleground forms its own two teams
     const grp = formGroup(act, trial ? { trial } : hard ? { hard } : undefined, picked); // the group the pop showed
     sys(`You have joined a group for ${D.ACTIVITIES[act].name}.`);
     grp.members.forEach((m, i) => { if (m.cameo || crand() < 0.7) S.pending.push({ at: now() + 800 + i * 1400 + crand() * 1500, bot: m.bot.id, ch: 'party', text: m.cameo ? G.legendLine(m.legend, 'hello') : B.partyLine(m.bot, 'hello'), fromName: m.name }); });
@@ -3983,6 +3983,7 @@
   G.runBase = (Dg, hard, trial) => (trial && Dg.trial) || (hard && Dg.hard) || Dg;
   function startRun(act, trial, hard) {
     const S = G.S, A = D.ACTIVITIES[act];
+    S.player.travel = null; S.player.route = null; // a trip ends when the group summons you (#424)
     let pulls, mult = null, bossMult = null, name = A.name;
     if (A.dungeon) {
       const Dg = D.DUNGEONS[A.dungeon];

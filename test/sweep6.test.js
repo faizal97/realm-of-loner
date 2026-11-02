@@ -220,3 +220,12 @@ test('queueing during a world fight is refused and the party stays (#423)', () =
   G.queueFor(act);
   assert.ok(!S.queue); assert.ok(G.partySize() > 1, 'the party stays');
 });
+
+test('accepting a group pop mid-trip ends the trip (#424)', () => {
+  const { S } = W.character(20); const P = S.player, act = 'deadmines'; P.place = D.ACTIVITIES[act].where; const start = P.place;
+  G.queueFor(act); S.queue.popAt = W.now() + 3600e3;
+  const dest = Object.keys(D.PLACES).find((k) => k !== start && G.travelSecs(start, k) >= 10);
+  G.travelTo(dest); assert.ok(P.travel);
+  W.advance(3); S.queue.popAt = W.now() - 1; W.advance(0.5); G.acceptPop();
+  assert.ok(S.run); assert.ok(!P.travel, 'the trip ended');
+});
