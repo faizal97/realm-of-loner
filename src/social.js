@@ -247,7 +247,7 @@
         a.state = 'expired';
         if (a.kind === 'help_kill' && a.accepted) finishHelp(m, false);
         else if (a.kind === 'quest_team' && a.accepted) finishTeam(m, false);
-        else if (asks && a.whisper && !a.accepted && chance(0.6)) { const b = botById(a.bot); if (b) { const n = post('whisper', b, pickT('s227', ['nvm, found someone', 'nvm got it', 'all good, someone else helped', 'np, maybe next time', 'all sorted, ty anyway'])); if (n) n.ref = m.id; } }
+        else if (a.whisper && !a.accepted && chance(0.6) && asks) { /* the roll happens either way: the outcome stream stays as it was */ const b = botById(a.bot); if (b) { const n = post('whisper', b, pickT('s227', ['nvm, found someone', 'nvm got it', 'all good, someone else helped', 'np, maybe next time', 'all sorted, ty anyway'])); if (n) n.ref = m.id; } }
       }
       if (a.kind === 'quest_team' && a.accepted && P.quests[a.qid] && G.questComplete(a.qid)) { a.state = 'done'; finishTeam(m, true); }
       else if (a.kind === 'quest_team' && a.accepted && !P.quests[a.qid]) { a.state = 'expired'; finishTeam(m, false); } // dropped: no reward (#352)

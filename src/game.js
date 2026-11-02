@@ -2750,8 +2750,7 @@
     const firstTimers = Math.random() < 0.6;
     const myF = (D.RACES[P.race] || {}).faction || 'alliance';
     const mine = S.bots.filter((b) => B.factionOf(b) === myF), on = new Date(t), fit = mine.filter((b) => b.level >= A.minLvl - 3 && b.level <= (A.maxLvl || D.LEVEL_CAP) + 5 && B.isOnline(b, on) && !B.lfRecent(S, b)); // a poster of the run's level (#69: a bot names content at its own level), online, never a level 60 in a level 20 dungeon (#357, #364)
-    if (!fit.length) return; // nobody fitting is online: no post
-    const poster = pick(fit);
+    const poster = pick(fit); if (!poster) return; // nobody fitting is online: no post
     const req = { id: 'hw' + t, act, role, startIdx: stuck, firstTimers, poster: poster.id, posterName: poster.name, expires: t + HW_LIFE };
     S.helpWanted.push(req);
     const what = stuck ? `stuck on ${Dg.pulls[stuck].label}` : 'from the start'; // (not 'full run': chat says full only of a busy server, #70)
