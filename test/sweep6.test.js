@@ -44,3 +44,14 @@ test('festival items stack in one bag slot (#405)', () => {
   for (let i = 0; i < 5; i++) G.addItem(G.copyItem('ln_snowball'), 1);
   assert.deepStrictEqual(G.S.player.bags.filter((b) => b.item.id === 'ln_snowball').map((b) => b.n), [5]);
 });
+
+test('an armour kit stays on top of the armour through every upgrade step (#406)', () => {
+  W.character(60); const P = G.S.player, kit = 'hardhide_armor_kit', k = D.ITEMS[kit].kit;
+  P.money = 1e9;
+  const fresh = () => G.genGear('chest', 60, 3, { atype: D.CLASSES[P.cls].armorType });
+  const step = (n) => { for (let i = 0; i < n; i++) G.upgradeItem({ slot: 'chest' }); return P.equip.chest.armor; };
+  const apply = () => { G.addItem(G.copyItem(kit), 1); G.useItem(P.bags.findIndex((b) => b.item.id === kit)); };
+  P.equip.chest = fresh(); const plain = step(2);
+  P.equip.chest = fresh(); step(1); apply(); assert.strictEqual(step(1), plain + k, 'kit after a step');
+  P.equip.chest = fresh(); apply(); assert.strictEqual(step(2), plain + k, 'kit before any step');
+});

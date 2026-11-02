@@ -2678,7 +2678,7 @@
     return Math.max(base * (1 - D.effectCost(it.effect)), G.itemPoints(upBase(it)) / st);
   };
   G.upgradeRef.reset = () => { upRef = null; }; // when D.UPGRADE.raid moves (sims)
-  const upBase = (it) => it.base || { stats: Object.assign({}, it.stats), armor: it.armor, sp: it.sp, dmg: it.dmg && it.dmg.slice() };
+  const upBase = (it) => it.base || { stats: Object.assign({}, it.stats), armor: it.armor && it.armor - (it.kit || 0), sp: it.sp, dmg: it.dmg && it.dmg.slice() }; // a kit's armour is not part of the base (#406)
   // An upgraded item stores the power it reached (it.pw, in stat points), not a step count, so a new ceiling raid never
   // changes an item on its own, and the label is a percentage of the ceiling that never grows past 100.
   G.upgradeInfo = function (it) {
@@ -2696,13 +2696,14 @@
     const b = upBase(it), p0 = G.itemPoints(b), inf = G.upgradeInfo(it), out = JSON.parse(JSON.stringify(it));
     const capPts = inf.ok ? D.UPGRADE.cap[it.q] * G.upgradeRef(it) : p0;
     pw = Math.min(pw, Math.max(capPts, it.pw || 0));
-    if (!inf.ok || pw <= p0 + 1e-9) { if (it.base) { Object.assign(out, JSON.parse(JSON.stringify(b))); delete out.base; delete out.pw; delete out.fxScale; } return out; }
+    const kit = it.kit || 0; // an armour kit sits on top of the upgraded armour (#406)
+    if (!inf.ok || pw <= p0 + 1e-9) { if (it.base) { Object.assign(out, JSON.parse(JSON.stringify(b))); delete out.base; delete out.pw; delete out.fxScale; if (b.armor) out.armor = b.armor + kit; if (kit) out.kit = kit; } return out; }
     const f = pw / p0;
     if (G.effectOf(it)) out.fxScale = Math.round(Math.min(G.FX_SCALE_CAP, f) * 100) / 100; // an item effect grows with each step, as the stats do (v10.10), up to the cap the engine uses
     out.base = JSON.parse(JSON.stringify(b)); out.pw = Math.round(pw * 100) / 100;
     out.stats = {}; for (const k in b.stats || {}) out.stats[k] = Math.round(b.stats[k] * f);
     if (b.sp) out.sp = Math.round(b.sp * f);
-    if (b.armor) out.armor = Math.round(b.armor * f);
+    if (b.armor) out.armor = Math.round(b.armor * f) + kit;
     if (b.dmg) out.dmg = [Math.round(b.dmg[0] * f), Math.round(b.dmg[1] * f)];
     return out;
   };
