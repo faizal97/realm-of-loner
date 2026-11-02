@@ -3282,6 +3282,7 @@
     if (G.partySize() >= PARTY_MAX) return toast('Your party is full.');
     const b = S.bots.find((x) => x.id === botId); if (!b) return;
     if (S.wparty && S.wparty.members.some((m) => m.bot.id === botId)) return toast(`${b.name} is already in your party.`);
+    if (!B.onlineIn(S, P.place, new Date(now())).some((x) => x.id === botId)) return toast(`${b.name} isn't here.`); // only someone where you are (#304)
     if ((S.flags.invitedAt || {})[botId] > now() - 20000) return toast(`You already invited ${b.name}.`);
     S.flags.invitedAt = Object.assign(S.flags.invitedAt || {}, { [botId]: now() });
     const diff = Math.abs(b.level - P.level);

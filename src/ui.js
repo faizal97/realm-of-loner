@@ -1220,7 +1220,7 @@
     if (near.length) {
       const chips = h('div', { class: 'chips' });
       for (const x of near.slice(0, 12)) chips.append(h('button', { class: 'chip', onclick: () => playerCard(x) }, h('span', { class: 'cls-' + x.cls }, x.name), h('small', null, `${x.level} ${raceClass(x)}`)));
-      b.append(h('div', { class: 'sec-h' }, 'Players here', h('small', null, `${near.length} nearby · tap to invite`)), chips);
+      b.append(h('div', { class: 'sec-h' }, 'Players here', h('small', null, `${near.length} nearby · tap for their card`)), chips);
     }
     const foe = G.intruderHere();
     if (foe) b.append(h('div', { class: 'sec-h foe-h' }, 'Enemy player', h('small', null, 'tap to attack')),
@@ -1460,7 +1460,8 @@
     parts.push(h('p', { class: 'bio' }, B.bio(live)));
     const btns = h('div', { class: 'btn-row' });
     const mine = B.factionOf(live) === G.myFaction(), inParty = S.wparty && S.wparty.members.some((m) => m.bot.id === b.id);
-    if (mine && on && !inParty && !who.equip && !S.run && !S.queue && G.partySize() < 3) btns.append(h('button', { class: 'btn', onclick: () => { closeDialog(); G.invite(b.id); } }, 'Invite'));
+    const here = on && !withMe && B.placeFor(live, new Date()) === P.place; // only someone where you are (#304)
+    if (mine && here && !inParty && !who.equip && !S.run && !S.queue && G.partySize() < 3) btns.append(h('button', { class: 'btn', onclick: () => { closeDialog(); G.invite(b.id); } }, 'Invite'));
     if (friend) btns.append(h('button', { class: 'btn alt', onclick: () => showDialog([h('h3', null, `Remove ${b.name} as a friend?`), h('p', null, 'They stop counting as your friend. You can be friends again by helping them.'),
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { G.unfriend(b.id); toast(`Removed ${b.name} as a friend.`); playerCard(who); } }, 'Remove'), h('button', { class: 'btn alt', onclick: () => playerCard(who) }, 'Cancel'))], true) }, 'Remove friend'));
     btns.append(h('button', { class: 'btn alt', onclick: closeDialog }, 'Close'));
