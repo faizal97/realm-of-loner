@@ -139,3 +139,16 @@ test('an empty save code asks for one (#414)', async () => {
   W.character(5);
   await assert.rejects(G.decodeSave('  '), /Paste a save code/);
 });
+
+test('no world party forms while queued or in PvP (#415)', () => {
+  W.setNow(new Date(2026, 10, 3, 20).getTime()); const { S, P } = W.character(30);
+  const cnt = (k) => B.onlineIn(S, k, new Date()).filter((x) => B.factionOf(x) === G.myFaction()).length;
+  let best = null; for (const k of Object.keys(D.PLACES)) { P.place = k; const a = Object.keys(D.ACTIVITIES).find((x) => !G.activityBlock(x)); if (a && cnt(k) && (!best || cnt(k) > best.c)) best = { k, a, c: cnt(k) }; }
+  P.place = best.k;
+  const x = B.onlineIn(S, P.place, new Date()).find((y) => B.factionOf(y) === G.myFaction()); x.level = P.level;
+  const rr = Math.random; Math.random = () => 0.01; G.invite(x.id); Math.random = rr;
+  G.queueFor(best.a); assert.ok(S.queue, 'queued'); W.advance(5);
+  assert.ok(!S.wparty || !S.wparty.members.length, 'the answer was refused while queued');
+  G.leaveQueue(); S.duelOn = { bot: x.id, name: x.name, wager: 0 };
+  assert.strictEqual(G.partyBlock(), 'Not during PvP.');
+});

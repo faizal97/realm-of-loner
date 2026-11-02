@@ -3338,6 +3338,8 @@
   }
   // in a group, a queue, a fight, a battleground or a brawl still going: no other group can start (#354)
   G.groupBusy = () => { const S = G.S; return !!(S.run || S.queue || G.fight || G.bgBusy() || (S.brawl && S.brawl.phase !== 'done')); };
+  // why a world party can't grow now (#415): the group finder, or PvP (a battleground, a brawl, a duel); null when it can
+  G.partyBlock = () => { const S = G.S; if (S.run || S.queue) return 'Not while in the group finder.'; if (G.bgBusy() || (S.brawl && S.brawl.phase !== 'done') || S.duelOn) return 'Not during PvP.'; return null; };
   G.bgBusy = () => !!(G.S.bg && G.S.bg.phase !== 'done'); // a finished battleground (the result screen) never blocks invites or groups (#30)
   G.leaveBg = function () { const S = G.S; if (!S.bg) return; if (G.fight && G.fight.kind === 'bg') return toast('Finish the fight first.'); S.bg = null; emit('instanceLeave', {}); emit('change'); G.save(); };
   G.bgStart = startBg; // sims
@@ -3422,7 +3424,7 @@
   // You invite someone from "Players here".
   G.invite = function (botId) {
     const S = G.S, P = S.player;
-    if (S.run || S.queue) return toast('Not while in the group finder.');
+    { const why = G.partyBlock(); if (why) return toast(why); }
     if (G.partySize() >= PARTY_MAX) return toast('Your party is full.');
     const b = S.bots.find((x) => x.id === botId); if (!b) return;
     if (S.wparty && S.wparty.members.some((m) => m.bot.id === botId)) return toast(`${b.name} is already in your party.`);
@@ -3434,7 +3436,7 @@
     const yes = Math.random() < (diff <= 3 ? 0.75 : diff <= 5 ? 0.35 : 0.05);
     sys(`You invite ${b.name} to your party.`); // the world party is a party; a group is the group finder (#400)
     S.pending.push({ at: now() + rnd(1500, 3500), bot: b.id, ch: 'whisper', text: yes ? cpick(['sure', 'ok!', 'yeah why not', 'sure, same quest']) : cpick(['no ty', 'soloing sry', 'nah', 'too low lol']),
-      onPost: () => { if (!G.S) return; if (!yes) return toast(`${b.name} said no.`); if (G.S.run) return toast(`${b.name} can't join during a run.`); toast(addToParty(b) ? `${b.name} joined your party.` : 'Your party is full.'); } }); // the answer on screen, not only in a whisper (#369); a join only when it happened (#386)
+      onPost: () => { if (!G.S) return; if (!yes) return toast(`${b.name} said no.`); if (G.partyBlock()) return toast(`${b.name} can't join: you're ${G.S.run || G.S.queue ? 'in the group finder' : 'in PvP'}.`); toast(addToParty(b) ? `${b.name} joined your party.` : 'Your party is full.'); } }); // the answer on screen, not only in a whisper (#369); a join only when it happened (#386)
   };
   G.acceptPartyInvite = function (botId) {
     const S = G.S; const b = S.bots.find((x) => x.id === botId); if (!b) return;

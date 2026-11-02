@@ -528,7 +528,7 @@
     if (a.kind === 'help_kill' || a.kind === 'quest_team') {
       if (a.accepted) return [{ label: 'Cancel', fn: () => { if (a.kind === 'help_kill') finishHelp(m, false); else finishTeam(m, false); close('declined'); } }];
       return [{ label: a.kind === 'quest_team' ? 'Team up' : 'Help', primary: true, fn: () => {
-        if (S.run || S.queue) return 'Not while in the group finder.';
+        if (G.partyBlock()) return G.partyBlock(); // the group finder or PvP (#415)
         if (G.partySize() >= 3) return 'Your party is full.';
         if (a.kind === 'quest_team' && (G.questComplete(a.qid) || !P.quests[a.qid])) { a.state = 'expired'; G.emitChange(); return 'That quest is done.'; }
         a.accepted = true; a.until = now() + 20 * 60000;
