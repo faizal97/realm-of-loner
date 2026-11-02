@@ -1743,6 +1743,12 @@
     return G.fight;
   };
 
+  // someone in your party thanks you for a buff you really cast (#316: the line came at random, buff or not), now and then
+  function thankBuff() {
+    const S = G.S, ms = partyNow().filter((m) => m.bot && !m.legend); if (!ms.length || (S.flags.thankedAt || 0) > now() - 600000 || crand() >= 0.4) return;
+    S.flags.thankedAt = now();
+    const m = cpick(ms); S.pending.push({ at: now() + 1500 + crand() * 2500, bot: m.bot.id, ch: 'party', text: cpick(['ty for the buff', 'ty!', 'ty for buffs']), fromName: m.name });
+  }
   G.useAbility = function (abId) {
     const C = G.fight;
     if (!C || !G.pUnit) return 'Not in combat';
@@ -1750,6 +1756,7 @@
     let tgt = G.pUnit.target;
     if (ab.target === 'ally' || (ab.either && G.role() === 'healer')) tgt = C.allyTarget != null && C.units[C.allyTarget] && !C.units[C.allyTarget].dead ? C.allyTarget : G.pUnit.uid;
     const why = E.use(C, G.pUnit, abId, tgt);
+    if (!why && ab.target === 'party' && ab.buff && ab.buff.dur >= 60) thankBuff();
     if (why && E.queue(C, G.pUnit, abId, tgt, why)) return null; // the last 0.4 s of a cast or the global cooldown: it waits and fires then (#249)
     if (why && why !== E.GCD_WHY) emit('error', why); // the global cooldown says nothing (#173)
     return why;
@@ -1924,6 +1931,12 @@
       if (ab.buff.thorns) extra.thorns = { dmg: Math.round((ab.buff.thorns.base + ab.buff.thorns.perLvl * P.level) * bp), charges: ab.buff.thorns.charges }; // with its talent, as in a fight
       if (ab.buff.dur >= 60) P.auras.push(Object.assign({ id: ab.buff.id, stats, until: now() + ab.buff.dur * 1000 }, extra));
       if (stats.sta) P.hp += stats.sta * 10;
+      // a party buff reaches the party between pulls too, as it does in a fight (#315): each member's next fight reads it
+      if (ab.target === 'party' && ab.buff.dur >= 60) thankBuff();
+      if (ab.target === 'party' && ab.buff.dur >= 60) for (const m of partyNow()) {
+        m.auras = (m.auras || []).filter((a) => a.id !== ab.buff.id && !(ab.buff.group && ((D.ABILITIES[a.id] || {}).buff || {}).group === ab.buff.group));
+        m.auras.push({ id: ab.buff.id, stats: Object.assign({}, stats), until: now() + ab.buff.dur * 1000 });
+      }
     }
     if (ab.heal || ab.hot) {
       const st = G.stats();

@@ -478,7 +478,7 @@
     (c) => `wiped on ${c.boss} 3 times, still got it`,
   ];
   const SAY_NEAR = [
-    () => 'hey', () => 'o/', () => 'ty for the buff', () => 'argh, respawn is so slow', () => 'u can have this one', () => 'lol', () => 'got it', () => 'brb', () => 'ok back',
+    () => 'hey', () => 'o/', () => 'argh, respawn is so slow', () => 'u can have this one', () => 'lol', () => 'got it', () => 'brb', () => 'ok back',
     () => 'my bags are full already', (c) => `watch out, ${c.mobName} packs here`, (c) => `${c.mobName} again...`, () => 'nice pull', () => 'oops sorry, thought that was mine',
     () => 'these spawns are so fast lol', () => 'gl with the quest', () => 'phew, almost died there', () => 'just one more and im done', () => 'where did all the mobs go',
     (c) => `this ${c.zone} music tho`, () => 'ow', () => 'rip', () => 'nice one', () => 'close call lol', () => 'ty!', () => 'np', () => 'ding!', () => 'gz',
@@ -496,7 +496,6 @@
     () => 'r u a bot?',
     () => 'Hello friend! Cheapest gold on the server, 1000g for $10, visit our site!',
     () => 'CHEAP GOLD FAST DELIVERY 100% SAFE, visit our site',
-    () => 'ty for the buff earlier!',
     (c) => `was that u in ${c.zone}? saw u fighting ${c.mobName}s`,
     () => 'wrong window sorry',
     () => 'lol sorry, meant that for someone else',
