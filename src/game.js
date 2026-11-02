@@ -2093,7 +2093,7 @@
     const S = G.S, P = S.player, l = (S.ah.listings || []).find((x) => x.id === id);
     if (!l) return toast('Someone else bought it.');
     if (P.money < l.price) return toast(`You need ${G.moneyText(l.price)}.`);
-    if (G.bagsFull()) return toast('Inventory is full.');
+    if (G.slotsShort([[l.item, l.n || 1]])) return toast('Inventory is full.'); // a stack it joins is room (#407)
     P.money -= l.price; S.ah.listings = S.ah.listings.filter((x) => x !== l);
     G.addItem(l.item, l.n || 1); loot(`You bought ${B.link(l.item.name, l.item.q)}${(l.n || 1) > 1 ? ' x' + l.n : ''} from ${l.seller} for ${G.moneyText(l.price)}.`);
     emit('change');
@@ -2121,7 +2121,7 @@
   };
   G.ahCancel = function (i) {
     const S = G.S, a = S.ah.mine[i]; if (!a) return;
-    if (G.bagsFull()) return toast('Inventory is full.');
+    if (G.slotsShort([[a.item, a.n || 1]])) return toast('Inventory is full.');
     S.ah.mine.splice(i, 1); G.addItem(a.item, a.n || 1); sys(`You cancelled your auction of ${a.item.name}.${a.deposit ? ` The deposit of ${G.moneyText(a.deposit)} is kept by the house.` : ''}`); emit('change');
   };
   const ahTick = G.ahTick = function () {
