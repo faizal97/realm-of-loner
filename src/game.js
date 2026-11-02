@@ -112,6 +112,17 @@
     const k = S.server.keep || (S.server.keep = {});
     for (const id of Object.keys(f)) { const b = S.bots.find((x) => String(x.id) === id); if (b) k[b.name] = 1; }
   }
+  // Remove friend (#84): off this character's list; the account stops keeping them (#71: friends never quit) only when
+  // no other character has them as a friend either
+  G.unfriend = function (botId) {
+    const S = G.S, f = S.soc && S.soc.friends; if (!f || !f[botId]) return false;
+    delete f[botId];
+    const b = S.bots.find((x) => x.id === botId), k = S.server && S.server.keep;
+    const elsewhere = readIndex().some((c) => c.id !== S.id && (((G.readSave(c.id) || {}).soc || {}).friends || {})[botId]);
+    if (b && k && !elsewhere) delete k[b.name];
+    G.save(); emit('change');
+    return true;
+  };
   // a person's own story (#72) lives in the account's roster only: each character's copy of the bots (for older builds
   // and save codes) leaves it out, so ten characters don't carry ten copies of it
   const ROSTER_ONLY = (k, v) => (k === 'hist' || k === 'pals' || k === 'rival' ? undefined : v);

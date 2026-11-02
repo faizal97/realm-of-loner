@@ -75,3 +75,14 @@ test('a friend takes a break, says so and comes back; a guildmate who quits says
   crowd(S, 300); B.trimRoster(S, now() + 86400000);
   assert.ok(S.bots.includes(pal), 'a friend back from a break is never removed');
 });
+
+test('Remove friend: off this character; the account keeps them while another character is still their friend', () => {
+  fresh();
+  const a = make('Ana'), pal = G.S.bots[12];
+  G.S.soc = G.S.soc || {}; G.S.soc.friends = { [pal.id]: { n: 2, where: null, last: 0 } }; G.save();
+  make('Bel'); G.S.soc = G.S.soc || {}; G.S.soc.friends = { [pal.id]: { n: 1, where: null, last: 0 } }; G.save();
+  assert.ok(G.unfriend(pal.id)); assert.ok(!G.S.soc.friends[pal.id]);
+  assert.ok(G.S.server.keep[pal.name], 'Ana still has them as a friend, so they are still kept');
+  G.logout(); G.load(a); assert.ok(G.unfriend(pal.id));
+  assert.ok(!G.S.server.keep[pal.name], 'nobody has them now: they can quit like anyone');
+});

@@ -33,6 +33,7 @@ const inFight = () => { const m = G.placeMobs().find((x) => x.state === 'alive')
 // each action, with arguments a player's tap would give it; a missing precondition is fine (the action should refuse
 // politely), a throw is not
 const ACTIONS = {
+  unfriend: () => { const b = G.S.bots[0]; G.S.soc = G.S.soc || {}; G.S.soc.friends = { [b.id]: { n: 1, where: null, last: 0 } }; G.unfriend(b.id); },
   accept: () => G.accept(Object.keys(D.QUESTS)[0]),
   abandon: () => { const q = Object.keys(D.QUESTS)[0]; G.accept(q); G.abandon(first(G.S.player.quests) || q); },
   turnIn: () => { const q = first(G.S.player.quests) || Object.keys(D.QUESTS)[0]; G.turnIn(q); },

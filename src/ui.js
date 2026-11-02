@@ -1460,6 +1460,8 @@
     const btns = h('div', { class: 'btn-row' });
     const mine = B.factionOf(live) === G.myFaction(), inParty = S.wparty && S.wparty.members.some((m) => m.bot.id === b.id);
     if (mine && on && !inParty && !who.equip && !S.run && !S.queue && G.partySize() < 3) btns.append(h('button', { class: 'btn', onclick: () => { closeDialog(); G.invite(b.id); } }, 'Invite'));
+    if (friend) btns.append(h('button', { class: 'btn alt', onclick: () => showDialog([h('h3', null, `Remove ${b.name} as a friend?`), h('p', null, 'They stop counting as your friend. You can be friends again by helping them.'),
+      h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { G.unfriend(b.id); toast(`Removed ${b.name} as a friend.`); playerCard(who); } }, 'Remove'), h('button', { class: 'btn alt', onclick: () => playerCard(who) }, 'Cancel'))], true) }, 'Remove friend'));
     btns.append(h('button', { class: 'btn alt', onclick: closeDialog }, 'Close'));
     parts.push(btns);
     showDialog(parts, true);
