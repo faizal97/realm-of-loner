@@ -162,3 +162,16 @@ test('nobody on the realm has a character\'s name (#314)', () => {
   assert.ok(!G.S.bots.some((x) => x.name === name));
   assert.ok(G.S.server.keep[b.name] && !G.S.server.keep[name], 'and stay kept under it');
 });
+
+test('a friend back from a break says so, once; the break line says how long (#321)', () => {
+  fresh();
+  make('Ana'); const S = G.S, f = S.bots[8];
+  S.soc = S.soc || {}; S.soc.friends = { [f.id]: { n: 1 } };
+  f.away = now() + 3600000;
+  B.advance(S, 2 * 3600000);
+  const back = S.chat.filter((m) => m.ch === 'whisper' && m.from === f.name && /back/.test(m.text));
+  assert.strictEqual(back.length, 1, 'one whisper on coming back');
+  assert.ok(!f.away);
+  B.advance(S, 2 * 3600000);
+  assert.strictEqual(S.chat.filter((m) => m.ch === 'whisper' && m.from === f.name && /back/.test(m.text)).length, 1, 'and only once');
+});

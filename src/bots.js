@@ -109,8 +109,12 @@
     const leave = (b) => {
       if (keep[b.name]) {
         if (b.broke > t - B.BREAK_EVERY * 86400000) return false; // back from one not long ago: they stay
-        b.broke = t; b.away = t + (B.BREAK_DAYS[0] + crand() * (B.BREAK_DAYS[1] - B.BREAK_DAYS[0])) * 86400000;
-        if (S.player) B.post(S, 'whisper', b, cpick(['hey, taking a break for a few days. see you when i am back', 'gonna be away a bit, talk soon', 'short break for me, back in a few days']));
+        const days = B.BREAK_DAYS[0] + crand() * (B.BREAK_DAYS[1] - B.BREAK_DAYS[0]);
+        b.broke = t; b.away = t + days * 86400000;
+        // the line says how long (#321: "a few days" for two weeks read as a lie)
+        if (S.player) B.post(S, 'whisper', b, cpick(days < 5 ? ['hey, taking a break for a few days. see you when i am back', 'short break for me, back in a few days', 'off for a few days, talk soon']
+          : days < 10 ? ['gonna be away about a week, talk soon', 'taking a week off, see you after', 'away for a week or so. dont have too much fun without me']
+            : ['taking a couple weeks off. see you when i am back', 'gone for two weeks or so, real life stuff. cya', 'long break for me, a couple of weeks. take care']));
         return false;
       }
       const bye = (mine >= 0 && b.guild === mine) || theirs[b.guild] ? cpick(['ok i am done with this game for now. gl everyone o/', 'quitting for a while, thanks for the runs all', 'logging off for good i think. was fun, cya']) : null;
@@ -257,6 +261,11 @@
           else if (first && last) news.push({ t: when.getTime(), text: `<${g}> is the first guild on ${D.REALM} to defeat ${last.name}!`, big: true });
           else clears[g + '|' + act] = (clears[g + '|' + act] || 0) + 1;
         }
+      }
+      // back from a break (#321): a friend of this character says so, once
+      for (const b of S.bots) if (b.away && b.away <= when.getTime()) {
+        delete b.away;
+        if (S.player && S.soc && S.soc.friends && S.soc.friends[b.id]) B.post(S, 'whisper', b, cpick(['back! did i miss anything?', 'hey, im back o/', 'back from my break. what did i miss']));
       }
       B.guildMoves(S, stepMs, when.getTime()); // #72: now and then someone changes guild
       B.trimRoster(S, when.getTime()); // #71: people quit, the realm stays at its size (each step, so a long absence keeps its spread, #302)

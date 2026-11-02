@@ -1417,19 +1417,29 @@
   // The player card (#84): who someone on the realm is, from any place you see them. It reads who bots are (#72: stored
   // gear, runs with you, their own story, friends and a rival); it changes nothing about how they play. Every place and
   // item name passes G.nameable at your level. b: a roster bot, or a party/group member (its gear is then the one worn).
-  function playerCard(who) {
+  // back: what Close returns to (the group pop, #323); while the card shows, the run waits to pull (G.looking)
+  // where someone is, as the card and the friends list say it: here, a place you may be told of, on a break (#321)
+  function whereText(live, withMe) {
+    const P = G.S.player, d = new Date();
+    if (withMe) return D.PLACES[P.place] ? D.PLACES[P.place].name : 'With you';
+    if (live.away > d.getTime()) return `On a break · back in ${Math.max(1, Math.ceil((live.away - d.getTime()) / 86400000))}d`;
+    if (!B.isOnline(live, d)) return 'Offline';
+    const pl = D.PLACES[B.placeFor(live, d)];
+    return pl && G.nameable(pl.name, P.level) ? pl.name : 'Far away';
+  }
+  function playerCard(who, back) {
     const S = G.S, P = S.player, b = (who && who.bot) || who; if (!b || b.legend || who.legend) return; // a Legend has their own story
     const live = S.bots.find((x) => x.id === b.id) || b, lv = P.level, ok = (t) => G.nameable(t, lv);
     const row = (k, v) => h('div', { class: 'ai-row' }, h('span', null, k), h('b', null, v));
     const ago = (t) => { const m = (Date.now() - t) / 60000; return m < 2 ? 'just now' : m < 60 ? `${Math.floor(m)}m ago` : m < 48 * 60 ? `${Math.floor(m / 60)}h ago` : `${Math.floor(m / 1440)} days ago`; };
     const role = who.role || b.role, C = D.CLASSES[b.cls];
-    const parts = [h('h3', null, rankBadge(b), h('span', { class: 'cls-' + b.cls }, b.name)),
+    const parts = [h('h3', null, rankBadge(b), h('span', { class: 'cls-' + b.cls }, who.name || b.name)), // the name as the party frame shows it, realm and all (#322)
       h('p', null, `Level ${(who.level || b.level)} ${raceClass(b)}${role ? ' · ' + (role === 'tank' ? 'Tank' : role === 'healer' ? 'Healer' : 'Damage') : ''}`)];
-    const withMe = who.equip || (S.wparty && S.wparty.members.some((m) => m.bot.id === b.id)); // in your party or group: where you are
-    const on = withMe || B.isOnline(live, new Date()), pl = on ? D.PLACES[withMe ? P.place : B.placeFor(live, new Date())] : null;
+    const withMe = (S.run && S.group && S.group.members.includes(who)) || (S.wparty && S.wparty.members.some((m) => m.bot.id === b.id)); // in your party or group: where you are
+    const on = withMe || B.isOnline(live, new Date());
     parts.push(h('div', { class: 'ai-box' },
       row('Guild', live.guild >= 0 ? `<${B.GUILDS[live.guild]}>` : 'None'),
-      row('Where', !on ? 'Offline' : pl && ok(pl.name) ? pl.name : 'Far away')));
+      row('Where', whereText(live, withMe))));
     // with you: what this character did with them (#72)
     const met = G.metWith(b.id), friend = window.SOC && SOC.isFriend(b.id);
     if (met || friend) {
@@ -1438,7 +1448,9 @@
         h('div', { class: 'ai-box' },
           met && met.n ? row('Runs together', String(met.n)) : null,
           met && met.n ? row('Last run', (A && ok(A.name) ? A.name + ', ' : '') + last) : null,
-          met && met.ninja ? h('div', { class: 'ai-row' }, h('span', null, 'Ninja rolls'), h('b', { style: { color: '#ff6a5a' } }, String(met.ninja))) : null));
+          met && met.wipes ? row('Wipes together', String(met.wipes)) : null,
+          // whose loot, with the why a tap away (#322)
+          met && met.ninja ? h('button', { class: 'ai-row', style: { width: '100%' }, onclick: () => toast('They rolled Need on gear for another class and won it.') }, h('span', null, 'Took your loot ', h('small', { class: 'dim' }, '?')), h('b', { style: { color: '#ff6a5a' } }, String(met.ninja))) : null));
     }
     // gear: the set they wear in your group, or the one they always wear at their level (#72)
     const ch = who.equip ? who : G.botChar(Object.assign({}, live, { role: role || C.role }));
@@ -1447,7 +1459,7 @@
       const it = ch.equip[slot]; if (!it) continue;
       const tip = h('div', { style: { display: 'none' } }, itemTip(it, null, ch));
       list.append(h('button', { class: 'row', onclick: () => { tip.style.display = tip.style.display === 'none' ? '' : 'none'; } },
-        h('div', { class: 'ic' }, itemIcon(it)), h('div', { class: 't' }, h('b', { class: 'q' + it.q }, it.name), h('small', null, D.SLOT_LABEL[slot]))), tip); // someone else's gear: the slot, not whether you can use it
+        h('div', { class: 'ic' }, img(art('icon', it.icon))), h('div', { class: 't' }, h('b', { class: 'q' + it.q }, it.name), h('small', null, D.SLOT_LABEL[slot]))), tip); // someone else's gear: the slot, not whether you can use it (no can't-use badge, #322)
     }
     parts.push(h('div', { class: 'sec-h' }, 'Gear', h('small', null, 'tap to inspect')), list);
     // their own story, newest first
@@ -1456,17 +1468,23 @@
     // their friends and rival: each opens their own card
     const circle = B.circle(S, live), nm = (x) => h('button', { class: 'chip', onclick: () => playerCard(x) }, h('span', { class: 'cls-' + x.cls }, x.name));
     if (circle.pals.length || circle.rival) parts.push(h('div', { class: 'sec-h' }, 'Their people'), h('div', { class: 'chips' },
-      ...circle.pals.filter(Boolean).map(nm), circle.rival ? h('small', { style: { alignSelf: 'center', margin: '0 4px' } }, 'Rival:') : null, circle.rival ? nm(circle.rival) : null));
+      circle.pals.some(Boolean) ? h('small', { style: { alignSelf: 'center', margin: '0 4px 0 0' } }, 'Friends:') : null, ...circle.pals.filter(Boolean).map(nm), circle.rival ? h('small', { style: { alignSelf: 'center', margin: '0 4px' } }, 'Rival:') : null, circle.rival ? nm(circle.rival) : null));
     parts.push(h('p', { class: 'bio' }, B.bio(live)));
     const btns = h('div', { class: 'btn-row' });
     const mine = B.factionOf(live) === G.myFaction(), inParty = S.wparty && S.wparty.members.some((m) => m.bot.id === b.id);
     const here = on && !withMe && B.placeFor(live, new Date()) === P.place; // only someone where you are (#304)
-    if (mine && here && !inParty && !who.equip && !S.run && !S.queue && G.partySize() < 3) btns.append(h('button', { class: 'btn', onclick: () => { closeDialog(); G.invite(b.id); } }, 'Invite'));
-    if (friend) btns.append(h('button', { class: 'btn alt', onclick: () => showDialog([h('h3', null, `Remove ${b.name} as a friend?`), h('p', null, 'They stop counting as your friend. You can be friends again by helping them.'),
-      h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { G.unfriend(b.id); toast(`Removed ${b.name} as a friend.`); playerCard(who); } }, 'Remove'), h('button', { class: 'btn alt', onclick: () => playerCard(who) }, 'Cancel'))], true) }, 'Remove friend'));
-    btns.append(h('button', { class: 'btn alt', onclick: closeDialog }, 'Close'));
+    // Invite, or why not (#322): greyed with the reason, so a missing button never reads as a bug
+    if (mine && !inParty && !withMe && !who.equip) {
+      const why = !on ? (live.away > Date.now() ? 'On a break' : 'Offline') : !here ? 'Not here' : S.run || S.queue ? 'In a group' : G.partySize() >= 3 ? 'Party full' : '';
+      btns.append(why ? h('button', { class: 'btn', disabled: true }, `Invite · ${why}`) : h('button', { class: 'btn', onclick: () => { closeDialog(); G.invite(b.id); } }, 'Invite'));
+    }
+    // the cost said in full (#322): only a friend no other character has can then quit the realm
+    if (friend) btns.append(h('button', { class: 'btn alt', onclick: () => showDialog([h('h3', null, `Remove ${b.name} as a friend?`), h('p', null, G.friendElsewhere(b.id) ? 'They stop counting as your friend on this character. Help them again to be friends.' : 'They stop counting as your friend, and may quit the realm. Help them again to be friends.'),
+      h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { G.unfriend(b.id); toast(`Removed ${b.name} as a friend.`); playerCard(who, back); } }, 'Remove'), h('button', { class: 'btn alt', onclick: () => playerCard(who, back) }, 'Cancel'))], true) }, 'Remove friend'));
+    btns.append(h('button', { class: 'btn alt', onclick: () => (back ? back() : closeDialog()) }, back ? 'Back' : 'Close'));
     parts.push(btns);
     showDialog(parts, true);
+    G.looking = true; // the run waits to pull while you read (#323)
   }
   function confirmAttack(foe) {
     const R = D.RACES[foe.race] || {}, place = D.PLACES[G.S.player.place];
@@ -2254,7 +2272,7 @@
     const d = h('div', { class: 'dialog', onclick: () => { if (dismissable) closeDialog(); } }, h('div', { class: 'card', onclick: (e) => e.stopPropagation() }, content));
     app.append(d); ui.dialog = d;
   }
-  function closeDialog() { if (ui.dialog) ui.dialog.remove(); ui.dialog = null; if (ui.updPending) { const r = ui.updPending; setTimeout(() => { if (!ui.dialog && ui.updPending === r) offerUpdate(r); }, 600); } }
+  function closeDialog() { G.looking = false; if (ui.dialog) ui.dialog.remove(); ui.dialog = null; if (ui.updPending) { const r = ui.updPending; setTimeout(() => { if (!ui.dialog && ui.updPending === r) offerUpdate(r); }, 600); } }
 
   // an effect item's strength from its upgrades, as a percentage (#42): the same for every effect, one decimal so every step moves it
   const fxPct = (it) => { const v = Math.round(D.fxGrow(it.fxScale, it.effect) * 1000) / 10; return (v % 1 ? v.toFixed(1) : String(v)) + '%'; };
@@ -4290,7 +4308,21 @@
       h('p', null, 'Friends lets real friends see your characters. Cloud save is separate: it keeps a copy of your characters in your own Google Drive, so you can play them on another device or get them back if this one is lost. Both use your Google account.'),
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: both }, 'Turn on both'), h('button', { class: 'btn alt', onclick: only }, 'Friends only'))], true);
   }
+  // the people on the realm you helped (#320): where they are, each opening their card
+  function realmFriends(b) {
+    const list = window.SOC ? SOC.friends() : [], d = new Date();
+    b.append(h('div', { class: 'sec-h' }, 'Realm friends', h('small', null, list.length ? `${list.length} · tap for their card` : 'people you helped')));
+    if (!list.length) { b.append(friendNote('None yet. Help someone with a request in chat and they remember you.')); return; }
+    const rank = (x) => (x.bot.away > d.getTime() ? 2 : B.isOnline(x.bot, d) ? 0 : 1);
+    const rows = h('div', { class: 'list' });
+    for (const x of list.slice().sort((p, q) => rank(p) - rank(q) || q.n - p.n)) {
+      const bot = x.bot;
+      rows.append(h('button', { class: 'row', onclick: () => playerCard(bot) }, h('div', { class: 't' }, h('b', { class: 'cls-' + bot.cls }, bot.name), h('small', null, `${bot.level} ${D.CLASSES[bot.cls].name} · ${whereText(bot)}`))));
+    }
+    b.append(rows);
+  }
   function friendsTab(b) {
+    realmFriends(b);
     if (!window.FRIENDS || !FRIENDS.available()) {
       b.append(friendNote(UPD.inApp() ? 'Friends needs the newest version of the app.' : `Friends works in the app and on the game's own page, ${UPD.WEB}.`));
       return;
@@ -4305,7 +4337,7 @@
         friendsOn().catch((e) => { friendErr(e); ui.sheetFn(); });
       } }, FRIENDS.state().pendingOn ? 'Connect Friends here' : 'Turn on Friends');
       if (cloudOffer()) CLOUD.prepare(); // Google's script ready, so [Turn on both] can open its window from the tap
-      b.append(h('div', { class: 'sec-h' }, 'Friends', h('small', null, 'real players')),
+      b.append(h('div', { class: 'sec-h' }, 'Players you know', h('small', null, 'real players')),
         h('p', null, 'Add the people you know by friend code, see their characters and gear, and see when they are playing.'),
         FRIENDS.state().pendingOn ? friendNote('You turned Friends on on another device. Connect here with one tap to see your friends on this one too.')
           : friendNote('Optional, and off until you turn it on. It uses your Google sign-in (only to know it is you, not your email). Your friends see the characters you share: their level, gear, talents, professions and guild, where you are, and when you last played. Nobody else does. With cloud save on, the switch follows you to your other devices.'),
@@ -5183,9 +5215,10 @@
   }
   // who you'll play with (#189): one row each (name in its class colour, level and class, role); a raid's nine others are
   // counted by role instead, with a row only for players you know, so the dialog stays the same size
+  // a tap on someone in the pop: their card, Back to the pop (#323)
   function popMember(m) {
     const P = G.S.player, known = SOC.isFriend(m.bot.id) ? 'Friend' : P.guild >= 0 && m.bot.guild === P.guild ? 'Guild' : '';
-    return h('div', { class: 'pop-m' }, h('span', { class: 'cls-' + m.cls }, m.name), h('small', null, `${m.level} ${D.CLASSES[m.cls].name}`),
+    return h('button', { class: 'pop-m', onclick: () => playerCard(m, () => { closeDialog(); if (G.S.queue && G.S.queue.popped) showPop(G.S.queue); }) }, h('span', { class: 'cls-' + m.cls }, m.name), h('small', null, `${m.level} ${D.CLASSES[m.cls].name}`),
       known ? h('small', { class: 'pop-known' }, known) : null, h('b', null, m.role === 'tank' ? 'TANK' : m.role === 'healer' ? 'HEAL' : 'DPS'));
   }
   function showPop(q) {

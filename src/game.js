@@ -156,6 +156,8 @@
   }
   // Remove friend (#84): off this character's list; the account stops keeping them (#71: friends never quit) only when
   // no other character has them as a friend either
+  // another character on the account has them as a friend too (Remove friend's confirm says what it costs, #322)
+  G.friendElsewhere = (botId) => readIndex().some((c) => c.id !== G.S.id && (((G.readSave(c.id) || {}).soc || {}).friends || {})[botId]);
   G.unfriend = function (botId) {
     const S = G.S, f = S.soc && S.soc.friends; if (!f || !f[botId]) return false;
     delete f[botId];
@@ -4206,6 +4208,7 @@
     if (!R || R.phase === 'fight') return;
     const t = now();
     if (G.paused) { R.restUntil = Math.max(R.restUntil, t + 4000); return; }
+    if (G.looking) R.restUntil = Math.max(R.restUntil, t + 2000); // a player card is open: the pull waits (#323), the rest goes on
     // regen during rest
     const v = G.vitals();
     const P = S.player;
