@@ -4318,15 +4318,15 @@
   // the people on the realm you helped (#320): where they are, each opening their card
   function realmFriends(b) {
     const list = window.SOC ? SOC.friends() : [], d = new Date();
-    const rank = (x) => (x.bot.away > d.getTime() ? 2 : B.isOnline(x.bot, d) ? 0 : 1), online = list.filter((x) => rank(x) === 0).length;
+    const S = G.S, party = new Set(((S.wparty && S.wparty.members) || []).map((m) => m.bot.id)), inRun = new Set(S.run && S.group ? S.group.members.filter((m) => m.bot && !m.gone).map((m) => m.bot.id) : []); // a run's group too (#391)
+    const rank = (x) => (party.has(x.bot.id) || inRun.has(x.bot.id) ? 0 : x.bot.away > d.getTime() ? 2 : B.isOnline(x.bot, d) ? 0 : 1), online = list.filter((x) => rank(x) === 0).length;
     // online/all, online first; a long list shows its first 10 until asked (#339)
     b.append(h('div', { class: 'sec-h' }, 'Realm friends', h('small', null, list.length ? `${online}/${list.length} online · tap for their card` : 'people you helped')));
     if (!list.length) { b.append(friendNote('None yet. Help someone with a request in chat and they remember you.')); return; }
-    const S = G.S, party = new Set(((S.wparty && S.wparty.members) || []).map((m) => m.bot.id));
     const rows = h('div', { class: 'list' }), all = list.slice().sort((p, q) => rank(p) - rank(q) || q.n - p.n), shown = ui.allFriends ? all : all.slice(0, 10);
     for (const x of shown) {
       const bot = x.bot;
-      rows.append(h('button', { class: 'row nav', onclick: () => playerCard(bot) }, h('div', { class: 't' }, h('b', { class: 'cls-' + bot.cls }, bot.name), h('small', null, `${bot.level} ${D.CLASSES[bot.cls].name} · ${party.has(bot.id) ? 'In your party' : whereText(bot)}`)))); // no icon: the text takes the whole row (#377)
+      rows.append(h('button', { class: 'row nav', onclick: () => playerCard(bot) }, h('div', { class: 't' }, h('b', { class: 'cls-' + bot.cls }, bot.name), h('small', null, `${bot.level} ${D.CLASSES[bot.cls].name} · ${party.has(bot.id) ? 'In your party' : inRun.has(bot.id) ? S.run.name : whereText(bot)}`)))); // no icon: the text takes the whole row (#377)
     }
     b.append(rows);
     if (shown.length < all.length) b.append(h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', onclick: () => { ui.allFriends = true; ui.sheetFn(); } }, `Show all (${all.length})`)));
