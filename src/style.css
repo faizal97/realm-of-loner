@@ -1183,3 +1183,5 @@ button.ev-fact { width: 100%; background: none; border: 0; border-bottom: 1px so
 .fest-longnight .fest-sky i { top: -30px; bottom: auto; width: calc(8px * var(--s, 1)); height: calc(8px * var(--s, 1)); border-radius: 50%; background: radial-gradient(circle, #ffffff, #cfe6ff 60%, transparent 70%); box-shadow: none; animation-name: ln-fall; }
 @keyframes ln-fall { 0% { transform: translate(0, 0); opacity: 0; } 8% { opacity: .9; } 50% { transform: translate(-14px, 55vh); } 100% { transform: translate(10px, 110vh); opacity: .2; } }
 @media (prefers-reduced-motion: reduce) { .fest-longnight .fest-sky i { animation: none; top: calc(10% + var(--s) * 60%); } .fest-sky b { animation: none; opacity: .5; transform: scale(.8); } }
+/* a name that opens the player card (#84): looks like the name, reads as tappable */
+.linkbtn { background: none; border: 0; padding: 0; font: inherit; color: inherit; text-decoration: underline dotted; text-underline-offset: 3px; cursor: pointer; min-height: 0; }

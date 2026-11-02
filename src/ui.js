@@ -628,7 +628,7 @@
           const el = spriteEl(art('hero', looks(b)), SLOTS[i], 'walker small', h('div', { class: 'np', style: { fontSize: '10px' } }, h('span', { class: 'cls-' + b.cls }, b.name)));
           el.querySelector('img').style.animationDelay = (-i * 0.37) + 's';
           el.classList.add('tappable');
-          el.addEventListener('click', () => confirmInvite(b));
+          el.addEventListener('click', () => playerCard(b));
           sc.append(el);
         });
         // an enemy player nearby (War Mode)
@@ -1219,7 +1219,7 @@
     const near = B.onlineIn(S, P.place, new Date()).filter((x) => !partyIds.has(x.id) && B.factionOf(x) === G.myFaction());
     if (near.length) {
       const chips = h('div', { class: 'chips' });
-      for (const x of near.slice(0, 12)) chips.append(h('button', { class: 'chip', onclick: () => confirmInvite(x) }, h('span', { class: 'cls-' + x.cls }, x.name), h('small', null, `${x.level} ${raceClass(x)}`)));
+      for (const x of near.slice(0, 12)) chips.append(h('button', { class: 'chip', onclick: () => playerCard(x) }, h('span', { class: 'cls-' + x.cls }, x.name), h('small', null, `${x.level} ${raceClass(x)}`)));
       b.append(h('div', { class: 'sec-h' }, 'Players here', h('small', null, `${near.length} nearby · tap to invite`)), chips);
     }
     const foe = G.intruderHere();
@@ -1394,10 +1394,10 @@
       const st = E.statsFor(m); const hp = u ? u.hp : (m.hp == null ? st.maxHp : m.hp);
       const bar = h('div', { class: 'bar hp', 'data-pf': u ? u.uid : '' }, h('i', { style: { width: Math.max(0, hp / st.maxHp * 100) + '%' } }), h('b', { class: 'tnum' }, Math.round(hp)));
       // a tap picks (or, on the picked row, clears) whom heals go to, in a fight or not; redrawing the panel shows .sel at once (#155, #156)
-      pf.append(h('button', { class: 'pfr' + (u && u.dead ? ' dead' : '') + (G.isHealPick(m) ? ' sel' : ''), onclick: () => { G.pickHeal(m); renderTarget(); markTargets(); renderPanel(); } },
+      pf.append(holdCard(h('button', { class: 'pfr' + (u && u.dead ? ' dead' : '') + (G.isHealPick(m) ? ' sel' : ''), onclick: () => { G.pickHeal(m); renderTarget(); markTargets(); renderPanel(); } },
         h('div', { class: 'portrait' }, h('div', { class: 'pclip' }, img(art('portrait', looks(m))))),
         h('div', { class: 'uf-body' }, h('div', { class: 'uf-name cls-' + m.cls }, rankBadge(m), m.name, h('small', { class: 'rc' }, `${m.level} ${raceClass(m)}`)), bar, u ? h('div', { class: 'buffs rowbuffs', 'data-au': u.uid }) : null),
-        h('div', { class: 'role' }, m.role === 'tank' ? 'TANK' : m.role === 'healer' ? 'HEAL' : 'DPS')));
+        h('div', { class: 'role' }, m.role === 'tank' ? 'TANK' : m.role === 'healer' ? 'HEAL' : 'DPS')), m));
     }
     const left = Math.max(0, S.wparty.until - Date.now());
     // a player who can heal an ally always sees where heals go, in place of "XP is shared" (#156)
@@ -1405,13 +1405,64 @@
     p.append(h('div', { class: 'sec-h' }, 'Party', h('small', { class: heals ? 'heal-to' : null }, heals ? healLine() : C ? 'XP is shared' : S.wparty.meet ? `meeting at ${D.PLACES[S.wparty.place].name}` : `about ${Math.ceil(left / 60000)} min left`)), pf);
     if (!C) p.append(h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', onclick: () => G.leaveParty() }, 'Leave party')));
   }
-  function confirmInvite(b) {
-    if (G.S.wparty && G.S.wparty.members.some((m) => m.bot.id === b.id)) return toast(`${b.name} is already in your party.`, true);
-    if (G.S.run || G.S.queue) return toast('Not while in the group finder.');
-    if (G.partySize() >= 3) return toast('Your party is full.');
-    const bio = h('p', { class: 'bio' }, B.bio(b));
-    showDialog([h('h3', null, `Invite ${b.name}?`), h('p', null, `Level ${b.level} ${(D.RACES[b.race] || D.RACES.human).name} ${D.CLASSES[b.cls].name}`), bio,
-      h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { closeDialog(); G.invite(b.id); } }, 'Invite'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Cancel'))], true);
+  // a party frame keeps its tap (who your heals go to); holding it for half a second opens the player card (#84)
+  function holdCard(el, who) {
+    let t = 0; const stop = () => clearTimeout(t);
+    el.addEventListener('pointerdown', () => { stop(); t = setTimeout(() => { el.held = true; playerCard(who); }, 550); });
+    for (const e of ['pointerup', 'pointerleave', 'pointercancel']) el.addEventListener(e, stop);
+    el.addEventListener('click', (e) => { if (el.held) { el.held = false; e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+    el.addEventListener('contextmenu', (e) => e.preventDefault());
+    return el;
+  }
+  // The player card (#84): who someone on the realm is, from any place you see them. It reads who bots are (#72: stored
+  // gear, runs with you, their own story, friends and a rival); it changes nothing about how they play. Every place and
+  // item name passes G.nameable at your level. b: a roster bot, or a party/group member (its gear is then the one worn).
+  function playerCard(who) {
+    const S = G.S, P = S.player, b = (who && who.bot) || who; if (!b || b.legend || who.legend) return; // a Legend has their own story
+    const live = S.bots.find((x) => x.id === b.id) || b, lv = P.level, ok = (t) => G.nameable(t, lv);
+    const row = (k, v) => h('div', { class: 'ai-row' }, h('span', null, k), h('b', null, v));
+    const ago = (t) => { const m = (Date.now() - t) / 60000; return m < 2 ? 'just now' : m < 60 ? `${Math.floor(m)}m ago` : m < 48 * 60 ? `${Math.floor(m / 60)}h ago` : `${Math.floor(m / 1440)} days ago`; };
+    const role = who.role || b.role, C = D.CLASSES[b.cls];
+    const parts = [h('h3', null, rankBadge(b), h('span', { class: 'cls-' + b.cls }, b.name)),
+      h('p', null, `Level ${(who.level || b.level)} ${raceClass(b)}${role ? ' · ' + (role === 'tank' ? 'Tank' : role === 'healer' ? 'Healer' : 'Damage') : ''}`)];
+    const on = B.isOnline(live, new Date()), pl = on ? D.PLACES[B.placeFor(live, new Date())] : null;
+    parts.push(h('div', { class: 'ai-box' },
+      row('Guild', live.guild >= 0 ? `<${B.GUILDS[live.guild]}>` : 'None'),
+      row('Where', !on ? 'Offline' : pl && ok(pl.name) ? pl.name : 'Far away')));
+    // with you: what this character did with them (#72)
+    const met = G.metWith(b.id), friend = window.SOC && SOC.isFriend(b.id);
+    if (met || friend) {
+      const A = met && met.where && D.ACTIVITIES[met.where], last = met && met.last ? ago(met.last) : null;
+      parts.push(h('div', { class: 'sec-h' }, 'With you', friend ? h('small', { class: 'gold' }, 'Friend') : null),
+        h('div', { class: 'ai-box' },
+          met ? row('Runs together', String(met.n)) : null,
+          met && met.n ? row('Last run', (A && ok(A.name) ? A.name + ', ' : '') + last) : null,
+          met && met.ninja ? h('div', { class: 'ai-row' }, h('span', null, 'Ninja rolls'), h('b', { style: { color: '#ff6a5a' } }, String(met.ninja))) : null));
+    }
+    // gear: the set they wear in your group, or the one they always wear at their level (#72)
+    const ch = who.equip ? who : G.botChar(Object.assign({}, live, { role: role || C.role }));
+    const list = h('div', { class: 'list' });
+    for (const slot of D.GEAR_SLOTS) {
+      const it = ch.equip[slot]; if (!it) continue;
+      const tip = h('div', { style: { display: 'none' } }, itemTip(it, null, ch));
+      list.append(h('button', { class: 'row', onclick: () => { tip.style.display = tip.style.display === 'none' ? '' : 'none'; } },
+        h('div', { class: 'ic' }, itemIcon(it)), h('div', { class: 't' }, h('b', { class: 'q' + it.q }, it.name), h('small', null, D.SLOT_LABEL[slot]))), tip); // someone else's gear: the slot, not whether you can use it
+    }
+    parts.push(h('div', { class: 'sec-h' }, 'Gear', h('small', null, 'tap to inspect')), list);
+    // their own story, newest first
+    const story = (live.hist || []).slice().reverse().map((e) => ({ e, t: B.histText(e) })).filter((x) => x.t && ok(x.t));
+    if (story.length) parts.push(h('div', { class: 'sec-h' }, 'Lately'), h('div', { class: 'ai-box' }, ...story.map((x) => h('div', { class: 'ai-row' }, h('span', null, x.t), h('b', null, ago(x.e.t))))));
+    // their friends and rival: each opens their own card
+    const circle = B.circle(S, live), nm = (x) => h('button', { class: 'chip', onclick: () => playerCard(x) }, h('span', { class: 'cls-' + x.cls }, x.name));
+    if (circle.pals.length || circle.rival) parts.push(h('div', { class: 'sec-h' }, 'Their people'), h('div', { class: 'chips' },
+      ...circle.pals.filter(Boolean).map(nm), circle.rival ? h('small', { style: { alignSelf: 'center', margin: '0 4px' } }, 'Rival:') : null, circle.rival ? nm(circle.rival) : null));
+    parts.push(h('p', { class: 'bio' }, B.bio(live)));
+    const btns = h('div', { class: 'btn-row' });
+    const mine = B.factionOf(live) === G.myFaction(), inParty = S.wparty && S.wparty.members.some((m) => m.bot.id === b.id);
+    if (mine && on && !inParty && !who.equip && !S.run && !S.queue && G.partySize() < 3) btns.append(h('button', { class: 'btn', onclick: () => { closeDialog(); G.invite(b.id); } }, 'Invite'));
+    btns.append(h('button', { class: 'btn alt', onclick: closeDialog }, 'Close'));
+    parts.push(btns);
+    showDialog(parts, true);
   }
   function confirmAttack(foe) {
     const R = D.RACES[foe.race] || {}, place = D.PLACES[G.S.player.place];
@@ -1537,6 +1588,7 @@
           resting && D.CLASSES[m.cls].resource === 'mana' ? h('div', { class: 'bar mana thin', 'data-rest-mana': i }, h('i')) : null,
           u ? h('div', { class: 'buffs rowbuffs', 'data-au': u.uid }) : null),
         h('div', { class: 'role' }, resting ? h('span', { class: 'ready-mark', 'data-rest-mark': i }) : null, m.role === 'tank' ? 'TANK' : m.role === 'healer' ? 'HEAL' : 'DPS'));
+      if (!m.me) holdCard(row, m.char);
       pf.append(row);
     });
     if (!C && R.phase === 'rest') tacticsBlock(p, R); // the pace: decide before the pull
@@ -4957,7 +5009,10 @@
     const a = m.act;
     const ch = D.CHANNELS[m.ch] || D.CHANNELS.system;
     const who = m.me ? 'You' : m.from || ch.label || 'System';
-    const parts = [h('h3', null, m.ch === 'whisper' ? `${who} whispers` : `${who}${ch.label ? ' · ' + ch.label : ''}`), h('p', { html: richText(m.text) })];
+    // the speaker's name opens their player card (#84)
+    const sb = !m.me && m.fromId != null && G.S.bots.find((x) => x.id === m.fromId);
+    const nameEl = sb ? h('button', { class: 'linkbtn cls-' + sb.cls, onclick: () => playerCard(sb) }, who) : who;
+    const parts = [h('h3', null, nameEl, m.ch === 'whisper' ? ' whispers' : ch.label ? ' · ' + ch.label : ''), h('p', { html: richText(m.text) })];
     for (const it of linkedItems(m).slice(0, 2)) parts.push(itemTip(it));
     if (a && a.state !== 'open') parts.push(h('p', { class: 'ai-note' }, a.state === 'done' ? 'Done.' : a.state === 'declined' ? 'You said no.' : 'This request has expired.'));
     if (a && a.state === 'open') { const mins = Math.floor((a.until - Date.now()) / 60000); parts.splice(1, 0, h('p', { class: 'ai-note' }, mins >= 1 ? `Open for ${mins} more minute${mins === 1 ? '' : 's'}.` : 'Open for less than a minute.')); } // (#166)
@@ -5018,7 +5073,7 @@
     b.append(h('div', { class: 'sec-h' }, 'Guild requests', h('small', null, reqs.length ? 'tap to help' : 'none right now')));
     for (const m of reqs) b.append(h('button', { class: 'row', style: { gridTemplateColumns: '1fr auto', textAlign: 'left' }, onclick: () => msgDialog(m) }, h('div', { class: 't' }, h('b', { class: 'cls-' + (m.cls || '') }, m.from), h('small', { html: richText(m.text), style: { whiteSpace: 'normal' } })), h('span', { class: 'chip gold' }, 'Help')));
     b.append(h('div', { class: 'sec-h' }, 'Online'));
-    b.append(h('div', { class: 'list' }, ...on.slice(0, 30).map((x) => h('div', { class: 'row', style: { minHeight: '36px' } }, h('div', { class: 'ic' }, img(art('portrait', looks(x)))), h('div', { class: 't' }, h('b', { class: 'cls-' + x.cls }, x.name), h('small', null, `Level ${x.level} ${D.CLASSES[x.cls].name}`))))));
+    b.append(h('div', { class: 'list' }, ...on.slice(0, 30).map((x) => h('button', { class: 'row', style: { minHeight: '36px' }, onclick: () => playerCard(x) }, h('div', { class: 'ic' }, img(art('portrait', looks(x)))), h('div', { class: 't' }, h('b', { class: 'cls-' + x.cls }, x.name), h('small', null, `Level ${x.level} ${D.CLASSES[x.cls].name}`))))));
     b.append(h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', onclick: () => showDialog([h('h3', null, `Leave <${gi.name}>?`), h('p', null, 'Your guild standing resets to zero.'), h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { SOC.leaveGuild(); closeDialog(); ui.sheetFn && ui.sheetFn(); } }, 'Leave'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Stay'))], true) }, 'Leave guild')));
   }
 
