@@ -308,14 +308,27 @@
     return { pals: b.pals.map(find), rival: b.rival == null ? null : find(b.rival) };
   };
   // one history entry as a line, or null when it names a place or item the reader's level may not read (#54)
-  B.histText = function (e) {
-    const A = D.ACTIVITIES[e.v], it = D.ITEMS[e.v];
+  // lvl: the reader's level. A clear follows the news's rule (B.newsNames: raids and level-60 places at 60, a dungeon
+  // from 10 levels below it), an item that and its own level (#303)
+  B.histText = function (e, lvl) {
+    const A = D.ACTIVITIES[e.v], it = D.ITEMS[e.v], R = lvl == null ? null : { player: { level: lvl } };
     if (e.k === 'lvl') return `Reached level ${e.v}`;
-    if (e.k === 'clear') return A ? `Cleared ${A.name} with <${GUILDS[e.w]}>` : null;
-    if (e.k === 'item') return it ? `Got ${it.name}` : null;
+    if (e.k === 'clear') return A && (!R || B.newsNames(R, e.v)) ? `Cleared ${A.name} with <${GUILDS[e.w]}>` : null;
+    if (e.k === 'item') return it && (lvl == null || B.itemTellable(e.v, lvl)) ? `Got ${it.name}` : null;
     if (e.k === 'joined') return `Joined <${GUILDS[e.v]}>`;
     if (e.k === 'left') return `Left <${GUILDS[e.v]}>`;
     return null;
+  };
+
+  // an item someone else has can be named at this level: not more than 10 levels above it, and from a place the news
+  // may name (#303)
+  let ITEM_ACT = null;
+  B.itemTellable = function (id, lvl) {
+    const it = D.ITEMS[id]; if (!it) return true; // a made-up piece of gear
+    if ((it.lvl || 1) > lvl + 10) return false;
+    if (!ITEM_ACT) { ITEM_ACT = {}; for (const k in D.ACTIVITIES) { const dg = D.DUNGEONS[D.ACTIVITIES[k].dungeon]; if (dg) for (const pl of dg.pulls) for (const mk of pl.mobs) for (const x of (D.MOBS[mk].loot || [])) if (!ITEM_ACT[x]) ITEM_ACT[x] = k; } }
+    const act = ITEM_ACT[id], R = { player: { level: lvl } };
+    return (!act || B.newsNames(R, act)) && (!it.source || !root.G || !root.G.nameable || root.G.nameable(it.source, lvl));
   };
 
   // the news follows the player's level, not the server's (issue #18, the lore bible's Reveals): a dungeon or raid is named

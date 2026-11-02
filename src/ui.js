@@ -1451,7 +1451,7 @@
     }
     parts.push(h('div', { class: 'sec-h' }, 'Gear', h('small', null, 'tap to inspect')), list);
     // their own story, newest first
-    const story = (live.hist || []).slice().reverse().map((e) => ({ e, t: B.histText(e) })).filter((x) => x.t && ok(x.t));
+    const story = (live.hist || []).slice().reverse().map((e) => ({ e, t: B.histText(e, lv) })).filter((x) => x.t && ok(x.t));
     if (story.length) parts.push(h('div', { class: 'sec-h' }, 'Lately'), h('div', { class: 'ai-box' }, ...story.map((x) => h('div', { class: 'ai-row' }, h('span', null, x.t), h('b', null, ago(x.e.t))))));
     // their friends and rival: each opens their own card
     const circle = B.circle(S, live), nm = (x) => h('button', { class: 'chip', onclick: () => playerCard(x) }, h('span', { class: 'cls-' + x.cls }, x.name));
@@ -2322,7 +2322,7 @@
       t.append(h('div', { style: { color: '#ffd100' } }, `${SET.name} (${worn}/${SET.pieces})`), h('div', { class: worn >= SET.mask ? 'gr' : 'dim' }, `(${SET.mask}) Set: you wear the Grey Hood mask.`));
     }
     if (it.look || base.look) t.append(h('div', { style: { color: '#ff80ff' } }, 'Appearance: shows on your character'));
-    if (it.source || base.source) t.append(h('div', { class: 'dim' }, (/^Quest/.test(it.source || base.source) ? '' : 'Drops from ') + (it.source || base.source)));
+    if ((it.source || base.source) && (!who || B.itemTellable(it.id, G.S.player.level))) t.append(h('div', { class: 'dim' }, (/^Quest/.test(it.source || base.source) ? '' : 'Drops from ') + (it.source || base.source))); // someone else's gear: only a place you may be told of (#303)
     if (it.sell && !it.noSell && it.slot !== 'quest') t.append(h('div', { class: 'dim', html: 'Sell Price: ' + moneyHtml(it.sell) }));
     const cmp = who ? null : compareBlock(it);
     if (cmp) t.append(cmp);
