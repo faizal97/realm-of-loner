@@ -1058,9 +1058,9 @@ svg.sym { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: 
 @keyframes collectFlash { 50% { box-shadow: 0 0 0 2px var(--gold); } }
 @media (prefers-reduced-motion: reduce) { .chip.flash { animation: none; } }
 
-/* ---- festivals (v10.13): the event lantern floats over every screen while one is on (layer 58: above sheets 55, the
-   bottom nav 56 and dialogs 57; under toasts 59 and cutscenes 60). A ring of candle-gold fills with today's candles. */
-.ev-lantern { position: absolute; z-index: 58; top: 42%; right: 6px; width: 56px; height: 56px; padding: 0; border: 0; border-radius: 50%; background: radial-gradient(circle, rgba(255,194,74,.28), rgba(10,15,34,.85) 70%); box-shadow: 0 2px 8px #000; touch-action: none; }
+/* ---- festivals (v10.13): the event lantern floats over the main screen while one is on (layer 54: under sheets 55, the
+   bottom nav 56 and dialogs 57, so it never covers what they show (#378)). A ring of candle-gold fills with today's candles. */
+.ev-lantern { position: absolute; z-index: 54; top: 42%; right: 6px; width: 56px; height: 56px; padding: 0; border: 0; border-radius: 50%; background: radial-gradient(circle, rgba(255,194,74,.28), rgba(10,15,34,.85) 70%); box-shadow: 0 2px 8px #000; touch-action: none; }
 .ev-lantern img { position: absolute; inset: 9px; width: 38px; height: 38px; border-radius: 50%; pointer-events: none; }
 .ev-lantern .ring { position: absolute; inset: 0; width: 56px; height: 56px; pointer-events: none; }
 .ev-lantern .ring circle { fill: none; stroke-width: 4; }
