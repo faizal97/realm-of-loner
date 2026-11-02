@@ -4621,7 +4621,8 @@
     if (P.companion && D.COMPANIONS[P.companion] && D.COMPANIONS[P.companion].event && !owned.includes(P.companion)) P.companion = null;
     const t = D.TITLES.find((x) => x.id === P.title); if (t && t.need.event && !owned.includes(t.need.event)) P.title = null;
     for (const pl in P.wardrobe || {}) { const k = P.wardrobe[pl]; if (/^lw_/.test(k) && !looks.includes(pl + ':' + k)) delete P.wardrobe[pl]; }
-    if (!G.eventLive('lanternwake') || (P.lw && /^test/.test(P.lw.season))) P.bags = (P.bags || []).filter((b) => !(D.ITEMS[b.item.id] || {}).event); // festival wares go with the festival
+    // festival wares go when the festival ends (once, while its record is still here), so a reward mailed after it stays (#382); only Lanternwake's own (#403)
+    if (P.lw && (!G.eventLive('lanternwake') || /^test/.test(P.lw.season))) P.bags = (P.bags || []).filter((b) => (D.ITEMS[b.item.id] || {}).event !== 'lanternwake');
   };
   // this character's festival state; null when Lanternwake is not on. A new season (or a new day) starts it fresh
   G.lw = function () {
@@ -4760,7 +4761,7 @@
     if (P.companion && D.COMPANIONS[P.companion] && D.COMPANIONS[P.companion].event === 'longnight' && !owned.includes(P.companion)) P.companion = null;
     const t = D.TITLES.find((x) => x.id === P.title); if (t && t.need.event && /^ln_/.test(t.need.event) && !owned.includes(t.need.event)) P.title = null;
     for (const pl in P.wardrobe || {}) { const k = P.wardrobe[pl]; if (/^ln_/.test(k) && !looks.includes(pl + ':' + k)) delete P.wardrobe[pl]; }
-    if (!G.lnOn() || (P.ln && /^test/.test(P.ln.season))) P.bags = (P.bags || []).filter((b) => (D.ITEMS[b.item.id] || {}).event !== 'longnight');
+    if (P.ln && (!G.lnOn() || /^test/.test(P.ln.season))) P.bags = (P.bags || []).filter((b) => (D.ITEMS[b.item.id] || {}).event !== 'longnight'); // as Lanternwake's (#382)
   };
   G.lnOwned = (id) => G.lnRec().owned.includes(id);
   const lnOwn = (id) => { const a = G.lnAccount(), r = lnRec(a); if (!r.owned.includes(id)) r.owned.push(id); G.saveAccount(a); };
