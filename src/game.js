@@ -176,7 +176,7 @@
   };
   // a person's own story (#72) lives in the account's roster only: each character's copy of the bots (for older builds
   // and save codes) leaves it out, so ten characters don't carry ten copies of it
-  // the realm's records of who quit and their waiting goodbyes (S.server.gone, .byes) live there too: up to 5000 names,
+  // the realm's records of who quit and their waiting goodbyes (S.server.gone, .byes) live there too: up to 1500 names,
   // ~50k a copy (#311); an older build reads a save without them as a realm nobody has left yet
   const ROSTER_ONLY = function (k, v) { return k === 'hist' || k === 'pals' || k === 'rival' || ((k === 'gone' || k === 'byes') && Array.isArray(v) && this === (G.S && G.S.server)) ? undefined : v; };
   function saveRoster(S) {
@@ -314,13 +314,16 @@
   const fromB64 = (b) => { const s = atob(b); const u8 = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u8[i] = s.charCodeAt(i); return u8; };
   const pipe = async (u8, Stream) => { const cs = new Stream('deflate-raw'); const w = cs.writable.getWriter(); w.write(u8); w.close(); return new Uint8Array(await new Response(cs.readable).arrayBuffer()); };
   // encodeSave/decodeSave turn any character into a code and back; cloud save (cloud.js) uses them for its files
-  G.encodeSave = async function (S) {
-    const json = JSON.stringify(Object.assign({}, S, { chat: [], pending: [] }));
+  // lite (a save code to send, #376): without the realm-only history (ROSTER_ONLY), so it stays short enough for a chat
+  // app; cloud files keep it all, since a restore may rebuild the realm from them (#344)
+  G.encodeSave = async function (S, lite) {
+    const json = lite ? JSON.stringify(Object.assign({}, S, { chat: [], pending: [] }), function (k, v) { return k === 'hist' || k === 'pals' || k === 'rival' || ((k === 'gone' || k === 'byes') && Array.isArray(v) && this === S.server) ? undefined : v; })
+      : JSON.stringify(Object.assign({}, S, { chat: [], pending: [] }));
     if (typeof CompressionStream === 'undefined') return btoa(unescape(encodeURIComponent(json)));
     const b = toB64(await pipe(new TextEncoder().encode(json), CompressionStream));
     return `${SAVE_TAG}.${b.length}.${b}`;
   };
-  G.exportSave = async function () { G.save(); return G.encodeSave(G.S); };
+  G.exportSave = async function () { G.save(); return G.encodeSave(G.S, true); };
   G.decodeSave = async function (str) {
     let code = String(str || '').replace(/\s+/g, ''); // messaging apps add line breaks and spaces
     let json;
@@ -2900,7 +2903,7 @@
     const S = G.S, P = S.player, f = S.flags, place = D.PLACES[P.place];
     const myF = (D.RACES[P.race] || {}).faction || 'alliance';
     const theirF = myF === 'alliance' ? 'horde' : 'alliance';
-    f.gankers = f.gankers || {};
+    f.gankers = f.gankers || {}; for (const k of Object.keys(f.gankers)) if (f.gankers[k] <= now()) delete f.gankers[k]; // only the ones still waiting (#376)
     const pool = S.bots.filter((b) => B.factionOf(b) === theirF && !(f.gankers[b.id] > now()));
     if (!pool.length) return;
     const b = pick(pool);
@@ -3381,12 +3384,13 @@
     if (S.wparty && S.wparty.members.some((m) => m.bot.id === botId)) return toast(`${b.name} is already in your party.`);
     if (!B.onlineIn(S, P.place, new Date(now())).some((x) => x.id === botId)) return toast(`${b.name} isn't here.`); // only someone where you are (#304)
     if ((S.flags.invitedAt || {})[botId] > now() - 20000) return toast(`You already invited ${b.name}.`);
-    S.flags.invitedAt = Object.assign(S.flags.invitedAt || {}, { [botId]: now() });
+    const ia = {}; for (const [k, v] of Object.entries(S.flags.invitedAt || {})) if (v > now() - 20000) ia[k] = v; // only the ones still waiting (#376)
+    ia[botId] = now(); S.flags.invitedAt = ia;
     const diff = Math.abs(b.level - P.level);
     const yes = Math.random() < (diff <= 3 ? 0.75 : diff <= 5 ? 0.35 : 0.05);
     sys(`You invite ${b.name} to your group.`);
     S.pending.push({ at: now() + rnd(1500, 3500), bot: b.id, ch: 'whisper', text: yes ? cpick(['sure', 'ok!', 'yeah why not', 'sure, same quest']) : cpick(['no ty', 'soloing sry', 'nah', 'too low lol']),
-      onPost: () => { if (yes && G.S && !G.S.run) addToParty(b); } });
+      onPost: () => { if (!G.S) return; if (yes && !G.S.run) { addToParty(b); toast(`${b.name} joined your party.`); } else if (!yes) toast(`${b.name} said no.`); } }); // the answer on screen, not only in a whisper (#369)
   };
   G.acceptPartyInvite = function (botId) {
     const S = G.S; const b = S.bots.find((x) => x.id === botId); if (!b) return;
@@ -3719,13 +3723,15 @@
   // chat (#73): runs finished together, the last one, where, and whether they ninja'd your loot. Bounded at 300 people.
   G.MET_MAX = 300;
   G.remember = function (bot, what) {
-    const S = G.S, P = S.player; if (!bot || !(bot.id >= 0) || !S.bots.some((b) => b.id === bot.id)) return; // not someone from the realm
-    const M = P.met = P.met || {}, m = M[bot.id] = M[bot.id] || { n: 0 };
+    const S = G.S, P = S.player; if (!bot || !(bot.id >= 0)) return;
+    // someone from another realm (the group finder) is kept by name and realm, never by an id that means no one here (#363)
+    const away = !S.bots.some((b) => b.id === bot.id); if (away && !(bot.realm && bot.name)) return;
+    const M = away ? (P.metAway = P.metAway || {}) : (P.met = P.met || {}), key = away ? `${bot.name}-${bot.realm}` : bot.id, m = M[key] = M[key] || { n: 0 };
     if (what.run) { m.n++; m.last = now(); m.where = what.run; if (what.wipes) m.wipes = (m.wipes || 0) + what.wipes; }
     if (what.ninja) { m.ninja = (m.ninja || 0) + 1; m.last = m.last || now(); } // dated, or the trim drops it first (#310)
-    const ids = Object.keys(M); if (ids.length > G.MET_MAX) { ids.sort((a, b) => (M[a].last || 0) - (M[b].last || 0)); for (const id of ids.slice(0, ids.length - G.MET_MAX)) delete M[id]; }
+    const max = away ? G.MET_MAX / 3 : G.MET_MAX, ids = Object.keys(M); if (ids.length > max) { ids.sort((a, b) => (M[a].last || 0) - (M[b].last || 0)); for (const id of ids.slice(0, ids.length - max)) delete M[id]; }
   };
-  G.metWith = (botId) => ((G.S.player.met || {})[botId]) || null;
+  G.metWith = (botId, bot) => ((G.S.player.met || {})[botId]) || (bot && bot.realm && bot.name && !G.S.bots.some((b) => b.id === botId) ? (G.S.player.metAway || {})[`${bot.name}-${bot.realm}`] : null) || null;
   const OTHER_REALMS = ['Mistral', 'Hearthwick', 'Thornbury', 'Copperbell', 'Saltwind', 'Longwinter']; // our own realm names (v10)
   function recruit(role, lvl, used, usedCls, guild, exact) { // exact: only players at this level (Trials: the cap)
     const S = G.S, date = new Date();

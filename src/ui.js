@@ -1220,7 +1220,7 @@
     if (near.length) {
       const chips = h('div', { class: 'chips' });
       for (const x of near.slice(0, 12)) chips.append(h('button', { class: 'chip', onclick: () => playerCard(x) }, h('span', { class: 'cls-' + x.cls }, x.name), h('small', null, `${x.level} ${raceClass(x)}`)));
-      b.append(h('div', { class: 'sec-h' }, 'Players here', h('small', null, `${near.length > 12 ? `12 of ${near.length}` : near.length} · tap for their card`)), chips); // what the count counts (#339)
+      b.append(h('div', { class: 'sec-h' }, 'Players here', h('small', null, `${near.length > 12 ? `12/${near.length}` : near.length} · tap for their card`)), chips); // what the count counts (#339)
     }
     const foe = G.intruderHere();
     if (foe) b.append(h('div', { class: 'sec-h foe-h' }, 'Enemy player', h('small', null, 'tap to attack')),
@@ -1421,7 +1421,8 @@
   // where someone is, as the card and the friends list say it: here, a place you may be told of, on a break (#321)
   function whereText(live, withMe) {
     const P = G.S.player, d = new Date();
-    if (withMe) return D.PLACES[P.place] ? D.PLACES[P.place].name : 'With you';
+    if (withMe) return G.S.run && D.ACTIVITIES[G.S.run.act] ? D.ACTIVITIES[G.S.run.act].name : 'In your party'; // in a run: the run, not your town (#366)
+    if (!G.S.bots.some((x) => x.id === live.id)) return 'Another realm'; // a group-finder player from another realm is never Offline (#366)
     if (live.away > d.getTime()) return `On a break · back in ${Math.max(1, Math.ceil((live.away - d.getTime()) / 86400000))}d`;
     if (!B.isOnline(live, d)) return 'Offline';
     const pl = D.PLACES[B.placeFor(live, d)];
@@ -1441,16 +1442,16 @@
       row('Guild', live.guild >= 0 ? `<${B.GUILDS[live.guild]}>` : 'None'),
       row('Where', whereText(live, withMe))));
     // with you: what this character did with them (#72)
-    const met = G.metWith(b.id), friend = window.SOC && SOC.isFriend(b.id);
+    const met = G.metWith(b.id, b), friend = window.SOC && SOC.isFriend(b.id);
     if (met || friend) {
       const A = met && met.where && D.ACTIVITIES[met.where], last = met && met.last ? ago(met.last) : null;
-      parts.push(h('div', { class: 'sec-h' }, 'With you', friend ? h('small', { class: 'gold' }, 'Friend') : null),
-        h('div', { class: 'ai-box' },
+      const rows = [
           met && met.n ? row('Runs together', String(met.n)) : null,
           met && met.n ? row('Last run', (A && ok(A.name) ? A.name + ', ' : '') + last) : null,
           met && met.wipes ? row('Wipes together', String(met.wipes)) : null,
           // whose loot, with the why a tap away (#322)
-          met && met.ninja ? h('button', { class: 'ai-row', style: { width: '100%' }, onclick: () => toast('They rolled Need on gear for another class and won it.') }, h('span', null, 'Took your loot ', h('small', { class: 'dim' }, '?')), h('b', { style: { color: '#ff6a5a' } }, String(met.ninja))) : null));
+          met && met.ninja ? h('button', { class: 'ai-row', style: { width: '100%' }, onclick: () => toast('They rolled Need on gear for another class and won it.') }, h('span', null, 'Took your loot ', h('small', { class: 'dim' }, '?')), h('b', { style: { color: '#ff6a5a' } }, String(met.ninja))) : null].filter(Boolean);
+      parts.push(h('div', { class: 'sec-h' }, 'With you', friend ? h('small', { class: 'gold' }, 'Friend') : null), rows.length ? h('div', { class: 'ai-box' }, ...rows) : null); // no empty box (#370)
     }
     // gear: the set they wear in your group, or the one they always wear at their level (#72)
     const ch = who.equip ? who : G.botChar(Object.assign({}, live, { role: role || C.role }));
@@ -1475,8 +1476,8 @@
     const here = on && !withMe && B.placeFor(live, new Date()) === P.place; // only someone where you are (#304)
     // Invite, or why not (#322): greyed with the reason, so a missing button never reads as a bug
     if (mine && !inParty && !withMe && !who.equip) {
-      const why = !on ? (live.away > Date.now() ? 'On a break' : 'Offline') : !here ? 'Not here' : S.run ? 'In a group' : S.queue ? 'In queue' : G.partySize() >= 3 ? 'Party full' : '';
-      btns.append(why ? h('button', { class: 'btn', disabled: true }, `Invite · ${why}`) : h('button', { class: 'btn', onclick: () => { closeDialog(); G.invite(b.id); } }, 'Invite'));
+      const why = !on ? (live.away > Date.now() ? 'On a break' : 'Offline') : !here ? 'Not here' : S.run ? 'In a run' : S.queue ? 'In queue' : G.partySize() >= 3 ? 'Party full' : Math.abs(live.level - P.level) > 5 ? 'Level gap' : ''; // more than 5 levels apart, they all but always say no (#369)
+      btns.append(why ? h('button', { class: 'btn', disabled: true }, `Invite · ${why}`) : h('button', { class: 'btn', onclick: () => { closeDialog(); G.invite(b.id); toast(`Invited ${b.name}.`); } }, 'Invite'));
     }
     // the cost said in full (#322): only a friend no other character has can then quit the realm
     if (friend) btns.append(h('button', { class: 'btn alt', onclick: () => { showDialog([h('h3', null, `Remove ${b.name} as a friend?`), h('p', null, G.friendElsewhere(b.id) ? 'They stop counting as your friend on this character. Help them again to be friends.' : 'They stop counting as your friend, and may quit the realm. Help them again to be friends.'),
@@ -1604,7 +1605,7 @@
     const members = [{ me: true, name: S.player.name, cls: S.player.cls, role: G.role(), char: S.player }].concat(S.group.members.map((m) => ({ name: m.name, cls: m.cls, role: m.role, char: m, gone: m.gone })));
     members.forEach((m, i) => {
       const u = units ? units.find((x) => (m.me ? x.kind === 'player' : x.memberRef === m.char)) : null;
-      const row = h('button', { class: 'pfr' + (u && u.dead ? ' dead' : '') + (!m.me && G.isHealPick(m.char) ? ' sel' : ''), onclick: () => { G.pickHeal(m.me ? null : m.char); renderTarget(); markTargets(); renderPanel(); } },
+      const row = h('button', { class: 'pfr' + (u && u.dead ? ' dead' : '') + (!m.me && G.isHealPick(m.char) ? ' sel' : ''), onclick: () => { if (!m.me && !G.healsAllies()) return playerCard(m.char); G.pickHeal(m.me ? null : m.char); renderTarget(); markTargets(); renderPanel(); } }, // no heals to aim: a tap opens their card (#367)
         h('div', { class: 'portrait' }, h('div', { class: 'pclip' }, img(art('portrait', looks(m.me ? S.player : m.char.bot || m.char))))),
         h('div', { class: 'uf-body' }, h('div', { class: 'uf-name cls-' + m.cls }, rankBadge(m.me ? S.player : m.char, m.me), m.gone ? m.name + ' (left)' : m.name, h('small', { class: 'rc' }, (m.me ? S.player.level : (m.char.level || '')) + ' ' + raceClass(m.me ? S.player : m.char))), h('div', { class: 'bar hp', 'data-pf': u ? u.uid : '' }, h('i'), h('b', { class: 'tnum' })),
           // between pulls: a thin mana bar for mana users, and ✓ once the member meets the pace's thresholds (#159)
@@ -2185,7 +2186,7 @@
     const gt = document.getElementById('ghost-t');
     if (gt && P.ghostUntil) gt.textContent = `Running back to your body... ${Math.ceil((P.ghostUntil - now()) / 1000)}s`;
     const qt = document.getElementById('q-time');
-    if (qt && S.queue) qt.textContent = S.queue.popped ? 'Your group is waiting' : `Waiting ${fmtTime(now() - S.queue.since)} · as ${G.role() === 'tank' ? 'Tank' : G.role() === 'healer' ? 'Healer' : 'Damage'}`;
+    if (qt && S.queue) qt.textContent = S.queue.popped ? 'Group ready' : `Waiting ${fmtTime(now() - S.queue.since)} · as ${G.role() === 'tank' ? 'Tank' : G.role() === 'healer' ? 'Healer' : 'Damage'}`;
     const qc = document.querySelector('[data-qchip="short"]'); if (qc && S.queue && qc.textContent !== queuedShort()) qc.textContent = queuedShort(); // (#173)
     const on = document.getElementById('online');
     if (on && !on.dataset.t || on && now() - on.dataset.t > 10000) { on.dataset.t = now(); on.textContent = `${B.onlineCount(S, new Date())} online`; }
@@ -3413,7 +3414,8 @@
   // the event lantern: floats over every screen while a festival is on (only cutscenes cover it); a ring fills with
   // today's candles, a dot shows while today's daily loot or Light the Way is still open. Drag it; it snaps to an edge
   function evLantern() {
-    const live = G.S && G.liveEvents().length && !lwPrefs().off && !app.querySelector('.create');
+    // not during a run or a battleground (#368): its text fills the screen at 375 px, and the lantern's buttons can't be used there
+    const live = G.S && G.liveEvents().length && !lwPrefs().off && !app.querySelector('.create') && !G.S.run && !G.bgBusy();
     if (!live) { if (ui.evBtn) { ui.evBtn.remove(); ui.evBtn = null; } return; }
     const fk = festNow(), isLn = fk === 'longnight';
     let frac, open;
@@ -4382,7 +4384,7 @@
       b.append(list);
     }
     const online = v.friends.filter((f) => f.online).length;
-    b.append(h('div', { class: 'sec-h' }, 'Friends', h('small', null, v.friends.length ? `${online} of ${v.friends.length} online` : '')));
+    b.append(h('div', { class: 'sec-h' }, 'Friends', h('small', null, v.friends.length ? `${online}/${v.friends.length} online` : '')));
     if (!v.friends.length) b.append(friendNote('No friends yet. Send your code to someone, or add theirs.'));
     else {
       const list = h('div', { class: 'list' });
@@ -5213,13 +5215,13 @@
   // ---------- away report, pops, invites
   function showAway(rep) {
     const S = G.S;
-    const news = rep.news.slice(-8).reverse();
+    const news = rep.news.filter((n) => !n.joined).slice(-8).reverse(); // New players is its row (#372)
     const newsEl = news.length ? h('div', { class: 'news' }, ...news.map((n) => h('div', { class: n.big ? 'big' : '' }, n.text))) : null;
     const row = (k, v, c) => h('div', { class: 'ai-row' }, h('span', null, k), h('b', c ? { style: { color: c } } : null, v));
     // label: value rows, counting the realm as it is now (#334)
     showDialog([h('h3', null, 'Welcome back'),
       h('div', { class: 'ai-box' }, row('Away', fmtTime(rep.away)), rep.rested > 0 ? row('Rested', `+${rep.rested} XP`, '#6fa8ff') : null,
-        rep.dings ? row('Levelled up', String(rep.dings)) : null, rep.joined ? row('New players', String(rep.joined)) : null, row('Online now', String(rep.online))),
+        rep.dings ? row('Players levelled', String(rep.dings)) : null, rep.joined ? row('New players', String(rep.joined)) : null, row('Online now', String(rep.online))),
       newsEl,
       h('button', { class: 'btn wide', onclick: closeDialog }, 'Enter World')]);
   }

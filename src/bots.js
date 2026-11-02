@@ -118,7 +118,7 @@
             : ['taking a couple weeks off. see you when i am back', 'gone for two weeks or so, real life stuff. cya', 'long break for me, a couple of weeks. take care']));
         return false;
       }
-      const bye = (mine >= 0 && b.guild === mine) || theirs[b.guild] ? cpick(['ok i am done with this game for now. gl everyone o/', 'quitting for a while, thanks for the runs all', 'logging off for good i think. was fun, cya']) : null;
+      const bye = (mine >= 0 && b.guild === mine) || theirs[b.guild] ? cpick(['ok i am done with this game. gl everyone o/', 'quitting, thanks for the runs all', 'logging off for good i think. was fun, cya']) : null;
       if (bye && S.player && b.guild === mine) B.post(S, 'guild', b, bye);
       if (bye && theirs[b.guild]) { const L = SV.byes || (SV.byes = []); for (const c of theirs[b.guild]) L.push({ c, t, n: b.name, cls: b.cls, text: bye }); if (L.length > 200) L.splice(0, L.length - 200); }
       if (bye) b.bye = true; // said goodbye: their name is never someone else's (#333)
@@ -133,9 +133,9 @@
     for (let over = vets.length - B.VETERANS; over > 0 && vets.length;) if (leave(vets.shift())) over--;
     if (!gone.size) return;
     for (let i = S.bots.length - 1; i >= 0; i--) if (gone.has(S.bots[i])) S.bots.splice(i, 1);
-    // a name that quit is never someone else's: kept for anyone around a week or more (someone may know them); a first-week
+    // a name that quit isn't someone else's for a long while: kept for anyone around a week or more (someone may know them); a first-week
     // quitter's name goes back to the pool, or the names run out (#302)
-    SV.gone = (SV.gone || []).concat([...gone].filter((b) => b.bye || t - (b.born || 0) >= 7 * 86400000).map((b) => b.name)).slice(-5000);
+    SV.gone = (SV.gone || []).concat([...gone].filter((b) => b.bye || t - (b.born || 0) >= 7 * 86400000).map((b) => b.name)).slice(-1500); // newest 1500, well under the ~2600 short names, so newcomers keep getting them (#376)
   };
 
   // #71: a new realm starts as a lived-in one: today's spread under the cap (B.BANDS) and B.START_VETERANS at it, each
@@ -290,7 +290,7 @@
     for (const [k, n] of Object.entries(clears)) { const [g, act] = k.split('|'); news.push({ t: S.lastSim + ms, text: `<${g}> cleared ${D.ACTIVITIES[act].name}${n > 1 ? ` ×${n}` : ''}.` }); }
     if (beyond) news.push({ t: S.lastSim + ms, text: `Veteran groups cleared ${beyond} more ${beyond === 1 ? 'place' : 'places'} beyond your level.` });
     const stayed = S.bots.filter((b) => b.id >= firstNew).length; // the ones still here, not every start (#334)
-    if (stayed > 0 && ms >= 3600000) news.push({ t: S.lastSim + ms, text: `${stayed} new adventurer${stayed === 1 ? '' : 's'} started out across Caldreth.` }); // every start, not only the Human one (issue #18); not each minute of live play
+    if (stayed > 0 && ms >= 3600000) news.push({ t: S.lastSim + ms, joined: true, text: `${stayed} new adventurer${stayed === 1 ? '' : 's'} started out across Caldreth.` }); // every start, not only the Human one (issue #18); not each minute of live play
     S.lastSim += ms;
     const G1 = root.G; // and nothing the reader's level may not read (#69, the #54 rule)
     return G1 && G1.nameable && S.player ? news.filter((n) => G1.nameable(n.text, S.player.level)) : news;
