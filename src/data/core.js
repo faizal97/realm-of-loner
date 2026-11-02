@@ -400,9 +400,10 @@
   D.AFFIXES = [{ name: 'of the Bear', stats: { str: 1, sta: 1 } }, { name: 'of the Tiger', stats: { str: 1, agi: 1 } }, { name: 'of the Monkey', stats: { agi: 1, sta: 1 } }, { name: 'of the Eagle', stats: { sta: 1, int: 1 } }, { name: 'of the Owl', stats: { int: 1, spi: 1 } }, { name: 'of the Whale', stats: { sta: 1, spi: 1 } }, { name: 'of the Falcon', stats: { agi: 1, int: 1 } }, { name: 'of Strength', stats: { str: 2 } }, { name: 'of Agility', stats: { agi: 2 } }, { name: 'of Intellect', stats: { int: 2 } }, { name: 'of Stamina', stats: { sta: 2 } }, { name: 'of Spirit', stats: { spi: 2 } }];
 
   D.GEAR_BASES = {
-    cloth: { mats: ['Linen', 'Silk', 'Woolen'], grey: ['Frayed', 'Tattered'], arm: 0.25 },
-    leather: { mats: ['Stitched Leather', 'Rawhide', 'Rough Leather'], grey: ['Worn', 'Cracked'], arm: 0.55 },
-    mail: { mats: ['Chainmail', 'Ringed', 'Linked'], grey: ['Dented', 'Battered'], arm: 1 },
+    // mats by level band (1-19, 20-39, 40+), so the name fits the level: no Linen at 60 (#72)
+    cloth: { mats: [['Linen', 'Woolen', 'Homespun'], ['Silk', 'Embroidered', 'Brocade'], ['Gossamer', 'Spellwoven', 'Starthread']], grey: ['Frayed', 'Tattered'], arm: 0.25 },
+    leather: { mats: [['Stitched Leather', 'Rawhide', 'Rough Leather'], ['Tanned Leather', 'Hardened Leather', 'Studded'], ['Wyvernhide', 'Blackhide', 'Duskhide']], grey: ['Worn', 'Cracked'], arm: 0.55 },
+    mail: { mats: [['Chainmail', 'Ringed', 'Linked'], ['Banded', 'Scaled', 'Riveted'], ['Blacksteel', 'Wyrmscale', 'Gilded Steel']], grey: ['Dented', 'Battered'], arm: 1 },
   };
 
   D.SLOT_NAMES = {

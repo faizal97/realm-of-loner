@@ -428,9 +428,9 @@
     } else {
       const atype = slot === 'back' || slot === 'finger' ? null : (opts.atype || pick(['cloth', 'leather', 'mail']));
       if (atype) it.atype = atype;
-      const Ab = atype ? D.GEAR_BASES[atype] : { mats: ['Simple', 'Fine'], grey: ['Frayed'], arm: 0.3 };
+      const Ab = atype ? D.GEAR_BASES[atype] : { mats: [['Simple', 'Fine']], grey: ['Frayed'], arm: 0.3 };
       const baseName = pick(D.SLOT_NAMES[slot]);
-      const mat = q === 0 ? pick(Ab.grey) : pick(Ab.mats);
+      const mat = q === 0 ? pick(Ab.grey) : pick(Ab.mats[Math.min(Ab.mats.length - 1, Math.floor(lvl / 20))]); // one draw either way, so the random numbers don't move
       it.name = slot === 'finger' ? `${pick(['Copper', 'Silver', 'Simple'])} ${baseName}` : `${mat} ${baseName}`;
       it.armor = slot === 'finger' ? 0 : Math.max(1, Math.round((D.SLOT_ARMOR[slot] || 3) * (atype ? Ab.arm : 0.3) * (lvl + 2) * 0.9 * qm));
       it.icon = slot === 'chest' ? 'chest_' + (atype || 'cloth') : D.SLOT_ICON[slot];

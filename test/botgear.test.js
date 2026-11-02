@@ -22,3 +22,10 @@ test('the quality odds are unchanged: about 40% epic chests for a skilled bot, n
   assert.ok(Math.abs(epic / n - 0.4) < 0.04, `epic share ${epic / n}`);
   assert.strictEqual(low, n);
 });
+
+test('gear names fit the level: no Linen at 60, no Gossamer at 5', () => {
+  const names = (lvl) => { const out = new Set(); for (let i = 0; i < 300; i++) for (const a of ['cloth', 'leather', 'mail']) out.add(G.genGear('chest', lvl, 2, { atype: a }).name.split(' ')[0]); return out; };
+  const at60 = names(60), at5 = names(5);
+  for (const low of ['Linen', 'Woolen', 'Homespun', 'Rawhide', 'Chainmail', 'Ringed']) assert.ok(!at60.has(low), `${low} at 60`);
+  for (const high of ['Gossamer', 'Spellwoven', 'Blacksteel', 'Wyvernhide']) assert.ok(!at5.has(high), `${high} at 5`);
+});
