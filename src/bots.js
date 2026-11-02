@@ -522,7 +522,7 @@
     () => 'r u a bot?',
     () => 'Hello friend! Cheapest gold on the server, 1000g for $10, visit our site!',
     () => 'CHEAP GOLD FAST DELIVERY 100% SAFE, visit our site',
-    (c) => `was that u in ${c.zone}? saw u fighting ${c.mobName}s`,
+    (c) => (c.fought ? `was that u in ${c.zone}? saw u fighting ${c.fought}s` : 'gl out there!'), // only a creature you did fight here (#365)
     () => 'wrong window sorry',
     () => 'lol sorry, meant that for someone else',
     () => 'gl out there!',
@@ -543,6 +543,7 @@
     return 'no idea';
   };
 
+  B.lineContext = (S) => ctx(S);
   function ctx(S) {
     const P = D.PLACES[S.player.place] || D.PLACES.northshire_abbey;
     const mobs = (P.mobs || []).map((m) => m[0]);
@@ -567,6 +568,7 @@
       act: A.name, boss: bossKey && D.MOBS[bossKey] ? D.MOBS[bossKey].name : 'the last boss', classA: cpick(clsNames), classB: cpick(clsNames),
       mobName: mobs.length ? D.MOBS[cpick(mobs)].name : 'Kobold', namedMob: D.MOBS[cpick(namedAll)].name, questNpc: npc,
       hogger: S.player.level >= 8,
+      fought: S.player.lastKill && S.player.lastKill.place === S.player.place && D.MOBS[S.player.lastKill.mob] ? D.MOBS[S.player.lastKill.mob].name : null,
     };
   }
 

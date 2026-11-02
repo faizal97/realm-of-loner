@@ -1505,7 +1505,7 @@
   G.bookDrop = bookDrop;
   function onKill(mobKey) {
     const P = G.S.player;
-    P.kills++;
+    P.kills++; P.lastKill = { mob: mobKey, place: P.place }; // what a passer-by may have seen you fight (#365)
     emit('kill', { mob: mobKey });
     bookDrop(mobKey);
     for (const qid in P.quests) D.QUESTS[qid].objs.forEach((o, i) => {
@@ -2746,8 +2746,9 @@
     const role = pick(G.roles());
     const firstTimers = Math.random() < 0.6;
     const myF = (D.RACES[P.race] || {}).faction || 'alliance';
-    const mine = S.bots.filter((b) => B.factionOf(b) === myF), fit = mine.filter((b) => b.level >= A.minLvl - 3 && !B.lfRecent(S, b)); // a poster of the run's level (#69: a bot names content at its own level)
-    const poster = pick(fit.length ? fit : mine) || S.bots[0];
+    const mine = S.bots.filter((b) => B.factionOf(b) === myF), on = new Date(t), fit = mine.filter((b) => b.level >= A.minLvl - 3 && b.level <= (A.maxLvl || D.LEVEL_CAP) + 5 && B.isOnline(b, on) && !B.lfRecent(S, b)); // a poster of the run's level (#69: a bot names content at its own level), online, never a level 60 in a level 20 dungeon (#357, #364)
+    if (!fit.length) return; // nobody fitting is online: no post
+    const poster = pick(fit);
     const req = { id: 'hw' + t, act, role, startIdx: stuck, firstTimers, poster: poster.id, posterName: poster.name, expires: t + HW_LIFE };
     S.helpWanted.push(req);
     const what = stuck ? `stuck on ${Dg.pulls[stuck].label}` : 'from the start'; // (not 'full run': chat says full only of a busy server, #70)
@@ -2767,8 +2768,11 @@
     if (G.roles().includes(req.role)) S.player.role = req.role;
     stopActions();
     const grp = formGroup(req.act, { firstTimers: req.firstTimers });
+    // the one who asked is in the group (#357), as with a group from chat
+    const poster = S.bots.find((b) => b.id === req.poster);
+    if (poster && !grp.members.some((m) => m.bot && m.bot.id === poster.id)) { const i = grp.members.findIndex((m) => m.role === 'dps' && !m.legend); if (i >= 0) { const pc = G.botChar(Object.assign({}, poster, { level: grp.members[i].level, role: 'dps' })); pc.syncLevel = grp.members[i].syncLevel; grp.members[i] = pc; } }
     sys(`${req.posterName}'s group summons you to ${D.ACTIVITIES[req.act].name}.`);
-    grp.members.forEach((m, i) => S.pending.push({ at: now() + 900 + i * 1400, bot: m.bot.id, ch: 'party', text: cpick(i === 0 ? ['ty for coming!!', 'thank you so much', 'yay a helper', 'omg ty'] : ['hi', 'ty', 'hello', 'o/']), fromName: m.name }));
+    grp.members.forEach((m, i) => S.pending.push({ at: now() + 900 + i * 1400, bot: m.bot.id, ch: 'party', text: cpick((poster ? m.bot.id === poster.id : i === 0) ? ['ty for coming!!', 'thank you so much', 'yay a helper', 'omg ty'] : ['hi', 'ty', 'hello', 'o/']), fromName: m.name }));
     startRun(req.act);
     const R = S.run; R.help = { firstTimers: req.firstTimers, stuck: !!req.startIdx }; R.idx = req.startIdx || 0; R.noSpeed = !!req.startIdx;
     if (req.startIdx) sys(`They wiped here twice. Next: ${R.pulls[R.idx].label}.`);
@@ -3284,7 +3288,7 @@
     else G.addMarks(won ? C.marksAtCap.win : C.marksAtCap.loss, C.name);
     bg.phase = 'done'; bg.result = won ? 'win' : draw ? 'draw' : 'loss'; bg.reward = { honor, money };
     sys(`${C.name}: ${won ? 'victory' : draw ? 'a draw' : 'defeat'}, ${bg.score.us} to ${bg.score.them}. +${honor} Honor.`);
-    emit('bgEnd', { result: bg.result }); emit('change'); G.save();
+    emit('bgEnd', { result: bg.result, leader: bg.leader }); emit('change'); G.save();
   }
   // in a group, a queue, a fight, a battleground or a brawl still going: no other group can start (#354)
   G.groupBusy = () => { const S = G.S; return !!(S.run || S.queue || G.fight || G.bgBusy() || (S.brawl && S.brawl.phase !== 'done')); };
@@ -3324,7 +3328,7 @@
     if (role && G.roles().includes(role)) S.player.role = role;
     stopActions();
     // a battleground forms its own two teams, as from the queue (issue #15: it started as a dungeon run with no pulls)
-    if (D.ACTIVITIES[act].bg) { const bl = opts.leader && S.bots.find((b) => b.id === opts.leader); sys(`${bl ? bl.name + "'s" : 'The'} team summons you to ${D.ACTIVITIES[act].name}.`); startBg(act); emit('change'); return true; }
+    if (D.ACTIVITIES[act].bg) { const bl = opts.leader && S.bots.find((b) => b.id === opts.leader); sys(`${bl ? bl.name + "'s" : 'The'} team summons you to ${D.ACTIVITIES[act].name}.`); startBg(act); if (S.bg && bl) S.bg.leader = bl.id; emit('change'); return true; } // the leader a friend at its end (#362)
     const grp = formGroup(act, { guild: opts.guild });
     const lead = opts.leader && S.bots.find((b) => b.id === opts.leader);
     if (lead) { const i = grp.members.findIndex((m) => m.role === 'dps' && !m.legend); if (i >= 0) { const lc = G.botChar(Object.assign({}, lead, { level: grp.members[i].level, role: 'dps' })); lc.syncLevel = grp.members[i].syncLevel; grp.members[i] = lc; } }
@@ -3350,6 +3354,7 @@
     if (lead) { const i = grp.members.findIndex((m) => m.role === 'dps' && !m.legend); if (i >= 0) { const lc = G.botChar(Object.assign({}, lead, { level: D.LEVEL_CAP, role: 'dps' })); lc.syncLevel = D.LEVEL_CAP; grp.members[i] = lc; } }
     sys(`${lead ? lead.name + "'s" : 'The'} group summons you to ${D.ACTIVITIES[act].name}, Trial ${lvl}.`);
     startRun(act, lvl);
+    if (lead) S.run.soc = { kind: 'trial', leader: lead.id }; // finishing it makes them a friend (#362)
     emit('change');
     return true;
   };

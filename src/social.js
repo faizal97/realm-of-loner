@@ -84,6 +84,7 @@
       const goals = [{ what: 'creatures slain', kind: 'kill', goal: 150 }, { what: 'dungeon bosses defeated', kind: 'boss', goal: 12 }, { what: 'requests answered', kind: 'help', goal: 10 }];
       const gl = goals[(weekId() + P.guild) % goals.length];
       soc.week = Object.assign({ id: weekId(), g: P.guild, got: Math.floor(gl.goal * rnd(0.1, 0.3)), done: false }, gl);
+      if (soc.weekPaid === weekId()) { soc.week.got = soc.week.goal; soc.week.done = true; } // one weekly reward a week, whichever guild (#348)
     }
     return soc.week;
   };
@@ -91,7 +92,7 @@
     const w = SOC.week(); if (!w || w.done || w.kind !== kind) return;
     w.got += n;
     if (w.got >= w.goal) {
-      w.done = true;
+      w.done = true; state().weekPaid = w.id;
       const P = G.S.player, gold = P.level * 150;
       P.money += gold;
       post('guild', guildOfficer(), pickT('s93', [`WEEKLY GOAL DONE! ${w.goal} ${w.what}, thanks everyone!`, `we hit the weekly goal, ${w.goal} ${w.what}. gold to everyone who helped!`]));
@@ -103,6 +104,8 @@
   SOC.leaveGuild = function () {
     const S = G.S, P = S.player; if (P.guild < 0) return;
     const name = B.GUILDS[P.guild];
+    // a guildmate you were helping goes back to their guild (#356)
+    for (const m of S.chat) if (m.act && m.act.guild && m.act.state === 'open' && m.act.accepted && m.act.kind === 'help_kill') finishHelp(m, false);
     P.guild = -1; P.guildRep = 0;
     for (const m of S.chat) if (m.act && m.act.guild && m.act.state === 'open') m.act.state = 'expired';
     state().week = null;
@@ -110,7 +113,7 @@
     G.emitChange();
   };
   // a request still waiting for an answer (#341): one you took on (a team-up, a kill) is a task now, not a request
-  SOC.isOpenRequest = (m) => !!(m && m.act && m.act.state === 'open' && !m.act.accepted);
+  SOC.isOpenRequest = (m) => !!(m && m.act && m.act.state === 'open' && !m.act.accepted && !m.act.signed && !(m.act.kind === 'craft_order' && m.act.sent)); // a signed-up event and a taken order too (#360)
   // a request's time left, as the chat line shows it (#166): "4m", "<1m", or "expired"; null for a line with no request
   SOC.timeLeft = function (a) {
     if (!a || (a.state !== 'open' && a.state !== 'expired')) return null;
@@ -232,14 +235,22 @@
     for (const m of S.chat) {
       const a = m.act; if (!a || a.state !== 'open') continue;
       // one nudge if a whisper request is ignored, then a goodbye when it expires
-      if (a.whisper && !a.accepted && !a.nudged && t - (a.posted || t) > 100000) { a.nudged = true; const b = botById(a.bot); if (b) { const n = post('whisper', b, pickT('s222', ['u there?', '??', 'hello?', 'no rush, just lmk', 'still up for it?', 'hellooo', 'ping :)'])); if (n) n.ref = m.id; } }
+      const asks = a.kind !== 'gift' && a.kind !== 'chat'; // a gift or a question waits quietly (#359)
+      if (asks && a.whisper && !a.accepted && !a.nudged && t - (a.posted || t) > 100000) { a.nudged = true; const b = botById(a.bot); if (b) { const n = post('whisper', b, pickT('s222', ['u there?', '??', 'hello?', 'no rush, just lmk', 'still up for it?', 'hellooo', 'ping :)'])); if (n) n.ref = m.id; } }
+      // a task is done with its person: one who left your party (you walked off, it disbanded, a run) ends it (#351)
+      if ((a.kind === 'help_kill' || a.kind === 'quest_team') && a.accepted && !(S.wparty && S.wparty.members.some((x) => x.bot.id === a.bot))) {
+        a.state = 'expired'; if (a.kind === 'help_kill') finishHelp(m, false); else finishTeam(m, false); continue;
+      }
+      // a team-up for a quest you finished or dropped has nothing left to do (#352)
+      if (a.kind === 'quest_team' && !a.accepted && (G.questComplete(a.qid) || !P.quests[a.qid])) { a.state = 'expired'; continue; }
       if (a.until < t) {
         a.state = 'expired';
         if (a.kind === 'help_kill' && a.accepted) finishHelp(m, false);
         else if (a.kind === 'quest_team' && a.accepted) finishTeam(m, false);
-        else if (a.whisper && !a.accepted && chance(0.6)) { const b = botById(a.bot); if (b) { const n = post('whisper', b, pickT('s227', ['nvm, found someone', 'nvm got it', 'all good, someone else helped', 'np, maybe next time', 'all sorted, ty anyway'])); if (n) n.ref = m.id; } }
+        else if (asks && a.whisper && !a.accepted && chance(0.6)) { const b = botById(a.bot); if (b) { const n = post('whisper', b, pickT('s227', ['nvm, found someone', 'nvm got it', 'all good, someone else helped', 'np, maybe next time', 'all sorted, ty anyway'])); if (n) n.ref = m.id; } }
       }
-      if (a.kind === 'quest_team' && a.accepted && (G.questComplete(a.qid) || !P.quests[a.qid])) { a.state = 'done'; finishTeam(m, true); }
+      if (a.kind === 'quest_team' && a.accepted && P.quests[a.qid] && G.questComplete(a.qid)) { a.state = 'done'; finishTeam(m, true); }
+      else if (a.kind === 'quest_team' && a.accepted && !P.quests[a.qid]) { a.state = 'expired'; finishTeam(m, false); } // dropped: no reward (#352)
       if (a.kind === 'g_event' && a.signed && !a.started && t >= a.startAt) startGuildEvent(m);
     }
     if (G.fight || S.run) return;
@@ -275,7 +286,8 @@
     if (!acts.length) return;
     const k = pick(acts), A = D.ACTIVITIES[k];
     const bots = guild ? G.S.bots.filter((b) => b.guild === P.guild && B.isOnline(b, new Date())) : myBots();
-    const free = bots.filter((b) => !B.lfRecent(G.S, b)), lead = pick(free.filter((b) => b.level >= A.minLvl - 2)) || pick(free); // #70: not a bot already looking for another group
+    const free = bots.filter((b) => !B.lfRecent(G.S, b)), near = free.filter((b) => b.level >= A.minLvl - 2 && b.level <= (A.maxLvl || D.LEVEL_CAP) + 5); // #70: not a bot already looking for another group; #364: of the dungeon's levels, not a level 60 in a level 20 dungeon
+    const lead = pick(near.length ? near : free.filter((b) => b.level >= A.minLvl - 2)) || pick(free);
     if (!lead) return;
     const role = pick(G.roles());
     const size = A.size || 5, have = rint(1, size - 1);
@@ -397,7 +409,8 @@
     }
   }
   function makeRecruit() {
-    const gs = SOC.myGuilds().filter((x) => x.members > 0); if (!gs.length) return;
+    const all = SOC.myGuilds().filter((x) => x.members > 0); if (!all.length) return;
+    const fit = all.filter((x) => (x.min || 0) <= G.S.player.level), gs = fit.length ? fit : all; // guilds you can join first (#361)
     const g = pick(gs); const who = g.officer || pick(myBots()); if (!who) return;
     post('general', who, pickT('s381', [`<${g.name}> is recruiting! ${g.style} guild, level ${g.min}+, pst`, `<${g.name}> ${g.blurb.toLowerCase()} whisper me for an invite`, `looking for more people for <${g.name}>, ${g.min}+ welcome`,
       `<${g.name}>: ${g.style} guild, friendly officers, ${g.min}+. apply any time`, `<${g.name}> ${g.style} guild looking for members, ${g.min}+. whisper me`, `join <${g.name}>! ${g.blurb.toLowerCase()}`]), { kind: 'guild_apply', bot: who.id, g: g.g, until: now() + 8 * 60000 });
@@ -513,6 +526,7 @@
       return [{ label: a.kind === 'quest_team' ? 'Team up' : 'Help', primary: true, fn: () => {
         if (S.run || S.queue) return 'Not while in the group finder.';
         if (G.partySize() >= 3) return 'Your party is full.';
+        if (a.kind === 'quest_team' && (G.questComplete(a.qid) || !P.quests[a.qid])) { a.state = 'expired'; G.emitChange(); return 'That quest is done.'; }
         a.accepted = true; a.until = now() + 20 * 60000;
         if (b) G.addToParty(b, { meet: a.place, until: a.until });
         reply(pick(['omg ty! meet me there', 'thanks!! on my way', 'ty, lets go', 'yay, inviting', 'sweet, party up', 'omw!', 'u r the best, see u there']));
@@ -613,8 +627,12 @@
         close(right ? 'done' : 'declined');
       } })).concat([decline]);
     }
-    if (a.kind === 'guild_invite') return [{ label: `Join <${B.GUILDS[a.g]}>`, primary: true, disabled: P.guild >= 0, fn: () => { if (P.guild >= 0) return 'You are already in a guild.'; G.joinGuild(a.g); close(); } }, decline];
-    if (a.kind === 'guild_apply') return [{ label: `Apply to <${B.GUILDS[a.g]}>`, primary: true, disabled: P.guild >= 0, fn: () => { const why = SOC.apply(a.g); if (why) return why; close(); } }, decline]; // closes only on success (#166)
+    if (a.kind === 'guild_invite') return [{ label: `Join <${B.GUILDS[a.g]}>`, primary: true, disabled: P.guild >= 0, fn: () => { if (P.guild >= 0) return 'You are already in a guild.'; G.joinGuild(a.g); close(); } },
+      Object.assign({}, decline, { fn: () => { G.declineGuild(a.g); return decline.fn(); } })]; // No thanks: that guild stops asking (#358)
+    if (a.kind === 'guild_apply') {
+      const min = SOC.guildInfo(a.g).min || 0, low = P.level < min; // greyed with the level, as the Guild tab does (#361)
+      return [{ label: low ? `Level ${min}+` : `Apply to <${B.GUILDS[a.g]}>`, primary: true, disabled: P.guild >= 0 || low, why: low, fn: () => { if (low) return `<${B.GUILDS[a.g]}> takes level ${min}+.`; const why = SOC.apply(a.g); if (why) return why; close(); } }, decline]; // closes only on success (#166)
+    }
     if (a.kind === 'g_mats') {
       const have = G.countItem(a.item);
       return [{ label: have >= a.n ? `Give ${a.n}` : `You have ${have}/${a.n}`, primary: true, disabled: have < a.n, why: have < a.n, fn: () => {
@@ -697,6 +715,7 @@
   };
   G.on('kill', (d) => { try { SOC.onKill(d.mob); } catch (e) { console.error(e); } });
   G.on('runComplete', (d) => { try { SOC.onRunComplete(d); } catch (e) { console.error(e); } });
+  G.on('bgEnd', (d) => { try { const b = d && d.leader != null && botById(d.leader); if (b) befriend(b); } catch (e) { console.error(e); } }); // a battleground from chat, played to its end (#362)
 
   // ------------------------------------------------------------ quick replies (for any message from someone)
   SOC.replies = function (m) {
