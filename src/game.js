@@ -112,6 +112,9 @@
     const k = S.server.keep || (S.server.keep = {});
     for (const id of Object.keys(f)) { const b = S.bots.find((x) => String(x.id) === id); if (b) k[b.name] = 1; }
   }
+  // a person's own story (#72) lives in the account's roster only: each character's copy of the bots (for older builds
+  // and save codes) leaves it out, so ten characters don't carry ten copies of it
+  const ROSTER_ONLY = (k, v) => (k === 'hist' || k === 'pals' || k === 'rival' ? undefined : v);
   function saveRoster(S) {
     const R = G.R; if (!R || R.bots !== S.bots) return;
     keepFriends(S); R.lastSim = S.lastSim; R.nextBotId = S.nextBotId; R.server = S.server;
@@ -122,7 +125,7 @@
     if (!G.S) return;
     G.S.lastSeen = now();
     if (G.fight && G.pUnit) E.writeBack(G.fight, G.pUnit, now(), true); // the fight goes on: don't shift it out (#217)
-    ls.set(CHAR_KEY(G.S.id), JSON.stringify(G.S));
+    ls.set(CHAR_KEY(G.S.id), JSON.stringify(G.S, ROSTER_ONLY));
     saveRoster(G.S);
     const idx = readIndex().filter((c) => c.id !== G.S.id); idx.push(summary(G.S)); writeIndex(idx);
   };
@@ -428,9 +431,9 @@
     } else {
       const atype = slot === 'back' || slot === 'finger' ? null : (opts.atype || pick(['cloth', 'leather', 'mail']));
       if (atype) it.atype = atype;
-      const Ab = atype ? D.GEAR_BASES[atype] : { mats: ['Simple', 'Fine'], grey: ['Frayed'], arm: 0.3 };
+      const Ab = atype ? D.GEAR_BASES[atype] : { mats: [['Simple', 'Fine']], grey: ['Frayed'], arm: 0.3 };
       const baseName = pick(D.SLOT_NAMES[slot]);
-      const mat = q === 0 ? pick(Ab.grey) : pick(Ab.mats);
+      const mat = q === 0 ? pick(Ab.grey) : pick(Ab.mats[Math.min(Ab.mats.length - 1, Math.floor((lvl || 1) / 20))]); // one draw either way, so the random numbers don't move
       it.name = slot === 'finger' ? `${pick(['Copper', 'Silver', 'Simple'])} ${baseName}` : `${mat} ${baseName}`;
       it.armor = slot === 'finger' ? 0 : Math.max(1, Math.round((D.SLOT_ARMOR[slot] || 3) * (atype ? Ab.arm : 0.3) * (lvl + 2) * 0.9 * qm));
       it.icon = slot === 'chest' ? 'chest_' + (atype || 'cloth') : D.SLOT_ICON[slot];
@@ -3601,6 +3604,17 @@
     emit('change');
   };
   G.leaveQueue = function () { G.S.queue = null; sys('You left the queue.'); emit('change'); };
+  // Who you ran with (#72): each roster person keeps what they did with this character, for the player card (#84) and the
+  // chat (#73): runs finished together, the last one, where, and whether they ninja'd your loot. Bounded at 300 people.
+  G.MET_MAX = 300;
+  G.remember = function (bot, what) {
+    const S = G.S, P = S.player; if (!bot || !(bot.id >= 0) || !S.bots.some((b) => b.id === bot.id)) return; // not someone from the realm
+    const M = P.met = P.met || {}, m = M[bot.id] = M[bot.id] || { n: 0 };
+    if (what.run) { m.n++; m.last = now(); m.where = what.run; if (what.wipes) m.wipes = (m.wipes || 0) + what.wipes; }
+    if (what.ninja) m.ninja = (m.ninja || 0) + 1;
+    const ids = Object.keys(M); if (ids.length > G.MET_MAX) { ids.sort((a, b) => (M[a].last || 0) - (M[b].last || 0)); for (const id of ids.slice(0, ids.length - G.MET_MAX)) delete M[id]; }
+  };
+  G.metWith = (botId) => ((G.S.player.met || {})[botId]) || null;
   const OTHER_REALMS = ['Mistral', 'Hearthwick', 'Thornbury', 'Copperbell', 'Saltwind', 'Longwinter']; // our own realm names (v10)
   function recruit(role, lvl, used, usedCls, guild, exact) { // exact: only players at this level (Trials: the cap)
     const S = G.S, date = new Date();
@@ -3639,7 +3653,7 @@
       return F && roles.includes(F.role) && ['chest', 'legs', 'feet', 'hands'].includes(it.slot) && (!it.atype || it.atype === C.armorType) && G.canUseItem(it, b.cls) && L <= b.level && L >= b.level - 10; });
     return ids.length ? G.copyItem(pick(ids)) : null;
   };
-  G.botChar = function (b) {
+  function rollBotChar(b) {
     const C = D.CLASSES[b.cls];
     const q = b.skill > 0.72 ? (Math.random() < 0.4 ? 3 : 2) : b.skill > 0.4 ? 2 : 1;
     const wt = b.cls === 'paladin' ? 'mace' : b.role === 'healer' || b.cls === 'mage' || b.cls === 'warlock' ? 'staff' : C.weapons[0];
@@ -3658,6 +3672,18 @@
     { const fx = G.botEffectItem(b); if (fx) equip[fx.slot] = fx; } // sometimes an effect item, in place of one of those (#56)
     const talents = G.autoTalents(b.cls, b.role || (D.CLASSES[b.cls] || {}).role || 'dps', b.level, Math.abs(b.id || 0));
     return { name: b.name + (b.realm ? '-' + b.realm.replace(' ', '') : ''), cls: b.cls, race: b.race || 'human', level: b.level, equip, role: b.role, hp: null, res: null, auras: [], bot: b, talents };
+  }
+  // A person wears the same gear every time you meet them (#72): everything rolled for a bot's gear (quality, the named
+  // look, the cape, an effect item, the item's own rolls) comes from a stream seeded by who they are, their level and
+  // role, so a new level is a new set and the next run with them is the same one. Same chances as before, so the same
+  // power band; a bot with no id (a guard) still rolls freely.
+  const ROLE_N = { tank: 1, healer: 2, dps: 3 };
+  G.botChar = function (b) {
+    if (!(b && b.id >= 0)) return rollBotChar(b);
+    let s = (B.hash(b.id, b.level * 4 + (ROLE_N[b.role] || 0)) * 4294967296) >>> 0;
+    const real = Math.random;
+    Math.random = () => { s = (s + 0x6D2B79F5) >>> 0; let x = s; x = Math.imul(x ^ (x >>> 15), x | 1); x ^= x + Math.imul(x ^ (x >>> 7), x | 61); return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
+    try { return rollBotChar(b); } finally { Math.random = real; }
   };
   // ------------------------------------------------------------ Legends
   // Before you know him, a legend may step into a hard solo fight in disguise: at most once an hour, 3 times per zone.
@@ -3936,6 +3962,7 @@
         sys(`${R.name} complete!`);
         runBonuses(R);
         emit('runComplete', { act: R.act, soc: R.soc || null, wipes: R.wipes });
+        for (const m of S.group.members) if (!m.gone && !m.cameo) G.remember(m.bot, { run: R.act, wipes: R.wipes });
         S.group.members.filter((m) => !m.gone).forEach((m, i) => S.pending.push({ at: now() + 2000 + i * 1600, bot: m.bot.id, ch: 'party', text: m.cameo ? G.legendLine(m.legend, 'bye') : B.partyLine(m.bot, 'bye'), fromName: m.name }));
         for (const m of S.group.members) if (m.cameo && !m.gone) { const P = S.player; P.legendMem = P.legendMem || {}; const mem = G.legendMemory(m.legend); P.legendMem[m.legend] = Object.assign(mem, { n: (mem.n || 0) + 1, where: R.name }); } // the memory on the Hero screen
       } else { R.phase = 'rest'; R.restUntil = now() + 6500 * (PACE[R.pace || 'normal'].rest); }
@@ -4031,6 +4058,7 @@
         loot(`${win.name} won: ${B.link(r.item.name, r.item.q)}`);
         const usable = G.canUseItem(r.item, win.m.cls);
         if (win.m.bot.ninja && !usable) {
+          G.remember(win.m.bot, { ninja: 1 });
           const other = S.group.members.find((m) => !m.gone && m !== win.m);
           if (other) S.pending.push({ at: t + 2000, bot: other.bot.id, ch: 'party', text: cpick(['ninja...', 'wtf that is not even your armor', 'reported lol', 'bruh']), fromName: other.name });
           S.pending.push({ at: t + 4500, bot: win.m.bot.id, ch: 'party', text: B.partyLine(win.m.bot, 'loot'), fromName: win.m.name });

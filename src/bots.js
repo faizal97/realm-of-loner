@@ -205,6 +205,7 @@
         b.xpf += rate(b) * (stepMs / 3600000);
         while (b.xpf >= 1 && b.level < D.LEVEL_CAP) {
           b.xpf -= 1; b.level++;
+          if (b.level % 10 === 0 || b.level === D.LEVEL_CAP) B.note(b, when.getTime(), 'lvl', b.level); // their own history (#72)
           if (b.level === D.LEVEL_CAP) {
             const firstCap = !S.server.firstCap;
             if (firstCap) S.server.firstCap = b.name;
@@ -223,6 +224,7 @@
           if (S.server.firstVC && !F.deadmines) F.deadmines = S.server.firstVC; // the one first older saves recorded
           const first = !F[act]; if (first) F[act] = g; // recorded even when it can't be told yet, so it's right when you get there
           const last = lastBoss(act);
+          B.noteClear(S, act, GUILDS.indexOf(g), when.getTime(), last);
           if (!B.newsNames(S, act)) beyond++;
           else if (first && last) news.push({ t: when.getTime(), text: `<${g}> is the first guild on ${D.REALM} to defeat ${last.name}!`, big: true });
           else clears[g + '|' + act] = (clears[g + '|' + act] || 0) + 1;
@@ -240,10 +242,64 @@
       S.bots.push(nb);
     }
     if (newbies > 0) news.push({ t: S.lastSim + ms, text: `${Math.min(newbies, 40)} new adventurer${Math.min(newbies, 40) === 1 ? '' : 's'} started out across Caldreth.` }); // every start, not only the Human one (issue #18)
+    B.guildMoves(S, ms, S.lastSim + ms); // #72: now and then someone changes guild
     B.trimRoster(S, S.lastSim + ms); // #71: people quit, the realm stays at its size
     S.lastSim += ms;
     const G1 = root.G; // and nothing the reader's level may not read (#69, the #54 rule)
     return G1 && G1.nameable && S.player ? news.filter((n) => G1.nameable(n.text, S.player.level)) : news;
+  };
+
+  // ---- a person's own story (#72): a short history per bot ("Reached level 40", "Cleared <place> with <guild>", "Got
+  // <item>", "Joined <guild>"), friends and a rival of their own. For the player card (#84) and the chat (#73). Cosmetic
+  // only: no outcome dice (hash or the cosmetic stream), and nothing here touches how anyone plays.
+  B.HIST_MAX = 6;
+  B.note = function (b, t, k, v, w) { const h = b.hist = b.hist || []; h.push(w == null ? { t, k, v } : { t, k, v, w }); if (h.length > B.HIST_MAX) h.splice(0, h.length - B.HIST_MAX); };
+  B.noteClear = function (S, act, gi, t, last) {
+    if (gi < 0) return;
+    const A = D.ACTIVITIES[act], size = Math.min(5, (A && A.size) || 5);
+    const there = S.bots.filter((b) => b.guild === gi && b.level >= A.minLvl && b.level <= (A.maxLvl || D.LEVEL_CAP) + 5)
+      .sort((x, y) => hash(x.id, t % 100003) - hash(y.id, t % 100003)).slice(0, size);
+    for (const b of there) B.note(b, t, 'clear', act, gi);
+    const loot = last && (last.loot || []).filter((id) => D.ITEMS[id]);
+    if (there.length && loot && loot.length) B.note(there[0], t, 'item', loot[Math.floor(hash(there[0].id, t % 99991) * loot.length)]);
+  };
+  // about once in 60 days a person changes guild (or leaves one); never into or out of the player's own guild, whose
+  // members are the player's people (#71) and whose runs draw from it
+  B.GUILD_MOVE_DAYS = 60;
+  B.guildMoves = function (S, ms, t) {
+    const mine = S.player && S.player.guild != null && S.player.guild >= 0 ? S.player.guild : -2;
+    const p = Math.min(1, ms / (B.GUILD_MOVE_DAYS * 86400000));
+    for (const b of S.bots) {
+      if (b.guild === mine || !(crand() < p)) continue;
+      const opts = GUILDS.map((g, i) => i).filter((i) => GUILD_FACTION[i] === B.factionOf(b) && i !== b.guild && i !== mine);
+      const to = b.guild >= 0 && crand() < 0.25 ? -1 : opts.length ? opts[Math.floor(crand() * opts.length)] : -1;
+      if (to === b.guild) continue;
+      B.note(b, t, to < 0 ? 'left' : 'joined', to < 0 ? b.guild : to); b.guild = to;
+    }
+  };
+  // two friends and a rival of their own, kept until one of them quits: their guildmates first (else people near their
+  // level), picked by hash; the rival is the same class within 5 levels
+  B.circle = function (S, b) {
+    const here = (id) => id != null && S.bots.some((x) => x.id === id);
+    if (!(b.pals && b.pals.every(here) && (b.rival == null || here(b.rival)))) {
+      const near = (x) => x !== b && Math.abs(x.level - b.level) <= 5, by = (a, c) => hash(b.id, a.id) - hash(b.id, c.id);
+      const mates = b.guild >= 0 ? S.bots.filter((x) => x !== b && x.guild === b.guild) : [];
+      b.pals = (mates.length >= 2 ? mates : S.bots.filter(near)).sort(by).slice(0, 2).map((x) => x.id);
+      const rv = S.bots.filter((x) => near(x) && x.cls === b.cls && !b.pals.includes(x.id)).sort(by)[0];
+      b.rival = rv ? rv.id : null;
+    }
+    const find = (id) => S.bots.find((x) => x.id === id);
+    return { pals: b.pals.map(find), rival: b.rival == null ? null : find(b.rival) };
+  };
+  // one history entry as a line, or null when it names a place or item the reader's level may not read (#54)
+  B.histText = function (e) {
+    const A = D.ACTIVITIES[e.v], it = D.ITEMS[e.v];
+    if (e.k === 'lvl') return `Reached level ${e.v}`;
+    if (e.k === 'clear') return A ? `Cleared ${A.name} with <${GUILDS[e.w]}>` : null;
+    if (e.k === 'item') return it ? `Got ${it.name}` : null;
+    if (e.k === 'joined') return `Joined <${GUILDS[e.v]}>`;
+    if (e.k === 'left') return `Left <${GUILDS[e.v]}>`;
+    return null;
   };
 
   // the news follows the player's level, not the server's (issue #18, the lore bible's Reveals): a dungeon or raid is named
