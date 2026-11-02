@@ -118,6 +118,13 @@
       }
     }
     S.bots = R.bots; S.server = R.server || (R.server = {}); S.lastSim = R.lastSim; S.nextBotId = Math.max(R.nextBotId, 1000);
+    // nobody on the realm has a character's name (#314): such a person gets another, and stays kept if they were
+    const mine = new Set(readIndex().map((c) => c.name).concat(S.player ? [S.player.name] : []));
+    const clash = R.bots.filter((b) => mine.has(b.name));
+    if (clash.length) {
+      const used = new Set(R.bots.map((b) => b.name).concat(S.server.gone || [], [...mine])), k = S.server.keep;
+      for (const b of clash) { const n = B.makeName(used); if (k && k[b.name]) { delete k[b.name]; k[n] = 1; } b.name = n; }
+    }
     S.flags = S.flags || {}; S.flags.roster = true;
     G.R = R; saveRoster(S);
   }

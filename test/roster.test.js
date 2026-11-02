@@ -151,3 +151,14 @@ test('a character save leaves out the realm\'s quit list; a refused write is sai
   try { G.save(); } finally { localStorage.setItem = set; }
   assert.ok(said.some((t) => /storage is full/.test(t)), said.join(' | '));
 });
+
+test('nobody on the realm has a character\'s name (#314)', () => {
+  fresh();
+  make('Ana'); const name = G.S.bots[10].name, id = G.S.bots[10].id;
+  G.S.server.keep = { [name]: 1 }; G.save();
+  make(name); // a new character takes someone's name
+  const b = G.S.bots.find((x) => x.id === id);
+  assert.notStrictEqual(b.name, name, 'they go by another name now');
+  assert.ok(!G.S.bots.some((x) => x.name === name));
+  assert.ok(G.S.server.keep[b.name] && !G.S.server.keep[name], 'and stay kept under it');
+});
