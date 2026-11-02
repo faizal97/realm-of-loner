@@ -60,3 +60,11 @@ test('a gift arrives even if Thank them is never tapped: gold at once, an item b
   assert.ok(G.mail().some((m) => G.mailWaiting(m) && m.gift && m.item.name === it.name));
   assert.strictEqual(gold.act.state, 'done'); assert.strictEqual(item.act.state, 'done');
 });
+
+test('greyed guild and donate buttons say why (#395)', () => {
+  const { S, P } = character(30); const SOC = globalThis.SOC; P.guild = 0; P.money = 100;
+  const b = S.bots[0], first = (act) => SOC.actions({ id: 9901, ch: 'whisper', from: b.name, text: 'x', act: Object.assign({ bot: b.id, state: 'open' }, act) })[0];
+  for (const kind of ['guild_invite', 'guild_apply']) { const x = first({ kind, g: 1 }); assert.ok(x.disabled && x.why && x.label === 'In a guild', JSON.stringify(x)); }
+  const d = first({ kind: 'g_donate', amt: 5000, guild: true });
+  assert.ok(d.disabled && d.why && /^Need /.test(d.label), JSON.stringify(d));
+});

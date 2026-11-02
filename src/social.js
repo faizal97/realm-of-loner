@@ -631,11 +631,11 @@
         close(right ? 'done' : 'declined');
       } })).concat([decline]);
     }
-    if (a.kind === 'guild_invite') return [{ label: `Join <${B.GUILDS[a.g]}>`, primary: true, disabled: P.guild >= 0, fn: () => { if (P.guild >= 0) return 'You are already in a guild.'; G.joinGuild(a.g); close(); } },
+    if (a.kind === 'guild_invite') return [{ label: P.guild >= 0 ? 'In a guild' : `Join <${B.GUILDS[a.g]}>`, primary: true, disabled: P.guild >= 0, why: P.guild >= 0, fn: () => { if (P.guild >= 0) return 'You are already in a guild.'; G.joinGuild(a.g); close(); } },
       Object.assign({}, decline, { fn: () => { G.declineGuild(a.g); return decline.fn(); } })]; // No thanks: that guild stops asking (#358)
     if (a.kind === 'guild_apply') {
       const min = SOC.guildInfo(a.g).min || 0, low = P.level < min; // greyed with the level, as the Guild tab does (#361)
-      return [{ label: low ? `Level ${min}+` : `Apply to <${B.GUILDS[a.g]}>`, primary: true, disabled: P.guild >= 0 || low, why: low, fn: () => { if (low) return `<${B.GUILDS[a.g]}> takes level ${min}+.`; const why = SOC.apply(a.g); if (why) return why; close(); } }, decline]; // closes only on success (#166)
+      return [{ label: P.guild >= 0 ? 'In a guild' : low ? `Level ${min}+` : `Apply to <${B.GUILDS[a.g]}>`, primary: true, disabled: P.guild >= 0 || low, why: P.guild >= 0 || low, fn: () => { if (low) return `<${B.GUILDS[a.g]}> takes level ${min}+.`; const why = SOC.apply(a.g); if (why) return why; close(); } }, decline]; // closes only on success (#166)
     }
     if (a.kind === 'g_mats') {
       const have = G.countItem(a.item);
@@ -647,7 +647,8 @@
       } }, decline];
     }
     if (a.kind === 'g_donate') {
-      return [{ label: `Donate ${coin(a.amt)}`, primary: true, disabled: P.money < a.amt, fn: () => {
+      const short = a.amt - P.money; // greyed with the shortfall, as buying is (#395)
+      return [{ label: short > 0 ? `Need ${coin(short)}` : `Donate ${coin(a.amt)}`, primary: true, disabled: short > 0, why: short > 0, need: short > 0 ? short : 0, fn: () => {
         if (P.money < a.amt) return 'Not enough money.';
         P.money -= a.amt; G.sys(`You donated ${coin(a.amt)} to the guild bank.`);
         reply(pick(['thank you!', 'appreciated!', 'ty, the guild thanks u'])); addStanding(15, 'a donation'); help(); close();
