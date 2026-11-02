@@ -169,3 +169,16 @@ test('a guild application is still answered after a reload (#417)', () => {
   W.advance(60);
   assert.strictEqual(G.S.player.guild, mine[0]);
 });
+
+const helpTask = (S, place, id, botId) => { const b = botId != null ? { id: botId, name: 'Nobody' } : S.bots.find((x) => B.factionOf(x) === G.myFaction() && B.isOnline(x, new Date()) && !S.chat.some((m) => m.act && m.act.bot === x.id));
+  const m = { id, ch: 'whisper', from: b.name, text: 'x', act: { kind: 'help_kill', bot: b.id, state: 'open', whisper: true, posted: W.now(), until: W.now() + 300000, mob: D.PLACES[place].mobs[0][0], n: 5, got: 0, place, pay: 100 } };
+  S.chat.push(m); return m; };
+const huntPlaces = (P, lv) => Object.keys(D.PLACES).filter((k) => { const p = D.PLACES[k]; return !p.safe && p.lvl && (p.mobs || []).length && p.lvl[0] <= lv + 1 && p.lvl[1] >= lv - 2 && G.canReach(P.place, k) && k !== P.place; });
+
+test('a second Help task in another place waits until the first is done (#418)', () => {
+  W.setNow(new Date(2026, 10, 3, 20).getTime()); const { S, P } = W.character(20); const pls = huntPlaces(P, 20);
+  const a = helpTask(S, pls[0], 9001), b = helpTask(S, pls[1], 9002);
+  globalThis.SOC.actions(a)[0].fn();
+  assert.match(String(globalThis.SOC.actions(b)[0].fn()), /Finish the task at/);
+  assert.ok(!b.act.accepted);
+});
