@@ -20,3 +20,15 @@ test('a mob is never tapped by someone in your party', () => {
   assert.ok(mobs.some((m) => m.state === 'tapped'), 'the world tapped mobs');
   assert.ok(!mobs.some((m) => m.state === 'tapped' && m.by === near[0].name), 'not by the party member');
 });
+
+test('a creature still on its way when the fight is won goes back to the world (#318)', () => {
+  const { S, P } = character(8, 'warrior', 'human'), D = globalThis.D;
+  P.place = Object.keys(D.PLACES).find((k) => (D.PLACES[k].mobs || []).length && !D.PLACES[k].city && D.PLACES[k].lvl && D.PLACES[k].lvl[0] <= 8);
+  const [m, friend] = G.placeMobs().filter((x) => x.state === 'alive' && !x.id.startsWith('n_'));
+  G.engage(m.id); assert.ok(G.fight, 'a fight');
+  friend.state = 'fight'; G.fight.addAt = { t: 999, inst: friend };
+  for (const e of G.fight.enemies) { e.hp = 0; e.dead = true; }
+  G.update(0.3);
+  assert.ok(!G.fight, 'won');
+  assert.strictEqual(friend.state, 'alive', 'not stuck as fighting');
+});

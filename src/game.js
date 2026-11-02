@@ -1880,6 +1880,7 @@
     if (Math.random() < (C.kind === 'pvp' ? 0.45 : 0.6)) {
       if (C.kind === 'pvp') { const f = G.S.flags; G.S.player.pvp = G.pvpStats(); G.S.player.pvp.escapes++; f.nextAmbush = now() + AMBUSH_GAP; }
       for (const e of C.enemies) { if (e.inst) { e.inst.state = 'alive'; } }
+      addNeverCame(C);
       recordFx(C, G.pUnit); E.writeBack(C, G.pUnit, now());
       petWriteBack(C);
       G.fight = null; G.pUnit = null;
@@ -1952,8 +1953,12 @@
     return null;
   };
 
+  // a creature on its way to join (C.addAt) when the fight ends never came: it goes back to the world (#318: it stayed
+  // marked as fighting, so it never respawned and was gone from the place)
+  function addNeverCame(C) { const a = C.addAt; if (a && a.inst && a.inst.state === 'fight') a.inst.state = 'alive'; C.addAt = null; }
   function endSolo(C) {
     const S = G.S, P = S.player;
+    addNeverCame(C);
     if (C.wanderer) { const Hd = D.LEGENDS[C.wanderer.key].hooded; B.post(S, 'say', { name: Hd.name, cls: 'paladin' }, cpick(Hd.leave)); sys('The hooded knight walks off without giving a name.'); }
     const pu = G.pUnit;
     recordFx(C, pu); E.writeBack(C, pu, now());
