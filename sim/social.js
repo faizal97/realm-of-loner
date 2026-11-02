@@ -76,7 +76,8 @@ SOC.leaveGuild(); if (P.guild !== -1) fail('leave guild');
   if (!fr.length) fail('no friends remembered');
   // guild extras
   G.joinGuild(busiest(SOC.myGuilds()).g); const gseen = {}; const w0 = SOC.week().got;
-  for (let i = 0; i < 3 * 3600; i++) { t += 1000; G.update(1); for (const m of S2.chat) if (m.act && m.act.guild && !m.g2) { m.g2 = 1; gseen[m.act.kind] = (gseen[m.act.kind] || 0) + 1; if (m.act.kind === 'g_donate') SOC.actions(m)[0].fn(); if (m.act.kind === 'g_event') SOC.actions(m)[0].fn(); } if (S2.run) { const d = { act: S2.run.act, soc: S2.run.soc }; S2.run = null; S2.group = null; SOC.onRunComplete(d); } if (G.fight) { G.fight = null; G.pUnit = null; } }
+  // until both kinds have come up (a donation is about 1 in 9 guild requests, so 3 hours could miss it by luck), at most 12 hours
+  for (let i = 0; i < 12 * 3600 && !(i >= 3 * 3600 && gseen.g_donate && gseen.g_event); i++) { t += 1000; G.update(1); for (const m of S2.chat) if (m.act && m.act.guild && !m.g2) { m.g2 = 1; gseen[m.act.kind] = (gseen[m.act.kind] || 0) + 1; if (m.act.kind === 'g_donate') SOC.actions(m)[0].fn(); if (m.act.kind === 'g_event') SOC.actions(m)[0].fn(); } if (S2.run) { const d = { act: S2.run.act, soc: S2.run.soc }; S2.run = null; S2.group = null; SOC.onRunComplete(d); } if (G.fight) { G.fight = null; G.pUnit = null; } }
   for (let i = 0; i < 40; i++) SOC.onKill('skeletal_warrior');
   const wk = SOC.week(); console.log('guild requests in 3 h:', JSON.stringify(gseen), '· standing', P2.guildRep, '· week', wk.what, wk.got + '/' + wk.goal, '· motd:', SOC.motd(P2.guild));
   for (const k of ['g_donate', 'g_event']) if (!gseen[k]) fail('no ' + k);
