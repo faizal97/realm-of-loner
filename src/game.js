@@ -964,7 +964,8 @@
     const P = D.PLACES[id];
     if (!P) return;
     const W = placeState(id);
-    const near = B.onlineIn(S, id, new Date(t));
+    const inParty = new Set(S.wparty ? S.wparty.members.map((m) => m.bot && m.bot.id) : []);
+    const near = B.onlineIn(S, id, new Date(t)).filter((b) => !inParty.has(b.id)); // your own party never takes a mob from you (#313)
     const n = Math.min(5, near.length);
     const all = W.mobs.concat(Object.values(W.named));
     for (const m of all) {
