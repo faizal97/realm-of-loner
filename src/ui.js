@@ -1074,8 +1074,8 @@
     if (S.queue) {
       p.append(h('div', { class: 'row', style: { gridTemplateColumns: '34px 1fr auto' } },
         h('div', { class: 'ic' }, img(art('icon', 'hearthstone'))),
-        h('div', { class: 't' }, h('b', null, 'Queued: ' + D.ACTIVITIES[S.queue.act].name), h('small', { id: 'q-time' }, 'Waiting...')),
-        S.queue.popped ? h('button', { class: 'chip gold', onclick: () => showPop(S.queue) }, 'Group ready') : h('button', { class: 'chip', onclick: () => G.leaveQueue() }, 'Leave'))); // a closed pop comes back here (#325)
+        h('div', { class: 't' }, h('b', null, 'In queue: ' + D.ACTIVITIES[S.queue.act].name), h('small', { id: 'q-time' }, 'Waiting...')),
+        S.queue.popped ? h('button', { class: 'chip gold', onclick: () => showPop(S.queue) }, 'Open') : h('button', { class: 'chip', onclick: () => G.leaveQueue() }, 'Leave'))); // a closed pop comes back here (#325)
     }
     const place = D.PLACES[P.place];
     const mobs = G.placeMobs();
@@ -4911,8 +4911,8 @@
       : h('span', { class: 'chip gold' }, ROLE_NAME[r] || r));
     if (roles.length > 1) roleRow.append(h('span', { class: 'gf-hint' }, 'tanks and healers find groups faster'));
     top.append(roleRow);
-    if (S.queue) top.append(h('div', { class: 'gf-queue' }, h('span', null, 'In queue: ', h('b', null, D.ACTIVITIES[S.queue.act].name + (S.queue.trial ? ` · Trial ${S.queue.trial}` : ''))),
-      S.queue.popped ? h('button', { class: 'chip gold', onclick: () => showPop(S.queue) }, 'Group ready') : null, // the pop, if it was closed (#325)
+    if (S.queue) top.append(h('div', { class: 'gf-queue' }, h('span', null, 'In queue: ', h('b', null, D.ACTIVITIES[S.queue.act].name + (S.queue.trial ? ` · Trial ${S.queue.trial}` : '')), S.queue.popped ? ' · Group ready' : ''),
+      S.queue.popped ? h('button', { class: 'chip gold', onclick: () => showPop(S.queue) }, 'Open') : null, // the pop, if it was closed (#325); the button is the action, the status is the line (#397)
       h('button', { class: 'chip', onclick: () => { G.leaveQueue(); ui.sheetFn(); } }, 'Leave')));
     b.append(top);
     // everything this character can see, with why it can't be done yet
