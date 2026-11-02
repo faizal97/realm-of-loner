@@ -28,3 +28,10 @@ test('a ninja is remembered, and the list stays bounded', () => {
   assert.ok(Object.keys(G.S.player.met).length <= G.MET_MAX);
   G.remember({ id: 999999 }, { run: 'x' }); assert.strictEqual(G.metWith(999999), null, 'not someone from the realm');
 });
+
+test('a ninja from someone new is kept when the list is full (#310)', () => {
+  const bots = G.S.bots; G.S.player.met = {};
+  for (let i = 0; i < G.MET_MAX; i++) G.remember(bots[i], { run: 'x' });
+  const late = bots[G.MET_MAX + 5]; G.remember(late, { ninja: 1 });
+  assert.ok(G.metWith(late.id) && G.metWith(late.id).ninja === 1);
+});

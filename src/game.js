@@ -3660,7 +3660,7 @@
     const S = G.S, P = S.player; if (!bot || !(bot.id >= 0) || !S.bots.some((b) => b.id === bot.id)) return; // not someone from the realm
     const M = P.met = P.met || {}, m = M[bot.id] = M[bot.id] || { n: 0 };
     if (what.run) { m.n++; m.last = now(); m.where = what.run; if (what.wipes) m.wipes = (m.wipes || 0) + what.wipes; }
-    if (what.ninja) m.ninja = (m.ninja || 0) + 1;
+    if (what.ninja) { m.ninja = (m.ninja || 0) + 1; m.last = m.last || now(); } // dated, or the trim drops it first (#310)
     const ids = Object.keys(M); if (ids.length > G.MET_MAX) { ids.sort((a, b) => (M[a].last || 0) - (M[b].last || 0)); for (const id of ids.slice(0, ids.length - G.MET_MAX)) delete M[id]; }
   };
   G.metWith = (botId) => ((G.S.player.met || {})[botId]) || null;

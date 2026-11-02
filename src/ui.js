@@ -1127,8 +1127,8 @@
     const strip = h('div', { class: 'pstrip' }, h('span', { class: 'pstrip-l' }, 'Party'));
     for (const m of S.wparty.members) {
       const st = E.statsFor(m); const hp = m.hp == null ? st.maxHp : m.hp;
-      strip.append(h('button', { class: 'pmini', onclick: () => { ui.tab = 'people'; renderPanel(); } },
-        h('b', { class: 'cls-' + m.cls }, m.name.split('-')[0]), h('div', { class: 'bar thin' }, h('i', { style: { width: Math.max(0, hp / st.maxHp * 100) + '%', background: 'var(--hp)' } }))));
+      strip.append(holdCard(h('button', { class: 'pmini', onclick: () => { ui.tab = 'people'; renderPanel(); } },
+        h('b', { class: 'cls-' + m.cls }, m.name.split('-')[0]), h('div', { class: 'bar thin' }, h('i', { style: { width: Math.max(0, hp / st.maxHp * 100) + '%', background: 'var(--hp)' } }))), m)); // held: their card (#310)
     }
     return strip;
   }
@@ -1436,7 +1436,7 @@
       const A = met && met.where && D.ACTIVITIES[met.where], last = met && met.last ? ago(met.last) : null;
       parts.push(h('div', { class: 'sec-h' }, 'With you', friend ? h('small', { class: 'gold' }, 'Friend') : null),
         h('div', { class: 'ai-box' },
-          met ? row('Runs together', String(met.n)) : null,
+          met && met.n ? row('Runs together', String(met.n)) : null,
           met && met.n ? row('Last run', (A && ok(A.name) ? A.name + ', ' : '') + last) : null,
           met && met.ninja ? h('div', { class: 'ai-row' }, h('span', null, 'Ninja rolls'), h('b', { style: { color: '#ff6a5a' } }, String(met.ninja))) : null));
     }
