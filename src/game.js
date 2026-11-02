@@ -84,7 +84,7 @@
       const saves = readIndex().filter((c) => c.id !== S.id).map((c) => G.readSave(c.id)).concat([S]).filter((x) => x && Array.isArray(x.bots) && x.bots.length);
       const src = saves.sort((a, b) => (a.created || 0) - (b.created || 0))[0];
       R = src ? { v: 1, from: src.id, bots: src.bots, nextBotId: src.nextBotId || 1000, lastSim: src.lastSim || now(), server: src.server || {} }
-        : { v: 1, from: S.id, bots: B.makePopulation(260), nextBotId: 1000, lastSim: S.lastSim || now(), server: {} };
+        : { v: 1, from: S.id, bots: B.makeRealm(), nextBotId: 1000, lastSim: S.lastSim || now(), server: {} };
     }
     const byName = new Map(R.bots.map((b) => [b.name, b])), byId = new Map(own.map((b) => [String(b.id), b]));
     const soc = S.soc, f = soc && soc.friends;
@@ -106,9 +106,15 @@
     S.flags = S.flags || {}; S.flags.roster = true;
     G.R = R; saveRoster(S);
   }
+  // every character's friends, by name, so the realm never lets one quit without a goodbye (B.trimRoster)
+  function keepFriends(S) {
+    const f = S.soc && S.soc.friends; if (!f) return;
+    const k = S.server.keep || (S.server.keep = {});
+    for (const id of Object.keys(f)) { const b = S.bots.find((x) => String(x.id) === id); if (b) k[b.name] = 1; }
+  }
   function saveRoster(S) {
     const R = G.R; if (!R || R.bots !== S.bots) return;
-    R.lastSim = S.lastSim; R.nextBotId = S.nextBotId; R.server = S.server;
+    keepFriends(S); R.lastSim = S.lastSim; R.nextBotId = S.nextBotId; R.server = S.server;
     ls.set(ROSTER_KEY, JSON.stringify(R));
   }
   G.characters = function () { migrate(); return readIndex().sort((a, b) => b.lastSeen - a.lastSeen); };

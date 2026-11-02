@@ -7,6 +7,18 @@ of the bots in the contents"); the tavern moves to v10.12. From QA's believabili
 disguised NPCs; what's needed is **persistent identity, not more AI**; and chat's "repetitiveness and cohesiveness...
 we need to crush that down". Drafted by the game designer, 2026-10-04.
 
+**Phase 2 as built (#71, 2026-11-02).** Two decisions made while building it, from the population sim (`sim/population.js`):
+- **Size: 420 under the level cap plus up to 80 veterans at it (about 500).** Today's roster settles at about 325 bots at
+  levels 1–20 and 95 at 21–59 (measured on the old code, days 15–120). Those two bands keep exactly that size, so the
+  levelling zones and every rate that scales with bots there are unchanged; when over, the band furthest over its share
+  loses its newest arrival. Up to 80 at the cap stay on top: the endgame gets people for the first time. A new realm
+  starts lived-in: today's spread plus 75 veterans, their start dates set back by level.
+- **Retention target: 40% of the established people (above level 20 at the start) after 60 days**, not 40% of everyone.
+  The levelling zones churn as they do today (mostly new arrivals), which caps long-term residents near 35% of the
+  realm; the people you get to know are the established ones. Measured: 42% (seeds 0 and 1).
+- Friends (any character's, by name) take a break instead of quitting, at most once a month, say so, and come back;
+  a guildmate who quits says goodbye in guild chat. Who quits is drawn with no dice (a hash), so no fight moves.
+
 ## What's broken, in numbers
 
 - **No one reaches the endgame.** At 420 bots the roster deletes the *oldest* first: in a 60-day run, **0 bots ever

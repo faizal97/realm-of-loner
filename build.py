@@ -15,7 +15,7 @@ SKIP = set(next((a[7:] for a in sys.argv[1:] if a.startswith('--skip=')), '').sp
 # whose changes since touch only notes/ and app/pubspec.yaml (the version commit), and no code changed here since.
 # Otherwise the build stops. --local-gates runs every gate on this machine instead (GitHub down, or a run you doubt).
 SIM_GATES = {'cloudsync', 'friends', 'legends', 'upgrades', 'wardrobe', 'sellspeed', 'news', 'trials', 'reactions', 'hard',
-             'worldboss', 'streams', 'distance', 'brawl', 'prof', 'social', 'auction', 'effects', 'rares', 'consumables', 'music'}
+             'worldboss', 'streams', 'population', 'distance', 'brawl', 'prof', 'social', 'auction', 'effects', 'rares', 'consumables', 'music'}
 NO_CODE = lambda p: p.startswith('notes/') or p == 'app/pubspec.yaml'
 def ci_passed():
     git = lambda *a: subprocess.run(['git', '-C', R, *a], capture_output=True, text=True).stdout
@@ -85,6 +85,8 @@ if 'worldboss' not in SKIP and subprocess.run(['node', os.path.join(R, 'sim', 'w
     sys.exit('build stopped: a world boss rule is broken (node sim/worldboss.js lists which)')
 if 'streams' not in SKIP and quiet(['node', os.path.join(R, 'sim', 'streams.js')]).returncode != 0:
     sys.exit('build stopped: chat moved an outcome; chat must draw from the cosmetic stream (node sim/streams.js shows where, #74)')
+if 'population' not in SKIP and quiet(['node', os.path.join(R, 'sim', 'population.js')]).returncode != 0:
+    sys.exit('build stopped: the realm\'s population misses a target (node sim/population.js lists which, #71)')
 if 'distance' not in SKIP and subprocess.run(['node', os.path.join(R, 'sim', 'distance.js')]).returncode != 0:
     sys.exit('build stopped: a distance rule is broken (node sim/distance.js lists which)')
 if 'brawl' not in SKIP and subprocess.run(['node', os.path.join(R, 'sim', 'brawl.js'), '48']).returncode != 0:
