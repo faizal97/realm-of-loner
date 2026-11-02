@@ -492,7 +492,7 @@
     const help = () => { weekProgress('help', 1); };
     if (a.kind === 'ln_stew') return [{ label: 'Give a bowl', primary: true, fn: () => G.lnGiveStew(m) }, decline]; // Longnight Stew
     if (a.kind === 'lfg') {
-      return [{ label: `Join as ${roleName(a.role)}`, primary: true, fn: () => { if (G.joinChatGroup(a.act, a.role, { leader: a.leader, guild: a.guild ? P.guild : null, soc: a.guild ? { kind: 'g_run' } : null })) { close(); help(); } } }, decline];
+      return [{ label: `Join as ${roleName(a.role)}`, primary: true, fn: () => { if (G.joinChatGroup(a.act, a.role, { leader: a.leader, guild: a.guild ? P.guild : null, soc: { kind: a.guild ? 'g_run' : 'lfg', leader: a.leader } })) { close(); help(); } } }, decline]; // the leader remembers you once it's done (#338)
     }
     if (a.kind === 'trial_lfg') {
       return [{ label: `Join Trial ${a.lvl} as ${roleName(a.role)}`, primary: true, fn: () => { if (G.joinChatTrial(a.act, a.lvl, a.role, { leader: a.leader })) { close(); help(); } } }, decline];
@@ -536,7 +536,7 @@
         if (G.bagsFull()) return 'Your bags are full.';
         P.money -= a.price; G.addItem(JSON.parse(JSON.stringify(a.itemData)), 1);
         G.sys(`You bought ${a.itemData.name} from ${b ? b.name : 'them'} for ${coin(a.price)}.`);
-        reply(pick(['ty!', 'enjoy', 'gl with it', 'nice doing business'])); close();
+        reply(pick(['ty!', 'enjoy', 'gl with it', 'nice doing business'])); befriend(b, P.place); close(); // a trade both ways makes a friend (#338)
       } }, { label: 'Haggle', fn: () => {
         const ok = chance(tone(b) === 'nice' ? 0.7 : tone(b) === 'rude' ? 0.2 : 0.45);
         if (ok) { a.price = Math.round(a.price * 0.8); reply(pick([`ok ${coin(a.price)} then`, `fine, ${coin(a.price)}`, `deal at ${coin(a.price)}`])); return `They drop it to ${coin(a.price)}.`; }
@@ -683,6 +683,7 @@
   SOC.onRunComplete = function (d) {
     const S = G.S;
     if (d && d.soc && d.soc.kind === 'carry') { S.player.money += d.soc.tip; G.sys(`Your carry is done: +${coin(d.soc.tip)} tip.`); const b = botById(d.soc.bot); if (b) { S.pending.push({ at: now() + 2500, bot: b.id, ch: 'whisper', text: voice(b, pick(['ty so much, tip sent!', 'that was amazing, thx', 'u carried hard, ty'])) }); befriend(b); } }
+    if (d && d.soc && d.soc.leader != null) { const b = botById(d.soc.leader); if (b) befriend(b); } // you joined their group and finished it (#338)
     if (d && d.soc && (d.soc.kind === 'g_run' || d.soc.kind === 'g_event')) { addStanding(d.soc.kind === 'g_event' ? 60 : 40, d.soc.kind === 'g_event' ? 'guild night' : 'a guild run'); const bonus = SOC.perk('marks'); if (bonus && G.addMarks) G.addMarks(bonus, 'guild run'); }
     const A = d && D.ACTIVITIES[d.act];
     if (A && A.dungeon && S.player.guild >= 0) {
