@@ -423,7 +423,7 @@
 
   // ============================================================ items
   G.copyItem = (id) => JSON.parse(JSON.stringify(D.ITEMS[id]));
-  G.stackable = (it) => ['junk', 'quest', 'food', 'drink', 'mat', 'potion', 'elixir', 'stone', 'kit'].includes(it.slot);
+  G.stackable = (it) => ['junk', 'quest', 'food', 'drink', 'mat', 'potion', 'elixir', 'stone', 'kit', 'event'].includes(it.slot); // festival toys stack too (#405)
   G.canUseItem = function (it, cls) {
     cls = cls || G.S.player.cls;
     const C = D.CLASSES[cls];

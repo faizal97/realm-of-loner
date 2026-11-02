@@ -38,3 +38,9 @@ test('festival dailies never reset when the clock moves to another day and back 
   W.setNow(t1 - 86400000); G.ln(); W.setNow(t1);
   assert.ok(G.ln().done, 'the Longnight daily stays done');
 });
+
+test('festival items stack in one bag slot (#405)', () => {
+  W.setNow(new Date(2026, 11, 20, 19).getTime()); W.character(30);
+  for (let i = 0; i < 5; i++) G.addItem(G.copyItem('ln_snowball'), 1);
+  assert.deepStrictEqual(G.S.player.bags.filter((b) => b.item.id === 'ln_snowball').map((b) => b.n), [5]);
+});
