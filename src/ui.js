@@ -4366,13 +4366,13 @@
         h('button', { class: 'btn alt', onclick: () => copyText(`Add me in Realm of Loner: ${FRIENDS.link(st.code)}`, 'Link copied. Paste it to your friend.') }, 'Copy link')));
     if (!v) { b.append(friendNote(FRIENDS.signedIn() ? 'Loading your friends…' : 'Connecting…'), h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', onclick: friendsSignIn }, 'Reconnect'))); friendsFooter(b); return; }
     if (v.requests.length) {
-      b.append(h('div', { class: 'sec-h' }, 'Requests', h('small', null, `${v.requests.length} waiting`)));
+      b.append(h('div', { class: 'sec-h' }, 'Friend requests', h('small', null, `${v.requests.length} waiting`))); // not Chat's Requests (#398)
       const list = h('div', { class: 'list' });
       for (const r of v.requests) {
         const busy = (btn, p) => { btn.disabled = true; p.catch(friendErr); };
         const yes = h('button', { class: 'btn', onclick: () => busy(yes, FRIENDS.accept(r.from).then(() => toast(`You and ${r.name} are friends now.`, true))) }, 'Accept');
         const no = h('button', { class: 'btn alt', onclick: () => busy(no, FRIENDS.decline(r.from)) }, 'Decline');
-        list.append(h('div', { class: 'row' }, h('div', { class: 'ic' }, (r.name || '?')[0]), h('div', { class: 't' }, h('b', { class: 'cls-' + r.cls }, r.name), h('small', null, `Level ${r.level} ${(D.CLASSES[r.cls] || { name: '' }).name}`)), h('div', { class: 'r' }, yes, ' ', no)));
+        list.append(h('div', { class: 'row' }, h('div', { class: 'ic' }, (r.name || '?')[0]), h('div', { class: 't' }, h('b', { class: 'cls-' + r.cls }, r.name), h('small', null, `Level ${r.level} ${(D.CLASSES[r.cls] || { name: '' }).name}`), h('div', { class: 'btn-row', style: { marginTop: '6px' } }, yes, no)))); // buttons under the name, so it isn't cut at 375 px (#401)
       }
       b.append(list);
     }
