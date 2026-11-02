@@ -140,3 +140,14 @@ test('someone quitting elsewhere leaves this character\'s open requests open; ru
   assert.strictEqual(G.S.chat.find((m) => m.id === 99).act.state, 'open', 'the asker is still here: the request stays open');
   assert.deepStrictEqual(Object.keys(G.S.player.met), ['9999'], 'the runs follow the person to their id here; someone not on this realm drops out');
 });
+
+test('a character save leaves out the realm\'s quit list; a refused write is said (#311)', () => {
+  fresh();
+  const a = make('Ana'); G.S.server.gone = ['Somebody', 'Someone']; G.save();
+  assert.ok(!('gone' in G.readSave(a).server), 'not in the character save');
+  assert.deepStrictEqual(JSON.parse(store.getItem('azsolo.roster')).server.gone, ['Somebody', 'Someone'], 'kept on the realm');
+  const said = []; G.on('toast', (t) => said.push(t));
+  const set = localStorage.setItem; localStorage.setItem = () => { throw new Error('QuotaExceededError'); };
+  try { G.save(); } finally { localStorage.setItem = set; }
+  assert.ok(said.some((t) => /storage is full/.test(t)), said.join(' | '));
+});

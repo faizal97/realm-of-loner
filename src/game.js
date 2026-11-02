@@ -160,18 +160,23 @@
   };
   // a person's own story (#72) lives in the account's roster only: each character's copy of the bots (for older builds
   // and save codes) leaves it out, so ten characters don't carry ten copies of it
-  const ROSTER_ONLY = (k, v) => (k === 'hist' || k === 'pals' || k === 'rival' ? undefined : v);
+  // the realm's records of who quit and their waiting goodbyes (S.server.gone, .byes) live there too: up to 5000 names,
+  // ~50k a copy (#311); an older build reads a save without them as a realm nobody has left yet
+  const ROSTER_ONLY = function (k, v) { return k === 'hist' || k === 'pals' || k === 'rival' || ((k === 'gone' || k === 'byes') && Array.isArray(v) && this === (G.S && G.S.server)) ? undefined : v; };
   function saveRoster(S) {
     const R = G.R; if (!R || R.bots !== S.bots) return;
     keepFriends(S); R.lastSim = S.lastSim; R.nextBotId = S.nextBotId; R.server = S.server;
-    ls.set(ROSTER_KEY, JSON.stringify(R));
+    if (!ls.set(ROSTER_KEY, JSON.stringify(R))) cantSave();
   }
+  // a write the browser refused (its storage is full): said, not swallowed, at most every 10 minutes (#311)
+  let cantSaidAt = 0;
+  function cantSave() { if (now() - cantSaidAt < 600000) return; cantSaidAt = now(); toast("Couldn't save: this browser's storage is full."); }
   G.characters = function () { migrate(); return readIndex().sort((a, b) => b.lastSeen - a.lastSeen); };
   G.save = function () {
     if (!G.S) return;
     G.S.lastSeen = now();
     if (G.fight && G.pUnit) E.writeBack(G.fight, G.pUnit, now(), true); // the fight goes on: don't shift it out (#217)
-    ls.set(CHAR_KEY(G.S.id), JSON.stringify(G.S, ROSTER_ONLY));
+    if (!ls.set(CHAR_KEY(G.S.id), JSON.stringify(G.S, ROSTER_ONLY))) cantSave();
     saveRoster(G.S);
     const idx = readIndex().filter((c) => c.id !== G.S.id); idx.push(summary(G.S)); writeIndex(idx);
   };
