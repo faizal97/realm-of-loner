@@ -124,3 +124,19 @@ test('migration: a friend missing from a younger save never becomes a stranger w
   G.load(b);
   assert.deepStrictEqual(Object.keys(G.S.soc.friends), [], `Ana's id 7 is someone else, not Bel's lost friend (${B7 && B7.name})`);
 });
+
+test('someone quitting elsewhere leaves this character\'s open requests open; runs together follow the person (#307, #308)', () => {
+  fresh();
+  const a = make('Ana'), S = G.S, asker = S.bots[3], mate = S.bots[4], quitter = S.bots[5], lost = S.bots[6];
+  S.chat.push({ id: 99, t: now(), ch: 'whisper', from: asker.name, fromId: asker.id, text: 'help?', act: { kind: 'help', state: 'open', bot: asker.id } });
+  S.player.met = { [mate.id]: { n: 2, last: now(), where: null }, [lost.id]: { n: 1, last: now() } };
+  G.logout();
+  // meanwhile on the realm: one person quit, one is gone from this realm, and the same person now has another id (a save
+  // brought from another device)
+  const R = JSON.parse(store.getItem('azsolo.roster'));
+  R.bots = R.bots.filter((b) => b.id !== quitter.id && b.id !== lost.id); R.bots.find((b) => b.id === mate.id).id = 9999;
+  store.setItem('azsolo.roster', JSON.stringify(R)); G.R = null;
+  G.load(a);
+  assert.strictEqual(G.S.chat.find((m) => m.id === 99).act.state, 'open', 'the asker is still here: the request stays open');
+  assert.deepStrictEqual(Object.keys(G.S.player.met), ['9999'], 'the runs follow the person to their id here; someone not on this realm drops out');
+});

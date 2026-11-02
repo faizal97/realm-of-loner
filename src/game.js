@@ -99,9 +99,23 @@
       soc.friends = nf;
     }
     // anything this save remembers by a bot's id now names the roster's person of that name (or no one)
+    // a request stays open while its sender is still the same person here (#307: one quit anywhere expired them all)
     if (own.some((o) => { const b = byName.get(o.name); return !b || b.id !== o.id; })) {
-      delete S.botSaid; delete S.lfAt;
-      for (const m of S.chat || []) { if (m.fromId != null) { const b = byName.get(m.from); m.fromId = b ? b.id : null; } if (m.act && m.act.state === 'open') m.act.state = 'expired'; }
+      const same = new Set(own.filter((o) => { const b = byName.get(o.name); return b && b.id === o.id; }).map((o) => String(o.id)));
+      for (const k of ['botSaid', 'lfAt']) if (S[k]) for (const id of Object.keys(S[k])) if (!same.has(id)) delete S[k][id];
+      for (const m of S.chat || []) {
+        if (m.fromId == null) continue;
+        const b = byName.get(m.from), kept = b && b.id === m.fromId;
+        m.fromId = b ? b.id : null;
+        if (!kept && m.act && m.act.state === 'open') m.act.state = 'expired';
+      }
+      // runs together (#72) are by id too: they follow the person, by name (#308)
+      const met = S.player && S.player.met;
+      if (met) {
+        const nm = {};
+        for (const id of Object.keys(met)) { const o = byId.get(id), b = o ? byName.get(o.name) : null; if (b) nm[b.id] = met[id]; }
+        S.player.met = nm;
+      }
     }
     S.bots = R.bots; S.server = R.server || (R.server = {}); S.lastSim = R.lastSim; S.nextBotId = Math.max(R.nextBotId, 1000);
     S.flags = S.flags || {}; S.flags.roster = true;
