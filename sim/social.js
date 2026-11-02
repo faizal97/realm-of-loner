@@ -17,7 +17,11 @@ G.addItem(G.copyItem('linen_cloth'), 30); G.addItem(G.copyItem('light_leather'),
 const kinds = {};
 for (let i = 0; i < 3 * 3600; i++) { t += 1000; G.update(1); for (const m of S.chat) if (m.act && !m.counted) { m.counted = 1; kinds[m.act.kind] = (kinds[m.act.kind] || 0) + 1; } }
 console.log('requests in 3 h (not in a guild):', JSON.stringify(kinds));
-for (const k of ['lfg', 'wtb', 'wts', 'guild_apply']) if (!kinds[k]) fail('no ' + k + ' requests'); // where/guild_invite are rare by design
+// a whisper request comes ~6 times an hour across a dozen kinds, so one kind can miss 3 hours by luck (any change to the
+// dice moves it): up to 3 more hours for a kind still missing; never seen in 6 hours is a real failure
+const need = ['lfg', 'wtb', 'wts', 'guild_apply'];
+for (let i = 0; i < 3 * 3600 && need.some((k) => !kinds[k]); i++) { t += 1000; G.update(1); for (const m of S.chat) if (m.act && !m.counted) { m.counted = 1; kinds[m.act.kind] = (kinds[m.act.kind] || 0) + 1; } }
+for (const k of need) if (!kinds[k]) fail('no ' + k + ' requests in 6 h'); // where/guild_invite are rare by design
 const run = (kind, pick) => { const m = S.chat.slice().reverse().find((x) => x.act && x.act.kind === kind && x.act.state === 'open'); if (!m) { fail('no open ' + kind); return null; } const acts = SOC.actions(m); const a = pick ? pick(acts, m) : acts[0]; const r = a.fn(); return { m, r, a }; };
 // fresh ones of each kind, then act on them
 const force = (kind) => { for (let i = 0; i < 4000; i++) { t += 1000; G.update(1); if (S.chat.some((x) => x.act && x.act.kind === kind && x.act.state === 'open')) return true; if (S.run) { while (S.run && S.run.phase !== 'done') { G.update(0.1); t += 100; } G.leaveRun && G.leaveRun(); S.run = null; S.group = null; } } return false; };

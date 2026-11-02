@@ -229,9 +229,10 @@
       // (not all at its end, #302) and the fraction carried over, so a minute of live play adds its share too
       const owed = (SV.newAcc || 0) + (stepMs / 3600000) * B.NEW_PER_HOUR, n = Math.floor(owed);
       SV.newAcc = owed - n;
-      // a newcomer joins a guild only once they have stayed a week (#328): most who quit do so in their first days, and
+      // a newcomer joins a guild only once they have stayed a week (#328; the guild draw still happens, so the random
+      // stream every sim measures stays as it was): most who quit do so in their first days, and
       // a guild of yours filled with people who said goodbye before you ever met them
-      for (let i = 0; i < n; i++) { const nb = B.makeBot(S.nextBotId++, used, { level: 1 }); nb.born = when.getTime() - stepMs * (i / n); nb.gj = 1; S.bots.push(nb); }
+      for (let i = 0; i < n; i++) { const nb = B.assignGuild(B.makeBot(S.nextBotId++, used, { level: 1 })); nb.guild = -1; nb.born = when.getTime() - stepMs * (i / n); nb.gj = 1; S.bots.push(nb); }
       // they fill the guilds people left (the smallest of their side first) while fewer than the realm's share are in one
       for (const b of S.bots) if (b.gj && when.getTime() - b.born >= 7 * 86400000) {
         delete b.gj;
