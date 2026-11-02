@@ -476,7 +476,7 @@
       const gold = Math.round(P.level * rnd(20, 50));
       post('whisper', b, gift ? pickT('s443', [`hey, found this and thought of u: ${link(gift)}`, `thanks again for the help, have this ${link(gift)}`, `ty for last time, this is for u: ${link(gift)}`]) : pick([`thanks again for earlier! sent u ${coin(gold)}`, `still grateful for the help, here's ${coin(gold)}`, `sent u ${coin(gold)}, for the help that day`]), { kind: 'gift', whisper: true, bot: b.id, itemData: gift, gold: gift ? 0 : gold, until: now() + 10 * 60000 });
     }
-    f.last = now();
+    const e = (state().friends || {})[b.id]; if (e) e.last = now(); // the saved entry: SOC.friends() hands out copies (#389)
   }
   function offerItem() {
     const P = G.S.player;

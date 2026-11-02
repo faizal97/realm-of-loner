@@ -18,3 +18,20 @@ test('"joined your party" only for someone who joined (#386)', () => {
   const joined = toasts.filter((t) => /joined your party/.test(t)).length;
   assert.strictEqual(joined, S.wparty.members.length, JSON.stringify(toasts));
 });
+
+test('a friend visits at most once in 20 minutes (#389)', () => {
+  const { S } = character(30); const SOC = globalThis.SOC;
+  const b = S.bots.find((x) => B.factionOf(x) === G.myFaction());
+  S.soc = S.soc || { next: {}, recent: [] }; S.soc.friends = { [b.id]: { n: 1, where: null, last: 0 } };
+  const io = B.isOnline; B.isOnline = (bb, d) => (bb.id === b.id ? true : io(bb, d));
+  let visits = 0;
+  try {
+    for (let i = 0; i < 6; i++) {
+      S.soc.next.friend = 1; for (const m of S.chat) if (m.act && m.act.whisper) m.act.state = 'done';
+      const n0 = S.chat.length; SOC.tick(); if (S.chat.slice(n0).some((m) => m.act && m.act.bot === b.id)) visits++;
+      W.setNow(W.now() + 60000);
+    }
+  } finally { B.isOnline = io; }
+  assert.strictEqual(visits, 1);
+  assert.ok(S.soc.friends[b.id].last > 0);
+});
