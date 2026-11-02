@@ -419,7 +419,7 @@
       // regen fully
       P.hp = null; P.res = null; P.auras = (P.auras || []).filter((a) => a.until > t);
       S.world = {};
-      if (S.queue) { S.queue = null; }
+      if (S.queue) { S.queue = null; sys('Your queue ended while you were away.'); } // said, not silent (#412)
       if (S.run && away > 600000) {
         settleRolls();
         P.place = S.run.returnTo || 'goldshire'; S.run = null; S.group = null; delete P.syncLevel;
@@ -3965,6 +3965,7 @@
     const guest = grp.members.find((m) => m.cameo); if (guest) emit('legendJoin', { key: guest.legend });
     emit('change');
   };
+  G.POP_WAIT = 90000; // how long a group pop waits for Enter (#412)
   G.declinePop = function () { G.S.queue = null; sys('You declined the group.'); emit('change'); };
 
   // ============================================================ runs (dungeon / hogger)
@@ -4594,6 +4595,9 @@
         const A = D.ACTIVITIES[S.queue.act]; S.queue.popped = true;
         if (!A.bg) S.queue.group = pickGroup(S.queue.act, S.queue.trial ? { trial: S.queue.trial } : S.queue.hard ? { hard: true } : undefined); // who you'll play with (#189)
         emit('pop', S.queue);
+      } else if (S.queue && S.queue.popped && now() >= S.queue.popAt + G.POP_WAIT) {
+        // a pop nobody answers times out, as in an MMO (#412): the group goes on, and nobody is held
+        S.queue = null; sys("You didn't answer in time: the group went on without you."); emit('popExpired'); emit('change');
       }
       // bots keep levelling while you play
       if (now() - S.lastSim > 60000) { const news = B.advance(S, now() - S.lastSim); for (const n of news) if (n.big) sys(n.text); }

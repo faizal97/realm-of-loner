@@ -5242,6 +5242,7 @@
       : h('div', { class: 'pop-group' }, h('p', { class: 'pop-count' }, [[n('tank'), 'tank'], [n('healer'), 'healer'], [n('dps'), 'damage']].filter((x) => x[0]).map(([k, w]) => `${k} ${w}${k > 1 && w !== 'damage' ? 's' : ''}`).join(' · ')), ...knownOnly.map(popMember));
     showDialog([h('h3', null, 'Your group is ready'), h('p', null, A.name), h('p', { style: { color: 'var(--muted)' } }, `Role: ${G.role() === 'tank' ? 'Tank' : G.role() === 'healer' ? 'Healer' : 'Damage'}${who ? ' · tap someone for their card' : ''}`), who,
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { if (G.fight) return G.acceptPop(); closeDialog(); closeSheet(); G.acceptPop(); renderAll(); } }, 'Enter'), h('button', { class: 'btn alt', onclick: () => { closeDialog(); G.declinePop(); renderAll(); } }, 'Decline'))]);
+    ui.dialog.classList.add('pop-dialog'); // closed if the pop times out (#412)
   }
   function showInvite(d) {
     showDialog([h('h3', null, 'Guild invitation'), h('p', null, `${d.from} invites you to join <${d.guildName}>.`), d.line ? h('p', { class: 'ai-note' }, `"${d.line}"`) : null,
@@ -5960,6 +5961,7 @@
     G.on('infoToast', (t) => toast(t, true)); // yellow: a note, not an error (#193)
     G.on('error', (t) => toast(t));
     G.on('pop', (q) => { renderNavDots(); showPop(q); });
+    G.on('popExpired', () => { if (ui.dialog && ui.dialog.classList.contains('pop-dialog')) closeDialog(); renderAll(); });
     G.on('invite', (d) => whenCalm(() => showInvite(d))); // the guild invitation (issues #12, #24)
     G.on('helpWanted', (r) => toast(`Help Wanted: a group in ${D.ACTIVITIES[r.act].name} needs a ${r.role === 'dps' ? 'damage dealer' : r.role}. See Social → Groups.`, true));
     // wait for a calm moment: no fight, no run, no other dialog, no cutscene

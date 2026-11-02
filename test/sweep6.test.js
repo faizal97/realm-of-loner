@@ -68,8 +68,8 @@ test('a battleground fight left by closing the app is a lost round, and the batt
   let done = false;
   for (let tries = 0; tries < 20 && !done; tries++) {
     W.character(20); const id = G.S.id;
-    G.queueFor('bg_highmoor'); W.advance(90); G.acceptPop();
-    const bg = G.S.bg, bn = D.BG[bg.key].banners.map((b) => b[0]);
+    G.queueFor('bg_highmoor'); for (let i = 0; i < 600 && !G.S.queue.popped; i++) W.advance(1); G.acceptPop();
+    const bg = G.S.bg; if (!bg) continue; const bn = D.BG[bg.key].banners.map((b) => b[0]);
     const target = bn.slice().sort((a, b) => (bg.plan[b] || 0) - (bg.plan[a] || 0))[0];
     G.bgGo(target, bn.find((x) => x !== target));
     if (!(G.fight && G.fight.kind === 'bg')) continue;
@@ -116,4 +116,12 @@ test('the level-5 guild invitation the app closed on is asked again (#411)', () 
   G.save(); G.S = null; G.fight = null; G.pUnit = null; W.setNow(W.now() + 30000); G.load(id);
   W.advance(600); assert.strictEqual(invites, 2, 'asked again');
   if (typeof off === 'function') off();
+});
+
+test('a group pop left unanswered times out and says so (#412)', () => {
+  W.character(20); const S = G.S; S.player.place = D.ACTIVITIES.deadmines.where;
+  G.queueFor('deadmines'); S.queue.popAt = W.now() - 1; W.advance(1); assert.ok(S.queue.popped);
+  W.advance(G.POP_WAIT / 1000 + 2);
+  assert.ok(!G.S.queue, 'the pop is gone');
+  assert.ok(G.S.chat.some((m) => /didn't answer in time/.test(m.text || '')));
 });
