@@ -78,7 +78,60 @@
     return bots;
   };
 
+  // #71: the realm keeps today's people under the level cap (B.ROSTER_CAP, in today's level spread: B.BANDS, measured on
+  // the old roster), so the zones you level in and every rate that scales with bots online there are unchanged; on top,
+  // up to B.VETERANS at the cap, who stay. Over a band's share, people quit as in real games: the newest first (a first
+  // day, then a first week), so those who stay level up and the top fills over time. Nobody someone knows vanishes
+  // silently: a friend of any character on the account (S.server.keep, by name) takes a break instead (at most once a
+  // month), says so, and comes back after a few days; a guildmate of yours who quits says goodbye in guild chat first.
+  B.ROSTER_CAP = 420; B.VETERANS = 80;
+  B.BANDS = [{ max: 20, n: 325 }, { max: 59, n: 95 }]; // levels 1-20 and 21-59: today's roster from day 15 on (sim/population.js TODAY)
+  B.quitWeight = (b, t) => { const days = (t - (b.born || 0)) / 86400000; return days < 2 ? 1 : days < 7 ? 0.2 : 0.02; };
+  B.BREAK_DAYS = [3, 14]; B.BREAK_EVERY = 30;
+  B.trimRoster = function (S, t) {
+    const SV = S.server || (S.server = {}), keep = SV.keep || {}, mine = S.player ? S.player.guild : -1;
+    // a weighted draw with no dice (the outcome stream stays as it was): each person's key is hash^(1/weight), highest go
+    const hr = Math.floor(t / 3600000), key = (b) => Math.pow(hash(b.id, hr) || 1e-9, 1 / B.quitWeight(b, t));
+    const queue = (f) => S.bots.filter((b) => f(b) && !(keep[b.name] && b.away > t)).sort((x, y) => key(y) - key(x));
+    const vets = queue((b) => b.level >= D.LEVEL_CAP), bands = B.BANDS.map((B1, i) => ({ n: B1.n, q: queue((b) => b.level <= B1.max && (i === 0 || b.level > B.BANDS[i - 1].max)) }));
+    const gone = new Set();
+    // one leaves (or, someone you know, takes a break): true if they left
+    const leave = (b) => {
+      if (keep[b.name]) {
+        if (b.broke > t - B.BREAK_EVERY * 86400000) return false; // back from one not long ago: they stay
+        b.broke = t; b.away = t + (B.BREAK_DAYS[0] + crand() * (B.BREAK_DAYS[1] - B.BREAK_DAYS[0])) * 86400000;
+        if (S.player) B.post(S, 'whisper', b, cpick(['hey, taking a break for a few days. see you when i am back', 'gonna be away a bit, talk soon', 'short break for me, back in a few days']));
+        return false;
+      }
+      if (S.player && mine >= 0 && b.guild === mine) B.post(S, 'guild', b, cpick(['ok i am done with this game for now. gl everyone o/', 'quitting for a while, thanks for the runs all', 'logging off for good i think. was fun, cya']));
+      gone.add(b); return true;
+    };
+    // under the cap: while over B.ROSTER_CAP, the band furthest over its share loses its newest
+    let under = bands.reduce((a, x) => a + x.q.length, 0);
+    while (under > B.ROSTER_CAP) {
+      const x = bands.filter((y) => y.q.length).sort((y, z) => (z.q.length - z.n) - (y.q.length - y.n))[0]; if (!x) break;
+      const b = x.q.shift(); if (leave(b)) under--; else x.n--; // someone who stays still counts, so the band shares its room
+    }
+    for (let over = vets.length - B.VETERANS; over > 0 && vets.length;) if (leave(vets.shift())) over--;
+    if (!gone.size) return;
+    for (let i = S.bots.length - 1; i >= 0; i--) if (gone.has(S.bots[i])) S.bots.splice(i, 1);
+    SV.gone = (SV.gone || []).concat([...gone].map((b) => b.name)).slice(-5000);
+  };
+
+  // #71: a new realm starts as a lived-in one: today's spread under the cap (B.BANDS) and B.START_VETERANS at it, each
+  // with a start date as far back as their level (so the newest arrivals, not they, are the ones who quit first)
+  B.START_VETERANS = 75;
+  B.makeRealm = function () {
+    const used = new Set(), bots = [], t = Date.now(), lo = B.BANDS[0], mid = B.BANDS[1];
+    const add = (level) => { const b = B.assignGuild(B.makeBot(bots.length + 1, used, { level })); b.born = t - (2 + level * 0.6 + Math.random() * 4) * 86400000; bots.push(b); };
+    for (let i = 0; i < lo.n; i++) add(1 + Math.floor(Math.random() * Math.random() * lo.max));
+    for (let i = 0; i < mid.n; i++) add(lo.max + 1 + Math.floor(Math.random() * (mid.max - lo.max)));
+    for (let i = 0; i < B.START_VETERANS; i++) add(D.LEVEL_CAP);
+    return bots;
+  };
+
   B.isOnline = function (bot, date) {
+    if (bot.away && date.getTime() < bot.away) return false; // #71: on a break
     const h = date.getHours();
     const d = Math.floor(date.getTime() / 3600000);
     let dist = Math.abs(h - ((bot.peak + 24) % 24));
@@ -181,14 +234,13 @@
     if (beyond) news.push({ t: S.lastSim + ms, text: `Veteran groups cleared ${beyond} more ${beyond === 1 ? 'place' : 'places'} beyond your level.` });
     // new players keep rolling alts, so the starting zone never empties
     const newbies = Math.floor((ms / 3600000) * 3);
-    const used = new Set(S.bots.map((b) => b.name));
+    const used = new Set(S.bots.map((b) => b.name).concat((S.server && S.server.gone) || [])); // #71: a name that quit is never someone else's
     for (let i = 0; i < Math.min(newbies, 40); i++) {
       const nb = B.assignGuild(B.makeBot(S.nextBotId++, used, { level: 1 }));
       S.bots.push(nb);
     }
     if (newbies > 0) news.push({ t: S.lastSim + ms, text: `${Math.min(newbies, 40)} new adventurer${Math.min(newbies, 40) === 1 ? '' : 's'} started out across Caldreth.` }); // every start, not only the Human one (issue #18)
-    // keep the population bounded
-    if (S.bots.length > 420) S.bots.splice(0, S.bots.length - 420);
+    B.trimRoster(S, S.lastSim + ms); // #71: people quit, the realm stays at its size
     S.lastSim += ms;
     const G1 = root.G; // and nothing the reader's level may not read (#69, the #54 rule)
     return G1 && G1.nameable && S.player ? news.filter((n) => G1.nameable(n.text, S.player.level)) : news;
