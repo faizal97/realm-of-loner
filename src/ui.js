@@ -1425,7 +1425,8 @@
     const role = who.role || b.role, C = D.CLASSES[b.cls];
     const parts = [h('h3', null, rankBadge(b), h('span', { class: 'cls-' + b.cls }, b.name)),
       h('p', null, `Level ${(who.level || b.level)} ${raceClass(b)}${role ? ' · ' + (role === 'tank' ? 'Tank' : role === 'healer' ? 'Healer' : 'Damage') : ''}`)];
-    const on = B.isOnline(live, new Date()), pl = on ? D.PLACES[B.placeFor(live, new Date())] : null;
+    const withMe = who.equip || (S.wparty && S.wparty.members.some((m) => m.bot.id === b.id)); // in your party or group: where you are
+    const on = withMe || B.isOnline(live, new Date()), pl = on ? D.PLACES[withMe ? P.place : B.placeFor(live, new Date())] : null;
     parts.push(h('div', { class: 'ai-box' },
       row('Guild', live.guild >= 0 ? `<${B.GUILDS[live.guild]}>` : 'None'),
       row('Where', !on ? 'Offline' : pl && ok(pl.name) ? pl.name : 'Far away')));
