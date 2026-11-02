@@ -930,7 +930,7 @@
     return (ui.chatPrefs = p);
   }
   function saveChatPrefs() { try { localStorage.setItem(CHAT_KEY, JSON.stringify(ui.chatPrefs)); } catch (e) { } }
-  const isOpenReq = (m) => m.act && m.act.state === 'open';
+  const isOpenReq = (m) => SOC.isOpenRequest(m);
   function chatFilter(active) {
     if (active === 'requests') return isOpenReq;
     const tab = chatPrefs().tabs[active]; if (!tab) return () => true;
@@ -969,7 +969,7 @@
     if (!els.chat) return;
     const lines = G.S.chat.filter(chatFilter(chatPrefs().active)).slice(-5);
     els.chatLines.innerHTML = lines.map(chatLineHtml).join('');
-    const nReq = G.S.chat.filter((m) => m.act && m.act.state === 'open').length;
+    const nReq = G.S.chat.filter(isOpenReq).length;
     els.chatOpen.innerHTML = `<span>Chat</span><small>${esc(chatTabName(chatPrefs().active))}</small>${nReq ? `<b class="tnum">${nReq}</b>` : ''}`;
     if (ui.sheet === 'social' && ui.socialTab === 'chat') refreshChatLog();
   }
@@ -1075,7 +1075,7 @@
       p.append(h('div', { class: 'row', style: { gridTemplateColumns: '34px 1fr auto' } },
         h('div', { class: 'ic' }, img(art('icon', 'hearthstone'))),
         h('div', { class: 't' }, h('b', null, 'Queued: ' + D.ACTIVITIES[S.queue.act].name), h('small', { id: 'q-time' }, 'Waiting...')),
-        h('button', { class: 'chip', onclick: () => G.leaveQueue() }, 'Leave')));
+        S.queue.popped ? h('button', { class: 'chip gold', onclick: () => showPop(S.queue) }, 'Group ready') : h('button', { class: 'chip', onclick: () => G.leaveQueue() }, 'Leave'))); // a closed pop comes back here (#325)
     }
     const place = D.PLACES[P.place];
     const mobs = G.placeMobs();
@@ -1114,7 +1114,7 @@
       if (a.kind === 'help_kill') { title = `Helping ${who}`; what = `Kill ${D.MOBS[a.mob].name}: ${Math.min(a.got, a.n)}/${a.n}`; }
       else { const Q = D.QUESTS[a.qid]; title = `Teaming up with ${who}`; what = Q ? `"${Q.name}"` : 'your quest'; }
       const where = P.place === a.place ? 'here' : `at ${Pl.name}${Pl.zone && Pl.zone !== (D.PLACES[P.place] || {}).zone ? ', ' + Pl.zone : ''}`;
-      const mins = Math.max(1, Math.ceil((a.until - Date.now()) / 60000));
+      const mins = Math.max(1, Math.floor((a.until - Date.now()) / 60000)); // rounded as the chat line's "19m" (#341)
       p.append(h('div', { class: 'task' },
         h('button', { class: 'task-b', onclick: () => msgDialog(m) },
           h('div', { class: 'ic mob' }, img(a.mob ? mobArt(a.mob) : art('icon', 'chest_box'))),
@@ -1220,7 +1220,7 @@
     if (near.length) {
       const chips = h('div', { class: 'chips' });
       for (const x of near.slice(0, 12)) chips.append(h('button', { class: 'chip', onclick: () => playerCard(x) }, h('span', { class: 'cls-' + x.cls }, x.name), h('small', null, `${x.level} ${raceClass(x)}`)));
-      b.append(h('div', { class: 'sec-h' }, 'Players here', h('small', null, `${near.length} nearby · tap for their card`)), chips);
+      b.append(h('div', { class: 'sec-h' }, 'Players here', h('small', null, `${near.length > 12 ? `12 of ${near.length}` : near.length} · tap for their card`)), chips); // what the count counts (#339)
     }
     const foe = G.intruderHere();
     if (foe) b.append(h('div', { class: 'sec-h foe-h' }, 'Enemy player', h('small', null, 'tap to attack')),
@@ -1431,7 +1431,7 @@
     const S = G.S, P = S.player, b = (who && who.bot) || who; if (!b || b.legend || who.legend) return; // a Legend has their own story
     const live = S.bots.find((x) => x.id === b.id) || b, lv = P.level, ok = (t) => G.nameable(t, lv);
     const row = (k, v) => h('div', { class: 'ai-row' }, h('span', null, k), h('b', null, v));
-    const ago = (t) => { const m = (Date.now() - t) / 60000; return m < 2 ? 'just now' : m < 60 ? `${Math.floor(m)}m ago` : m < 48 * 60 ? `${Math.floor(m / 60)}h ago` : `${Math.floor(m / 1440)} days ago`; };
+    const ago = (t) => { const m = (Date.now() - t) / 60000; return m < 2 ? 'just now' : m < 60 ? `${Math.floor(m)}m ago` : m < 48 * 60 ? `${Math.floor(m / 60)}h ago` : `${Math.floor(m / 1440)}d ago`; }; // as "back in 3d" reads (#339)
     const role = who.role || b.role, C = D.CLASSES[b.cls];
     const parts = [h('h3', null, rankBadge(b), h('span', { class: 'cls-' + b.cls }, who.name || b.name)), // the name as the party frame shows it, realm and all (#322)
       h('p', null, `Level ${(who.level || b.level)} ${raceClass(b)}${role ? ' · ' + (role === 'tank' ? 'Tank' : role === 'healer' ? 'Healer' : 'Damage') : ''}`)];
@@ -1466,7 +1466,7 @@
     const story = (live.hist || []).slice().reverse().map((e) => ({ e, t: B.histText(e, lv) })).filter((x) => x.t && ok(x.t));
     if (story.length) parts.push(h('div', { class: 'sec-h' }, 'Lately'), h('div', { class: 'ai-box' }, ...story.map((x) => h('div', { class: 'ai-row' }, h('span', null, x.t), h('b', null, ago(x.e.t))))));
     // their friends and rival: each opens their own card
-    const circle = B.circle(S, live), nm = (x) => h('button', { class: 'chip', onclick: () => playerCard(x) }, h('span', { class: 'cls-' + x.cls }, x.name));
+    const circle = B.circle(S, live), nm = (x) => h('button', { class: 'chip', onclick: () => playerCard(x, () => playerCard(who, back)) }, h('span', { class: 'cls-' + x.cls }, x.name));
     if (circle.pals.length || circle.rival) parts.push(h('div', { class: 'sec-h' }, 'Their people'), h('div', { class: 'chips' },
       circle.pals.some(Boolean) ? h('small', { style: { alignSelf: 'center', margin: '0 4px 0 0' } }, 'Friends:') : null, ...circle.pals.filter(Boolean).map(nm), circle.rival ? h('small', { style: { alignSelf: 'center', margin: '0 4px' } }, 'Rival:') : null, circle.rival ? nm(circle.rival) : null));
     parts.push(h('p', { class: 'bio' }, B.bio(live)));
@@ -1475,15 +1475,15 @@
     const here = on && !withMe && B.placeFor(live, new Date()) === P.place; // only someone where you are (#304)
     // Invite, or why not (#322): greyed with the reason, so a missing button never reads as a bug
     if (mine && !inParty && !withMe && !who.equip) {
-      const why = !on ? (live.away > Date.now() ? 'On a break' : 'Offline') : !here ? 'Not here' : S.run || S.queue ? 'In a group' : G.partySize() >= 3 ? 'Party full' : '';
+      const why = !on ? (live.away > Date.now() ? 'On a break' : 'Offline') : !here ? 'Not here' : S.run ? 'In a group' : S.queue ? 'In queue' : G.partySize() >= 3 ? 'Party full' : '';
       btns.append(why ? h('button', { class: 'btn', disabled: true }, `Invite · ${why}`) : h('button', { class: 'btn', onclick: () => { closeDialog(); G.invite(b.id); } }, 'Invite'));
     }
     // the cost said in full (#322): only a friend no other character has can then quit the realm
-    if (friend) btns.append(h('button', { class: 'btn alt', onclick: () => showDialog([h('h3', null, `Remove ${b.name} as a friend?`), h('p', null, G.friendElsewhere(b.id) ? 'They stop counting as your friend on this character. Help them again to be friends.' : 'They stop counting as your friend, and may quit the realm. Help them again to be friends.'),
-      h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { G.unfriend(b.id); toast(`Removed ${b.name} as a friend.`); playerCard(who, back); } }, 'Remove'), h('button', { class: 'btn alt', onclick: () => playerCard(who, back) }, 'Cancel'))], true) }, 'Remove friend'));
+    if (friend) btns.append(h('button', { class: 'btn alt', onclick: () => { showDialog([h('h3', null, `Remove ${b.name} as a friend?`), h('p', null, G.friendElsewhere(b.id) ? 'They stop counting as your friend on this character. Help them again to be friends.' : 'They stop counting as your friend, and may quit the realm. Help them again to be friends.'),
+      h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { G.unfriend(b.id); toast(`Removed ${b.name} as a friend.`); playerCard(who, back); } }, 'Remove'), h('button', { class: 'btn alt', onclick: () => playerCard(who, back) }, 'Cancel'))], () => playerCard(who, back)); G.looking = true; } }, 'Remove friend')); // the run still waits (#330)
     btns.append(h('button', { class: 'btn alt', onclick: () => (back ? back() : closeDialog()) }, back ? 'Back' : 'Close'));
     parts.push(btns);
-    showDialog(parts, true);
+    showDialog(parts, back || true);
     G.looking = true; // the run waits to pull while you read (#323)
   }
   function confirmAttack(foe) {
@@ -2184,7 +2184,7 @@
     const gt = document.getElementById('ghost-t');
     if (gt && P.ghostUntil) gt.textContent = `Running back to your body... ${Math.ceil((P.ghostUntil - now()) / 1000)}s`;
     const qt = document.getElementById('q-time');
-    if (qt && S.queue) qt.textContent = `Waiting ${fmtTime(now() - S.queue.since)} · as ${G.role() === 'tank' ? 'Tank' : G.role() === 'healer' ? 'Healer' : 'Damage'}`;
+    if (qt && S.queue) qt.textContent = S.queue.popped ? 'Your group is waiting' : `Waiting ${fmtTime(now() - S.queue.since)} · as ${G.role() === 'tank' ? 'Tank' : G.role() === 'healer' ? 'Healer' : 'Damage'}`;
     const qc = document.querySelector('[data-qchip="short"]'); if (qc && S.queue && qc.textContent !== queuedShort()) qc.textContent = queuedShort(); // (#173)
     const on = document.getElementById('online');
     if (on && !on.dataset.t || on && now() - on.dataset.t > 10000) { on.dataset.t = now(); on.textContent = `${B.onlineCount(S, new Date())} online`; }
@@ -2267,9 +2267,10 @@
         more > 0 ? h('small', { class: 'recap-more' }, `+${more} more`) : null),
       h('div', { class: 'btn-row' }, fightLogButton(), h('button', { class: 'btn', onclick: closeDialog }, 'Close'))], true);
   }
+  // dismissable: true closes on a tap outside; a function runs instead (a card opened from the group pop goes back to it, #325)
   function showDialog(content, dismissable) {
     closeDialog();
-    const d = h('div', { class: 'dialog', onclick: () => { if (dismissable) closeDialog(); } }, h('div', { class: 'card', onclick: (e) => e.stopPropagation() }, content));
+    const d = h('div', { class: 'dialog', onclick: () => { if (typeof dismissable === 'function') dismissable(); else if (dismissable) closeDialog(); } }, h('div', { class: 'card', onclick: (e) => e.stopPropagation() }, content));
     app.append(d); ui.dialog = d;
   }
   function closeDialog() { G.looking = false; if (ui.dialog) ui.dialog.remove(); ui.dialog = null; if (ui.updPending) { const r = ui.updPending; setTimeout(() => { if (!ui.dialog && ui.updPending === r) offerUpdate(r); }, 600); } }
@@ -4311,15 +4312,18 @@
   // the people on the realm you helped (#320): where they are, each opening their card
   function realmFriends(b) {
     const list = window.SOC ? SOC.friends() : [], d = new Date();
-    b.append(h('div', { class: 'sec-h' }, 'Realm friends', h('small', null, list.length ? `${list.length} · tap for their card` : 'people you helped')));
+    const rank = (x) => (x.bot.away > d.getTime() ? 2 : B.isOnline(x.bot, d) ? 0 : 1), online = list.filter((x) => rank(x) === 0).length;
+    // online/all, online first; a long list shows its first 10 until asked (#339)
+    b.append(h('div', { class: 'sec-h' }, 'Realm friends', h('small', null, list.length ? `${online}/${list.length} online · tap for their card` : 'people you helped')));
     if (!list.length) { b.append(friendNote('None yet. Help someone with a request in chat and they remember you.')); return; }
-    const rank = (x) => (x.bot.away > d.getTime() ? 2 : B.isOnline(x.bot, d) ? 0 : 1);
-    const rows = h('div', { class: 'list' });
-    for (const x of list.slice().sort((p, q) => rank(p) - rank(q) || q.n - p.n)) {
+    const S = G.S, party = new Set(((S.wparty && S.wparty.members) || []).map((m) => m.bot.id));
+    const rows = h('div', { class: 'list' }), all = list.slice().sort((p, q) => rank(p) - rank(q) || q.n - p.n), shown = ui.allFriends ? all : all.slice(0, 10);
+    for (const x of shown) {
       const bot = x.bot;
-      rows.append(h('button', { class: 'row', onclick: () => playerCard(bot) }, h('div', { class: 't' }, h('b', { class: 'cls-' + bot.cls }, bot.name), h('small', null, `${bot.level} ${D.CLASSES[bot.cls].name} · ${whereText(bot)}`))));
+      rows.append(h('button', { class: 'row', onclick: () => playerCard(bot) }, h('div', { class: 't' }, h('b', { class: 'cls-' + bot.cls }, bot.name), h('small', null, `${bot.level} ${D.CLASSES[bot.cls].name} · ${party.has(bot.id) ? 'In your party' : whereText(bot)}`))));
     }
     b.append(rows);
+    if (shown.length < all.length) b.append(h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', onclick: () => { ui.allFriends = true; ui.sheetFn(); } }, `Show all (${all.length})`)));
   }
   function friendsTab(b) {
     realmFriends(b);
@@ -4337,7 +4341,7 @@
         friendsOn().catch((e) => { friendErr(e); ui.sheetFn(); });
       } }, FRIENDS.state().pendingOn ? 'Connect Friends here' : 'Turn on Friends');
       if (cloudOffer()) CLOUD.prepare(); // Google's script ready, so [Turn on both] can open its window from the tap
-      b.append(h('div', { class: 'sec-h' }, 'Players you know', h('small', null, 'real players')),
+      b.append(h('div', { class: 'sec-h' }, 'Friends', h('small', null, 'real players, by friend code')), // the feature's own name (#339)
         h('p', null, 'Add the people you know by friend code, see their characters and gear, and see when they are playing.'),
         FRIENDS.state().pendingOn ? friendNote('You turned Friends on on another device. Connect here with one tap to see your friends on this one too.')
           : friendNote('Optional, and off until you turn it on. It uses your Google sign-in (only to know it is you, not your email). Your friends see the characters you share: their level, gear, talents, professions and guild, where you are, and when you last played. Nobody else does. With cloud save on, the switch follows you to your other devices.'),
@@ -4901,6 +4905,7 @@
     if (roles.length > 1) roleRow.append(h('span', { class: 'gf-hint' }, 'tanks and healers find groups faster'));
     top.append(roleRow);
     if (S.queue) top.append(h('div', { class: 'gf-queue' }, h('span', null, 'In queue: ', h('b', null, D.ACTIVITIES[S.queue.act].name + (S.queue.trial ? ` · Trial ${S.queue.trial}` : ''))),
+      S.queue.popped ? h('button', { class: 'chip gold', onclick: () => showPop(S.queue) }, 'Group ready') : null, // the pop, if it was closed (#325)
       h('button', { class: 'chip', onclick: () => { G.leaveQueue(); ui.sheetFn(); } }, 'Leave')));
     b.append(top);
     // everything this character can see, with why it can't be done yet
@@ -5057,10 +5062,11 @@
     if (acts.length) {
       const row = h('div', { class: 'btn-row wrap' });
       for (const x of acts) row.append(h('button', { class: 'btn' + (x.why ? ' why' : x.primary ? '' : ' alt'), disabled: !!x.disabled, onclick: () => {
-        const r = x.fn();
+        const ran = G.S.run || G.S.bg, r = x.fn();
         // a refusal keeps the dialog open (the request is still open), so the player can fix it and try again (#166)
         if (typeof r === 'string' && !r.startsWith('route:') && a && a.state === 'open') { toast(r); renderAll(); msgDialog(m); return; }
-        closeDialog(); renderAll();
+        closeDialog(); if (!ran && (G.S.run || G.S.bg)) closeSheet(); // a run you joined from chat starts in view, as the pop's Enter does (#327)
+        renderAll();
         if (typeof r === 'string' && r.startsWith('route:')) { const to = r.slice(6); if (G.S.player.place !== to) routeDialog(to); }
         else if (r) toast(r);
       } }, x.need ? ['Need ', h('span', { html: moneyHtml(x.need, false, true) })] : x.label)); // a shortfall in coin colours (#169)
@@ -5205,12 +5211,12 @@
     const S = G.S;
     const news = rep.news.slice(-8).reverse();
     const newsEl = news.length ? h('div', { class: 'news' }, ...news.map((n) => h('div', { class: n.big ? 'big' : '' }, n.text))) : null;
+    const row = (k, v, c) => h('div', { class: 'ai-row' }, h('span', null, k), h('b', c ? { style: { color: c } } : null, v));
+    // label: value rows, counting the realm as it is now (#334)
     showDialog([h('h3', null, 'Welcome back'),
-      h('p', null, `You were away for ${fmtTime(rep.away)}.`),
-      rep.rested > 0 ? h('p', { style: { color: '#6fa8ff' } }, `You feel rested: +${rep.rested} bonus XP.`) : null,
-      rep.dings ? h('p', null, `${rep.dings} players levelled up while you were gone.`) : null,
+      h('div', { class: 'ai-box' }, row('Away', fmtTime(rep.away)), rep.rested > 0 ? row('Rested', `+${rep.rested} XP`, '#6fa8ff') : null,
+        rep.dings ? row('Levelled up', String(rep.dings)) : null, rep.joined ? row('New players', String(rep.joined)) : null, row('Online now', String(rep.online))),
       newsEl,
-      h('p', { style: { color: 'var(--muted)' } }, `${rep.online} players online on ${D.REALM} right now.`),
       h('button', { class: 'btn wide', onclick: closeDialog }, 'Enter World')]);
   }
   // who you'll play with (#189): one row each (name in its class colour, level and class, role); a raid's nine others are
@@ -5219,7 +5225,7 @@
   function popMember(m) {
     const P = G.S.player, known = SOC.isFriend(m.bot.id) ? 'Friend' : P.guild >= 0 && m.bot.guild === P.guild ? 'Guild' : '';
     return h('button', { class: 'pop-m', onclick: () => playerCard(m, () => { closeDialog(); if (G.S.queue && G.S.queue.popped) showPop(G.S.queue); }) }, h('span', { class: 'cls-' + m.cls }, m.name), h('small', null, `${m.level} ${D.CLASSES[m.cls].name}`),
-      known ? h('small', { class: 'pop-known' }, known) : null, h('b', null, m.role === 'tank' ? 'TANK' : m.role === 'healer' ? 'HEAL' : 'DPS'));
+      known ? h('small', { class: 'pop-known' }, known) : null, h('b', null, ROLE_NAME[m.role] || 'Damage')); // the role's one name, as the card and the count say it (#339)
   }
   function showPop(q) {
     const A = D.ACTIVITIES[q.act], ms = q.group ? q.group.members : [];
@@ -5227,7 +5233,7 @@
     const knownOnly = ms.filter((m) => SOC.isFriend(m.bot.id) || (P.guild >= 0 && m.bot.guild === P.guild));
     const who = !ms.length ? null : ms.length <= 4 ? h('div', { class: 'pop-group' }, ...ms.map(popMember))
       : h('div', { class: 'pop-group' }, h('p', { class: 'pop-count' }, [[n('tank'), 'tank'], [n('healer'), 'healer'], [n('dps'), 'damage']].filter((x) => x[0]).map(([k, w]) => `${k} ${w}${k > 1 && w !== 'damage' ? 's' : ''}`).join(' · ')), ...knownOnly.map(popMember));
-    showDialog([h('h3', null, 'Your group is ready'), h('p', null, A.name), h('p', { style: { color: 'var(--muted)' } }, `Role: ${G.role() === 'tank' ? 'Tank' : G.role() === 'healer' ? 'Healer' : 'Damage'}`), who,
+    showDialog([h('h3', null, 'Your group is ready'), h('p', null, A.name), h('p', { style: { color: 'var(--muted)' } }, `Role: ${G.role() === 'tank' ? 'Tank' : G.role() === 'healer' ? 'Healer' : 'Damage'}${who ? ' · tap someone for their card' : ''}`), who,
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { if (G.fight) return G.acceptPop(); closeDialog(); closeSheet(); G.acceptPop(); renderAll(); } }, 'Enter'), h('button', { class: 'btn alt', onclick: () => { closeDialog(); G.declinePop(); renderAll(); } }, 'Decline'))]);
   }
   function showInvite(d) {
@@ -5985,7 +5991,7 @@
     const dt = (t - last) / 1000; last = t;
     if (G.S) {
       if (dt > 20) resume();
-      if (ui.pendingChapter && !ui.sceneBusy && !G.fight && !ui.dialog && !(window.CS && CS.playing)) { const id = ui.pendingChapter; ui.pendingChapter = null; ui.sceneBusy = true; closeSheet(); setTimeout(() => { const done = () => { ui.sceneBusy = false; }; if (!(window.CS && CS.unlocked().has(id))) Promise.resolve(playChapter(id)).then(done, done); else done(); }, 2600); } // one at a time; seen on another device (cloud save) in the meantime: skip it
+      if (ui.pendingChapter && !ui.sceneBusy && !G.fight && !ui.dialog && !(ui.chapterWait && ui.sheet) && !(window.CS && CS.playing)) { const id = ui.pendingChapter; ui.pendingChapter = null; ui.sceneBusy = true; closeSheet(); setTimeout(() => { const done = () => { ui.sceneBusy = false; }; if (ui.dialog || ui.sheet || G.fight) { ui.pendingChapter = id; ui.chapterWait = true; return done(); } ui.chapterWait = false; if (!(window.CS && CS.unlocked().has(id))) Promise.resolve(playChapter(id)).then(done, done); else done(); }, 2600); } // something opened in the 2.6 s: it waits again (#340) // one at a time; seen on another device (cloud save) in the meantime: skip it
       G.update(Math.min(dt, 1));
       cloudTick += dt; if (cloudTick > 30) { cloudTick = 0; cloudAuto(false); if (window.FRIENDS && FRIENDS.on()) FRIENDS.flush(false); }
       frame();
