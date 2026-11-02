@@ -1544,14 +1544,14 @@
       const b = R.bonus;
       p.append(h('div', { class: 'score done' },
         h('div', null, h('span', null, 'Cleared in '), h('b', { class: 'tnum' }, G.fmtClock(b.secs)), h('span', null, ` · par ${G.fmtClock(b.par)}`)),
-        h('div', null, h('span', { class: b.speed ? 'ok' : 'no' }, (b.speed ? '✓' : '✗') + ' Speed bonus'), h('span', { class: b.flawless ? 'ok' : 'no' }, (b.flawless ? '✓' : '✗') + ' Flawless (no wipes)')), // one term, one rule, on every screen (issue #14)
+        h('div', null, h('span', { class: b.speed ? 'ok' : 'no' }, (b.speed ? '✓' : '✗') + ' Speed bonus'), h('span', { class: b.flawless ? 'ok' : 'no' }, b.flawless ? '✓ Flawless (no wipes)' : `✗ Flawless lost · ${R.wipes || 1} wipe${(R.wipes || 1) === 1 ? '' : 's'}`)), // one term, one rule, on every screen (issue #14); once lost, it says so (#396)
         cx ? h('small', null, `Best ${G.fmtClock(cx.best)} · ${cx.clears} clears · ${cx.speed} speed · ${cx.flawless} flawless`) : null));
       return;
     }
     p.append(h('div', { class: 'score' },
       h('span', null, '⏱ ', h('b', { class: 'tnum', 'data-clock': '1' }, G.fmtClock(G.runClock())), ` / par ${G.fmtClock(R.trial ? window.TRIALS.par(Dg, R.omens) : G.par(Dg))}`),
       R.momentum ? h('span', { class: 'mom' }, `Momentum ×${R.momentum}`) : h('span', { class: 'dim' }, 'Pull within 5s to build Momentum'),
-      h('span', { class: R.wipes ? 'no' : 'ok' }, R.wipes ? '✗ Flawless (no wipes)' : '✓ Flawless (no wipes)')));
+      h('span', { class: R.wipes ? 'no' : 'ok' }, R.wipes ? `✗ Flawless lost · ${R.wipes} wipe${R.wipes === 1 ? '' : 's'}` : '✓ Flawless (no wipes)')));
     if ((R.omens || []).length) p.append(h('div', { class: 'chips', style: { margin: '4px 0' } }, h('small', { class: 'dim', style: { alignSelf: 'center' } }, 'Omens:'), ...R.omens.map((k) => omenChip(k)))); // tap one for its rule
   }
   function tacticsBlock(p, R) {
