@@ -40,7 +40,7 @@
         race, pet: (C.pets || []).includes('imp') ? { type: 'imp', name: pick(D.PETS.imp.names), hp: null } : null, // only a class whose pets include the imp (#34: Hunters started with one); a Hunter tames at 10
         quests: {}, done: {}, auras: [], hearthAt: 0, guild: -1, kills: 0, deaths: 0, visited: { [start]: true }, played: 0,
       },
-      world: {}, bots: null, chat: [], news: [], pending: [], group: null, queue: null, run: null, flags: {},
+      world: {}, bots: null, chat: [], news: [], pending: [], group: null, queue: null, run: null, flags: { v10names: true }, // a new save has the v10 names already: the migration (which keeps only open requests in chat) is for older ones
     };
     joinRoster(S); // #71: the account's realm (made here, as before, the first time)
     G.S = S;
