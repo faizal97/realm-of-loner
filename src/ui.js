@@ -1433,7 +1433,7 @@
     const live = S.bots.find((x) => x.id === b.id) || b, lv = P.level, ok = (t) => G.nameable(t, lv);
     const row = (k, v) => h('div', { class: 'ai-row' }, h('span', null, k), h('b', null, v));
     const ago = (t) => { const m = (Date.now() - t) / 60000; return m < 2 ? 'just now' : m < 60 ? `${Math.floor(m)}m ago` : m < 48 * 60 ? `${Math.floor(m / 60)}h ago` : `${Math.floor(m / 1440)}d ago`; }; // as "back in 3d" reads (#339)
-    const role = who.role || b.role, C = D.CLASSES[b.cls];
+    const role = who.role || b.role;
     const parts = [h('h3', null, rankBadge(b), h('span', { class: 'cls-' + b.cls }, who.name || b.name)), // the name as the party frame shows it, realm and all (#322)
       h('p', null, `Level ${(who.level || b.level)} ${raceClass(b)}${role ? ' · ' + (role === 'tank' ? 'Tank' : role === 'healer' ? 'Healer' : 'Damage') : ''}`)];
     const withMe = (S.run && S.group && S.group.members.includes(who)) || (S.wparty && S.wparty.members.some((m) => m.bot.id === b.id)); // in your party or group: where you are
@@ -1454,7 +1454,7 @@
       parts.push(h('div', { class: 'sec-h' }, 'With you', friend ? h('small', { class: 'gold' }, 'Friend') : null), rows.length ? h('div', { class: 'ai-box' }, ...rows) : null); // no empty box (#370)
     }
     // gear: the set they wear in your group, or the one they always wear at their level (#72)
-    const ch = who.equip ? who : G.botChar(Object.assign({}, live, { role: role || C.role }));
+    const ch = who.equip ? who : G.botChar(Object.assign({}, live, { role: role || G.mainRole(live) })); // their main role's gear, as the group finder brings them (#388)
     const list = h('div', { class: 'list' });
     for (const slot of D.GEAR_SLOTS) {
       const it = ch.equip[slot]; if (!it) continue;

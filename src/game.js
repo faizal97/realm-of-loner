@@ -2785,7 +2785,7 @@
     const grp = formGroup(req.act, { firstTimers: req.firstTimers });
     // the one who asked is in the group (#357), as with a group from chat
     const poster = S.bots.find((b) => b.id === req.poster);
-    if (poster && !grp.members.some((m) => m.bot && m.bot.id === poster.id)) { const i = grp.members.findIndex((m) => m.role === 'dps' && !m.legend); if (i >= 0) { const pc = G.botChar(Object.assign({}, poster, { level: grp.members[i].level, role: 'dps' })); pc.syncLevel = grp.members[i].syncLevel; grp.members[i] = pc; } }
+    if (poster && !grp.members.some((m) => m.bot && m.bot.id === poster.id)) seatLead(grp, poster);
     sys(`${req.posterName}'s group summons you to ${D.ACTIVITIES[req.act].name}.`);
     grp.members.forEach((m, i) => S.pending.push({ at: now() + 900 + i * 1400, bot: m.bot.id, ch: 'party', text: cpick((poster ? m.bot.id === poster.id : i === 0) ? ['ty for coming!!', 'thank you so much', 'yay a helper', 'omg ty'] : ['hi', 'ty', 'hello', 'o/']), fromName: m.name }));
     startRun(req.act);
@@ -3348,7 +3348,7 @@
     if (D.ACTIVITIES[act].bg) { const bl = opts.leader && S.bots.find((b) => b.id === opts.leader); sys(`${bl ? bl.name + "'s" : 'The'} team summons you to ${D.ACTIVITIES[act].name}.`); startBg(act); if (S.bg && bl) S.bg.leader = bl.id; emit('change'); return true; } // the leader a friend at its end (#362)
     const grp = formGroup(act, { guild: opts.guild });
     const lead = opts.leader && S.bots.find((b) => b.id === opts.leader);
-    if (lead) { const i = grp.members.findIndex((m) => m.role === 'dps' && !m.legend); if (i >= 0) { const lc = G.botChar(Object.assign({}, lead, { level: grp.members[i].level, role: 'dps' })); lc.syncLevel = grp.members[i].syncLevel; grp.members[i] = lc; } }
+    if (lead) seatLead(grp, lead);
     sys(`${lead ? lead.name + "'s" : 'The'} group summons you to ${D.ACTIVITIES[act].name}.`);
     grp.members.forEach((m, i) => S.pending.push({ at: now() + 900 + i * 1400, bot: m.bot.id, ch: 'party', text: m.cameo ? G.legendLine(m.legend, 'hello') : cpick(m.bot.id === (lead && lead.id) ? ['ty for joining!', 'yay ty', 'nice, lets go'] : ['hi', 'hello', 'o/', 'hey']), fromName: m.name }));
     startRun(act);
@@ -3368,7 +3368,7 @@
     stopActions();
     const grp = formGroup(act, { trial: lvl });
     const lead = opts.leader && S.bots.find((b) => b.id === opts.leader);
-    if (lead) { const i = grp.members.findIndex((m) => m.role === 'dps' && !m.legend); if (i >= 0) { const lc = G.botChar(Object.assign({}, lead, { level: D.LEVEL_CAP, role: 'dps' })); lc.syncLevel = D.LEVEL_CAP; grp.members[i] = lc; } }
+    if (lead) seatLead(grp, lead);
     sys(`${lead ? lead.name + "'s" : 'The'} group summons you to ${D.ACTIVITIES[act].name}, Trial ${lvl}.`);
     startRun(act, lvl);
     if (lead) S.run.soc = { kind: 'trial', leader: lead.id }; // finishing it makes them a friend (#362)
@@ -3754,6 +3754,7 @@
     let pool = S.bots.filter((b) => B.isOnline(b, date) && B.factionOf(b) === myF && want.includes(b.cls) && (exact ? b.level === lvl : b.level >= lvl - 1 && b.level <= lvl + 3) && !used.has(b.id));
     // prefer classes the group does not have yet
     if (guild != null && guild >= 0) { const mates = pool.filter((b) => b.guild === guild); if (mates.length) pool = mates; }
+    { const mains = pool.filter((b) => G.mainRole(b) === role); if (mains.length) pool = mains; } // asked for the role they play (#388)
     if (usedCls) { const fresh = pool.filter((b) => !usedCls.has(b.cls)); if (fresh.length) pool = fresh; }
     let b;
     if (pool.length) b = JSON.parse(JSON.stringify(pick(pool)));
@@ -3809,12 +3810,26 @@
   // role, so a new level is a new set and the next run with them is the same one. Same chances as before, so the same
   // power band; a bot with no id (a guard) still rolls freely.
   const ROLE_N = { tank: 1, healer: 2, dps: 3 };
+  // one main role a person always plays (#388): the group finder asks them for it, and their gear (seeded by role) is the
+  // same on every card, in the world and in your group. From their id, so it never changes and draws no dice
+  G.mainRole = (b) => { const C = D.CLASSES[b.cls] || {}, rs = C.roles || [C.role || 'dps']; return rs[Math.floor(B.hash(b.id, 7) * rs.length) % rs.length]; };
+  // the person who posted or leads a group takes a seat in it as themselves: their own level, their main role's seat if
+  // there is one (else a damage seat), so the card in the pop matches the one in the world (#388)
+  function seatLead(grp, bot) {
+    const r = G.mainRole(bot); let i = grp.members.findIndex((m) => m.role === r && !m.legend);
+    if (i < 0) i = grp.members.findIndex((m) => m.role === 'dps' && !m.legend); if (i < 0) return;
+    const c = G.botChar(Object.assign({}, bot, { role: grp.members[i].role })); c.syncLevel = grp.members[i].syncLevel; grp.members[i] = c;
+  }
   G.botChar = function (b) {
     if (!(b && b.id >= 0)) return rollBotChar(b);
-    let s = (B.hash(b.id, b.level * 4 + (ROLE_N[b.role] || 0)) * 4294967296) >>> 0;
+    // their gear is their main role's, whatever seat they take (#388): the same set on every card; talents follow the seat
+    const main = b.id > 0 ? G.mainRole(b) : b.role;
+    let s = (B.hash(b.id, b.level * 4 + (ROLE_N[main] || 0)) * 4294967296) >>> 0;
     const real = Math.random;
     Math.random = () => { s = (s + 0x6D2B79F5) >>> 0; let x = s; x = Math.imul(x ^ (x >>> 15), x | 1); x ^= x + Math.imul(x ^ (x >>> 7), x | 61); return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
-    try { return rollBotChar(b); } finally { Math.random = real; }
+    let ch; try { ch = rollBotChar(main === b.role ? b : Object.assign({}, b, { role: main })); } finally { Math.random = real; }
+    if (main !== b.role) Object.assign(ch, { role: b.role, bot: b, talents: G.autoTalents(b.cls, b.role || (D.CLASSES[b.cls] || {}).role || 'dps', b.level, Math.abs(b.id || 0)) });
+    return ch;
   };
   // ------------------------------------------------------------ Legends
   // Before you know him, a legend may step into a hard solo fight in disguise: at most once an hour, 3 times per zone.
