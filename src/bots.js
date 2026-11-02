@@ -221,7 +221,7 @@
     const news = [], clears = {}; let beyond = 0; // beyond: clears the news can't name at your level (issue #18)
     const steps = Math.min(48, Math.max(1, Math.ceil(ms / 1800000)));
     const stepMs = ms / steps;
-    const SV = S.server || (S.server = {}), used = new Set(S.bots.map((b) => b.name).concat(SV.gone || [], S.player ? [S.player.name] : [])); // #71: a name that quit is never someone else's; #314: nor yours
+    const SV = S.server || (S.server = {}), used = new Set(S.bots.map((b) => b.name).concat(SV.gone || [], S.player ? [S.player.name] : [], B.accountNames ? B.accountNames() : [])); // #71: a name that quit is never someone else's; #314: nor yours, nor your other characters' (#345)
     const firstNew = S.nextBotId;
     for (let s = 0; s < steps; s++) {
       const when = new Date(S.lastSim + stepMs * (s + 1));

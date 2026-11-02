@@ -74,15 +74,16 @@
   // so every character meets the same people (each sees its own faction's half, as before). A character's save still
   // carries a copy of the bots (older builds and save codes read it); on load it only brings that character's friends
   // into the roster by name, so a friend from another character, another device or an older save is never lost.
-  // The first time, the oldest character's realm becomes the account's. Same name, same person: ids are remapped by name.
+  // The first time, the realm furthest on (a tie: the oldest character's) becomes the account's. Same name, same person: ids are remapped by name.
   const ROSTER_KEY = 'azsolo.roster';
+  B.accountNames = () => readIndex().map((c) => c.name); // newcomers never take a character's name (#345)
   const readRoster = () => { try { return JSON.parse(ls.get(ROSTER_KEY) || 'null'); } catch (e) { return null; } };
   function joinRoster(S) {
     const own = Array.isArray(S.bots) ? S.bots : [];
     let R = readRoster();
     if (!R || !Array.isArray(R.bots)) {
       const saves = readIndex().filter((c) => c.id !== S.id).map((c) => G.readSave(c.id)).concat([S]).filter((x) => x && Array.isArray(x.bots) && x.bots.length);
-      const src = saves.sort((a, b) => (a.created || 0) - (b.created || 0))[0];
+      const src = saves.sort((a, b) => (b.lastSim || 0) - (a.lastSim || 0) || (a.created || 0) - (b.created || 0))[0]; // the realm furthest on (#344: a cloud restore has no roster, and the oldest character's copy can be months behind); a tie, the oldest
       R = src ? { v: 1, from: src.id, bots: src.bots, nextBotId: src.nextBotId || 1000, lastSim: src.lastSim || now(), server: src.server || {} }
         : { v: 1, from: S.id, bots: B.makeRealm(), nextBotId: 1000, lastSim: S.lastSim || now(), server: {} };
     }
@@ -127,7 +128,7 @@
     if (clash.length) {
       const used = new Set(R.bots.map((b) => b.name).concat(S.server.gone || [], [...mine])), k = S.server.keep;
       const ren = S.server.renamed = S.server.renamed || {};
-      for (const b of clash) { const n = B.makeName(used); if (k && k[b.name]) { delete k[b.name]; k[n] = 1; } ren[b.name] = n; b.name = n; }
+      for (const b of clash) { const n = B.makeName(used); if (k && k[b.name]) { delete k[b.name]; k[n] = 1; } if (!ren[b.name]) ren[b.name] = n; b.name = n; } // the first person of that name keeps the link (#345)
     }
     S.flags = S.flags || {}; S.flags.roster = true;
     G.R = R; saveRoster(S);
@@ -151,6 +152,8 @@
   // a character deleted (#306): its guild and its friends stop counting, unless another character has them too
   function forget(id) {
     const R = G.S && G.R && G.S.bots === G.R.bots ? G.R : readRoster(); if (!R || !R.server) return;
+    // the live realm is written whole (#343): its people with its own clock and next id, or a later load runs the same days again
+    if (R === G.R) { R.lastSim = G.S.lastSim; R.nextBotId = G.S.nextBotId; R.server = G.S.server; }
     const SV = R.server; if (SV.homes) delete SV.homes[id];
     if (SV.byes) SV.byes = SV.byes.filter((e) => e.c !== id);
     const k = {}, names = new Map(R.bots.map((b) => [String(b.id), b.name]));
@@ -386,6 +389,11 @@
         if (mates.length) B.post(S, 'guild', cpick(mates), cpick(['wb!', 'welcome back', 'oh hey you are back', 'yo']));
       }
       S.news = report.news.slice().sort((a, b) => b.t - a.t).concat(S.news).slice(0, 40); // newest first, as Social → News reads: a long absence drops its oldest lines, not the summary at its end (#18)
+    } else if (t - S.lastSim > 60000) {
+      // this character was here a moment ago but the realm's stored clock is behind (#344: a rebuilt realm, an older
+      // copy): those days still happen, never skipped
+      const news = B.advance(S, t - S.lastSim);
+      S.news = news.slice().sort((a, b) => b.t - a.t).concat(S.news).slice(0, 40);
     }
     S.lastSim = Math.max(S.lastSim, t); // a realm clock ahead of the device's (a clock moved back) waits, never runs twice (#336)
     S.lastSeen = t;
