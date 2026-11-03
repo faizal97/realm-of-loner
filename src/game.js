@@ -3304,7 +3304,15 @@
   }
   // the range for a banner (a save from v10.7 has no scout report: then the exact count)
   G.bgScoutRange = function (bg, b) { return (bg.scout && bg.scout[b]) || [bg.plan[b] || 0, bg.plan[b] || 0]; };
+  // a finished battleground or brawl result closes when something new starts, however it was joined (#479); a brawl
+  // chest still waiting keeps its brawl
+  function closeFinished() {
+    const S = G.S;
+    if (S.bg && S.bg.phase === 'done') { S.bg = null; emit('instanceLeave', {}); }
+    if (S.brawl && S.brawl.phase === 'done' && !S.brawl.chest) S.brawl = null;
+  }
   function startBg(act) {
+    closeFinished();
     const S = G.S, P = S.player, A = D.ACTIVITIES[act], key = A.bg, C = D.BG[key];
     const myF = G.myFaction(), theirF = myF === 'alliance' ? 'horde' : 'alliance', used = new Set(), L = P.level;
     const mine = BG_ROLES.slice(); const i = mine.indexOf(G.role()); mine.splice(i >= 0 ? i : 2, 1);
@@ -4055,6 +4063,7 @@
   function startRun(act, trial, hard) {
     const S = G.S, A = D.ACTIVITIES[act];
     S.player.travel = null; S.player.route = null; // a trip ends when the group summons you (#424)
+    closeFinished(); // #479
     for (const m of (S.group && S.group.members) || []) if (m.cameo) G.cameoSeen(m.legend); // #455
     let pulls, mult = null, bossMult = null, name = A.name;
     if (A.dungeon) {

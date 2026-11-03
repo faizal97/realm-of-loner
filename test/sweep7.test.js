@@ -166,3 +166,12 @@ test('a level-1 friend is never seated in a level-33 dungeon run (#478)', () => 
   assert.ok(G.joinChatGroup(act, 'dps', { leader: low.id, soc: { kind: 'lfg', leader: low.id } }));
   assert.ok(!S.group.members.some((m) => m.bot && m.bot.id === low.id), 'the low friend is not in the run');
 });
+
+test('a finished battleground or brawl closes when the Roulette starts a run (#479)', () => {
+  const { S } = W.character(40, 'warrior', 'human');
+  S.brawl = { id: 'x', round: 3, slots: [], phase: 'done', results: [], wins: 1, reward: { money: 0, xp: 0, marks: 0 }, chest: null };
+  G.startRoulette(); assert.ok(S.run, 'a run'); assert.ok(!S.brawl, 'the brawl result closed');
+  const r2 = W.character(40, 'warrior', 'human'); const bgAct = Object.keys(D.ACTIVITIES).find((k) => D.ACTIVITIES[k].bg && !G.activityBlock(k));
+  G.bgStart(bgAct); r2.S.bg.phase = 'done'; G.startRoulette();
+  assert.ok(r2.S.run, 'a run'); assert.ok(!r2.S.bg, 'the battleground result closed');
+});
