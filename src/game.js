@@ -255,6 +255,7 @@
     if (S.bg && S.bg.phase === 'fight') { const go = S.bg.go; if (go) { sys('You left the battleground fight: it counts as lost.'); endBgFight({ over: 'loss', enemies: [], bg: { banner: go.group, name: bgName(S.bg, go.group) } }); } else S.bg.phase = 'choose'; } // a battleground, the same (#408)
     if (S.brawl && S.brawl.phase === 'fight') { S.brawl.phase = 'choose'; const foe = G.brawlOpponent(); if (foe) endBrawlFight({ over: 'loss', brawl: { foe: foe.name } }); else S.brawl.phase = 'done'; }
     try { G.refreshHeirlooms(); } catch (e) { /* older save */ }
+    restack(S.player); // #485
     pruneBounties(); // #154
     G.lwRevokeTest(); // rewards from a test build's season stay in test builds
     if (G.lwRec().steed) G.giveTrialswornMount('wickless_steed'); // the Wickless Steed rides with every character
@@ -589,6 +590,17 @@
     for (const b of list) { if (n <= 0) break; if (b.item.id === it.id && b.n < STACK) { const k = Math.min(n, STACK - b.n); b.n += k; n -= k; } }
     let first = true;
     while (n > 0) { const k = Math.min(n, STACK); list.push({ item: first ? it : Object.assign({}, it), n: k }); n -= k; first = false; }
+  }
+  // how many of a stackable item still fit in the bags, and whether taking n out empties a slot (the last stacks go first)
+  G.bagRoom = (it) => { const P = G.S.player; return P.bags.reduce((a, b) => a + (b.item.id === it.id && b.n < STACK ? STACK - b.n : 0), 0) + Math.max(0, G.bagCap() - P.bags.length) * STACK; };
+  G.freesSlot = (id, n) => { const P = G.S.player; for (let i = P.bags.length - 1; i >= 0 && n > 0; i--) { const b = P.bags[i]; if (b.item.id !== id) continue; if (b.n <= n) return true; n -= b.n; } return false; };
+  // stacks over 20 from a save before #440 split into 20s where the room allows; nothing is ever dropped (#485)
+  function restack(P) {
+    for (const [list, cap] of [[P.bags || [], G.bagCap()], [P.bank || [], BANK_SLOTS]]) for (let i = 0; i < list.length; i++) {
+      const b = list[i]; if (b.n <= STACK || !G.stackable(b.item) || list.length + Math.ceil(b.n / STACK) - 1 > cap) continue;
+      let rest = b.n - STACK; b.n = STACK;
+      while (rest > 0) { list.splice(++i, 0, { item: Object.assign({}, b.item), n: Math.min(STACK, rest) }); rest -= STACK; }
+    }
   }
   G.addItem = function (it, n) {
     const P = G.S.player;
@@ -1482,7 +1494,7 @@
   G.giveReward = function (it, label) {
     const P = G.S.player;
     if (!G.slotsShort([[it, 1]]) && G.addItem(it, 1)) return 'bags'; // only when it fits, so no "full" toast before the bank (#443)
-    P.bank = P.bank || []; P.bank.push({ item: it, n: 1 });
+    P.bank = P.bank || []; if (G.stackable(it)) putStack(P.bank, it, 1); else P.bank.push({ item: it, n: 1 }); // onto a stack there (#476)
     sys(`${label}: your bags were full, so the ${it.name} went to your bank.`); return 'bank';
   };
   // a quest reward offers two versions (#141): the class's own stat mix and a second mix it plays with, and a weapon in
@@ -2366,7 +2378,9 @@
     list.splice(i, 1); const kd = nodeKind(c.key); if (W.pnodes.at[kd] < now() + 50000) W.pnodes.at[kd] = now() + rnd(60, 100) * 1000;
     const N = D.NODES[c.key], p = G.profs()[N.prof];
     const n = rint(N.n[0], N.n[1]);
-    if (G.addItem(G.copyItem(N.item), n)) loot(`You receive item: ${B.link(D.ITEMS[N.item].name, D.ITEMS[N.item].q)}${n > 1 ? ' x' + n : ''}.`);
+    const got = Math.min(n, G.bagRoom(D.ITEMS[N.item])); // what fits goes in, and the rest is named (#474)
+    if (got > 0 && G.addItem(G.copyItem(N.item), got)) loot(`You receive item: ${B.link(D.ITEMS[N.item].name, D.ITEMS[N.item].q)}${got > 1 ? ' x' + got : ''}.`);
+    if (got < n) info(`Bags full: ${n - got} ${D.ITEMS[N.item].name} left behind.`);
     if (N.extra && Math.random() < N.extra[1] && G.addItem(G.copyItem(N.extra[0]), 1)) loot(`You receive item: ${B.link(D.ITEMS[N.extra[0]].name)}.`);
     skillUp(N.prof, G.skillColor(p.skill, G.nodeSk(N)));
     emit('lootGain', { items: 1, got: [D.ITEMS[N.item]] });
@@ -2407,7 +2421,7 @@
     if (G.fight) return toast('You are in combat.');
     if (p.skill < r.sk[0]) return toast(`Requires ${D.PROFESSIONS[r.prof].name} ${r.sk[0]}.`);
     if (G.craftable(rid) < 1) return toast('You are missing materials.');
-    if (G.bagsFull() && !(G.stackable(D.ITEMS[r.makes]) && P.bags.some((b) => b.item.id === r.makes && b.n < 20))) return toast('Bags are full.');
+    if (G.bagsFull() && !(G.stackable(D.ITEMS[r.makes]) && P.bags.some((b) => b.item.id === r.makes && b.n < 20)) && !Object.keys(r.mats).some((m) => G.freesSlot(m, r.mats[m]))) return toast('Bags are full.'); // materials that empty a slot make room (#486)
     stopActions();
     const left = Math.max(1, Math.min(count || 1, G.craftable(rid)));
     P.casting = { what: 'craft', rid, left, total: left, label: `${D.ITEMS[r.makes].name}`, start: now(), end: now() + 1500 };
@@ -2485,7 +2499,10 @@
   }
   G.fishStart = function (auto) {
     const why = G.fishWhy(); if (why) { toast(why); return false; }
-    if (G.bagsFull()) { toast('Bags are full.'); return false; }
+    if (G.bagsFull()) { // a stack of this water's fish with room still takes one (#486)
+      const T = D.FISH[D.waterTier(G.S.player.place)], ids = T.common.map((c) => c[0]).concat(T.big[0], T.rare[0]);
+      if (!G.S.player.bags.some((b) => ids.includes(b.item.id) && b.n < 20)) { toast('Bags are full.'); return false; }
+    }
     stopActions();
     const P = G.S.player, f = rollFish(D.waterTier(P.place), G.profs().fishing.skill), t = now();
     P.fishing = { phase: 'wait', start: t, biteAt: t + rnd(G.FISH_TIME.wait[0], G.FISH_TIME.wait[1]) * 1000, fish: f, auto: !!auto, tier: D.waterTier(P.place) };
@@ -2495,7 +2512,7 @@
     const P = G.S.player, F = P.fishing; if (!F) return;
     P.fishing = Object.assign({}, F, { phase: 'done', result, caught: id || null, at: now() });
     if (id) {
-      G.addItem(G.copyItem(id), 1); loot(`You catch ${B.link(D.ITEMS[id].name, D.ITEMS[id].q)}.`);
+      if (G.addItem(G.copyItem(id), 1)) loot(`You catch ${B.link(D.ITEMS[id].name, D.ITEMS[id].q)}.`); else info(`Bags full: the ${D.ITEMS[id].name} got away.`);
       const need = F.fish.need, p = G.profs().fishing; skillUp('fishing', G.skillColor(p.skill, [need, need + 25, need + 50, need + 100]));
       emit('lootGain', { items: 1, got: [D.ITEMS[id]] });
     } else sys(result === 'early' ? 'You pulled too soon. The fish swims off.' : 'It got away.');

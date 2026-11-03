@@ -592,7 +592,7 @@
     }
     if (a.kind === 'swap') {
       const have = G.countItem(a.item);
-      const full = have >= a.n && G.bagsFull();
+      const full = have >= a.n && G.bagsFull() && !G.freesSlot(a.item, a.n); // the payment's emptied slot takes it (#486)
       return [{ label: have < a.n ? `You have ${have}/${a.n}` : full ? 'Bags full' : `Swap ${a.n} ${D.ITEMS[a.item].name}`, primary: true, disabled: have < a.n || full, why: have < a.n || full, fn: () => {
         if (G.countItem(a.item) < a.n) return `You need ${a.n}.`;
         G.removeItem(a.item, a.n); G.addItem(JSON.parse(JSON.stringify(a.itemData)), 1);

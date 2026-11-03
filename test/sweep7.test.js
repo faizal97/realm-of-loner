@@ -68,3 +68,40 @@ test('a guild night signed up for does not start when you come back after it (#4
   S.chat.push(m); W.setNow(W.now() + 5 * 3600000); SOC.tick();
   assert.ok(!S.run, 'no run'); assert.notStrictEqual(m.act.state, 'open');
 });
+
+const fillBags = (P) => { while (P.bags.length < G.bagCap()) P.bags.push({ item: G.genGear('chest', 30, 1, { atype: 'mail' }), n: 1 }); };
+
+test('gathering into the last room of a stack keeps what fits (#474)', () => {
+  let tried = 0;
+  for (let k = 0; k < 40 && tried < 3; k++) {
+    const { P } = W.character(32, 'warrior', 'human');
+    P.prof = { mining: { skill: 300, known: [] }, herbalism: { skill: 300, known: [] } };
+    P.place = Object.keys(D.PLACES).find((p) => { P.place = p; return G.placeNodes().length; });
+    const nd = G.placeNodes().find((x) => x.N.n[1] > 1); if (!nd) continue;
+    P.bags = [{ item: G.copyItem(nd.N.item), n: 19 }]; fillBags(P);
+    G.gatherNode(nd.i); W.advance(4); tried++;
+    assert.strictEqual(P.bags.find((b) => b.item.id === nd.N.item).n, 20, 'the one that fits goes in');
+  }
+  assert.ok(tried > 0);
+});
+
+test('a stackable reward sent to the bank joins a stack there (#476)', () => {
+  const { P } = W.character(30); P.bags = []; fillBags(P);
+  P.bank = [{ item: G.copyItem('linen_cloth'), n: 5 }];
+  G.giveReward(G.copyItem('linen_cloth'), 'test'); G.giveReward(G.copyItem('linen_cloth'), 'test');
+  assert.deepStrictEqual(P.bank.map((b) => b.n), [7]);
+});
+
+test('stacks over 20 from an old save split into 20s on load (#485)', () => {
+  const { P, S } = W.character(30); P.bags = [{ item: G.copyItem('linen_cloth'), n: 45 }]; P.bank = [{ item: G.copyItem('linen_cloth'), n: 60 }];
+  G.save(); G.logout(); G.load(S.id);
+  const n = (list) => list.filter((b) => b.item.id === 'linen_cloth').map((b) => b.n);
+  assert.deepStrictEqual(n(G.S.player.bags), [20, 20, 5]); assert.deepStrictEqual(n(G.S.player.bank), [20, 20, 20]);
+});
+
+test('crafting with full bags starts when its materials empty a slot (#486)', () => {
+  const r = Object.values(D.RECIPES).find((x) => Object.keys(x.mats).length === 1 && !x.rare && G.stackable(D.ITEMS[x.makes]) === false);
+  const { P } = W.character(30); P.prof = { [r.prof]: { skill: r.sk[0], known: [] } };
+  const [m] = Object.keys(r.mats); P.bags = [{ item: G.copyItem(m), n: r.mats[m] }]; fillBags(P);
+  assert.strictEqual(G.craft(r.id, 1), true);
+});
