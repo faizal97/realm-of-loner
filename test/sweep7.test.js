@@ -149,3 +149,12 @@ test('a Longnight item kept after the festival says it works next Longnight, and
   const n0 = P.bags.find((b) => b.item.id === 'ln_snowball').n; G.lnUse(P.bags.findIndex((b) => b.item.id === 'ln_snowball'));
   assert.ok((P.bags.find((b) => b.item.id === 'ln_snowball') || { n: 0 }).n < n0, 'thrown next year');
 });
+
+test('Help Wanted never posts or joins a dungeon the storm hides (#477)', () => {
+  const { S } = W.character(60, 'warrior', 'human');
+  const storm = Object.keys(D.ACTIVITIES).filter((k) => { const A = D.ACTIVITIES[k]; return A.dungeon && A.where && G.stormBlocks(A.where); });
+  assert.ok(storm.length, 'some dungeon is behind the storm');
+  for (let i = 0; i < 300; i++) { S.flags.nextHelpWanted = 0; S.helpWanted = []; W.advance(1); assert.ok(!S.helpWanted.some((r) => storm.includes(r.act)), 'posted a storm dungeon'); }
+  S.helpWanted = [{ id: 'hws', act: storm[0], role: 'dps', posterName: 'Someone', expires: W.now() + 60000 }];
+  G.joinHelpWanted('hws'); assert.ok(!S.run, 'no run behind the storm');
+});

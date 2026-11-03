@@ -2836,7 +2836,8 @@
     S.helpWanted = (S.helpWanted || []).filter((r) => r.expires > t);
     if ((f.nextHelpWanted || 0) > t) return;
     f.nextHelpWanted = t + rnd(HW_GAP[0], HW_GAP[1]);
-    const acts = Object.keys(D.ACTIVITIES).filter((k) => G.helpWantedFor(k) && G.activityBlock(k) !== 'hidden');
+    const storm = (k) => D.ACTIVITIES[k].where && G.stormBlocks(D.ACTIVITIES[k].where); // the storm hides it, as from the Roulette (#477)
+    const acts = Object.keys(D.ACTIVITIES).filter((k) => G.helpWantedFor(k) && G.activityBlock(k) !== 'hidden' && !storm(k));
     if (!acts.length || S.helpWanted.length >= 2) return;
     const act = pick(acts), A = D.ACTIVITIES[act], Dg = D.DUNGEONS[A.dungeon];
     const bossIdx = Dg.pulls.map((p, i) => (p.boss ? i : -1)).filter((i) => i > 0);
@@ -2858,6 +2859,7 @@
   G.joinHelpWanted = function (id) {
     const S = G.S, req = (S.helpWanted || []).find((r) => r.id === id);
     if (!req) return toast('That group already found someone.');
+    if (D.ACTIVITIES[req.act].where && G.stormBlocks(D.ACTIVITIES[req.act].where)) return toast(G.STORM_TEXT); // #477
     if (G.groupBusy()) return toast('Leave your current group first.');
     if ((S.flags.deserterUntil || 0) > now()) return toast('You are a Deserter for a few more minutes.');
     S.helpWanted = S.helpWanted.filter((r) => r !== req);
