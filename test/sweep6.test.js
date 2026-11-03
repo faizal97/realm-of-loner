@@ -237,3 +237,23 @@ test('a wipe from reopening the app is no free pass to leave: Deserter still app
   const id = S.id; G.save(); G.S = null; G.fight = null; G.pUnit = null; G.load(id);
   assert.ok(G.deserterFor(G.S.run) > 0);
 });
+
+// win every pull left in the run by setting the enemies to 1 health
+function clearRun() {
+  const S = G.S; let g = 0;
+  while (S.run && S.run.phase !== 'done' && g++ < 200) {
+    if (S.run.phase === 'rest') { S.run.restUntil = 0; G.runPull(); for (let k = 0; k < 40 && G.fight; k++) { for (const e of G.fight.enemies) if (!e.dead) e.hp = 1; for (const a of G.fight.allies) if (!a.dead) a.hp = a.maxHp; W.advance(0.5); } }
+    else W.advance(1);
+  }
+}
+
+test('Help Wanted at a raid\'s last boss is not a raid clear (#434)', () => {
+  const { S } = W.character(60, 'warrior'); const P = S.player, act = 'molten_core';
+  const Dg = D.DUNGEONS[D.ACTIVITIES[act].dungeon], last = Dg.pulls.map((p) => !!p.boss).lastIndexOf(true);
+  S.helpWanted = [{ id: 'hwx', act, role: 'tank', startIdx: last, firstTimers: false, poster: S.bots[0].id, posterName: S.bots[0].name, expires: W.now() + 6e5 }];
+  G.joinHelpWanted('hwx'); const m0 = G.account().marks; clearRun();
+  const cx = (P.codex || {})[act] || {};
+  assert.ok(!cx.clears, 'no clear counted'); assert.ok(cx.best == null, 'no best time');
+  assert.strictEqual(G.hardOpen(act), false);
+  assert.strictEqual(G.account().marks - m0, 18, 'only the Help Wanted Marks (10 + 5 no wipes + 3 stuck)');
+});

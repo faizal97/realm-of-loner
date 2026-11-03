@@ -4393,6 +4393,7 @@
     if (A.event) { const cx = (P.codex = P.codex || {})[R.act] = Object.assign({ clears: 0, hard: 0 }, (P.codex || {})[R.act]); cx.clears++; if (R.hard) cx.hard++; return; } // a festival run: counted (Hard opens after one)
     if (!Dg) return;
     R.finishedAt = now();
+    if (R.help && R.help.stuck) { helpRewards(R); emit('lootGain', { items: 1 }); return; } // joined part-way: only the Help Wanted rewards, never a clear
     const secs = G.runClock(), L = G.syncLevel(R.act);
     const speed = !R.noSpeed && G.par(Dg) && secs <= G.par(Dg), flawless = !R.wipes; // flawless = the group never wiped
     const cx = (P.codex = P.codex || {})[R.act] = Object.assign({ clears: 0, flawless: 0, speed: 0, best: null }, (P.codex || {})[R.act]);
