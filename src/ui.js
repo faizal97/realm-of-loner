@@ -5617,7 +5617,7 @@
 
   // ============================================================ character creation
   // the roles a class can queue as, read from its data (#245: Warrior and Priest gained Damage, and a hand-written list missed it)
-  const roleLine = (c) => { const r = D.CLASSES[c].roles || [D.CLASSES[c].role]; return r.length >= 3 ? 'Any role' : r.length === 1 ? { tank: 'Tank', healer: 'Healer', dps: 'Damage' }[r[0]] : r.map((x) => ({ tank: 'Tank', healer: 'Heal', dps: 'Damage' })[x]).join(' / '); // one word for damage (#495) };
+  const roleLine = (c) => { const r = D.CLASSES[c].roles || [D.CLASSES[c].role]; return r.length >= 3 ? 'Any role' : r.length === 1 ? { tank: 'Tank', healer: 'Healer', dps: 'Damage' }[r[0]] : r.map((x) => ({ tank: 'Tank', healer: 'Heal', dps: 'Damage' })[x]).join(' / '); }; // one word for damage (#495)
   const CLASS_BLURB = {
     warrior: 'Tank or damage. Wears mail, holds the enemy\'s attention or hits hard. Rage builds as you hit and get hit.',
     mage: 'Damage. Fire and frost from range. Fragile, and thirsty for mana.',
