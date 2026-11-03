@@ -3446,7 +3446,7 @@
     if (D.ACTIVITIES[act].bg) { const bl = opts.leader && S.bots.find((b) => b.id === opts.leader); sys(`${bl ? bl.name + "'s" : 'The'} team summons you to ${D.ACTIVITIES[act].name}.`); startBg(act); if (S.bg && bl) S.bg.leader = bl.id; emit('change'); return true; } // the leader a friend at its end (#362)
     const grp = formGroup(act, { guild: opts.guild });
     const lead = opts.leader && S.bots.find((b) => b.id === opts.leader);
-    if (lead) seatLead(grp, lead);
+    if (lead && lead.level >= D.ACTIVITIES[act].minLvl - 2) seatLead(grp, lead); // never a leader far below the run (#478)
     sys(`${lead ? lead.name + "'s" : 'The'} group summons you to ${D.ACTIVITIES[act].name}.`);
     grp.members.forEach((m, i) => S.pending.push({ at: now() + 900 + i * 1400, bot: m.bot.id, ch: 'party', text: m.cameo ? G.legendLine(m.legend, 'hello') : cpick(m.bot.id === (lead && lead.id) ? ['ty for joining!', 'yay ty', 'nice, lets go'] : ['hi', 'hello', 'o/', 'hey']), fromName: m.name }));
     startRun(act);
@@ -3466,7 +3466,7 @@
     stopActions();
     const grp = formGroup(act, { trial: lvl });
     const lead = opts.leader && S.bots.find((b) => b.id === opts.leader);
-    if (lead) seatLead(grp, lead);
+    if (lead && lead.level >= D.ACTIVITIES[act].minLvl - 2) seatLead(grp, lead); // never a leader far below the run (#478)
     sys(`${lead ? lead.name + "'s" : 'The'} group summons you to ${D.ACTIVITIES[act].name}, Trial ${lvl}.`);
     startRun(act, lvl);
     if (lead) S.run.soc = { kind: 'trial', leader: lead.id }; // finishing it makes them a friend (#362)

@@ -488,7 +488,7 @@
     const fr = SOC.friends().filter((f) => B.isOnline(f.bot, new Date()) && now() - f.last > 20 * 60000);
     if (!fr.length) return;
     const f = pick(fr), b = f.bot, P = G.S.player;
-    const acts = joinableActs();
+    const acts = joinableActs().filter((k) => { const A = D.ACTIVITIES[k]; return b.level >= A.minLvl - 2 && b.level <= (A.maxLvl || D.LEVEL_CAP) + 5; }); // one that fits the friend's level too (#478)
     if (acts.length && chance(0.5) && !openActs((a) => a.whisper).length) {
       const k = pick(acts), A = D.ACTIVITIES[k];
       post('whisper', b, pickT('s439', [`hey its ${b.name}${f.where ? ' from ' + D.PLACES[f.where].name : ''}! want to run ${A.name} with me?`, `${P.name}! doing ${A.name}, want in? would be fun`, `we still need someone for ${A.name}, u in? :)`, `${P.name}, got a spot in ${A.name} if u want it`, `remember me? we're doing ${A.name}, join?`]), { kind: 'lfg', whisper: true, bot: b.id, act: k, role: pick(G.roles()), leader: b.id, until: now() + 5 * 60000 });

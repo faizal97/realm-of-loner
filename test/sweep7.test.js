@@ -158,3 +158,11 @@ test('Help Wanted never posts or joins a dungeon the storm hides (#477)', () => 
   S.helpWanted = [{ id: 'hws', act: storm[0], role: 'dps', posterName: 'Someone', expires: W.now() + 60000 }];
   G.joinHelpWanted('hws'); assert.ok(!S.run, 'no run behind the storm');
 });
+
+test('a level-1 friend is never seated in a level-33 dungeon run (#478)', () => {
+  const { S } = W.character(38);
+  const act = Object.keys(D.ACTIVITIES).find((k) => { const A = D.ACTIVITIES[k]; return A.dungeon && (A.size || 5) === 5 && A.minLvl >= 30 && A.minLvl <= 38 && !A.needQuest; });
+  const low = S.bots[0]; low.level = 1; S.player.place = D.ACTIVITIES[act].where;
+  assert.ok(G.joinChatGroup(act, 'dps', { leader: low.id, soc: { kind: 'lfg', leader: low.id } }));
+  assert.ok(!S.group.members.some((m) => m.bot && m.bot.id === low.id), 'the low friend is not in the run');
+});
