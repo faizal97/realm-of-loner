@@ -1015,7 +1015,7 @@ svg.sym { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: 
 /* #67: sheets end above the bottom tabs (they stay tappable: Bags -> Hero in one tap); the bar's fold handle is a 44 px
    touch target and its "+N" readable */
 .sheet-back { bottom: var(--nav-h, 52px); }
-.nav { position: relative; z-index: 56; }
+nav.nav { position: relative; z-index: 56; } /* the bottom bar only: list rows are "row nav" too, and drew over sheets */
 .ab-handle::before { inset: -14px -10px -12px; }
 .ab-handle small { font: 700 12px var(--body); color: #e8dcc2; }
 /* #61: rank badges readable on a phone and tappable (a finger-sized target that doesn't move the layout) */
