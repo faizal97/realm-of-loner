@@ -381,3 +381,12 @@ test('the Help Wanted poster becomes a friend once the run is done (#451)', () =
   S.player.place = D.ACTIVITIES.deadmines.where; G.joinHelpWanted('hwf'); clearRun();
   assert.ok(SOC.isFriend(poster.id));
 });
+
+test('a guild night refused for Deserter closes instead of staying Signed up (#452)', () => {
+  const { S } = W.character(30); const g = SOC.myGuilds().find((x) => x.min <= 30).g; G.joinGuild(g);
+  const b = S.bots.find((x) => x.guild === g), act = 'deadmines';
+  const m = { id: 9200, ch: 'guild', from: b.name, text: 'event', act: { kind: 'g_event', guild: true, bot: b.id, act, startAt: W.now() + 1000, until: W.now() + 360000, signed: true, state: 'open' } };
+  S.chat.push(m); S.flags.deserterUntil = W.now() + 300000;
+  W.advance(3);
+  assert.notStrictEqual(m.act.state, 'open');
+});

@@ -710,6 +710,7 @@
     a.started = true;
     if (G.groupBusy()) { a.state = 'expired'; G.sys('The guild run started without you.'); return; }
     if (G.joinChatGroup(a.act, G.role(), { leader: a.bot, guild: S.player.guild, soc: { kind: 'g_event' } })) a.state = 'done';
+    else { a.state = 'expired'; G.sys('The guild run started without you.'); } // refused (Deserter, a level): it closes (#452)
   }
   SOC.onKill = function (mob) {
     const S = G.S;
