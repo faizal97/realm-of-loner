@@ -13,22 +13,26 @@
   // map labels (#461): each pin's two-line label (a name, then a level line) goes under the pin, slid sideways or put
   // above it so no two overlap, and kept inside the map. pins: [{ x, y, name, sub }]; returns [{ x, y }] for the name line
   // (the sub line sits `gap` below it). size is the name's font size; widths are estimated from it
-  function placeLabels(pins, W, Hh, size, gap) {
-    const boxes = [], out = [];
+  function placeLabels(pins, W, Hh, size, gap, keep) {
+    const fixed = keep || [], at = []; // keep: boxes already taken (the map's own name)
+    const area = (b, o) => Math.max(0, Math.min(b.r, o.r) - Math.max(b.l, o.l)) * Math.max(0, Math.min(b.b, o.b) - Math.max(b.t, o.t));
+    const hit = (b, me) => fixed.reduce((n, o) => n + area(b, o), 0) + at.reduce((n, o, j) => n + (o && j !== me ? area(b, o.b) : 0), 0)
+      + pins.reduce((n, p, j) => { const r = p.r || 12; return n + (j !== me && p.x > b.l - r && p.x < b.r + r && p.y > b.t - r && p.y < b.b + r ? 5000 : 0); }, 0) // never over another pin (r: its size, ring included)
+      + (pins.some((p, j) => j !== me && gap2(b, p) < gap2(b, pins[me])) ? 3000 : 0); // and nearer its own pin than any other, so it reads as that pin's
+    const gap2 = (b, p) => Math.max(0, b.l - p.x, p.x - b.r) ** 2 + Math.max(0, b.t - p.y, p.y - b.b) ** 2;
+    const spots = (p) => {
+      const w = Math.max(String(p.name).length, String(p.sub || '').length) * size * 0.5 + 6, hh = size + gap + 4;
+      return [[size * 2, 0], [size * 2, -w / 3], [size * 2, w / 3], [-gap - 16, 0], [4, -w / 2 - 18], [4, w / 2 + 18], [size * 2, -w / 2], [size * 2, w / 2], [-gap - 16, -w / 3], [-gap - 16, w / 3], [size * 2 + 26, 0], [size * 2 + 26, -w / 3], [size * 2 + 26, w / 3], [size * 2 + 44, 0], [size * 2 + 44, -w / 3], [size * 2 + 44, w / 3]]
+        .map(([dy, dx], k) => { const cx = Math.max(w / 2 + 2, Math.min(W - w / 2 - 2, p.x + dx)), ty = Math.max(size + 2, Math.min(Hh - gap - 4, p.y + dy)); return { k: k + (Math.abs(ty - p.y - dy) > 2 || (dy === 4 && Math.abs(cx - p.x - dx) > 2) ? 4000 : 0), cx, ty, b: { l: cx - w / 2, r: cx + w / 2, t: ty - size, b: ty - size + hh } }; }); // a spot pushed back in from an edge (a side spot sideways) lands on its own pin
+    };
     const order = pins.map((p, i) => i).sort((a, b) => pins[a].y - pins[b].y || pins[a].x - pins[b].x);
-    const hit = (b) => boxes.reduce((n, o) => n + Math.max(0, Math.min(b.r, o.r) - Math.max(b.l, o.l)) * Math.max(0, Math.min(b.b, o.b) - Math.max(b.t, o.t)), 0)
-      + pins.reduce((n, p) => n + (p.x > b.l - 9 && p.x < b.r + 9 && p.y > b.t - 9 && p.y < b.b + 9 ? 400 : 0), 0); // never over a pin
-    for (const i of order) {
-      const p = pins[i], w = Math.max(String(p.name).length * size * 0.56, String(p.sub || '').length * size * 0.5) + 6, hh = size + gap + 4;
+    // a first pass in order, then each label moves again with all the others in place, so an early one can make room
+    for (let pass = 0; pass < 4; pass++) for (const i of order) {
       let best = null;
-      for (const [dy, dx] of [[size * 2, 0], [size * 2, -w / 3], [size * 2, w / 3], [-gap - 14, 0], [size * 2, -w / 2], [size * 2, w / 2], [-gap - 14, -w / 3], [-gap - 14, w / 3]]) {
-        const cx = Math.max(w / 2 + 2, Math.min(W - w / 2 - 2, p.x + dx)), ty = Math.max(size + 2, Math.min(Hh - gap - 4, p.y + dy));
-        const b = { l: cx - w / 2, r: cx + w / 2, t: ty - size, b: ty - size + hh };
-        const n = hit(b); if (!best || n < best.n) best = { n, cx, ty, b }; if (!n) break;
-      }
-      boxes.push(best.b); out[i] = { x: Math.round(best.cx), y: Math.round(best.ty) };
+      for (const c of spots(pins[i])) { const n = hit(c.b, i) + c.k; if (!best || n < best.n) best = Object.assign(c, { n }); if (n === c.k && !c.k) break; } // nearer spots win ties
+      at[i] = best;
     }
-    return out;
+    return at.map((c) => ({ x: Math.round(c.cx), y: Math.round(c.ty) }));
   }
   // a reaction's teaching line without its own name in front, for text that already names it (#462)
   const teachBody = (pr) => { const n = pr.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); return pr.teach.replace(new RegExp('^' + n + '( \\([^)]*\\))?: '), ''); };
@@ -2451,7 +2455,7 @@
 
   // ---------- map
   const MAPS = {
-    elwynn: { stormwind_bank: [58, 20], stormwind: [95, 40], stormwind_gate: [135, 130], northshire_vineyards: [120, 60], northshire_abbey: [215, 88], echo_ridge: [300, 52], goldshire: [150, 228], fargodeep: [110, 330], brackwell: [215, 352], crystal_lake: [270, 250], forests_edge: [42, 300] },
+    elwynn: { stormwind_bank: [30, 60], stormwind: [92, 56], stormwind_gate: [135, 130], northshire_vineyards: [170, 62], northshire_abbey: [215, 88], echo_ridge: [300, 52], goldshire: [150, 228], fargodeep: [110, 330], brackwell: [215, 352], crystal_lake: [270, 250], forests_edge: [42, 300] },
     mulgore: { thunder_bluff: [110, 70], bloodhoof_village: [175, 205], camp_narache: [220, 340], brambleblade_ravine: [300, 300], palemane_rock: [70, 250], venture_mine: [290, 120], golden_plains: [180, 110] },
     tirisfal: { scarlet_monastery_gate: [310, 40], undercity: [285, 110], brill: [200, 180], deathknell: [60, 300], night_web_hollow: [40, 225], agamand_mills: [150, 90], garrens_haunt: [210, 60], scarlet_watch_post: [300, 250] },
     durotar: { orgrimmar: [150, 52], thunder_ridge: [80, 130], razor_hill: [200, 215], tiragarde_keep: [292, 185], echo_isles: [268, 325], valley_of_trials: [140, 300], burning_blade_coven: [62, 336] },
@@ -2666,7 +2670,7 @@
       }
       const trainAt = new Set(D.PROF_TRAINERS['crafts_' + G.myFaction()] || []), trainIc = art('icon', 'prof_blacksmithing'); // your profession trainers (#76)
       const huntUpAt = new Map(); for (const r of (G.huntRares ? G.huntRares() : [])) if (MAP[r.place] && G.huntUp(r.key, Date.now())) huntUpAt.set(r.place, r.key); // a rare hunt that's up (#43)
-      const lbl = placeLabels(Object.keys(MAP).map((k) => ({ x: MAP[k][0], y: MAP[k][1], name: D.PLACES[k].name, sub: D.PLACES[k].safe ? 'Town' : `${D.PLACES[k].lvl[0]}–${D.PLACES[k].lvl[1]}` })), 340, 400, 13, 14);
+      const lbl = placeLabels(Object.keys(MAP).map((k) => ({ x: MAP[k][0], y: MAP[k][1], r: k === cur ? 21 : 12, name: D.PLACES[k].name, sub: D.PLACES[k].safe ? 'Town' : `${D.PLACES[k].lvl[0]}–${D.PLACES[k].lvl[1]}` })), 340, 400, 13, 14, [{ l: 60, r: 280, t: 8, b: 30 }, { l: 60, r: 340, t: 376, b: 400 }]);
       Object.keys(MAP).forEach((p, pi) => {
         const [x, y] = MAP[p]; const pl = D.PLACES[p], L = lbl[pi];
         const here = p === cur;
@@ -2736,7 +2740,7 @@
   // the world: every zone, where it sits, and how the zones connect
   const WORLD = {
     tirisfal: [44, 44], plaguelands: [124, 44], hillsbrad: [58, 100], arathi: [132, 112], wetlands: [100, 158], dunmorogh: [52, 204], steppes: [134, 214],
-    elwynn: [62, 264], redridge: [140, 264], westfall: [36, 320], duskwood: [110, 320], stranglethorn: [72, 384],
+    elwynn: [62, 264], redridge: [156, 262], westfall: [36, 320], duskwood: [110, 320], stranglethorn: [72, 384],
     teldrassil: [236, 40], winterspring: [306, 66], ashenvale: [246, 108], stonetalon: [204, 154], durotar: [308, 154], barrens: [270, 208], mulgore: [214, 250],
     feralas: [210, 310], tanaris: [298, 322], dustwallow: [312, 262], ungoro: [254, 380], tidewatch: [118, 458], stormveil: [196, 486], skullreef: [274, 458],
   };
@@ -2751,7 +2755,7 @@
       lines.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${road ? '#8a6a3a' : '#5a7a9a'}" stroke-width="${road ? 3 : 2}" stroke-dasharray="${road ? '6 5' : '2 5'}" stroke-linecap="round" opacity=".9"/>`);
     }
     const lv = (r) => { let a = 99, c = 0; for (const k in D.PLACES) { const p = D.PLACES[k]; if (p.region === r && p.lvl) { a = Math.min(a, p.lvl[0]); c = Math.max(c, p.lvl[1]); } } return a < c ? `${a}–${c}` : a === c ? `${a}` : ''; }; // one level reads 60, not 60–60 (#467)
-    const wl = Object.keys(WORLD).filter((r) => D.REGIONS[r]), wlbl = placeLabels(wl.map((r) => ({ x: WORLD[r][0], y: WORLD[r][1], name: D.REGIONS[r].name, sub: lv(r) })), 340, 520, 11, 12);
+    const wl = Object.keys(WORLD).filter((r) => D.REGIONS[r]), wlbl = placeLabels(wl.map((r) => ({ x: WORLD[r][0], y: WORLD[r][1], r: r === hereRegion ? 14 : 9, name: D.REGIONS[r].name, sub: lv(r) })), 340, 520, 11, 12, [{ l: 58, r: 118, t: 4, b: 20 }, { l: 232, r: 292, t: 4, b: 20 }, { l: 140, r: 252, t: 422, b: 436 }]); // the map's own headings
     for (const r in WORLD) {
       if (!D.REGIONS[r]) continue;
       const [x, y] = WORLD[r], R = D.REGIONS[r], here = r === hereRegion, L = wlbl[wl.indexOf(r)];
