@@ -4976,7 +4976,7 @@
       const forQuests = all.filter((x) => qa[x.k] && doable(x) && !mine.includes(x)).sort(byLevel); // outlevelled or not, if a quest needs it (#285)
       if (forQuests.length) { b.append(h('div', { class: 'sec-h' }, 'For your quests')); for (const x of forQuests) b.append(row(x, true)); }
       const next = all.filter((x) => !doable(x) && /^Requires level/.test(x.why)).sort(byLevel)[0];
-      if (next) b.append(h('p', { class: 'ai-note', style: { margin: 0 } }, `Next: ${next.A.name} (${KIND_LABEL[actKind(next.A)].toLowerCase()}) at level ${next.A.minLvl}.`));
+      if (next) b.append(h('p', { class: 'ai-note', style: { margin: 0 } }, `Next: ${next.A.name}${next.A.name.toLowerCase().startsWith(KIND_LABEL[actKind(next.A)].toLowerCase()) ? '' : ' (' + KIND_LABEL[actKind(next.A)].toLowerCase() + ')'} at level ${next.A.minLvl}.`));
     } else if (tab === 'trials') {
       trialsTab(b);
     } else {
