@@ -2633,7 +2633,7 @@
   G.refreshHeirlooms = function () {
     const P = G.S.player;
     for (const s of Object.keys(P.equip || {})) { const it = P.equip[s]; if (it && it.heirloom) P.equip[s] = G.makeHeirloom(it.id, P.level); }
-    for (const b of P.bags) if (b.item && b.item.heirloom) b.item = G.makeHeirloom(b.item.id, P.level);
+    for (const b of P.bags.concat(P.bank || [])) if (b.item && b.item.heirloom) b.item = G.makeHeirloom(b.item.id, P.level); // the bank too (#442)
   };
   G.heirloomXpBonus = function () { let n = 0; for (const s in (G.S.player.equip || {})) if (G.S.player.equip[s] && G.S.player.equip[s].heirloom) n++; return Math.min(3, n) * 5; };
   G.buyHeirloom = function (id) {

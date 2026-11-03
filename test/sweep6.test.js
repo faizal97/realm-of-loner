@@ -312,3 +312,10 @@ test('Longnight items in the bank go when the festival ends, and no Snowball wor
   const n0 = count('ln_snowball'); G.lnUse(G.S.player.bags.length - 1);
   assert.strictEqual(count('ln_snowball'), n0, 'not thrown');
 });
+
+test('an heirloom kept in the bank grows with you (#442)', () => {
+  W.character(10); const id = G.S.id, P = G.S.player;
+  P.bank = [{ item: G.makeHeirloom('heirloom_cloak', 10), n: 1 }];
+  P.level = 60; G.save(); G.logout(); G.load(id);
+  assert.deepStrictEqual(G.S.player.bank[0].item, G.makeHeirloom('heirloom_cloak', 60));
+});
