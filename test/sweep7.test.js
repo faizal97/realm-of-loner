@@ -51,3 +51,12 @@ test('the clock moved to next month and back keeps this month\'s Trials (#472)',
   assert.strictEqual(Rec.best[act].lvl, 8); assert.strictEqual(Rec.open[act], open);
   assert.ok(!Rec.history.some((h) => h.season === Rec.season), 'no history for a month not over');
 });
+
+test('a story scene during a pull does not stop the run clock (#470)', () => {
+  W.character(20); const S = G.S; S.player.place = D.ACTIVITIES.deadmines.where;
+  G.queueFor('deadmines'); S.queue.popAt = W.now() - 1; G.update(0.5); G.acceptPop();
+  G.runPull(); W.advance(0.5);
+  assert.ok(G.fight, 'a pull started'); const c0 = G.runClock();
+  G.paused = true; try { W.advance(5); } finally { G.paused = false; }
+  assert.ok(G.runClock() - c0 > 4, `run clock moved ${G.runClock() - c0}`);
+});

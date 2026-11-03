@@ -4593,7 +4593,7 @@
     const fast = G.fight && G.speed > 1 && !G.isPvp(G.fight) ? G.speed : 1;
     if (G.speed > 1 && G.isPvp(G.fight) && !pvpSpeedTold) { pvpSpeedTold = true; emit('infoToast', 'PvP fights run at normal speed.'); }
     if (fast > 1 && S.run && !S.run.finishedAt) S.run.fastSecs = (S.run.fastSecs || 0) + dt * (fast - 1);
-    if (G.paused && S.run && !S.run.finishedAt) S.run.pausedSecs = (S.run.pausedSecs || 0) + dt; // a story scene's time isn't the run's (#454)
+    if (G.paused && !G.fight && S.run && !S.run.finishedAt) S.run.pausedSecs = (S.run.pausedSecs || 0) + dt; // a story scene's time isn't the run's (#454), unless a fight goes on under it (#470)
     acc += dt * fast;
     if (S.player.fishing) try { fishTick(); } catch (e) { console.error(e); } // fishing (v10.9)
     socAcc += dt; if (socAcc >= 1) { socAcc = 0; if (root.SOC) try { SOC.tick(); } catch (e) { console.error(e); } try { G.brawlTick(); } catch (e) { console.error(e); } G.lnTick(); }
