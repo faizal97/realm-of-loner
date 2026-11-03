@@ -1266,7 +1266,7 @@
     const lv = G.npcQuests(npc).filter((q) => q.st === 'available').map((q) => D.QUESTS[q.qid].lvl);
     if (!lv.length) return null;
     const lo = Math.min(...lv), hi = Math.max(...lv), num = (l) => h('span', { style: { color: conColor(l) } }, String(l));
-    return h('span', null, ' · Lv ', num(lo), lo === hi ? null : '-', lo === hi ? null : num(hi));
+    return h('span', null, ' · Lv ', num(lo), lo === hi ? null : '–', lo === hi ? null : num(hi));
   }
   // ---------- where quest things happen: the map, the quest page, the tracker and the leads all ask here
   // the places an objective is done in: a visit's place, where its mob lives or its item drops, where it is gathered
@@ -2655,7 +2655,7 @@
           ${huntUpAt.has(p) ? `<polygon points="${x - 15},${y - 22} ${x - 9},${y - 28} ${x - 3},${y - 22} ${x - 9},${y - 16}" fill="#ff8a3a" stroke="#1a1208" stroke-width="2"/>` : ''}
           ${qPlaces.has(p) ? (qMain.has(p) ? `<image href="${qmarkSrc(qPlaces.get(p), true)}" x="${x + 5}" y="${y - 30}" width="20" height="24.5"/>` : `<image href="${qmarkSrc(qPlaces.get(p))}" x="${x + 7}" y="${y - 30}" width="15" height="24.5"/>`) : ''}
           <text x="${x}" y="${y + 26}" text-anchor="middle" font-family="Alegreya Sans, sans-serif" font-weight="800" font-size="13" fill="${adj || here ? '#f3e6c6' : '#a89a7a'}" stroke="#120c05" stroke-width="3" paint-order="stroke">${esc(pl.name)}</text>
-          <text x="${x}" y="${y + 40}" text-anchor="middle" font-family="Alegreya Sans, sans-serif" font-weight="700" font-size="11" fill="${conColor(Math.round((pl.lvl[0] + pl.lvl[1]) / 2))}" stroke="#120c05" stroke-width="3" paint-order="stroke">${pl.safe ? 'Town' : pl.lvl[0] + '-' + pl.lvl[1]}</text>
+          <text x="${x}" y="${y + 40}" text-anchor="middle" font-family="Alegreya Sans, sans-serif" font-weight="700" font-size="11" fill="${conColor(Math.round((pl.lvl[0] + pl.lvl[1]) / 2))}" stroke="#120c05" stroke-width="3" paint-order="stroke">${pl.safe ? 'Town' : pl.lvl[0] + '–' + pl.lvl[1]}</text>
         </g>`);
       }
       // a map inside this one (#136): a marker that opens it, joined to the place its road starts from, with a quest mark
@@ -3026,7 +3026,7 @@
         const stack = G.stackable(it);
         list.append(h('div', { class: 'row', style: { gridTemplateColumns: '34px 1fr auto' } },
           h('button', { style: { padding: 0 }, onclick: () => showDialog(itemTip(it), true) }, itemIcon(it)),
-          h('button', { class: 't', style: { textAlign: 'left' }, onclick: () => showDialog(itemTip(it), true) }, h('b', { class: 'q' + it.q }, it.name), h('small', null, h('span', { html: moneyHtml(cost) + (stack ? ' each' : '') }), gearTag(it))),
+          h('button', { class: 't', style: { textAlign: 'left' }, onclick: () => showDialog(itemTip(it), true) }, h('b', { class: 'q' + it.q }, it.name), h('small', null, h('span', { html: moneyHtml(cost, false, cost > 0) + (stack ? ' each' : '') }), gearTag(it))),
           h('div', { class: 'btn-row', style: { flexWrap: 'nowrap' } },
             h('button', { class: 'chip', onclick: () => { G.buy(it, 1); ui.sheetFn(); } }, 'Buy'),
             stack ? h('button', { class: 'chip', onclick: () => { G.buy(it, 5); ui.sheetFn(); } }, '×5') : null)));
@@ -3204,7 +3204,7 @@
     if (dg.length || rd.length || wa.length) add('hearthstone', [dg.length ? `${dg.length} dungeon${dg.length > 1 ? 's' : ''}` : '', rd.length ? `${rd.length} raid${rd.length > 1 ? 's' : ''}` : '', wa.length ? `${wa.length} Wanted` : ''].filter(Boolean).join(', ') + ' at your level', dg.concat(rd, wa).slice(0, 3).map((k) => D.ACTIVITIES[k].name).join(', ') + (dg.length + rd.length + wa.length > 3 ? ', ...' : ''), () => { closeSheet(); openSocial('groups'); });
     if (G.rouletteOptions().length) add('hearthstone', G.rouletteReady() ? 'Dungeon Roulette: Ready' : 'Dungeon Roulette: Done', G.rouletteReady() ? null : `again ${clockAt('day')}`, () => { closeSheet(); openSocial('groups'); });
     const bh = G.bountiesHeld(); if (bh) add('journal', `${bh} bount${bh === 1 ? 'y' : 'ies'} in progress`, null, null);
-    if (G.eventLive('lanternwake')) { const st = G.lw(), Ev = D.EVENTS.lanternwake; add('event_lanternwake', 'Lanternwake', `${lwEndsText()} · candles ${st ? st.today : 0}/${Ev.cap}`, () => openLanternwake()); }
+    if (G.eventLive('lanternwake')) { const st = G.lw(), Ev = D.EVENTS.lanternwake; add('event_lanternwake', 'Lanternwake', `${lwEndsText()} · Wake Candles: ${st ? st.today : 0}/${Ev.cap}`, () => openLanternwake()); }
     if (G.lnOn()) { const st = G.ln(); add('event_longnight', 'Longnight', `${lwEndsText('longnight')} · ${st && st.done ? 'daily done' : G.LN_DAILY[G.lnToday()]}${st && st.ready ? ` · ${st.ready} door${st.ready > 1 ? 's' : ''} to open` : ''}`, () => openLongnight()); }
     { const wb = P.level >= cap && G.worldBoss(); if (wb) add('hearthstone', `World boss: ${D.MOBS[D.ACTIVITIES[wb].boss].name}`, `${D.PLACES[D.ACTIVITIES[wb].where].name}, ${D.PLACES[D.ACTIVITIES[wb].where].zone} · ${G.worldBossLooted(wb) ? `looted · a new one ${clockAt('week')}` : `loot open until ${untilAt('week')}`}`, () => { ui.gfTab = 'raid'; closeSheet(); openSocial('groups'); }); }
     if (P.level >= G.BRAWL.minLvl) { const w = G.brawlWindow(), fought = (P.brawl || {}).last === w.id;
