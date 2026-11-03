@@ -1481,7 +1481,7 @@
   // a reward is never lost: with full bags it goes to the bank, and chat says so (as an expired auction does)
   G.giveReward = function (it, label) {
     const P = G.S.player;
-    if (!(G.bagsFull() && !G.stackable(it)) && G.addItem(it, 1)) return 'bags';
+    if (!G.slotsShort([[it, 1]]) && G.addItem(it, 1)) return 'bags'; // only when it fits, so no "full" toast before the bank (#443)
     P.bank = P.bank || []; P.bank.push({ item: it, n: 1 });
     sys(`${label}: your bags were full, so the ${it.name} went to your bank.`); return 'bank';
   };

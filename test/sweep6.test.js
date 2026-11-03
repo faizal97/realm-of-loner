@@ -319,3 +319,10 @@ test('an heirloom kept in the bank grows with you (#442)', () => {
   P.level = 60; G.save(); G.logout(); G.load(id);
   assert.deepStrictEqual(G.S.player.bank[0].item, G.makeHeirloom('heirloom_cloak', 60));
 });
+
+test('a reward sent to the bank says where it went, without a bags-full toast (#443)', () => {
+  W.character(20); const P = G.S.player; const toasts = []; let on = true; G.on('toast', (t) => { if (on) toasts.push(t); });
+  while (!G.bagsFull()) P.bags.push({ item: G.genGear('chest', 20, 2, { atype: 'mail' }), n: 1 });
+  assert.strictEqual(G.giveReward(G.copyItem('linen_cloth'), 'Test'), 'bank');
+  on = false; assert.deepStrictEqual(toasts.filter((t) => /full/i.test(String(t && t.text || t))), []);
+});
