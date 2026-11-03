@@ -59,6 +59,6 @@
     ] },
   });
   Object.assign(D.ACTIVITIES, {
-    stratholme: { name: 'Graymouth', dungeon: 'stratholme', where: 'stratholme_gate', size: 5, minLvl: 58, maxLvl: 60, desc: 'Dungeon in the East Rotmoor. 5 players. Both factions.' },
+    stratholme: { name: 'Graymouth', dungeon: 'stratholme', where: 'stratholme_gate', size: 5, minLvl: 58, maxLvl: 60, desc: 'Dungeon in East Rotmoor. 5 players. Both factions.' },
   });
 })(typeof window !== 'undefined' ? window : globalThis);

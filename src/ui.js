@@ -2645,7 +2645,7 @@
       b.append(tabs);
       if (ui.mapView === 'world') return worldMap(b, title, hereRegion);
       const region = ui.mapRegion && MAPS[ui.mapRegion] ? ui.mapRegion : hereMap;
-      title.firstChild.textContent = mapName(region);
+      title.firstChild.textContent = mapName(region); { const sm = title.querySelector('small'); if (sm) sm.textContent = 'Tap a place to travel there'; }
       if (region !== hereMap) b.append(h('div', { class: 'chips' }, h('button', { class: 'chip', onclick: () => { ui.mapRegion = null; ui.sheetFn(); } }, '← Back to ' + mapName(hereMap))));
       const MAP = MAPS[region];
       const cur = P.travel ? null : P.place;
@@ -2711,7 +2711,7 @@
       });
       const far = h('div', { class: 'chips' });
       for (const a in MAP) for (const c in D.PLACES[a].links) if (!MAP[c] && !G.enemyTown(a) && !G.enemyTown(c)) far.append(h('button', { class: 'chip gold', onclick: () => { if (cur === a) { G.travelTo(c); closeSheet(); } else toast(`Go to ${D.PLACES[a].name} first.`); } }, `${D.PLACES[a].name} → ${D.PLACES[c].name}`, h('small', null, `${D.PLACES[c].zone} · ` + ((D.PLACES[a].via || {})[c] || 'Road') + ' · ' + G.travelSecs(a, c) + 's')));
-      b.append(m, h('div', { style: { color: 'var(--muted)', fontSize: '13px' } }, 'Gold: you are here. ! marks places your quests need, ? where a finished quest is handed in. The anvil marks a profession trainer. Tap any place for the way there.'),
+      b.append(m, h('div', { style: { color: 'var(--muted)', fontSize: '13px' } }, 'Gold: you are here · !: quest · ?: hand-in · Anvil: trainer'),
         ...(huntUpAt.size ? [h('div', { style: { color: '#ff8a3a', fontSize: '13px', fontWeight: 700 } }, `◆ Rare hunt up now: ${[...huntUpAt].map(([pk, k]) => `${D.MOBS[k].name} at ${D.PLACES[pk].name}`).join(', ')}`)] : [])); // no line when none is up (#53: append(null) wrote "null")
       // roads out of this zone, under the map so they never push it down
       if (far.childNodes.length) b.append(h('div', { class: 'sec-h' }, 'Roads out of ' + mapName(region)), far);
@@ -2741,7 +2741,7 @@
     feralas: [210, 310], tanaris: [298, 322], dustwallow: [312, 262], ungoro: [254, 380], tidewatch: [118, 458], stormveil: [196, 486], skullreef: [274, 458],
   };
   function worldMap(b, title, hereRegion) {
-    title.firstChild.textContent = 'Caldreth';
+    title.firstChild.textContent = 'Caldreth'; { const sm = title.querySelector('small'); if (sm) sm.textContent = 'Tap a zone to open it'; } // #467
     const P = G.S.player, my = G.myFaction();
     const edges = {}, lines = [], nodes = [];
     for (const k in D.PLACES) { const p = D.PLACES[k]; for (const l in p.links) { const a = p.region, c = D.PLACES[l].region; if (a && c && a !== c && WORLD[a] && WORLD[c]) { const key = [a, c].sort().join('|'); const via = (p.via || {})[l]; if (!edges[key] || (via && edges[key] === 'road')) edges[key] = via || 'road'; } } }
@@ -2750,7 +2750,7 @@
       const road = /road|pass|wall|span/i.test(edges[key]);
       lines.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${road ? '#8a6a3a' : '#5a7a9a'}" stroke-width="${road ? 3 : 2}" stroke-dasharray="${road ? '6 5' : '2 5'}" stroke-linecap="round" opacity=".9"/>`);
     }
-    const lv = (r) => { let a = 99, c = 0; for (const k in D.PLACES) { const p = D.PLACES[k]; if (p.region === r && p.lvl) { a = Math.min(a, p.lvl[0]); c = Math.max(c, p.lvl[1]); } } return a <= c ? `${a}–${c}` : ''; };
+    const lv = (r) => { let a = 99, c = 0; for (const k in D.PLACES) { const p = D.PLACES[k]; if (p.region === r && p.lvl) { a = Math.min(a, p.lvl[0]); c = Math.max(c, p.lvl[1]); } } return a < c ? `${a}–${c}` : a === c ? `${a}` : ''; }; // one level reads 60, not 60–60 (#467)
     const wl = Object.keys(WORLD).filter((r) => D.REGIONS[r]), wlbl = placeLabels(wl.map((r) => ({ x: WORLD[r][0], y: WORLD[r][1], name: D.REGIONS[r].name, sub: lv(r) })), 340, 520, 11, 12);
     for (const r in WORLD) {
       if (!D.REGIONS[r]) continue;
@@ -2772,7 +2772,7 @@
       ${lines.join('')}${nodes.join('')}</svg>`;
     const m = h('div', { class: 'map', html: svg });
     m.addEventListener('click', (e) => { const g = e.target.closest('[data-region]'); if (!g) return; ui.mapView = 'zone'; ui.mapRegion = g.dataset.region; ui.sheetFn(); });
-    b.append(m, h('div', { style: { color: 'var(--muted)', fontSize: '13px' } }, 'Green: your faction · red: the enemy\'s · gold: contested. Brown dashes are roads, blue dots are ships and flights. Tap a zone to open it, then tap a place for the way there.'));
+    b.append(m, h('div', { style: { color: 'var(--muted)', fontSize: '13px' } }, 'Green: yours · Red: enemy · Gold: contested · Dashes: roads · Dots: ships and flights'));
   }
 
   // ---------- quests
@@ -4119,7 +4119,7 @@
     const looks = new Set(G.account().looks || []), done = p.skill >= 300, t = D.TITLES.find((x) => x.id === 'prof_' + k);
     const crafted = Object.values(D.ITEMS).filter((it) => it.look && it.crafted && (it.source || '').startsWith(`Crafted: ${D.PROFESSIONS[k].name}`));
     const have = crafted.filter((it) => looks.has(it.look[0] + ':' + it.look[1])).length;
-    const rows = [h('div', { class: 'row' }, h('div', { class: 'ic' }, img(art('icon', R.keepsake))), h('div', { class: 't' }, h('b', { class: done ? 'q4' : '' }, R.name), h('small', null, done ? 'Earned: a look for your back, in the wardrobe' : `Keepsake: reach 300 (you have ${p.skill})`))),
+    const rows = [h('div', { class: 'row' }, h('div', { class: 'ic' }, img(art('icon', R.keepsake))), h('div', { class: 't' }, h('b', { class: done ? 'q4' : '' }, R.name), h('small', null, done ? 'Earned: a look for your back, in the wardrobe' : `Keepsake: ${p.skill}/300`))),
       h('div', { class: 'row' }, h('div', { class: 'ic' }, img(art('icon', 'journal'))), h('div', { class: 't' }, h('b', { class: done ? 'q4' : '' }, G.titleName(t, G.S.player.name)), h('small', null, done ? 'Earned: wear it from Hero → Journey → Titles' : 'Title: reach 300')))];
     if (crafted.length) rows.push(h('div', { class: 'row' }, h('div', { class: 'ic' }, itemIcon(crafted[0])), h('div', { class: 't' }, h('b', null, `Crafted looks: ${have}/${crafted.length}`), h('small', { style: { whiteSpace: 'normal' } }, crafted.map((it) => `${it.name}${looks.has(it.look[0] + ':' + it.look[1]) ? ' ✓' : ''}`).join(' · ') + '. Only from crafting.'))));
     return h('div', null, h('div', { class: 'sec-h' }, 'Collections', h('small', null, 'for every character on this device')), h('div', { class: 'list' }, ...rows));
@@ -4140,7 +4140,7 @@
     ui.profTab = ui.profTab || null;
     openSheet('profs', 'Professions', ' ', (b, title) => {
       const P = G.S.player, profs = G.profs(), ids = G.knownProfIds(); // a skill from a newer build is skipped (issue #17)
-      title.querySelector('small').textContent = ids.length ? `${G.primaryCount()}/${D.PROF_MAX} · craft anywhere out of combat` : 'Learn up to two from a profession trainer';
+      title.querySelector('small').textContent = ids.length ? `Primary: ${G.primaryCount()}/${D.PROF_MAX}` : 'Learn up to two from a profession trainer';
       ids.sort((a, c) => (D.isSecondary(a) ? 1 : 0) - (D.isSecondary(c) ? 1 : 0)); // your two professions, then Cooking and Fishing
       if (!ids.length) { // the nearest trainer as a fact, one tap from it (#76)
         const t = G.nearestTrainer(), N = t && D.NPCS[t.npc];
@@ -4153,7 +4153,7 @@
       b.append(h('div', { class: 'chips' }, ...ids.map((k) => h('button', { class: 'chip' + (k === ui.profTab ? ' gold' : ''), onclick: () => { ui.profTab = k; ui.sheetFn(); } }, img(art('icon', D.PROFESSIONS[k].icon)), ' ', D.PROFESSIONS[k].name, h('small', null, `${profs[k].skill}/${profs[k].max}`)))));
       const k = ui.profTab, Pd = D.PROFESSIONS[k], p = profs[k];
       const rank = (D.PROF_RANKS.find((r) => r.max === p.max) || {}).name || '';
-      b.append(h('div', { class: 'people' }, Pd.desc), profBar(p), h('div', { class: 'ai-note', style: { margin: '2px 0 0' } }, `${p.skill} / ${p.max}${rank ? ' · ' + rank : ''}`), profCollections(k, p));
+      b.append(h('div', { class: 'people' }, Pd.desc), profBar(p), h('div', { class: 'ai-note', style: { margin: '2px 0 0' } }, `${p.skill}/${p.max}${rank ? ' · ' + rank : ''}`), profCollections(k, p));
       if (!D.isSecondary(k)) b.append(h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', onclick: () => unlearnDialog(k) }, 'Unlearn ' + Pd.name))); // #145
       const recipes = G.recipesFor(k);
       if (k === 'fishing') { // what bites, by water: common fish by skill, then the big and rare ones that fight on the reel
@@ -4184,7 +4184,7 @@
         list.append(h('button', { class: 'row', onclick: () => showDialog([itemTip(G.copyItem(r.makes)), h('p', { class: 'ai-note' }, `Needs: ${mats}`),
           col < 0 ? h('p', { class: 'red' }, `Requires ${Pd.name} ${r.sk[0]}.`) : k === 'cooking' ? h('div', { class: 'btn-row' }, h('button', { class: 'btn', disabled: can < 1, onclick: () => { closeDialog(); openCookBar(r.id, 1); } }, 'Cook'), h('button', { class: 'btn alt', disabled: can < 2, onclick: () => { closeDialog(); openCookBar(r.id, can); } }, `Cook all (${can})`), h('button', { class: 'btn alt', onclick: closeDialog }, 'Close')) : h('div', { class: 'btn-row' }, h('button', { class: 'btn', disabled: can < 1, onclick: () => { closeDialog(); G.craft(r.id, 1); closeSheet(); } }, 'Create'), h('button', { class: 'btn alt', disabled: can < 2, onclick: () => { closeDialog(); G.craft(r.id, can); closeSheet(); } }, `Create all (${can})`), h('button', { class: 'btn alt', onclick: closeDialog }, 'Close'))], true) },
           h('div', { class: 'ic' }, itemIcon(mk)),
-          h('div', { class: 't' }, h('b', { style: { color: SKILL_COL[col + 1] } }, mk.name + (r.n > 1 ? ` ×${r.n}` : '')), h('small', { style: { whiteSpace: 'normal' } }, col < 0 ? `Needs skill ${r.sk[0]}` : mats)),
+          h('div', { class: 't' }, h('b', { style: { color: SKILL_COL[col + 1] } }, mk.name + (r.n > 1 ? ` ×${r.n}` : '')), h('small', { style: { whiteSpace: 'normal' } }, col < 0 ? `Requires skill ${r.sk[0]}` : mats)),
           h('div', { class: 'r' }, can ? String(can) : '')));
       };
       // what still raises your skill first (the hardest you can make on top), then what needs more skill (the next one
@@ -4265,7 +4265,7 @@
   function talentReset(b, tp) {
     const cost = G.respecCost();
     b.append(h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', disabled: !tp.spent, onclick: () => showDialog([h('h3', null, 'Reset talents?'), h('p', null, `All ${tp.spent} points come back to spend again. ${cost ? `This costs ${G.moneyText(cost)}.` : 'The first reset is free.'}`),
-        h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { closeDialog(); G.resetTalents(); ui.sheetFn(); } }, 'Reset'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Cancel'))], true) }, cost ? `Reset (${G.moneyText(cost)})` : 'Reset (free)')));
+        h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { closeDialog(); G.resetTalents(); ui.sheetFn(); } }, 'Reset'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Cancel'))], true) }, !tp.spent ? 'Reset: no points spent' : cost ? `Reset (${G.moneyText(cost)})` : 'Reset (free)')));
   }
   // ---------- Friends (friends.js): real players, added by friend code. Social → Friends. The live view (fw) runs
   // while Friends is on; the tab and the Social dot read it.

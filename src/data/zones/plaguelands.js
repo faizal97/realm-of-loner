@@ -40,7 +40,7 @@
     hearthglen: { name: 'Morrowglen', zone: 'West Rotmoor', region: 'plaguelands', scene: 'hearthglen', lvl: [56, 58], mobs: [['scarlet_sentinel', 5], ['scarlet_lightsworn', 4]], pool: 10, npcs: [], links: { dalson_tears: 20, stratholme_gate: 30 } },
     the_writhing_haunt: { name: 'The Weeping Haunt', zone: 'West Rotmoor', region: 'plaguelands', scene: 'the_writhing_haunt', lvl: [57, 58], mobs: [['rotting_behemoth', 6], ['diseased_ghoul', 3]], pool: 9, npcs: [], links: { andorhal: 16 } },
     caer_darrow: { name: 'Castle Ardmore', zone: 'West Rotmoor', region: 'plaguelands', scene: 'caer_darrow', lvl: [57, 60], mobs: [['scourge_warder', 3], ['diseased_ghoul', 3]], pool: 6, npcs: [], links: { chillwind_camp: 18, andorhal: 18 } },
-    stratholme_gate: { gate: true, name: 'Graymouth', zone: 'East Rotmoor', region: 'plaguelands', scene: 'stratholme_gate', lvl: [57, 60], mobs: [['plaguehound', 3], ['skeletal_executioner', 3]], pool: 6, npcs: [], links: { hearthglen: 30 }, via: { hearthglen: 'Road to the East Rotmoor' } },
+    stratholme_gate: { gate: true, name: 'Graymouth', zone: 'East Rotmoor', region: 'plaguelands', scene: 'stratholme_gate', lvl: [57, 60], mobs: [['plaguehound', 3], ['skeletal_executioner', 3]], pool: 6, npcs: [], links: { hearthglen: 30 }, via: { hearthglen: 'Road to East Rotmoor' } },
   });
   D.PLACES.alterac_foothills.links.chillwind_camp = 45; D.PLACES.alterac_foothills.via.chillwind_camp = 'Road through Vaskar';
   D.PLACES.brill.links.the_bulwark = 40; D.PLACES.brill.via = Object.assign(D.PLACES.brill.via || {}, { the_bulwark: 'Road to the Rotmoor' });
@@ -83,6 +83,6 @@
   both('araj', 58, 'Wanted: Vashti the Summoner', s('A lich, Vashti the Summoner, raises the dead in Elmsworth. Bring me his phylactery. Take friends.'), [{ type: 'collect', item: 'araj_phylactery', n: 1 }], ['argent_officer_a', { choice: ['fam_weapon58'] }], ['argent_officer_h', { choice: ['fam_weapon58'] }]);
   D.QUESTS.wpa_araj.group = 3; D.QUESTS.wph_araj.group = 3;
   Object.assign(D.ACTIVITIES, {
-    araj: { name: 'Wanted: Vashti the Summoner', where: 'andorhal', size: 3, minLvl: 55, maxLvl: 58, desc: 'Open-world elite in the West Rotmoor. 3 players.', boss: 'araj_the_summoner', pulls: [{ scene: 'andorhal', label: 'The ruins', mobs: ['skeletal_executioner', 'scourge_warder'] }, { scene: 'andorhal', label: 'The ruins', mobs: ['skeletal_executioner', 'skeletal_executioner'] }, { scene: 'andorhal', label: 'Vashti the Summoner', mobs: ['araj_the_summoner'], boss: true }] },
+    araj: { name: 'Wanted: Vashti the Summoner', where: 'andorhal', size: 3, minLvl: 55, maxLvl: 58, desc: 'Open-world elite in West Rotmoor. 3 players.', boss: 'araj_the_summoner', pulls: [{ scene: 'andorhal', label: 'The ruins', mobs: ['skeletal_executioner', 'scourge_warder'] }, { scene: 'andorhal', label: 'The ruins', mobs: ['skeletal_executioner', 'skeletal_executioner'] }, { scene: 'andorhal', label: 'Vashti the Summoner', mobs: ['araj_the_summoner'], boss: true }] },
   });
 })(typeof window !== 'undefined' ? window : globalThis);

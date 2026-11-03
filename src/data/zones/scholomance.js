@@ -1,5 +1,5 @@
 // The Blackcloister (dungeon, levels 57–60, v8): the Hollow Host's school of necromancy in the crypts under Castle Ardmore,
-// in the West Rotmoor. Reachable by both factions.
+// in West Rotmoor. Reachable by both factions.
 (function (root) {
   const D = root.D;
   D.item('kirtonos_blood', { name: "Skreel's Blood", slot: 'quest', q: 1, icon: 'venom' });
@@ -60,6 +60,6 @@
     ] },
   });
   Object.assign(D.ACTIVITIES, {
-    scholomance: { name: 'The Blackcloister', dungeon: 'scholomance', where: 'caer_darrow', size: 5, minLvl: 57, maxLvl: 60, desc: 'Dungeon in the West Rotmoor. 5 players. Both factions.' },
+    scholomance: { name: 'The Blackcloister', dungeon: 'scholomance', where: 'caer_darrow', size: 5, minLvl: 57, maxLvl: 60, desc: 'Dungeon in West Rotmoor. 5 players. Both factions.' },
   });
 })(typeof window !== 'undefined' ? window : globalThis);
