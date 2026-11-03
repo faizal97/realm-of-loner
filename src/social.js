@@ -244,8 +244,8 @@
     for (const m of S.chat) {
       const a = m.act; if (!a || a.state !== 'open') continue;
       // one nudge if a whisper request is ignored, then a goodbye when it expires
-      const asks = a.kind !== 'gift' && a.kind !== 'chat'; // a gift or a question waits quietly (#359)
-      if (asks && a.whisper && !a.accepted && !a.nudged && t - (a.posted || t) > 100000) { a.nudged = true; const b = botById(a.bot); if (b) { const n = post('whisper', b, pickT('s222', ['u there?', '??', 'hello?', 'no rush, just lmk', 'still up for it?', 'hellooo', 'ping :)'])); if (n) n.ref = m.id; } }
+      const asks = a.kind !== 'gift' && a.kind !== 'chat'; // a gift or a question waits quietly (#359); a taken craft order (a.sent) doesn't nag (#449)
+      if (asks && a.whisper && !a.accepted && !a.sent && !a.nudged && t - (a.posted || t) > 100000) { a.nudged = true; const b = botById(a.bot); if (b) { const n = post('whisper', b, pickT('s222', ['u there?', '??', 'hello?', 'no rush, just lmk', 'still up for it?', 'hellooo', 'ping :)'])); if (n) n.ref = m.id; } }
       // a task is done with its person: one who left your party (you walked off, it disbanded, a run) ends it (#351)
       if ((a.kind === 'help_kill' || a.kind === 'quest_team') && a.accepted && !(S.wparty && S.wparty.members.some((x) => x.bot.id === a.bot))) {
         a.state = 'expired'; if (a.kind === 'help_kill') finishHelp(m, false); else finishTeam(m, false); continue;
@@ -256,7 +256,7 @@
         a.state = 'expired';
         if (a.kind === 'help_kill' && a.accepted) finishHelp(m, false);
         else if (a.kind === 'quest_team' && a.accepted) finishTeam(m, false);
-        else if (a.whisper && !a.accepted && chance(0.6) && asks) { /* the roll happens either way: the outcome stream stays as it was */ const b = botById(a.bot); if (b) { const n = post('whisper', b, pickT('s227', ['nvm, found someone', 'nvm got it', 'all good, someone else helped', 'np, maybe next time', 'all sorted, ty anyway'])); if (n) n.ref = m.id; } }
+        else if (a.whisper && !a.accepted && chance(0.6) && asks && !a.sent) { /* the roll happens either way: the outcome stream stays as it was */ const b = botById(a.bot); if (b) { const n = post('whisper', b, pickT('s227', ['nvm, found someone', 'nvm got it', 'all good, someone else helped', 'np, maybe next time', 'all sorted, ty anyway'])); if (n) n.ref = m.id; } }
       }
       // a gift was sent: it arrives even if you never tapped Thank them, the gold at once, an item by mail (#392)
       if (a.state === 'expired' && a.kind === 'gift') { a.state = 'done'; const b = botById(a.bot), who = b ? b.name : 'A friend';

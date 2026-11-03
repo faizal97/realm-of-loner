@@ -358,3 +358,10 @@ test('the Champion title stays earned after leaving the guild (#448)', () => {
   G.setTitle('guild_champion'); SOC.leaveGuild();
   assert.ok(G.titleUnlocked(t), 'still earned'); assert.ok(G.displayName().includes('Champion'));
 });
+
+test('a craft order you took does not nudge you (#449)', () => {
+  W.character(20); const S = G.S, b = S.bots[0];
+  S.chat.push({ id: 'co1', ch: 'whisper', from: b.name, text: 'craft?', act: { kind: 'craft_order', whisper: true, state: 'open', bot: b.id, sent: true, posted: W.now(), until: W.now() + 20 * 60000 } });
+  W.advance(150);
+  assert.ok(!S.chat.some((m) => m.ref === 'co1'), 'no nudge');
+});
