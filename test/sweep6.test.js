@@ -287,3 +287,17 @@ test('a clock set back a day while playing moves every timer with it (#436-#439)
     ['pending', S.flags.pendingAt], ['help wanted', S.helpWanted[0].expires], ['auction', S.ah.mine[0].sellAt]])
     assert.ok(left(v) <= 61000, `${name}: ${left(v)} ms left`);
 });
+
+test('stacks hold 20 in the bags and the bank (#440)', () => {
+  W.character(20); const P = G.S.player; P.bags = []; P.bank = [];
+  const stacks = (list, id) => list.filter((b) => b.item.id === id).map((b) => b.n);
+  G.addItem(G.copyItem('linen_cloth'), 19); G.addItem(G.copyItem('linen_cloth'), 5);
+  assert.deepStrictEqual(stacks(P.bags, 'linen_cloth'), [20, 4]);
+  G.addItem(G.copyItem('linen_cloth'), 56);
+  assert.deepStrictEqual(stacks(P.bags, 'linen_cloth'), [20, 20, 20, 20]);
+  for (let i = 0; i < 4; i++) G.bankDeposit(P.bags.findIndex((b) => b.item.id === 'linen_cloth'));
+  assert.deepStrictEqual(stacks(P.bank, 'linen_cloth'), [20, 20, 20, 20]);
+  G.addItem(G.copyItem('linen_cloth'), 1); G.bankWithdraw(0);
+  assert.deepStrictEqual(stacks(P.bags, 'linen_cloth'), [20, 1]);
+  assert.strictEqual(G.slotsShort([[G.copyItem('linen_cloth'), 45]]), Math.max(0, 3 - G.bagFree()));
+});

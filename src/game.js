@@ -582,16 +582,26 @@
     return it;
   };
 
+  // the new slots n of a stackable item needs in a list of stacks of 20, and putting them there
+  const STACK = 20;
+  function stackSlots(list, it, n) { const room = list.reduce((a, b) => a + (b.item.id === it.id && b.n < STACK ? STACK - b.n : 0), 0); return Math.ceil(Math.max(0, n - room) / STACK); }
+  function putStack(list, it, n) {
+    for (const b of list) { if (n <= 0) break; if (b.item.id === it.id && b.n < STACK) { const k = Math.min(n, STACK - b.n); b.n += k; n -= k; } }
+    let first = true;
+    while (n > 0) { const k = Math.min(n, STACK); list.push({ item: first ? it : Object.assign({}, it), n: k }); n -= k; first = false; }
+  }
   G.addItem = function (it, n) {
     const P = G.S.player;
     n = n || 1;
     if (G.isQuestItem(it.id)) { P.qitems = P.qitems || {}; P.qitems[it.id] = (P.qitems[it.id] || 0) + n; return true; } // kept with the quests, no slot (#144)
     if (G.stackable(it)) {
-      const st = P.bags.find((b) => b.item.id === it.id && b.n < 20);
-      if (st) { st.n += n; return true; }
-    }
-    if (G.bagsFull()) { toast('Inventory is full.'); return false; }
-    P.bags.push({ item: it, n });
+      // stacks hold 20 (#440): fill the open ones, then new slots; nothing goes in unless it all fits
+      if (stackSlots(P.bags, it, n) > G.bagCap() - P.bags.length) { toast('Inventory is full.'); return false; }
+      const fresh = !P.bags.some((b) => b.item.id === it.id);
+      putStack(P.bags, it, n);
+      if (!fresh) return true;
+    } else if (G.bagsFull()) { toast('Inventory is full.'); return false; }
+    else P.bags.push({ item: it, n });
     if (G.collectLook) G.collectLook(it); // the wardrobe (v10.3)
     if (G.isUpgrade(it)) P.bagUpgrade = true; // the Bags button's dot until Bags is opened (v10.9, issue #11)
     if (G.effectOf(it)) { emit('effectItem', { item: it }); if (G.canUseItem(it)) { it.fxNew = 1; P.bagUpgrade = true; } } // the one-time card; a new effect item you can use lights the dot like an upgrade (#23)
@@ -2089,14 +2099,20 @@
   G.bankDeposit = function (idx) {
     const P = G.S.player, b = P.bags[idx]; if (!b) return;
     P.bank = P.bank || [];
-    if (G.stackable(b.item)) { const st = P.bank.find((x) => x.item.id === b.item.id); if (st) { st.n += b.n; P.bags.splice(idx, 1); emit('change'); return; } }
+    if (G.stackable(b.item) && stackSlots(P.bank, b.item, b.n) <= Math.max(0, BANK_SLOTS - P.bank.length)) { P.bags.splice(idx, 1); putStack(P.bank, b.item, b.n); emit('change'); return; } // stacks of 20 (#440)
     if (P.bank.length >= BANK_SLOTS) return toast(P.bank.length > BANK_SLOTS ? `Your bank holds ${P.bank.length - BANK_SLOTS} over from rewards. Take something out first.` : 'Your bank is full.');
     P.bank.push(b); P.bags.splice(idx, 1); emit('change');
   };
   G.bankWithdraw = function (idx) {
     const P = G.S.player, b = (P.bank || [])[idx]; if (!b) return;
     // a full stack (20) is no room, and the bank lets go only of what reached the bags (#163: a stack was deleted)
-    if (G.bagsFull() && !(G.stackable(b.item) && P.bags.some((x) => x.item.id === b.item.id && x.n < 20))) return toast('Inventory is full.');
+    if (G.stackable(b.item)) { // as many as fit, in stacks of 20 (#440); the rest stays in the bank
+      const fit = P.bags.reduce((a, x) => a + (x.item.id === b.item.id && x.n < STACK ? STACK - x.n : 0), 0) + Math.max(0, G.bagCap() - P.bags.length) * STACK;
+      const k = Math.min(b.n, fit); if (!k) return toast('Inventory is full.');
+      G.addItem(k === b.n ? b.item : Object.assign({}, b.item), k); b.n -= k; if (!b.n) P.bank.splice(idx, 1);
+      return emit('change');
+    }
+    if (G.bagsFull()) return toast('Inventory is full.');
     if (G.addItem(b.item, b.n)) P.bank.splice(idx, 1);
     emit('change');
   };
@@ -2232,8 +2248,14 @@
   // how many more bag slots a set of items ([item, n] pairs) needs than are free, counted the way G.addItem places them:
   // a stackable item joins a stack with room, a quest item takes no slot, anything else takes a slot. 0: they all fit (#162)
   G.slotsShort = function (list) {
-    const P = G.S.player; let need = 0;
-    for (const [it] of list) { if (G.isQuestItem(it.id)) continue; if (G.stackable(it) && P.bags.some((b) => b.item.id === it.id && b.n < 20)) continue; need++; }
+    const P = G.S.player, room = {}; let need = 0;
+    for (const [it, n] of list) {
+      if (G.isQuestItem(it.id)) continue;
+      if (!G.stackable(it)) { need++; continue; }
+      if (!(it.id in room)) room[it.id] = P.bags.reduce((a, b) => a + (b.item.id === it.id && b.n < STACK ? STACK - b.n : 0), 0);
+      const rest = Math.max(0, (n || 1) - room[it.id]), s = Math.ceil(rest / STACK); // stacks of 20 (#440)
+      need += s; room[it.id] = room[it.id] + s * STACK - (n || 1);
+    }
     return Math.max(0, need - (G.bagCap() - P.bags.length));
   };
   // the Bags tab warns before your bags are full (#90): free slots from the real capacity, so bigger bags need nothing here.
