@@ -1596,7 +1596,7 @@
     const status = R.phase === 'fight' ? 'Fighting: ' + R.pulls[R.idx].label : R.phase === 'rest' && S.group.members.some((m) => m.gone) ? 'Looking for replacements...' : R.phase === 'rest' ? (G.role() === 'tank' ? 'You are the tank. Pull when ready.' : 'Resting. The tank will pull soon.') : R.phase === 'wipe' ? 'Running back...' : 'Dungeon complete.';
     // the run's name, progress and status come after the party and the decisions (#65: decisions first)
     const resting = R.phase === 'rest' && !C; // between pulls the status line sits above Ready/Pull instead (#159)
-    const head = [h('div', { class: 'sec-h' }, R.name, h('small', null, `${Math.min(R.idx + (R.phase === 'done' ? 0 : 1), R.pulls.length)}/${R.pulls.length}${R.wipes ? ' · wipes ' + R.wipes : ''}`)), dots, resting ? null : h('div', { style: { color: 'var(--muted)', fontSize: '13px' } }, status)].filter(Boolean);
+    const head = [h('div', { class: 'sec-h' }, R.name, h('small', null, `Pull: ${Math.min(R.idx + (R.phase === 'done' ? 0 : 1), R.pulls.length)}/${R.pulls.length}${R.wipes ? ' · Wipes: ' + R.wipes : ''}`)), dots, resting ? null : h('div', { style: { color: 'var(--muted)', fontSize: '13px' } }, status)].filter(Boolean);
     // Pull / Ready / Leave sit right under the progress line and stay pinned there, so a 10-player raid's frames never push them off screen
     const actions = h('div', { class: 'run-actions' }); p.append(actions);
     // party frames
