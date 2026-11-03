@@ -529,7 +529,7 @@ img { max-width: 100%; display: block; }
 .tabs button { position: relative; }
 .tabs-fit { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .gf-tabs.tabs-fit { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-.gf-tabs.tabs-fit button { font-size: 12px; }
+.gf-tabs.tabs-fit button { font-size: 12px; padding-left: 0; padding-right: 0; } /* six labels fit at 375 px (#490) */
 .tabs-fit button { padding: 8px 2px; text-align: center; overflow: hidden; text-overflow: ellipsis; }
 .tabs button.dot::after { content: ''; position: absolute; top: 3px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: #ffd100; box-shadow: 0 0 5px #ffd100; }
 /* Friends */
@@ -1000,6 +1000,7 @@ svg.sym { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: 
 .pf.compact .bar b { font-size: 9.5px; line-height: 9px; }
 .pf.compact .rowbuffs { position: absolute; right: 0; top: 0; width: 96px; justify-content: flex-end; } /* room for 6 (#79): a width from its own content made the fit chase itself down to "+N" */
 .pf.compact .rowbuffs .au, .pf.compact .rowbuffs .au img { width: 13px; height: 13px; }
+.pf.compact .rowbuffs .au b { display: none; } /* 13 px chips: the time left is in the buff's card, as in the header frames (#488) */
 .pf.compact .role { font-size: 10px; }
 
 /* the panel starts 6 px higher, so a run's pace sits on screen under Pull (the sticky tabs and actions match it) */

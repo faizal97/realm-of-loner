@@ -279,7 +279,7 @@
     let open = foldOpen(key, !!def);
     const body = h('div', { class: 'fold-body' }, kids);
     const arr = h('span', { class: 'fold-arr' });
-    const head = h('button', { class: 'sec-h fold', onclick: () => { open = !open; setFold(key, open); paint(); } }, h('span', null, title), h('small', null, summary || ''), arr);
+    const head = h('button', { class: 'sec-h fold', onclick: () => { open = !open; setFold(key, open); paint(); if (open && body.scrollIntoView) requestAnimationFrame(() => body.scrollIntoView({ block: 'nearest' })); } }, h('span', null, title), h('small', null, summary || ''), arr);
     const paint = () => { body.hidden = !open; setSym(arr, open ? '▾' : '▸'); head.setAttribute('aria-expanded', String(open)); };
     paint();
     return [head, body];
@@ -1658,7 +1658,7 @@
           h('div', { class: 'buffs rowbuffs', 'data-au': u.uid })));
       }
       joiningRow(C, list);
-      p.append(h('div', { class: 'sec-h' }, 'Enemies', h('small', null, 'tap ◎ to mark kill order')), list);
+      pf.after(h('div', { class: 'sec-h' }, 'Enemies', h('small', null, 'tap ◎ to mark kill order')), list); // mid-pull the kill order is the decision: right under the party, above the fold (#489)
     } else {
       const row = h('div', { class: 'btn-row' });
       if (R.phase === 'rest') {
@@ -5252,9 +5252,9 @@
     // label: value rows, counting the realm as it is now (#334)
     showDialog([h('h3', null, 'Welcome back'),
       h('div', { class: 'ai-box' }, row('Away', fmtTime(rep.away)), rep.rested > 0 ? row('Rested', `+${rep.rested} XP`, '#6fa8ff') : null,
-        rep.dings ? row('Players levelled', String(rep.dings)) : null, rep.joined ? row('New players', String(rep.joined)) : null, row('Online now', String(rep.online))),
+        rep.dings ? row('Players leveled', String(rep.dings)) : null, rep.joined ? row('New players', String(rep.joined)) : null, row('Online now', String(rep.online))),
       newsEl,
-      h('button', { class: 'btn wide', onclick: closeDialog }, 'Enter World')]);
+      h('button', { class: 'btn wide', onclick: closeDialog }, 'Continue')], true); // a tap anywhere closes it, so the first tap in the world is never lost (#487)
   }
   // who you'll play with (#189): one row each (name in its class colour, level and class, role); a raid's nine others are
   // counted by role instead, with a row only for players you know, so the dialog stays the same size
