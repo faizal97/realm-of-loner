@@ -4936,6 +4936,7 @@
       const synced = !x.why && P.level > A.maxLvl ? `synced to level ${A.maxLvl}` : '';
       const note = travel(x) ? `${A.desc.split('.')[0]}. ${x.why}.` : x.why || [A.desc, synced].filter(Boolean).join(' · ');
       const btn = queued ? h('button', { class: 'chip', onclick: () => { G.leaveQueue(); ui.sheetFn(); } }, 'Leave')
+        : G.bgBusy() && S.bg.act === x.k ? h('button', { class: 'chip', disabled: true }, 'In battleground') // the one you're in (#459)
         : S.queue && (travel(x) || !x.why) ? queuedChip()
         : travel(x) ? h('button', { class: 'chip', onclick: () => { closeSheet(); G.travelRoute(A.where); renderAll(); } }, 'Travel')
         : h('button', { class: 'chip gold', disabled: !!x.why, onclick: () => { G.queueFor(x.k); ui.sheetFn(); } }, 'Queue');
