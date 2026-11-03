@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const W = require('./world');
-const { G, D, B } = W;
+const { G, D, B } = W; const SOC = globalThis.SOC;
 const count = (id) => G.S.player.bags.filter((b) => b.item.id === id).reduce((n, b) => n + (b.n || 1), 0);
 
 test('Longnight items stay in the bags across a reload while Longnight is on (#403)', () => {
@@ -331,4 +331,22 @@ test('selling an upgraded item asks first (#444)', () => {
   W.character(20); const it = G.genGear('chest', 20, 1, { atype: 'mail' }); it.pw = 0.2;
   G.S.player.equip.chest = G.genGear('chest', 25, 4, { atype: 'mail' });
   assert.strictEqual(G.sellNeedsConfirm(it), true);
+});
+
+test('no duel, and no party invite, inside a battleground or the group finder (#445, #446)', () => {
+  W.character(20); const S = G.S, bot = S.bots.find((b) => b.level >= 18 && b.level <= 22);
+  S.bg = { act: 'x', phase: 'choose' };
+  assert.strictEqual(G.startDuel(bot.id, 0), false); assert.ok(!S.duelOn);
+  const m = { ch: 'whisper', act: { kind: 'duel', state: 'open', wager: 0, bot: bot.id, until: W.now() + 6e4 } };
+  assert.ok(SOC.actions(m)[0].disabled, 'the duel is greyed');
+  S.flags.pendingInvite = bot.id; G.acceptPartyInvite(bot.id);
+  assert.strictEqual(G.partySize(), 1, 'no party in PvP');
+});
+
+test('a sale, a carry or a duel from someone who left the realm is greyed (#447)', () => {
+  W.character(20);
+  for (const kind of ['wts', 'carry', 'duel']) {
+    const [a] = SOC.actions({ ch: 'whisper', act: { kind, state: 'open', bot: 'gone-bot', price: 10, tip: 10, wager: 0, act: 'deadmines', itemData: G.copyItem('linen_cloth'), until: W.now() + 6e4 } });
+    assert.ok(a.disabled && /gone/.test(a.label), kind);
+  }
 });

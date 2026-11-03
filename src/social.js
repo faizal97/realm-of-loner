@@ -518,6 +518,8 @@
     const decline = { label: 'No thanks', fn: () => { close('declined'); if (b && (a.whisper || a.guild) && chance(0.6)) reply(tone(b) === 'rude' ? pick(['k whatever', 'ok', 'fine', 'whatever', 'ok then']) : pick(['np', 'ok no worries', 'all good', 'no problem!', 'all good!', 'no stress'])); } };
     const help = () => { weekProgress('help', 1); };
     const helpOnFinish = () => { const R = G.S.run; if (R) R.soc = Object.assign({}, R.soc, { help: true }); }; // a group joined from chat counts once its run is done (#420)
+    // someone who left the realm can't duel, buy, sell, carry or send materials (#447); a gift already sent still arrives
+    if (!b && (['duel', 'carry', 'wts', 'wtb'].includes(a.kind) || (a.kind === 'craft_order' && !a.sent))) return [{ label: "They're gone", disabled: true, why: true, fn: () => null }];
     if (a.kind === 'ln_stew') return [{ label: 'Give a bowl', primary: true, fn: () => G.lnGiveStew(m) }, decline]; // Longnight Stew
     if (a.kind === 'lfg') {
       return [{ label: `Join as ${roleName(a.role)}`, primary: true, fn: () => { if (G.joinChatGroup(a.act, a.role, { leader: a.leader, guild: a.guild ? P.guild : null, soc: { kind: a.guild ? 'g_run' : 'lfg', leader: a.leader } })) { close(); helpOnFinish(); } } }, decline]; // the leader remembers you once it's done (#338)
@@ -611,7 +613,8 @@
       } }, { label: 'Cancel', fn: () => { close('declined'); reply('ok no worries, keep the mats'); } }];
     }
     if (a.kind === 'duel') {
-      const short = a.wager - P.money; // (#169)
+      const short = a.wager - P.money, busy = G.duelWhy(); // (#169); busy: the group finder, PvP or a fight (#445)
+      if (busy) return [{ label: busy.replace(/\.$/, ''), disabled: true, why: true, fn: () => null }, decline];
       return [{ label: short > 0 ? `Need ${coin(short)}` : `Accept (${coin(a.wager)})`, primary: true, disabled: short > 0, why: short > 0, need: short > 0 ? short : 0, fn: () => {
         if (P.money < a.wager) return 'You can\'t cover the wager.';
         if (!G.startDuel(a.bot, a.wager)) return null;

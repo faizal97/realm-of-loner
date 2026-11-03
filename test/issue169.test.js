@@ -6,7 +6,7 @@ const assert = require('node:assert');
 const { G, D, character, now } = require('./world');
 const SOC = globalThis.SOC;
 
-const req = (act) => ({ ch: 'whisper', act: Object.assign({ state: 'open', posted: now(), until: now() + 5 * 60000 }, act) });
+const req = (act) => ({ ch: 'whisper', act: Object.assign({ state: 'open', posted: now(), until: now() + 5 * 60000, bot: G.S.bots[0].id }, act) }); // from someone on the realm (#447)
 
 test('a sale you are short for: the label is the shortfall', () => {
   const { P } = character(20, 'warrior', 'human');

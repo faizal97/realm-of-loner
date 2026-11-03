@@ -3009,9 +3009,11 @@
   };
   // A friendly duel from chat (v9.6): nobody dies. The loser ends at 1 health; the wager changes hands.
   G.DUEL_APART = 25; // a duel (and each brawl round) starts this many metres apart (distance, v10.9)
+  // why a duel can't start now, or null: busy, or in the group finder or PvP (#445)
+  G.duelWhy = function () { const S = G.S, P = S.player; return G.partyBlock() || (G.fight || S.run || P.travel || P.ghostUntil ? "You can't duel right now." : null); };
   G.startDuel = function (botId, wager) {
     const S = G.S, P = S.player;
-    if (G.fight || S.run || P.travel || P.ghostUntil) { toast("You can't duel right now."); return false; }
+    const why = G.duelWhy(); if (why) { toast(why); return false; }
     const bot = S.bots.find((b) => b.id === botId); if (!bot) return false;
     const skill = clamp(bot.skill || 0.5, 0.3, 0.8);
     const ec = G.botChar(Object.assign({}, bot, { level: clamp(bot.level, P.level - 1, P.level + 1), skill, role: 'dps' })); ec.role = 'dps';
@@ -3475,8 +3477,9 @@
   G.acceptPartyInvite = function (botId) {
     const S = G.S; const b = S.bots.find((x) => x.id === botId); if (!b) return;
     S.flags.pendingInvite = null;
+    const why = G.partyBlock(); if (why) return toast(why); // #446
     addToParty(b);
-    if (Math.random() < 0.35) { const friend = B.onlineIn(S, S.player.place, new Date()).find((x) => x.id !== b.id && Math.abs(x.level - S.player.level) <= 3 && B.factionOf(x) === B.factionOf(b)); if (friend) setTimeout(() => G.S && G.S.wparty && addToParty(friend), 2500); }
+    if (Math.random() < 0.35) { const friend = B.onlineIn(S, S.player.place, new Date()).find((x) => x.id !== b.id && Math.abs(x.level - S.player.level) <= 3 && B.factionOf(x) === B.factionOf(b)); if (friend) setTimeout(() => G.S && G.S.wparty && !G.partyBlock() && addToParty(friend), 2500); }
   };
   G.declinePartyInvite = function (botId) {
     const S = G.S; S.flags.pendingInvite = null;
@@ -3507,6 +3510,7 @@
     const cand = B.onlineIn(S, P.place, new Date(t)).filter((b) => Math.abs(b.level - P.level) <= 3 && !declined.has(b.id) && B.factionOf(b) === myF);
     if (!cand.length || Math.random() > 0.85) return;
     const b = pick(cand);
+    if (G.partyBlock()) return; // not in PvP (#446); checked after the draws, so the random stream stays the same
     S.flags.pendingInvite = b.id; S.flags.pendingAt = t;
     emit('partyInvite', { bot: b, why: `also hunting in ${pl.name}` });
   }
