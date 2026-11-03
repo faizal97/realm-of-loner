@@ -3290,6 +3290,7 @@
     const mine = BG_ROLES.slice(); const i = mine.indexOf(G.role()); mine.splice(i >= 0 ? i : 2, 1);
     S.bg = { act, key, round: 1, score: { us: 0, them: 0 }, owner: {}, phase: 'choose', team: bgSide(myF, L, mine, used), foes: bgSide(theirF, L, BG_ROLES, used), log: [], started: now() };
     S.bg.plan = bgPlan(S.bg); S.bg.scout = bgScout(S.bg);
+    P.hp = null; P.res = null; P.travel = null; P.route = null; // everyone starts full, and a trip ends, however you came in (#456, #457)
     sys(`${C.name} begins: 5v5. First to ${C.win} points, or most after ${C.rounds} rounds.`);
     emit('instanceEnter', { act, bg: key }); emit('change'); G.save();
   }

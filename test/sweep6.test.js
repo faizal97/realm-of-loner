@@ -417,3 +417,11 @@ test('declining a pop does not use up a Legend\'s visit (#455)', () => {
     assert.ok(!((P.legendMem || {})[guest.legend] || {}).last, 'not marked as seen');
   } finally { G.CAMEO_CHANCE = chance; }
 });
+
+test('a battleground joined from chat starts at full health and ends your trip (#456, #457)', () => {
+  W.character(30); const S = G.S, P = S.player, bg = Object.keys(D.ACTIVITIES).find((k) => D.ACTIVITIES[k].bg && D.ACTIVITIES[k].minLvl <= 30);
+  P.hp = 10; P.travel = { to: 'x', from: P.place, start: W.now(), end: W.now() + 60000 };
+  G.joinChatGroup(bg, G.role(), { leader: S.bots[0].id });
+  assert.ok(S.bg, 'in the battleground');
+  assert.strictEqual(P.hp, null, 'full health'); assert.strictEqual(P.travel, null, 'trip over');
+});
