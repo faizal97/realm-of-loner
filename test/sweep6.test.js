@@ -301,3 +301,14 @@ test('stacks hold 20 in the bags and the bank (#440)', () => {
   assert.deepStrictEqual(stacks(P.bags, 'linen_cloth'), [20, 1]);
   assert.strictEqual(G.slotsShort([[G.copyItem('linen_cloth'), 45]]), Math.max(0, 3 - G.bagFree()));
 });
+
+test('Longnight items in the bank go when the festival ends, and no Snowball works after it (#441)', () => {
+  W.setNow(new Date(2026, 11, 20, 19).getTime());
+  W.character(30); const id = G.S.id; G.ln();
+  G.addItem(G.copyItem('ln_snowball'), 5); G.bankDeposit(G.S.player.bags.findIndex((b) => b.item.id === 'ln_snowball'));
+  G.save(); G.logout(); W.setNow(new Date(2027, 0, 6, 19).getTime()); G.load(id);
+  assert.ok(!(G.S.player.bank || []).some((b) => b.item.id === 'ln_snowball'), 'gone from the bank');
+  G.S.player.bags.push({ item: G.copyItem('ln_snowball'), n: 1 });
+  const n0 = count('ln_snowball'); G.lnUse(G.S.player.bags.length - 1);
+  assert.strictEqual(count('ln_snowball'), n0, 'not thrown');
+});

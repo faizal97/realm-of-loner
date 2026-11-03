@@ -4695,7 +4695,7 @@
     const t = D.TITLES.find((x) => x.id === P.title); if (t && t.need.event && !owned.includes(t.need.event)) P.title = null;
     for (const pl in P.wardrobe || {}) { const k = P.wardrobe[pl]; if (/^lw_/.test(k) && !looks.includes(pl + ':' + k)) delete P.wardrobe[pl]; }
     // festival wares go when the festival ends (once, while its record is still here), so a reward mailed after it stays (#382); only Lanternwake's own (#403)
-    if (P.lw && (!G.eventLive('lanternwake') || /^test/.test(P.lw.season))) P.bags = (P.bags || []).filter((b) => (D.ITEMS[b.item.id] || {}).event !== 'lanternwake');
+    if (P.lw && (!G.eventLive('lanternwake') || /^test/.test(P.lw.season))) { const keep = (b) => (D.ITEMS[b.item.id] || {}).event !== 'lanternwake'; P.bags = (P.bags || []).filter(keep); if (P.bank) P.bank = P.bank.filter(keep); } // the bank too (#441)
   };
   // this character's festival state; null when Lanternwake is not on. A new season (or a new day) starts it fresh
   G.lw = function () {
@@ -4760,6 +4760,7 @@
   // the candle sink, used from your bags
   G.lwUse = function (idx) {
     const S = G.S, P = S.player, b = P.bags[idx], it = b && D.ITEMS[b.item.id]; if (!it) return;
+    if (!G.eventLive('lanternwake')) return toast('Lanternwake is over.'); // #441
     if (it.costume) {
       let mob = it.costume;
       if (mob === 'local') { const Pl = D.PLACES[P.place], pool = Object.values(D.PLACES).filter((x) => x.region === Pl.region).flatMap((x) => (x.mobs || []).map((m) => m[0])).filter((k) => D.MOBS[k] && !D.MOBS[k].boss); if (!pool.length) return toast('No creatures live in this zone to dress up as.'); mob = pick(pool); }
@@ -4834,7 +4835,7 @@
     if (P.companion && D.COMPANIONS[P.companion] && D.COMPANIONS[P.companion].event === 'longnight' && !owned.includes(P.companion)) P.companion = null;
     const t = D.TITLES.find((x) => x.id === P.title); if (t && t.need.event && /^ln_/.test(t.need.event) && !owned.includes(t.need.event)) P.title = null;
     for (const pl in P.wardrobe || {}) { const k = P.wardrobe[pl]; if (/^ln_/.test(k) && !looks.includes(pl + ':' + k)) delete P.wardrobe[pl]; }
-    if (P.ln && (!G.lnOn() || /^test/.test(P.ln.season))) P.bags = (P.bags || []).filter((b) => (D.ITEMS[b.item.id] || {}).event !== 'longnight'); // as Lanternwake's (#382)
+    if (P.ln && (!G.lnOn() || /^test/.test(P.ln.season))) { const keep = (b) => (D.ITEMS[b.item.id] || {}).event !== 'longnight'; P.bags = (P.bags || []).filter(keep); if (P.bank) P.bank = P.bank.filter(keep); } // as Lanternwake's (#382, #441)
   };
   G.lnOwned = (id) => G.lnRec().owned.includes(id);
   const lnOwn = (id) => { const a = G.lnAccount(), r = lnRec(a); if (!r.owned.includes(id)) r.owned.push(id); G.saveAccount(a); };
@@ -5148,6 +5149,7 @@
   // ---- toys, used from your bags
   G.lnUse = function (idx) {
     const S = G.S, P = S.player, b = P.bags[idx], it = b && D.ITEMS[b.item.id]; if (!it) return;
+    if (!G.lnOn()) return toast('Longnight is over.'); // #441
     const town = D.PLACES[P.place] && D.PLACES[P.place].safe;
     if (it.stew) return toast('Hand it to someone in town who asks for a bowl in chat.');
     if (it.costume) { P.costume = { mob: it.costume, until: now() + 3600000 }; G.removeItem(it.id, 1); sys(`You look like a ${D.MOBS[it.costume].name} for 1 hour.`); }
