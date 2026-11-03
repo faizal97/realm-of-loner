@@ -263,7 +263,7 @@
     if (m.g) parts.push(['g', m.g]);
     if (m.s || m.g) parts.push(['s', m.s]);
     parts.push(['c', m.c]);
-    if (noZero) parts = parts.filter(([, v]) => v);
+    if (noZero || c > 0) parts = parts.filter(([, v]) => v); // no "0c" after other coins (#463)
     if (compact) parts = parts.slice(0, 2);
     const word = { g: 'gold', s: 'silver', c: 'copper' };
     return `<span class="money tnum" aria-label="${parts.map(([k, v]) => v + ' ' + word[k]).join(' ')}">${parts.map(([k, v]) => `<span class="${k}">${v}<i class="coin ${k}"></i></span>`).join(' ')}</span>`;
