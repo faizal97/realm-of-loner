@@ -994,8 +994,9 @@
       h('div', { class: 't' }, h('b', null, name.replace(/^the /, 'The '), h('span', { class: 'bg-own' }, own(b))), h('small', null, scoutText(G.bgScoutRange(bg, b))))));
     p.append(list);
     const pickRow = (label, who, key) => h('div', { class: 'bg-pick' }, h('small', null, `${label} (${who})`), h('div', { class: 'chips' }, ...C.banners.map(([b, name]) => h('button', { class: 'chip' + (pk[key] === b ? ' gold' : ''), onclick: () => { pk[key] = b; renderPanel(); } }, name.replace(/^the /, '')))));
-    p.append(pickRow('Your group', ['you'].concat(sp.group.map(nm)).join(', '), 'group'), pickRow('The pair', sp.pair.map(nm).join(', '), 'pair'));
-    p.append(h('button', { class: 'btn wide', disabled: !pk.group || !pk.pair, onclick: () => { G.bgGo(pk.group, pk.pair); renderAll(); } }, pk.group && pk.pair ? 'Go' : 'Choose where both go'));
+    // the choices and Go stay in view, pinned like a run's Ready (#460)
+    p.append(h('div', { class: 'run-actions' }, pickRow('Your group', ['you'].concat(sp.group.map(nm)).join(', '), 'group'), pickRow('The pair', sp.pair.map(nm).join(', '), 'pair'),
+      h('button', { class: 'btn wide', disabled: !pk.group || !pk.pair, onclick: () => { G.bgGo(pk.group, pk.pair); renderAll(); } }, pk.group && pk.pair ? 'Go' : 'Choose where both go')));
     // your team with their Honor ranks (#57), after the decision (#66: the three banners and where you send them first)
     p.append(h('div', { class: 'bg-team' }, h('small', null, 'Your team: '), h('span', null, rankBadge(G.S.player, true), 'You'), ...(bg.team || []).map((m) => h('span', null, rankBadge(m), nm(m)))));
 
