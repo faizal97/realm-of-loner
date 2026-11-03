@@ -10,6 +10,28 @@
     get: () => sceneQueue[0] || null,
     set: (id) => { if (id == null) sceneQueue.shift(); else if (!sceneQueue.includes(id)) sceneQueue.push(id); },
   });
+  // map labels (#461): each pin's two-line label (a name, then a level line) goes under the pin, slid sideways or put
+  // above it so no two overlap, and kept inside the map. pins: [{ x, y, name, sub }]; returns [{ x, y }] for the name line
+  // (the sub line sits `gap` below it). size is the name's font size; widths are estimated from it
+  function placeLabels(pins, W, Hh, size, gap) {
+    const boxes = [], out = [];
+    const order = pins.map((p, i) => i).sort((a, b) => pins[a].y - pins[b].y || pins[a].x - pins[b].x);
+    const hit = (b) => boxes.reduce((n, o) => n + Math.max(0, Math.min(b.r, o.r) - Math.max(b.l, o.l)) * Math.max(0, Math.min(b.b, o.b) - Math.max(b.t, o.t)), 0)
+      + pins.reduce((n, p) => n + (p.x > b.l - 9 && p.x < b.r + 9 && p.y > b.t - 9 && p.y < b.b + 9 ? 400 : 0), 0); // never over a pin
+    for (const i of order) {
+      const p = pins[i], w = Math.max(String(p.name).length * size * 0.56, String(p.sub || '').length * size * 0.5) + 6, hh = size + gap + 4;
+      let best = null;
+      for (const [dy, dx] of [[size * 2, 0], [size * 2, -w / 3], [size * 2, w / 3], [-gap - 14, 0], [size * 2, -w / 2], [size * 2, w / 2], [-gap - 14, -w / 3], [-gap - 14, w / 3]]) {
+        const cx = Math.max(w / 2 + 2, Math.min(W - w / 2 - 2, p.x + dx)), ty = Math.max(size + 2, Math.min(Hh - gap - 4, p.y + dy));
+        const b = { l: cx - w / 2, r: cx + w / 2, t: ty - size, b: ty - size + hh };
+        const n = hit(b); if (!best || n < best.n) best = { n, cx, ty, b }; if (!n) break;
+      }
+      boxes.push(best.b); out[i] = { x: Math.round(best.cx), y: Math.round(best.ty) };
+    }
+    return out;
+  }
+  // a reaction's teaching line without its own name in front, for text that already names it (#462)
+  const teachBody = (pr) => { const n = pr.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); return pr.teach.replace(new RegExp('^' + n + '( \\([^)]*\\))?: '), ''); };
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const now = () => Date.now();
 
@@ -1880,7 +1902,7 @@
     // reactions (v10.4): say plainly what this ability lights up, or what lights it
     for (const pr of (D.PROCS || {})[P.cls] || []) {
       if (pr.talent && !(P.talents || {})[pr.talent]) continue; // a talent reaction only once the talent is taken
-      if (pr.lights.includes(id)) d += ` Reaction (${pr.name}): ${pr.teach}`;
+      if (pr.lights.includes(id)) d += ` Reaction (${pr.name}): ${teachBody(pr)}`;
       else if ((pr.from || []).includes(id)) d += ` Can light up ${pr.lights.map((l) => D.ABILITIES[l].name).join(' or ')} (${pr.name}).`;
     }
     const cost = E.abCost(ab, P);
@@ -2644,8 +2666,9 @@
       }
       const trainAt = new Set(D.PROF_TRAINERS['crafts_' + G.myFaction()] || []), trainIc = art('icon', 'prof_blacksmithing'); // your profession trainers (#76)
       const huntUpAt = new Map(); for (const r of (G.huntRares ? G.huntRares() : [])) if (MAP[r.place] && G.huntUp(r.key, Date.now())) huntUpAt.set(r.place, r.key); // a rare hunt that's up (#43)
-      for (const p in MAP) {
-        const [x, y] = MAP[p]; const pl = D.PLACES[p];
+      const lbl = placeLabels(Object.keys(MAP).map((k) => ({ x: MAP[k][0], y: MAP[k][1], name: D.PLACES[k].name, sub: D.PLACES[k].safe ? 'Town' : `${D.PLACES[k].lvl[0]}–${D.PLACES[k].lvl[1]}` })), 340, 400, 13, 14);
+      Object.keys(MAP).forEach((p, pi) => {
+        const [x, y] = MAP[p]; const pl = D.PLACES[p], L = lbl[pi];
         const here = p === cur;
         const adj = cur && D.PLACES[cur].links[p] && !G.enemyTown(p);
         const seenP = P.visited[p];
@@ -2655,10 +2678,10 @@
           ${trainAt.has(p) ? `<image href="${trainIc}" x="${x - 30}" y="${y - 9}" width="18" height="18"/>` : ''}
           ${huntUpAt.has(p) ? `<polygon points="${x - 15},${y - 22} ${x - 9},${y - 28} ${x - 3},${y - 22} ${x - 9},${y - 16}" fill="#ff8a3a" stroke="#1a1208" stroke-width="2"/>` : ''}
           ${qPlaces.has(p) ? (qMain.has(p) ? `<image href="${qmarkSrc(qPlaces.get(p), true)}" x="${x + 5}" y="${y - 30}" width="20" height="24.5"/>` : `<image href="${qmarkSrc(qPlaces.get(p))}" x="${x + 7}" y="${y - 30}" width="15" height="24.5"/>`) : ''}
-          <text x="${x}" y="${y + 26}" text-anchor="middle" font-family="Alegreya Sans, sans-serif" font-weight="800" font-size="13" fill="${adj || here ? '#f3e6c6' : '#a89a7a'}" stroke="#120c05" stroke-width="3" paint-order="stroke">${esc(pl.name)}</text>
-          <text x="${x}" y="${y + 40}" text-anchor="middle" font-family="Alegreya Sans, sans-serif" font-weight="700" font-size="11" fill="${conColor(Math.round((pl.lvl[0] + pl.lvl[1]) / 2))}" stroke="#120c05" stroke-width="3" paint-order="stroke">${pl.safe ? 'Town' : pl.lvl[0] + '–' + pl.lvl[1]}</text>
+          <text x="${L.x}" y="${L.y}" text-anchor="middle" font-family="Alegreya Sans, sans-serif" font-weight="800" font-size="13" fill="${adj || here ? '#f3e6c6' : '#a89a7a'}" stroke="#120c05" stroke-width="3" paint-order="stroke">${esc(pl.name)}</text>
+          <text x="${L.x}" y="${L.y + 14}" text-anchor="middle" font-family="Alegreya Sans, sans-serif" font-weight="700" font-size="11" fill="${conColor(Math.round((pl.lvl[0] + pl.lvl[1]) / 2))}" stroke="#120c05" stroke-width="3" paint-order="stroke">${pl.safe ? 'Town' : pl.lvl[0] + '–' + pl.lvl[1]}</text>
         </g>`);
-      }
+      });
       // a map inside this one (#136): a marker that opens it, joined to the place its road starts from, with a quest mark
       // when a quest needs a place in there; on such a map, the way back out
       const marker = (key, x, y, label, from, kind) => {
@@ -2728,15 +2751,16 @@
       lines.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${road ? '#8a6a3a' : '#5a7a9a'}" stroke-width="${road ? 3 : 2}" stroke-dasharray="${road ? '6 5' : '2 5'}" stroke-linecap="round" opacity=".9"/>`);
     }
     const lv = (r) => { let a = 99, c = 0; for (const k in D.PLACES) { const p = D.PLACES[k]; if (p.region === r && p.lvl) { a = Math.min(a, p.lvl[0]); c = Math.max(c, p.lvl[1]); } } return a <= c ? `${a}–${c}` : ''; };
+    const wl = Object.keys(WORLD).filter((r) => D.REGIONS[r]), wlbl = placeLabels(wl.map((r) => ({ x: WORLD[r][0], y: WORLD[r][1], name: D.REGIONS[r].name, sub: lv(r) })), 340, 520, 11, 12);
     for (const r in WORLD) {
       if (!D.REGIONS[r]) continue;
-      const [x, y] = WORLD[r], R = D.REGIONS[r], here = r === hereRegion;
+      const [x, y] = WORLD[r], R = D.REGIONS[r], here = r === hereRegion, L = wlbl[wl.indexOf(r)];
       const col = R.faction === 'contested' ? '#c9a23a' : R.faction === my ? '#4f8a3a' : R.faction ? '#9a3a2a' : '#6a6a5a';
       const been = Object.keys(D.PLACES).some((k) => D.PLACES[k].region === r && P.visited[k]);
       nodes.push(`<g data-region="${r}" style="cursor:pointer">
         <circle cx="${x}" cy="${y}" r="${here ? 12 : 9}" fill="${col}" stroke="${here ? '#f0c75e' : '#1a1208'}" stroke-width="${here ? 4 : 3}" opacity="${been || here ? 1 : 0.7}"/>
-        <text x="${x}" y="${y + 22}" text-anchor="middle" font-family="Alegreya Sans, sans-serif" font-weight="800" font-size="11" fill="${here ? '#ffd100' : '#f3e6c6'}" stroke="#120c05" stroke-width="3" paint-order="stroke">${esc(R.name)}</text>
-        <text x="${x}" y="${y + 34}" text-anchor="middle" font-family="Alegreya Sans, sans-serif" font-weight="700" font-size="10" fill="#bba" stroke="#120c05" stroke-width="3" paint-order="stroke">${lv(r)}</text></g>`);
+        <text x="${L.x}" y="${L.y}" text-anchor="middle" font-family="Alegreya Sans, sans-serif" font-weight="800" font-size="11" fill="${here ? '#ffd100' : '#f3e6c6'}" stroke="#120c05" stroke-width="3" paint-order="stroke">${esc(R.name)}</text>
+        <text x="${L.x}" y="${L.y + 12}" text-anchor="middle" font-family="Alegreya Sans, sans-serif" font-weight="700" font-size="10" fill="#bba" stroke="#120c05" stroke-width="3" paint-order="stroke">${lv(r)}</text></g>`);
     }
     const svg = `<svg viewBox="0 0 340 520" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="World map">
       <rect width="340" height="520" rx="6" fill="#1d3a4e"/>
@@ -4184,7 +4208,7 @@
   }
   // ---------- talents: three trees, tap a talent to spend a point
   // a capstone's reaction is part of its text (v10.4), so the choice shows what will light up
-  const talentText = (t, rank) => { const x = t.desc.replace('{v}', String(Math.round(t.fx[0].v * Math.max(1, rank) * 100) / 100)); const pr = Object.values(D.PROCS || {}).flat().find((q) => q.talent === t.id); return pr ? `${x} Reaction: ${pr.teach}` : x; };
+  const talentText = (t, rank) => { const x = t.desc.replace('{v}', String(Math.round(t.fx[0].v * Math.max(1, rank) * 100) / 100)); const pr = Object.values(D.PROCS || {}).flat().find((q) => q.talent === t.id); return pr ? `${x} Reaction (${pr.name}): ${teachBody(pr)}` : x; };
   function openTalents() {
     ui.talentTree = ui.talentTree || null;
     openSheet('talents', 'Talents', ' ', (b, title) => {
