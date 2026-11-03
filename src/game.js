@@ -1651,10 +1651,17 @@
     }
     return out.sort((a, b) => (b.complete - a.complete) || (a.weekly - b.weekly));
   };
-  // old days' bounties lapse: they leave the save on load, on accepting and on a kill
+  // old days' bounties lapse: they leave the save on load, on accepting and on a kill. A turned-in one is kept for
+  // 21 days, and one from a later day than the clock stays (#435), so moving the clock forward and back can't hand a
+  // turned-in bounty out again
   function pruneBounties() {
     const P = G.S && G.S.player; if (!P || !P.bounty) return;
-    for (const [id, st] of Object.entries(P.bounty)) if (!bountyLive(st)) delete P.bounty[id];
+    const keep = ymd(new Date(now() - 21 * 864e5));
+    for (const [id, st] of Object.entries(P.bounty)) {
+      if (bountyLive(st) || st.day > (st.weekly ? weekKey() : dayKey())) continue;
+      if (st.done && String(st.day).replace(/^w/, '') >= keep) continue;
+      delete P.bounty[id];
+    }
   }
   function bountyKill(mobKey) {
     const P = G.S.player; if (!P.bounty) return;

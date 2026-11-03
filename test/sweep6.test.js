@@ -257,3 +257,15 @@ test('Help Wanted at a raid\'s last boss is not a raid clear (#434)', () => {
   assert.strictEqual(G.hardOpen(act), false);
   assert.strictEqual(G.account().marks - m0, 18, 'only the Help Wanted Marks (10 + 5 no wipes + 3 stuck)');
 });
+
+test('a turned-in bounty stays done after the clock goes a week forward and back (#435)', () => {
+  const t0 = new Date(2026, 10, 4, 12).getTime(); W.setNow(t0);
+  const { S } = W.character(20, 'warrior'); const P = S.player, id = S.id;
+  P.place = Object.keys(D.PLACES).find((k) => G.isHub(k) && G.bounties(k).length);
+  const bs = G.bounties(P.place);
+  for (const b of [bs[0], bs.find((x) => x.weekly)]) { G.acceptBounty(b); P.bounty[b.id].prog = b.n; G.turnInBounty(b); }
+  G.save(); G.logout();
+  W.setNow(t0 + 8 * 864e5); G.load(id); G.myBounties(); G.save(); G.logout();
+  W.setNow(t0); G.load(id);
+  for (const b of [bs[0], bs.find((x) => x.weekly)]) assert.strictEqual(G.bountyState(b), 'done', b.id);
+});
