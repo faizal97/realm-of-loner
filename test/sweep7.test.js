@@ -175,3 +175,16 @@ test('a finished battleground or brawl closes when the Roulette starts a run (#4
   G.bgStart(bgAct); r2.S.bg.phase = 'done'; G.startRoulette();
   assert.ok(r2.S.run, 'a run'); assert.ok(!r2.S.bg, 'the battleground result closed');
 });
+
+test('the level-5 guild invitation is from a guild that takes level 5, sent by someone online (#481)', () => {
+  W.setNow(new Date(2026, 10, 3, 20).getTime());
+  const got = []; G.on('invite', (d) => { if (d.guild != null) got.push(d); });
+  for (let i = 0; i < 30; i++) {
+    const { S } = W.character(5); Object.assign(S.flags, { guildOffer: false, guildOfferAt: W.now() - 1 }); W.advance(2);
+  }
+  assert.ok(got.length > 10, `offers ${got.length}`);
+  for (const d of got) {
+    const info = SOC.guildInfo(d.guild); assert.ok(info.min <= 5, `${info.name} needs ${info.min}`);
+    assert.ok(G.S.bots.some((b) => b.name === d.from && b.guild === d.guild), 'a member asks');
+  }
+});

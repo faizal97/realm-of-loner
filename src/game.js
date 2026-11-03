@@ -1093,11 +1093,11 @@
     // guild offer
     // it waits for a calm moment, like a party invite (issue #12: it opened mid-fight and a run went on without you)
     if (S.flags.guildOfferAt && t >= S.flags.guildOfferAt && !S.flags.guildOffer && !G.fight && !S.run && !S.queue && !G.bgBusy() && !S.player.travel && !S.player.ghostUntil) {
+      // a guild that takes your level and that you haven't turned down, asked by its officer online; none online asks later (#481)
+      const no = S.flags.declinedGuilds || [], opts = root.SOC ? SOC.myGuilds().filter((x) => S.player.level >= x.min && !no.includes(x.g) && x.officer) : [];
+      if (!opts.length) { S.flags.guildOfferAt = t + 300000; return; }
       S.flags.guildOffer = true;
-      const myF = (D.RACES[S.player.race] || {}).faction || 'alliance';
-      const opts = B.GUILDS.map((x, i) => i).filter((i) => B.GUILD_FACTION[i] === myF);
-      const g = opts[rint(0, opts.length - 1)];
-      const inviter = S.bots.find((b) => b.guild === g) || pick(S.bots);
+      const info = opts[rint(0, opts.length - 1)], g = info.g, inviter = info.officer;
       S.flags.guildOfferOpen = g; // unanswered until Accept or Decline: a reload asks again (#411)
       // the pitch is part of the invitation (issue #8: a whisper posted with it read as a pitch after you declined)
       emit('invite', { guild: g, guildName: B.GUILDS[g], from: inviter.name, line: cpick(['hey, want to join our guild? chill ppl, we run dungeons', 'we are recruiting, want an invite?']) });
