@@ -49,12 +49,12 @@ G.CAMEO_CHANCE = 0.2;
 {
   G.newGame({ name: 'T', cls: 'mage', race: 'human' }); const S = G.S, P = S.player; P.level = 60; S.flags.warModeAsked = true;
   for (const q of chain) P.done[q] = true;
-  const joinsIn = (runs, gap) => { let n = 0; for (let i = 0; i < runs; i++) { if (gap != null) t += gap; if (G.rollCameo(D.ACTIVITIES.stratholme)) n++; } return n; };
+  const joinsIn = (runs, gap) => { let n = 0; for (let i = 0; i < runs; i++) { if (gap != null) t += gap; const k = G.rollCameo(D.ACTIVITIES.stratholme); if (k) { G.cameoSeen(k); n++; } } return n; }; // each cameo's run is entered
   const due = joinsIn(2000, G.CAMEO_GAP);
   console.log(`cameo: ${due} of 2000 runs when due (about 1 in 5), `);
   if (due < 330 || due > 470) fail('cameo chance is not about 1 in 5');
   P.legendMem = {}; t += G.CAMEO_GAP;
-  let first = 0; while (!G.rollCameo(D.ACTIVITIES.stratholme) && first < 200) first++;
+  let first = 0, k0; while (!(k0 = G.rollCameo(D.ACTIVITIES.stratholme)) && first < 200) first++; if (k0) G.cameoSeen(k0);
   const soon = joinsIn(300, 10 * 60 * 1000); // runs every 10 minutes for the next 50 hours
   console.log(`cameo: then ${soon} more in the next 50 hours (the gap is 3 days)`);
   if (soon !== 0) fail('a second cameo inside 3 days');

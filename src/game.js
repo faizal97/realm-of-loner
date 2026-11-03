@@ -3944,6 +3944,7 @@
     if (!ready.length || Math.random() >= G.CAMEO_CHANCE) return null;
     return pick(ready); // marked as seen when the run starts, so a declined pop doesn't use them up (#455)
   };
+  G.cameoSeen = (key) => { const P = G.S.player; P.legendMem = P.legendMem || {}; P.legendMem[key] = Object.assign(G.legendMemory(key), { last: now() }); };
   // what a legend says in the party when they arrive and leave (their own lines, in D.LEGENDS[key].cameo)
   G.legendLine = (key, kind) => { const c = (D.LEGENDS[key] || {}).cameo || {}; return cpick(c[kind] || ['o/']); };
   // wearing a Legend's keepsake: its look on your back, only once their story is done
@@ -4026,7 +4027,7 @@
   function startRun(act, trial, hard) {
     const S = G.S, A = D.ACTIVITIES[act];
     S.player.travel = null; S.player.route = null; // a trip ends when the group summons you (#424)
-    for (const m of (S.group && S.group.members) || []) if (m.cameo) { const P = S.player; P.legendMem = P.legendMem || {}; P.legendMem[m.legend] = Object.assign(G.legendMemory(m.legend), { last: now() }); } // #455
+    for (const m of (S.group && S.group.members) || []) if (m.cameo) G.cameoSeen(m.legend); // #455
     let pulls, mult = null, bossMult = null, name = A.name;
     if (A.dungeon) {
       const Dg = D.DUNGEONS[A.dungeon];
