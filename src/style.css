@@ -253,7 +253,7 @@ img { max-width: 100%; display: block; }
 .chat.folded .chat-open small { display: none; }
 .chat.folded .chat-open b { padding: 0 5px; }
 .panel .ptabs { top: -16px; margin-top: -16px; padding-top: 16px; }
-.panel .run-actions { top: -10px; }
+.panel .run-actions { top: -10px; bottom: -20px; border-top: 1px solid #3b2d18; } /* pinned to whichever edge it would leave, so Ready / Leave never sit below the fold (#426) */
 .portrait.tap { cursor: pointer; }
 /* the action bar editor */
 .bar-edit { border: 1px solid var(--edge); border-radius: 3px; }
