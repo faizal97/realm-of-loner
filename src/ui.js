@@ -1548,7 +1548,7 @@
       const tgt = C.units[u.target];
       list.append(h('button', { class: 'row' + (u.dead ? ' off' : ''), onclick: () => { G.setTarget(u.uid); renderTarget(); markTargets(); } },
         h('div', { class: 'ic mob' }, img(u.kind === 'mob' ? mobArt(u.key) : art('portrait', looks(u.char)))),
-        h('div', { class: 't' }, h('b', null, h('span', { style: { color: conColor(u.level) } }, u.level + ' '), u.name), h('small', null, u.dead ? 'Dead' : (u.kind !== 'mob' ? `${(D.RACES[u.race] || {}).name || ''} ${D.CLASSES[u.cls].name} · ` : '') + (u.key === 'practice_target' ? 'Never strikes back' : tgt ? 'Attacking ' + (tgt.kind === 'player' ? 'you' : tgt.name) : ''))), // the Rehearsal's target (#256)
+        h('div', { class: 't' }, h('b', null, h('span', { style: { color: conColor(u.level) } }, u.level + ' '), u.name), h('small', null, u.dead ? 'Dead' : [u.kind !== 'mob' ? `${(D.RACES[u.race] || {}).name || ''} ${D.CLASSES[u.cls].name}`.trim() : '', u.key === 'practice_target' ? 'Never strikes back' : tgt ? 'Attacking ' + (tgt.kind === 'player' ? 'you' : tgt.name) : ''].filter(Boolean).join(' · '))), // the Rehearsal's target (#256)
         h('div', { class: 'r tnum', 'data-hp': u.uid }, ''),
         h('div', { class: 'buffs rowbuffs', 'data-au': u.uid })));
     }
