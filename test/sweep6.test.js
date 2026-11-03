@@ -405,3 +405,15 @@ test('a story scene during a run does not use up par time (#454)', () => {
   G.paused = true; try { W.advance(38); } finally { G.paused = false; }
   assert.ok(G.runClock() < 2, `run clock ${G.runClock()}`);
 });
+
+test('declining a pop does not use up a Legend\'s visit (#455)', () => {
+  W.character(20); const S = G.S, P = S.player; P.place = D.ACTIVITIES.deadmines.where;
+  for (const k of Object.keys(D.LEGENDS)) P.done[D.LEGENDS[k].unlock] = true;
+  const chance = G.CAMEO_CHANCE; G.CAMEO_CHANCE = 1;
+  try {
+    G.queueFor('deadmines'); S.queue.popAt = W.now() - 1; W.advance(1.5);
+    const guest = ((S.queue && S.queue.group && S.queue.group.members) || []).find((m) => m.cameo);
+    assert.ok(guest, 'a Legend in the pop'); G.declinePop();
+    assert.ok(!((P.legendMem || {})[guest.legend] || {}).last, 'not marked as seen');
+  } finally { G.CAMEO_CHANCE = chance; }
+});
