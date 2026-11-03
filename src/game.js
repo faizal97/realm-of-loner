@@ -2854,6 +2854,7 @@
     grp.members.forEach((m, i) => S.pending.push({ at: now() + 900 + i * 1400, bot: m.bot.id, ch: 'party', text: cpick((poster ? m.bot.id === poster.id : i === 0) ? ['ty for coming!!', 'thank you so much', 'yay a helper', 'omg ty'] : ['hi', 'ty', 'hello', 'o/']), fromName: m.name }));
     startRun(req.act);
     const R = S.run; R.help = { firstTimers: req.firstTimers, stuck: !!req.startIdx }; R.idx = req.startIdx || 0; R.noSpeed = !!req.startIdx;
+    if (req.poster != null) R.soc = Object.assign({}, R.soc, { leader: req.poster }); // the poster leads: finishing it makes them a friend (#451)
     if (req.startIdx) sys(`They wiped here twice. Next: ${R.pulls[R.idx].label}.`);
     emit('change');
   };

@@ -374,3 +374,10 @@ test('Help is greyed with the reason when the party is full or you are in the gr
   S.queue = { act: 'deadmines' };
   x = SOC.actions(m)[0]; assert.strictEqual(x.label, 'Not while in the group finder'); assert.ok(x.disabled);
 });
+
+test('the Help Wanted poster becomes a friend once the run is done (#451)', () => {
+  const { S } = W.character(20); const poster = S.bots.find((b) => b.level >= 18 && b.level <= 22);
+  S.helpWanted = [{ id: 'hwf', act: 'deadmines', role: 'tank', startIdx: 0, firstTimers: false, poster: poster.id, posterName: poster.name, expires: W.now() + 6e5 }];
+  S.player.place = D.ACTIVITIES.deadmines.where; G.joinHelpWanted('hwf'); clearRun();
+  assert.ok(SOC.isFriend(poster.id));
+});
