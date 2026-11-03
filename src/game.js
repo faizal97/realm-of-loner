@@ -596,11 +596,11 @@
     if (G.isQuestItem(it.id)) { P.qitems = P.qitems || {}; P.qitems[it.id] = (P.qitems[it.id] || 0) + n; return true; } // kept with the quests, no slot (#144)
     if (G.stackable(it)) {
       // stacks hold 20 (#440): fill the open ones, then new slots; nothing goes in unless it all fits
-      if (stackSlots(P.bags, it, n) > G.bagCap() - P.bags.length) { toast('Inventory is full.'); return false; }
+      if (stackSlots(P.bags, it, n) > G.bagCap() - P.bags.length) { toast('Bags are full.'); return false; }
       const fresh = !P.bags.some((b) => b.item.id === it.id);
       putStack(P.bags, it, n);
       if (!fresh) return true;
-    } else if (G.bagsFull()) { toast('Inventory is full.'); return false; }
+    } else if (G.bagsFull()) { toast('Bags are full.'); return false; }
     else P.bags.push({ item: it, n });
     if (G.collectLook) G.collectLook(it); // the wardrobe (v10.3)
     if (G.isUpgrade(it)) P.bagUpgrade = true; // the Bags button's dot until Bags is opened (v10.9, issue #11)
@@ -678,7 +678,7 @@
     const P = G.S.player;
     if (G.fight) return toast('You are in combat.');
     if (!P.equip[slot]) return;
-    if (G.bagsFull()) return toast('Inventory is full.');
+    if (G.bagsFull()) return toast('Bags are full.');
     P.bags.push({ item: P.equip[slot], n: 1 }); delete P.equip[slot];
     clampVitals(); emit('change');
   };
@@ -2108,11 +2108,11 @@
     // a full stack (20) is no room, and the bank lets go only of what reached the bags (#163: a stack was deleted)
     if (G.stackable(b.item)) { // as many as fit, in stacks of 20 (#440); the rest stays in the bank
       const fit = P.bags.reduce((a, x) => a + (x.item.id === b.item.id && x.n < STACK ? STACK - x.n : 0), 0) + Math.max(0, G.bagCap() - P.bags.length) * STACK;
-      const k = Math.min(b.n, fit); if (!k) return toast('Inventory is full.');
+      const k = Math.min(b.n, fit); if (!k) return toast('Bags are full.');
       G.addItem(k === b.n ? b.item : Object.assign({}, b.item), k); b.n -= k; if (!b.n) P.bank.splice(idx, 1);
       return emit('change');
     }
-    if (G.bagsFull()) return toast('Inventory is full.');
+    if (G.bagsFull()) return toast('Bags are full.');
     if (G.addItem(b.item, b.n)) P.bank.splice(idx, 1);
     emit('change');
   };
@@ -2148,7 +2148,7 @@
     const S = G.S, P = S.player, l = (S.ah.listings || []).find((x) => x.id === id);
     if (!l) return toast('Someone else bought it.');
     if (P.money < l.price) return toast(`You need ${G.moneyText(l.price)}.`);
-    if (G.slotsShort([[l.item, l.n || 1]])) return toast('Inventory is full.'); // a stack it joins is room (#407)
+    if (G.slotsShort([[l.item, l.n || 1]])) return toast('Bags are full.'); // a stack it joins is room (#407)
     P.money -= l.price; S.ah.listings = S.ah.listings.filter((x) => x !== l);
     G.addItem(l.item, l.n || 1); loot(`You bought ${B.link(l.item.name, l.item.q)}${(l.n || 1) > 1 ? ' x' + l.n : ''} from ${l.seller} for ${G.moneyText(l.price)}.`);
     emit('change');
@@ -2176,7 +2176,7 @@
   };
   G.ahCancel = function (i) {
     const S = G.S, a = S.ah.mine[i]; if (!a) return;
-    if (G.slotsShort([[a.item, a.n || 1]])) return toast('Inventory is full.');
+    if (G.slotsShort([[a.item, a.n || 1]])) return toast('Bags are full.');
     S.ah.mine.splice(i, 1); G.addItem(a.item, a.n || 1); sys(`You cancelled your auction of ${a.item.name}.${a.deposit ? ` The deposit of ${G.moneyText(a.deposit)} is kept by the house.` : ''}`); emit('change');
   };
   const ahTick = G.ahTick = function () {
@@ -2355,7 +2355,7 @@
     const N = D.NODES[key], p = G.profs()[N.prof];
     if (!p) return toast(`Requires ${D.PROFESSIONS[N.prof].name}: learn it from a profession trainer.`);
     if (p.skill < N.skill) return toast(`Requires ${D.PROFESSIONS[N.prof].name} ${N.skill}.`);
-    if (G.bagsFull() && !P.bags.some((b) => b.item.id === N.item && b.n < 20)) return toast('Inventory is full.');
+    if (G.bagsFull() && !P.bags.some((b) => b.item.id === N.item && b.n < 20)) return toast('Bags are full.');
     stopActions();
     P.casting = { what: 'pgather', key, label: `${D.PROFESSIONS[N.prof].verb === 'Mine' ? 'Mining' : 'Picking'} ${N.name}`, start: now(), end: now() + 2500 };
     emit('castBegin', { what: 'pgather' }); emit('change');
@@ -2407,7 +2407,7 @@
     if (G.fight) return toast('You are in combat.');
     if (p.skill < r.sk[0]) return toast(`Requires ${D.PROFESSIONS[r.prof].name} ${r.sk[0]}.`);
     if (G.craftable(rid) < 1) return toast('You are missing materials.');
-    if (G.bagsFull() && !(G.stackable(D.ITEMS[r.makes]) && P.bags.some((b) => b.item.id === r.makes && b.n < 20))) return toast('Inventory is full.');
+    if (G.bagsFull() && !(G.stackable(D.ITEMS[r.makes]) && P.bags.some((b) => b.item.id === r.makes && b.n < 20))) return toast('Bags are full.');
     stopActions();
     const left = Math.max(1, Math.min(count || 1, G.craftable(rid)));
     P.casting = { what: 'craft', rid, left, total: left, label: `${D.ITEMS[r.makes].name}`, start: now(), end: now() + 1500 };
@@ -2485,7 +2485,7 @@
   }
   G.fishStart = function (auto) {
     const why = G.fishWhy(); if (why) { toast(why); return false; }
-    if (G.bagsFull()) { toast('Inventory is full.'); return false; }
+    if (G.bagsFull()) { toast('Bags are full.'); return false; }
     stopActions();
     const P = G.S.player, f = rollFish(D.waterTier(P.place), G.profs().fishing.skill), t = now();
     P.fishing = { phase: 'wait', start: t, biteAt: t + rnd(G.FISH_TIME.wait[0], G.FISH_TIME.wait[1]) * 1000, fish: f, auto: !!auto, tier: D.waterTier(P.place) };
@@ -2639,7 +2639,7 @@
   G.buyHeirloom = function (id) {
     const a = G.account(), H = D.HEIRLOOMS[id]; if (!H) return;
     const owned = a.heirlooms.includes(id);
-    if (G.bagsFull()) return toast('Inventory is full.'); // before any Marks are taken, so a full bag costs nothing (#87)
+    if (G.bagsFull()) return toast('Bags are full.'); // before any Marks are taken, so a full bag costs nothing (#87)
     if (!owned) { if (a.marks < H.cost) return toast(`You need ${H.cost} Mentor Marks.`); a.marks -= H.cost; a.heirlooms.push(id); G.saveAccount(a); }
     G.addItem(G.makeHeirloom(id, G.S.player.level), 1);
     loot(owned ? `You take a copy of ${B.link(H.name, 5)}.` : `You bought ${B.link(H.name, 5)} for ${H.cost} Mentor Marks. Every character can take a copy.`);
@@ -3221,7 +3221,7 @@
   }
   G.brawlTakeChest = function (i) {
     const S = G.S, P = S.player, br = S.brawl; if (!br || !br.chest || !br.chest[i]) return;
-    if (G.bagsFull()) return toast('Inventory is full.');
+    if (G.bagsFull()) return toast('Bags are full.');
     const it = br.chest[i]; G.addItem(it); P.brawl.chestDay = brawlDay(new Date(now())); br.chest = null;
     sys(`From the Bloodsand chest: [${it.name}].`); emit('lootGain', { items: 1, got: [it] }); emit('change'); G.save();
   };

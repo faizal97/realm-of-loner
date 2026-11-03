@@ -40,7 +40,7 @@ test('one free slot: everything is paid and the gear is in the bags, and chat an
   const gear = P.bags[P.bags.length - 1].item;
   assert.ok(lines.length === 1 && lines[0].includes('bonus gear'), lines[0]);
   assert.ok(G.S.chat.slice(chat).some((m) => (m.text || '').includes(gear.name)), 'chat names the gear that arrived');
-  assert.ok(!toasts.includes('Inventory is full.'));
+  assert.ok(!toasts.includes('Bags are full.'));
 });
 
 test('a daily bounty (no item) still hands in with full bags', () => {
