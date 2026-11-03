@@ -60,3 +60,11 @@ test('a story scene during a pull does not stop the run clock (#470)', () => {
   G.paused = true; try { W.advance(5); } finally { G.paused = false; }
   assert.ok(G.runClock() - c0 > 4, `run clock moved ${G.runClock() - c0}`);
 });
+
+test('a guild night signed up for does not start when you come back after it (#473)', () => {
+  const { S } = W.character(30); const g = SOC.myGuilds().find((x) => x.min <= 30).g; G.joinGuild(g);
+  const b = S.bots.find((x) => x.guild === g);
+  const m = { id: 9300, ch: 'guild', from: b.name, text: 'event', act: { kind: 'g_event', guild: true, bot: b.id, act: 'deadmines', startAt: W.now() + 60000, until: W.now() + 240000, signed: true, state: 'open' } };
+  S.chat.push(m); W.setNow(W.now() + 5 * 3600000); SOC.tick();
+  assert.ok(!S.run, 'no run'); assert.notStrictEqual(m.act.state, 'open');
+});

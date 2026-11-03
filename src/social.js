@@ -270,7 +270,9 @@
         if (a.itemData) { G.mailSend({ kind: 'reward', gift: true, from: who, item: JSON.parse(JSON.stringify(a.itemData)), n: 1 }); G.sys(`${who}'s gift waits in your mail.`); } }
       if (a.kind === 'quest_team' && a.accepted && P.quests[a.qid] && G.questComplete(a.qid)) { a.state = 'done'; finishTeam(m, true); }
       else if (a.kind === 'quest_team' && a.accepted && !P.quests[a.qid]) { a.state = 'expired'; finishTeam(m, false); } // dropped: no reward (#352)
-      if (a.kind === 'g_event' && a.signed && !a.started && t >= a.startAt) startGuildEvent(m);
+      if (a.kind === 'g_event' && a.signed && !a.started && t >= a.startAt) { // past its window (back hours later): it went on without you (#473)
+        if (a.state === 'open') startGuildEvent(m); else { a.started = true; G.sys('The guild run started without you.'); }
+      }
     }
     if (G.fight || S.run) return;
     if (P.level >= 8 && due('lfg', 45, 100) && openActs((a) => a.kind === 'lfg').length < 2) makeLfg();
