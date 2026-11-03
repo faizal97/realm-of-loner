@@ -540,12 +540,12 @@
     if (a.kind === 'help_kill' || a.kind === 'quest_team') {
       if (a.accepted) return [{ label: 'Cancel', fn: () => { if (a.kind === 'help_kill') finishHelp(m, false); else finishTeam(m, false); close('declined'); } }];
       if (!b) return [{ label: "They're gone", disabled: true, why: true, fn: () => null }]; // they left the realm (#421)
+      // greyed with the reason before the tap (#450): the group finder or PvP (#415), a full party, or one meeting place
+      // at a time, since a second task elsewhere would send the first one's party home (#418)
+      const other = S.chat.find((x) => x.act && x.act !== a && x.act.state === 'open' && x.act.accepted && (x.act.kind === 'help_kill' || x.act.kind === 'quest_team') && x.act.place !== a.place);
+      const busy = G.partyBlock() || (G.partySize() >= 3 ? 'Party full' : other ? `Finish the task at ${D.PLACES[other.act.place].name} first` : null);
+      if (busy) return [{ label: busy.replace(/\.$/, ''), disabled: true, why: true, fn: () => null }, decline];
       return [{ label: a.kind === 'quest_team' ? 'Team up' : 'Help', primary: true, fn: () => {
-        if (G.partyBlock()) return G.partyBlock(); // the group finder or PvP (#415)
-        if (G.partySize() >= 3) return 'Your party is full.';
-        // one meeting place at a time: a second task elsewhere would send the first one's party home (#418)
-        const other = S.chat.find((x) => x.act && x.act !== a && x.act.state === 'open' && x.act.accepted && (x.act.kind === 'help_kill' || x.act.kind === 'quest_team') && x.act.place !== a.place);
-        if (other) return `Finish the task at ${D.PLACES[other.act.place].name} first.`;
         if (a.kind === 'quest_team' && (G.questComplete(a.qid) || !P.quests[a.qid])) { a.state = 'expired'; G.emitChange(); return 'That quest is done.'; }
         a.accepted = true; a.until = now() + 20 * 60000;
         if (b) G.addToParty(b, { meet: a.place, until: a.until });

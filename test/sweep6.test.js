@@ -179,7 +179,8 @@ test('a second Help task in another place waits until the first is done (#418)',
   W.setNow(new Date(2026, 10, 3, 20).getTime()); const { S, P } = W.character(20); const pls = huntPlaces(P, 20);
   const a = helpTask(S, pls[0], 9001), b = helpTask(S, pls[1], 9002);
   globalThis.SOC.actions(a)[0].fn();
-  assert.match(String(globalThis.SOC.actions(b)[0].fn()), /Finish the task at/);
+  const x = globalThis.SOC.actions(b)[0]; x.fn();
+  assert.match(x.label, /Finish the task at/); assert.ok(x.disabled, 'greyed with the reason (#450)');
   assert.ok(!b.act.accepted);
 });
 
@@ -364,4 +365,12 @@ test('a craft order you took does not nudge you (#449)', () => {
   S.chat.push({ id: 'co1', ch: 'whisper', from: b.name, text: 'craft?', act: { kind: 'craft_order', whisper: true, state: 'open', bot: b.id, sent: true, posted: W.now(), until: W.now() + 20 * 60000 } });
   W.advance(150);
   assert.ok(!S.chat.some((m) => m.ref === 'co1'), 'no nudge');
+});
+
+test('Help is greyed with the reason when the party is full or you are in the group finder (#450)', () => {
+  const { S, P } = W.character(20); const m = helpTask(S, huntPlaces(P, 20)[0], 9010);
+  for (const b of S.bots.filter((x) => x.level >= 18 && x.level <= 22).slice(0, 2)) G.addToParty(b);
+  let x = SOC.actions(m)[0]; assert.strictEqual(x.label, 'Party full'); assert.ok(x.disabled);
+  S.queue = { act: 'deadmines' };
+  x = SOC.actions(m)[0]; assert.strictEqual(x.label, 'Not while in the group finder'); assert.ok(x.disabled);
 });
