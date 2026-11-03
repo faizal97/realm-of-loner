@@ -3552,7 +3552,13 @@
   G.trials = function () {
     const P = G.S.player, T = TR(), k = T.season(new Date());
     const Rec = P.trials = P.trials || { season: k, best: {}, open: {}, week: null, history: [], bestEver: 0, bestRank: null };
-    if (Rec.season !== k) {
+    // the clock set back into the month just closed: that month comes back as it was, and its history entry goes (#472)
+    if (k < Rec.season && Rec.prev && Rec.prev.season === k) {
+      if (Rec.history[0] && Rec.history[0].season === k) Rec.history.shift();
+      Object.assign(Rec, Rec.prev); Rec.prev = null;
+    }
+    if (k > Rec.season) { // only a later month closes one; an earlier one keeps this record (#472)
+      Rec.prev = Object.keys(Rec.best).length ? { season: Rec.season, best: Rec.best, open: Rec.open, week: Rec.week, bestRank: Rec.bestRank } : null;
       if (Rec.season >= -1 && Object.keys(Rec.best).length) {
         const picks = T.picks(Rec.season, G.myFaction()), rating = T.rating(Rec.best, picks);
         const board = T.board(G.S.bots, rating, P.name, new Date(T.end(Rec.season) - 1000));
@@ -3669,7 +3675,7 @@
     if (timed) { Rec.open[act] = Math.max(Rec.open[act] || 1, lvl + (great ? 2 : 1)); Rec.bestEver = Math.max(Rec.bestEver || 0, lvl); }
     G.addMarks(5 + lvl, `Trial ${lvl}`);
     const per = T.period(new Date()).id;
-    if (!Rec.week || Rec.week.id !== per) Rec.week = { id: per, n: 0, paid: false };
+    if (!Rec.week || per > Rec.week.id) Rec.week = { id: per, n: 0, paid: false }; // a clock set back keeps the week and what it paid (#471)
     if (lvl >= R.trial.bestHere) Rec.week.n++;
     if (Rec.week.n >= 4 && !Rec.week.paid) { Rec.week.paid = true; G.addMarks(25, 'this week\'s Trials goal'); }
     if (timed) { G.trialswornCheck(lvl); G.monthCloakCheck(lvl, R.trial.season); }
