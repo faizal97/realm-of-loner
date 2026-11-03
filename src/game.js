@@ -392,6 +392,10 @@
       }
     };
     for (const o of [S.queue, S.run, S.group, S.wparty, S.world, S.bg, S.brawl, P.travel, P.cds, P.auras, P.costume]) move(o, 0);
+    // chat, guild, auctions, invites, Help Wanted, casts, meals and fishing (#436-#439)
+    for (const o of [S.soc, S.flags, S.ah, S.helpWanted, P.casting, P.eating, P.drinking, P.fishing]) move(o, 0);
+    for (const m of S.chat || []) if (m.act) move(m.act, 0);
+    for (const [o, k] of [[P, 'potionAt'], [P, 'ghostUntil'], [P, 'hearthAt'], [S, 'lfAt']]) { const v = o[k]; if (typeof v === 'number' && v > 1e12 && v < S.lastSeen + 30 * 86400000) o[k] = v + d; }
   }
 
   // Time away: rested XP, the server moving on, a news digest.

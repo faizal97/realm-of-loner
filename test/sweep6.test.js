@@ -269,3 +269,21 @@ test('a turned-in bounty stays done after the clock goes a week forward and back
   W.setNow(t0); G.load(id);
   for (const b of [bs[0], bs.find((x) => x.weekly)]) assert.strictEqual(G.bountyState(b), 'done', b.id);
 });
+
+test('a clock set back a day while playing moves every timer with it (#436-#439)', () => {
+  W.character(30); const S = G.S, P = S.player; W.advance(2); G.save();
+  const t = W.now(), soon = t + 60000;
+  S.soc = S.soc || { next: {} }; S.soc.next.lfg = soon; S.soc.applied = { g: 1, until: soon };
+  S.chat.push({ id: 'x1', text: 'LFG', act: { kind: 'lfg', until: soon } });
+  P.potionAt = soon; P.ghostUntil = t + 10000; P.hearthAt = soon;
+  P.casting = { what: 'hearth', start: t, end: t + 10000 }; P.fishing = { phase: 'wait', start: t, biteAt: soon };
+  S.flags.deserterUntil = soon; S.flags.pendingAt = soon; S.flags.invitedAt = t;
+  S.helpWanted = [{ id: 'hw', act: 'deadmines', expires: soon }];
+  S.ah = Object.assign(S.ah || {}, { mine: [{ sellAt: soon, expires: soon }] });
+  const back = 864e5; W.setNow(t - back); G.update(0.1);
+  const left = (v) => v - W.now();
+  for (const [name, v] of [['soc.next', S.soc.next.lfg], ['applied', S.soc.applied.until], ['chat until', S.chat.find((m) => m.id === 'x1').act.until],
+    ['potion', P.potionAt], ['ghost', P.ghostUntil], ['hearth', P.hearthAt], ['bite', P.fishing.biteAt], ['deserter', S.flags.deserterUntil],
+    ['pending', S.flags.pendingAt], ['help wanted', S.helpWanted[0].expires], ['auction', S.ah.mine[0].sellAt]])
+    assert.ok(left(v) <= 61000, `${name}: ${left(v)} ms left`);
+});
