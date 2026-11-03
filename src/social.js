@@ -81,21 +81,25 @@
   const weekId = () => Math.floor((now() / 86400000 + 3) / 7);
   SOC.week = function () {
     const soc = state(), P = G.S.player; if (P.guild < 0) return null;
-    if (!soc.week || soc.week.id !== weekId() || soc.week.g !== P.guild) {
+    // only a later week rolls a new goal: a clock set back keeps the week it has (#471)
+    if (!soc.week || soc.week.id < weekId() || soc.week.g !== P.guild) {
       const kept = (soc.weekKept || {})[P.guild]; // back in a guild you left this week: its progress is where it was (#453)
-      if (kept && kept.id === weekId()) return (soc.week = kept);
-      const goals = [{ what: 'creatures slain', kind: 'kill', goal: 150 }, { what: 'dungeon bosses defeated', kind: 'boss', goal: 12 }, { what: 'requests answered', kind: 'help', goal: 10 }];
-      const gl = goals[(weekId() + P.guild) % goals.length];
-      soc.week = Object.assign({ id: weekId(), g: P.guild, got: Math.floor(gl.goal * rnd(0.1, 0.3)), done: false }, gl);
-      if (soc.weekPaid === weekId()) { soc.week.got = soc.week.goal; soc.week.done = true; } // one weekly reward a week, whichever guild (#348)
+      if (kept && kept.id >= weekId()) soc.week = kept;
+      else {
+        const goals = [{ what: 'creatures slain', kind: 'kill', goal: 150 }, { what: 'dungeon bosses defeated', kind: 'boss', goal: 12 }, { what: 'requests answered', kind: 'help', goal: 10 }];
+        const gl = goals[(weekId() + P.guild) % goals.length];
+        soc.week = Object.assign({ id: weekId(), g: P.guild, got: Math.floor(gl.goal * rnd(0.1, 0.3)), done: false }, gl);
+      }
     }
+    // one weekly reward a week, whichever guild (#348), kept goal or not (#469), and none again for a week the clock went back to (#471)
+    if (!soc.week.done && (soc.weekPaid || -1) >= soc.week.id) { soc.week.got = soc.week.goal; soc.week.done = true; }
     return soc.week;
   };
   function weekProgress(kind, n) {
     const w = SOC.week(); if (!w || w.done || w.kind !== kind) return;
     w.got += n;
     if (w.got >= w.goal) {
-      w.done = true; state().weekPaid = w.id;
+      w.done = true; state().weekPaid = Math.max(state().weekPaid || -1, w.id);
       const P = G.S.player, gold = P.level * 150;
       P.money += gold;
       post('guild', guildOfficer(), pickT('s93', [`WEEKLY GOAL DONE! ${w.goal} ${w.what}, thanks everyone!`, `we hit the weekly goal, ${w.goal} ${w.what}. gold to everyone who helped!`]));
