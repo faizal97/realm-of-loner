@@ -390,3 +390,11 @@ test('a guild night refused for Deserter closes instead of staying Signed up (#4
   W.advance(3);
   assert.notStrictEqual(m.act.state, 'open');
 });
+
+test('leaving and rejoining a guild in the same week keeps its weekly goal (#453)', () => {
+  W.setNow(new Date(2026, 10, 4, 12).getTime());
+  W.character(30); const g = SOC.myGuilds().find((x) => x.min <= 30).g; G.joinGuild(g);
+  const w = SOC.week(); w.got = 8; const got = w.got;
+  SOC.leaveGuild(); G.joinGuild(g);
+  assert.strictEqual(SOC.week().got, got);
+});

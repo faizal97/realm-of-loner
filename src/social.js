@@ -82,6 +82,8 @@
   SOC.week = function () {
     const soc = state(), P = G.S.player; if (P.guild < 0) return null;
     if (!soc.week || soc.week.id !== weekId() || soc.week.g !== P.guild) {
+      const kept = (soc.weekKept || {})[P.guild]; // back in a guild you left this week: its progress is where it was (#453)
+      if (kept && kept.id === weekId()) return (soc.week = kept);
       const goals = [{ what: 'creatures slain', kind: 'kill', goal: 150 }, { what: 'dungeon bosses defeated', kind: 'boss', goal: 12 }, { what: 'requests answered', kind: 'help', goal: 10 }];
       const gl = goals[(weekId() + P.guild) % goals.length];
       soc.week = Object.assign({ id: weekId(), g: P.guild, got: Math.floor(gl.goal * rnd(0.1, 0.3)), done: false }, gl);
@@ -109,7 +111,7 @@
     for (const m of S.chat) if (m.act && m.act.guild && m.act.state === 'open' && m.act.accepted && m.act.kind === 'help_kill') finishHelp(m, false);
     P.guild = -1; P.guildRep = 0;
     for (const m of S.chat) if (m.act && m.act.guild && m.act.state === 'open') m.act.state = 'expired';
-    state().week = null;
+    const soc = state(); if (soc.week) soc.weekKept = Object.assign({}, soc.weekKept, { [soc.week.g]: soc.week }); soc.week = null;
     G.sys(`You have left ${name}.`);
     G.emitChange();
   };
