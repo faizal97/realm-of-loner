@@ -683,7 +683,7 @@
     clampVitals(); emit('change');
   };
   // a sale that asks first (#168): green or better, or an upgrade; greys, whites and trade goods sell on one tap
-  G.sellNeedsConfirm = (it) => !!it && ((it.q || 0) >= 2 || (D.GEAR_SLOTS.includes(it.slot) && G.isUpgrade(it)));
+  G.sellNeedsConfirm = (it) => !!it && ((it.q || 0) >= 2 || !!it.pw || (D.GEAR_SLOTS.includes(it.slot) && G.isUpgrade(it))); // upgraded (#444)
   G.sellable = (it) => !!it && !it.noSell && it.slot !== 'quest';
   G.sell = function (idx) {
     const P = G.S.player;

@@ -326,3 +326,9 @@ test('a reward sent to the bank says where it went, without a bags-full toast (#
   assert.strictEqual(G.giveReward(G.copyItem('linen_cloth'), 'Test'), 'bank');
   on = false; assert.deepStrictEqual(toasts.filter((t) => /full/i.test(String(t && t.text || t))), []);
 });
+
+test('selling an upgraded item asks first (#444)', () => {
+  W.character(20); const it = G.genGear('chest', 20, 1, { atype: 'mail' }); it.pw = 0.2;
+  G.S.player.equip.chest = G.genGear('chest', 25, 4, { atype: 'mail' });
+  assert.strictEqual(G.sellNeedsConfirm(it), true);
+});

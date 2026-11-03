@@ -3002,6 +3002,7 @@
     showDialog([h('h3', null, 'Sell ', h('span', { class: 'q' + it.q }, it.name + (b.n > 1 ? ' ×' + b.n : '')), '?'),
       h('p', { html: `Sells for ${moneyHtml((it.sell || 1) * b.n)}. Can't be bought back.` }),
       up ? h('p', null, cur ? ["It's an upgrade over your ", h('span', { class: 'q' + cur.q }, cur.name), '.'] : `It's an upgrade: nothing is in your ${D.SLOT_LABEL[it.slot]} slot.`) : null,
+      it.pw ? h('p', null, 'Its upgrades are lost with it.') : null, // #444
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: closeDialog }, 'Keep'), h('button', { class: 'btn alt', onclick: () => { closeDialog(); sell(); } }, 'Sell'))], true);
   }
   function openVendor(npc) {
@@ -3951,7 +3952,7 @@
         P.bags.forEach((x, i) => { if (!G.ahTrade(x.item)) return; const v = G.ahValue(x.item) * x.n;
           // each price shows its facts (issue #20): how likely it sells within a day, and the deposit; no button is picked for you
           const dep = G.ahDeposit(x.item, x.n), odds = (f) => { const c = G.ahSellChance(f); return c >= 0.95 ? 'almost surely' : c <= 0.05 ? 'hardly ever' : `about ${Math.round(c * 10)} in 10`; };
-          list.append(itemRow(x.item, x.n, G.moneyText(v), () => showDialog([h('h3', null, `Sell ${x.item.name}`), h('p', null, `Players usually pay about ${G.moneyText(v)}. The higher the price, the less likely it sells within a day. The deposit of ${G.moneyText(dep)} comes back only if it sells; the house takes 5% of a sale.`),
+          list.append(itemRow(x.item, x.n, G.moneyText(v), () => showDialog([h('h3', null, `Sell ${x.item.name}`), x.item.pw ? h('p', null, 'Its upgrades are lost with it.') : null, h('p', null, `Players usually pay about ${G.moneyText(v)}. The higher the price, the less likely it sells within a day. The deposit of ${G.moneyText(dep)} comes back only if it sells; the house takes 5% of a sale.`),
             h('div', { class: 'list' }, ...[0.8, 1, 1.3, 1.6].map((f) => h('button', { class: 'row', onclick: () => { closeDialog(); G.ahPost(i, Math.round(v * f)); ui.sheetFn(); } }, h('div', { class: 't' }, h('b', null, G.moneyText(Math.round(v * f))), h('small', null, `Sells within a day: ${odds(f)} · deposit ${G.moneyText(dep)}`))))),
             h('button', { class: 'btn alt wide', onclick: closeDialog }, 'Cancel')], true), `Vendor pays ${G.moneyText((x.item.sell || 0) * x.n)}`)); });
         if (!list.children.length) list.append(h('div', { class: 'people' }, 'Nothing in your bags to sell. Gear, trade goods, potions and bags can go up for auction.'));
