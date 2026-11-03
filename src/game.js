@@ -4798,7 +4798,7 @@
   // the candle sink, used from your bags
   G.lwUse = function (idx) {
     const S = G.S, P = S.player, b = P.bags[idx], it = b && D.ITEMS[b.item.id]; if (!it) return;
-    if (!G.eventLive('lanternwake')) return toast('Lanternwake is over.'); // #441
+    if (!G.eventLive('lanternwake')) return toast('Lanternwake is over. It works again next Lanternwake.'); // #441, kept for next year (#475)
     if (it.costume) {
       let mob = it.costume;
       if (mob === 'local') { const Pl = D.PLACES[P.place], pool = Object.values(D.PLACES).filter((x) => x.region === Pl.region).flatMap((x) => (x.mobs || []).map((m) => m[0])).filter((k) => D.MOBS[k] && !D.MOBS[k].boss); if (!pool.length) return toast('No creatures live in this zone to dress up as.'); mob = pick(pool); }
@@ -5187,7 +5187,7 @@
   // ---- toys, used from your bags
   G.lnUse = function (idx) {
     const S = G.S, P = S.player, b = P.bags[idx], it = b && D.ITEMS[b.item.id]; if (!it) return;
-    if (!G.lnOn()) return toast('Longnight is over.'); // #441
+    if (!G.lnOn()) return toast('Longnight is over. It works again next Longnight.'); // #441, kept for next year (#475)
     const town = D.PLACES[P.place] && D.PLACES[P.place].safe;
     if (it.stew) return toast('Hand it to someone in town who asks for a bowl in chat.');
     if (it.costume) { P.costume = { mob: it.costume, until: now() + 3600000 }; G.removeItem(it.id, 1); sys(`You look like a ${D.MOBS[it.costume].name} for 1 hour.`); }

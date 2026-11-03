@@ -138,3 +138,14 @@ test('an imported save code counts the time since it was made (#480)', async () 
   W.setNow(t0 + 7 * 86400000); const id = await G.importSave(code); const rep = G.load(id);
   assert.ok(rep.away > 6 * 86400000, `away ${rep.away}`); assert.ok(!G.S.run, 'the stale run ended');
 });
+
+test('a Longnight item kept after the festival says it works next Longnight, and does (#475)', () => {
+  const toasts = []; const off = (t) => toasts.push(t); G.on('toast', off);
+  W.setNow(new Date(2027, 0, 6, 19).getTime()); const { P } = W.character(30);
+  P.bags.push({ item: G.copyItem('ln_snowball'), n: 3 });
+  G.lnUse(P.bags.length - 1); assert.ok(toasts.some((t) => /next Longnight/.test(t)), toasts.join(' | '));
+  assert.ok(G.canDiscard(P.bags[P.bags.length - 1].item), 'can be thrown away');
+  W.setNow(new Date(2027, 11, 20, 19).getTime()); G.ln();
+  const n0 = P.bags.find((b) => b.item.id === 'ln_snowball').n; G.lnUse(P.bags.findIndex((b) => b.item.id === 'ln_snowball'));
+  assert.ok((P.bags.find((b) => b.item.id === 'ln_snowball') || { n: 0 }).n < n0, 'thrown next year');
+});
