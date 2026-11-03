@@ -68,6 +68,7 @@
     P.guildRep = (P.guildRep || 0) + n;
     G.sys(`+${n} guild standing${why ? ' (' + why + ')' : ''}.`);
     const r1 = SOC.rank();
+    if (r1 > (P.guildRankBest || 0)) P.guildRankBest = r1; // the highest rank ever reached keeps its title (#448)
     if (r1 > r0) { post('guild', guildOfficer(), pickT('s67', [`congrats on ${RANKS[r1].name} rank!`, `promoted you to ${RANKS[r1].name}, well earned`, `${RANKS[r1].name} now, nice work`, `everyone say gz, new ${RANKS[r1].name}!`])); G.toast(`Guild rank: ${RANKS[r1].name}. ${RANKS[r1].perk ? 'New perk: ' + RANKS[r1].perk + '.' : ''}`, true); }
   }
   SOC.addStanding = addStanding;

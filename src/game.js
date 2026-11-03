@@ -2798,7 +2798,7 @@
     if (n.quest) return !!G.S.player.done[n.quest];
     if (n.event) return G.lwRec().owned.includes(n.event) || G.lnRec().owned.includes(n.event); // from a festival (v10.13)
     if (n.prof) return ((G.S.player.prof || {})[n.prof] || {}).skill >= 300 || !!(G.S.player.artisan || {})[n.prof]; // Artisan (v10.9): 300 in that skill, now or before it was unlearned (#145)
-    if (n.guildRank != null) return !!(root.SOC && SOC.rank() >= n.guildRank);
+    if (n.guildRank != null) return Math.max(G.S.player.guildRankBest || 0, root.SOC ? SOC.rank() : -1) >= n.guildRank; // earned once, kept after leaving (#448)
     if (n.trial) return ((G.S.player.trials || {}).bestEver || 0) >= n.trial; // Trials (v10.4): best level beaten in time
     if (n.trialRank) { const r = (G.S.player.trials || {}).bestRank; return !!r && r <= n.trialRank; } // a month's final realm rank
     return Object.keys(n).every((k) => (r[k] || 0) >= n[k]);

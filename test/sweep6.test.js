@@ -350,3 +350,11 @@ test('a sale, a carry or a duel from someone who left the realm is greyed (#447)
     assert.ok(a.disabled && /gone/.test(a.label), kind);
   }
 });
+
+test('the Champion title stays earned after leaving the guild (#448)', () => {
+  W.character(30); const P = G.S.player, t = D.TITLES.find((x) => x.id === 'guild_champion');
+  P.guild = B.GUILDS.findIndex((g, i) => B.GUILD_FACTION[i] === G.myFaction()); P.guildRep = 0;
+  SOC.addStanding(100000, 'test'); assert.ok(G.titleUnlocked(t), 'earned');
+  G.setTitle('guild_champion'); SOC.leaveGuild();
+  assert.ok(G.titleUnlocked(t), 'still earned'); assert.ok(G.displayName().includes('Champion'));
+});
