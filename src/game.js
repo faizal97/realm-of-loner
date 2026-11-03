@@ -246,7 +246,7 @@
     if (root.SOC && S.soc && S.soc.applied) SOC.resumeApply(); // #417
     if (S.flags.guildOfferOpen != null) { delete S.flags.guildOfferOpen; G.reofferGuild(); } // the level-5 invitation the app closed on (#411)
     // a reload mid-pull is a wipe (#349): the pull isn't undone for free, so a lost boss fight counts as lost
-    if (S.run && S.run.phase === 'fight') { S.run.wipes = (S.run.wipes || 0) + 1; S.run.momentum = 0; S.run.phase = 'wipe'; S.run.restUntil = now() + 12000; S.player.hp = null; S.player.res = null; if (S.group) for (const m of S.group.members) { m.hp = null; m.res = null; } sys('You left mid-fight: it counts as a wipe. Running back...'); }
+    if (S.run && S.run.phase === 'fight') { S.run.wipes = (S.run.wipes || 0) + 1; S.run.reloadWipes = (S.run.reloadWipes || 0) + 1; S.run.momentum = 0; S.run.phase = 'wipe'; S.run.restUntil = now() + 12000; S.player.hp = null; S.player.res = null; if (S.group) for (const m of S.group.members) { m.hp = null; m.res = null; } sys('You left mid-fight: it counts as a wipe. Running back...'); }
     // a clock that went back never leaves a timer longer than its full length (#393): a day as a ghost, or on hearth
     { const t = now(), P = S.player; if (P.ghostUntil > t + 15000) P.ghostUntil = t + 15000; if (P.hearthAt > t + 15 * 60000) P.hearthAt = t + 15 * 60000; if ((S.flags.deserterUntil || 0) > t + DESERTER) S.flags.deserterUntil = t + DESERTER; }
     // a duel or brawl round left by closing the app is lost, never undone (#380, #381)
@@ -3487,7 +3487,7 @@
   // you have to be there. Places you have no road to yet stay hidden (the factions' roads meet in later zones).
   // Leaving a run early = deserter: 5 min, none once the group has wiped (#283: a wipe is a fair reason to go)
   const DESERTER = 5 * 60000;
-  G.deserterFor = (R) => (!R || R.phase === 'done' || R.wipes > 0 ? 0 : DESERTER);
+  G.deserterFor = (R) => (!R || R.phase === 'done' || R.wipes - (R.reloadWipes || 0) > 0 ? 0 : DESERTER); // a wipe from reopening the app is no reason to leave free (#425)
   const reach = {};
   G.reachableRegions = function (from) {
     const key = from + ':' + G.myFaction() + ':' + (G.stormBroken() ? 1 : 0);

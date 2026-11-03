@@ -229,3 +229,11 @@ test('accepting a group pop mid-trip ends the trip (#424)', () => {
   W.advance(3); S.queue.popAt = W.now() - 1; W.advance(0.5); G.acceptPop();
   assert.ok(S.run); assert.ok(!P.travel, 'the trip ended');
 });
+
+test('a wipe from reopening the app is no free pass to leave: Deserter still applies (#425)', () => {
+  const { S } = W.character(20); S.player.place = D.ACTIVITIES.deadmines.where;
+  G.queueFor('deadmines'); S.queue.popAt = W.now() - 1; G.update(0.5); G.acceptPop();
+  S.run.restUntil = 0; G.runPull(); W.advance(1); assert.strictEqual(S.run.phase, 'fight');
+  const id = S.id; G.save(); G.S = null; G.fight = null; G.pUnit = null; G.load(id);
+  assert.ok(G.deserterFor(G.S.run) > 0);
+});
