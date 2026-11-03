@@ -120,7 +120,7 @@ test('the level-5 guild invitation the app closed on is asked again (#411)', () 
 
 test('a group pop left unanswered times out and says so (#412)', () => {
   W.character(20); const S = G.S; S.player.place = D.ACTIVITIES.deadmines.where;
-  G.queueFor('deadmines'); S.queue.popAt = W.now() - 1; W.advance(1); assert.ok(S.queue.popped);
+  G.queueFor('deadmines'); S.queue.popAt = 0; W.advance(1); assert.ok(S.queue && S.queue.popped, 'a late pop still shows');
   W.advance(G.POP_WAIT / 1000 + 2);
   assert.ok(!G.S.queue, 'the pop is gone');
   assert.ok(G.S.chat.some((m) => /didn't answer in time/.test(m.text || '')));

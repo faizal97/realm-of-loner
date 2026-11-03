@@ -4602,10 +4602,10 @@
       B.chatTick(S, now());
       if (S.chat.length !== before) emit('chat');
       if (S.queue && now() >= S.queue.popAt && !S.queue.popped) {
-        const A = D.ACTIVITIES[S.queue.act]; S.queue.popped = true;
+        const A = D.ACTIVITIES[S.queue.act]; S.queue.popped = true; S.queue.poppedAt = now();
         if (!A.bg) S.queue.group = pickGroup(S.queue.act, S.queue.trial ? { trial: S.queue.trial } : S.queue.hard ? { hard: true } : undefined); // who you'll play with (#189)
         emit('pop', S.queue);
-      } else if (S.queue && S.queue.popped && now() >= S.queue.popAt + G.POP_WAIT) {
+      } else if (S.queue && S.queue.popped && now() >= (S.queue.poppedAt || now()) + G.POP_WAIT) {
         // a pop nobody answers times out, as in an MMO (#412): the group goes on, and nobody is held
         S.queue = null; sys("You didn't answer in time: the group went on without you."); emit('popExpired'); emit('change');
       }
