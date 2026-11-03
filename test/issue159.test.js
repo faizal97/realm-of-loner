@@ -42,12 +42,12 @@ test('marks: a member short of mana has none and the line names them with the nu
   assert.strictEqual(row.ready, false);
   assert.strictEqual(st.rows.filter((r) => !r.me && r.ready).length, S.group.members.length - 1, 'the others are marked');
   const need = Math.round(st.need.mana * 100);
-  assert.strictEqual(G.restLine(), `Waiting for ${m.name}'s mana (32% of ${need}%)`);
+  assert.strictEqual(G.restLine(), `Waiting for ${m.name}'s mana: 32%, needs ${need}%`);
   // a second one short of health: the furthest behind is named, "+1 more"
   const o = S.group.members.find((x) => x !== m); o.hp = E.statsFor(o).maxHp * 0.45;
-  assert.strictEqual(G.restLine(), `Waiting for ${m.name}'s mana (32% of ${need}%) +1 more`);
+  assert.strictEqual(G.restLine(), `Waiting for ${m.name}'s mana: 32%, needs ${need}% · 1 more waiting`);
   o.hp = E.statsFor(o).maxHp * 0.05;
-  assert.strictEqual(G.restLine(), `Waiting for ${o.name}'s health +1 more`);
+  assert.strictEqual(G.restLine(), `Waiting for ${o.name}'s health · 1 more waiting`);
   fill(S, P); st = G.restState();
   assert.ok(st.rows.filter((r) => !r.me).every((r) => r.ready), 'every member marked');
 });
@@ -74,7 +74,7 @@ test('the tank is told to pull when ready; a missing member comes first', () => 
 test('your own mana is "your mana"; past the 25 s cap the line says the group pulls anyway', () => {
   const { P, S, R } = resting('mage'); R.pace = 'careful'; fill(S, P);
   P.res = G.vitals().maxRes * 0.2; R.restUntil = now() - 1000;
-  assert.match(G.restLine(), /^Waiting for your mana \(20% of 90%\)$/);
+  assert.match(G.restLine(), /^Waiting for your mana: 20%, needs 90%$/);
   R.restUntil = now() - 25001;
   assert.strictEqual(G.restLine(), 'Pulling anyway.');
 });

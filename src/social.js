@@ -39,7 +39,7 @@
     const members = S.bots.filter((b) => b.guild === g);
     const on = members.filter((b) => B.isOnline(b, new Date())), online = on.length;
     const officer = on.slice().sort((a, b) => b.level - a.level)[0] || null; // the highest-level one online speaks for the guild; nobody online, nobody (#390)
-    const blurb = { casual: 'Chill people, no pressure. We help each other level.', leveling: 'New and levelling players welcome. We run low dungeons every night.', dungeons: 'Dungeon runs every evening. Bring your role, we bring the rest.', raiding: 'Endgame raids three nights a week. Level 40+.', pvp: 'War Mode on, always. For the glory.', social: 'A friendly bunch who mostly talk and sometimes quest.' }[style];
+    const blurb = { casual: 'Chill people, no pressure. We help each other level.', leveling: 'New and leveling players welcome. We run low dungeons every night.', dungeons: 'Dungeon runs every evening. Bring your role, we bring the rest.', raiding: 'Endgame raids three nights a week. Level 40+.', pvp: 'War Mode on, always. For the glory.', social: 'A friendly bunch who mostly talk and sometimes quest.' }[style];
     return { g, name, style, min, members: members.length, online, officer, blurb, faction: B.GUILD_FACTION[g] };
   };
   SOC.myGuilds = () => B.GUILDS.map((_, g) => g).filter((g) => B.GUILD_FACTION[g] === G.myFaction()).map(SOC.guildInfo);

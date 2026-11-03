@@ -4377,8 +4377,8 @@
     if (short.length) {
       if (st.capped && !st.tank && st.rested) return 'Pulling anyway.';
       const { r, mana } = short[0], who = r.me ? 'your' : `${r.name}'s`;
-      const what = mana ? `${who} mana (${Math.floor(r.mana / r.maxMana * 100)}% of ${Math.round(st.need.mana * 100)}%)` : `${who} health`;
-      return `Waiting for ${what}` + (short.length > 1 ? ` +${short.length - 1} more` : '');
+      const what = mana ? `${who} mana: ${Math.floor(r.mana / r.maxMana * 100)}%, needs ${Math.round(st.need.mana * 100)}%` : `${who} health`;
+      return `Waiting for ${what}` + (short.length > 1 ? ` · ${short.length - 1} more waiting` : ''); // says what the rest wait for (#495)
     }
     if (!st.rested) return `Resting · ${Math.ceil(st.restLeft / 1000)} s`;
     return st.tank ? 'Everyone ready. Pull when you are.' : 'Everyone ready. Pulling.';

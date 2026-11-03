@@ -564,7 +564,7 @@
     // the Honor ranks (#57): one title per rank, from D.HONOR_RANKS below (ids pvp1..pvp8; pvp1-4 are the old titles renamed)
     ...D.HONOR_RANKS.map((r, i) => ({ id: 'pvp' + (i + 1), name: r.alliance, horde: r.horde, need: { honor: r.at }, how: `Reach Honor rank ${i + 1} (${r.at.toLocaleString('en-US')} Honor)`, rank: i + 1 })),
     { id: 'defender', name: '%s, Defender of the Realm', horde: '%s, Defender of the Krugar', need: { kills: 50 }, how: 'Defeat 50 enemy players' },
-    { id: 'biggame', name: '%s the Big-Game Hunter', need: { trophies: 10 }, how: 'Take 10 trophies from level-60 rares and world bosses' },
+    { id: 'biggame', name: '%s the Trophy Hunter', need: { trophies: 10 }, how: 'Take 10 trophies from level-60 rares and world bosses' },
     { id: 'deadmines', name: '%s of Longfield', need: { clear: 'deadmines' }, how: 'Clear the Smugglers\' Deep' },
     { id: 'wailing', name: '%s the Dreamwalker', need: { clear: 'wailing_caverns' }, how: 'Clear The Dreaming Caves' },
     { id: 'stockade', name: 'Warden %s', need: { clear: 'stockade' }, how: 'Clear Kingsmere Gaol' },

@@ -3193,7 +3193,7 @@
         list.append(h('button', { class: 'row', onclick: () => { ui.wTry = W[pl] || null; openWardrobePlace(pl); } },
           h('div', { class: 'ic' }, o ? img(art('icon', o.icon)) : worn && !cur ? img(art('icon', worn.icon)) : ''),
           h('div', { class: 't' }, h('b', { class: o ? 'q' + o.q : '' }, o ? o.name : cur === 'hidden' ? 'Hidden' : 'Your gear'), h('small', null, WPLACE[pl])),
-          h('div', { class: 'r' }, all.length ? `${got} / ${all.length}` : '')));
+          h('div', { class: 'r' }, all.length ? `${got}/${all.length}` : '')));
       }
       b.append(list, h('p', { class: 'ai-note', style: { marginTop: '8px' } }, 'Every item with its own look joins the wardrobe when you loot, buy or wear it.'));
     });
@@ -3262,16 +3262,16 @@
     const nav = (title, sub, right, fn, dot) => h('button', { class: 'row nav', onclick: fn }, h('div', { class: 't' }, h('b', null, title, dot ? h('span', { class: 'tab-dot' }) : null), sub ? h('small', null, sub) : null), h('div', { class: 'r tnum' }, right || '', h('span', { class: 'nav-arr' }, '›')));
     const nNew = loreUnread(), list = h('div', { class: 'list' });
     list.append(nav('Lore Journal', 'What you have learned about Caldreth', nNew ? `${nNew} new` : '', () => openLore(), nNew > 0));
-    if (window.CS) { const un = CS.unlocked(), chs = CS.CHAPTERS.filter((c) => !c.faction || c.faction === G.myFaction()); list.append(nav('Theater', 'Replay the story chapters you have reached', `${chs.filter((c) => un.has(c.id)).length} / ${chs.length}`, () => openTheater())); }
+    if (window.CS) { const un = CS.unlocked(), chs = CS.CHAPTERS.filter((c) => !c.faction || c.faction === G.myFaction()); list.append(nav('Theater', 'Replay the story chapters you have reached', `${chs.filter((c) => un.has(c.id)).length}/${chs.length}`, () => openTheater())); }
     const LK = Object.keys(D.LEGENDS || {});
-    if (LK.length) { const done = LK.filter((k) => G.legendUnlocked(k)).length, going = LK.filter((k) => !G.legendUnlocked(k) && legendStarted(k)).length; list.append(nav('Legends', going ? `${going} stor${going === 1 ? 'y' : 'ies'} in progress` : 'Characters with their own story, who then join your groups', `${done} / ${LK.length}`, () => openLegends())); }
+    if (LK.length) { const done = LK.filter((k) => G.legendUnlocked(k)).length, going = LK.filter((k) => !G.legendUnlocked(k) && legendStarted(k)).length; list.append(nav('Legends', going ? `${going} stor${going === 1 ? 'y' : 'ies'} in progress` : 'Characters with their own story, who then join your groups', `${done}/${LK.length}`, () => openLegends())); }
     const tOwn = D.TITLES.filter(G.titleUnlocked).length, tNow = P.title && D.TITLES.find((t) => t.id === P.title);
     if (D.EVENTS) { const on = G.liveEvents(); list.append(nav('Events', on.length ? `${on.map((k) => D.EVENTS[k].name).join(', ')} is on: ${lwEndsText(on[0]).toLowerCase()}` : (() => { const k = Object.keys(D.EVENTS).sort((a, b) => G.eventNext(a) - G.eventNext(b))[0]; return `${D.EVENTS[k].name} returns ${dayName(G.eventNext(k))}`; })(), on.length ? 'On now' : '', () => openEvents(), on.length > 0)); }
-    if (D.COMPANIONS) list.append(nav('Companions', G.S.player.companion ? 'With you: ' + D.COMPANIONS[G.S.player.companion].name : 'Small friends that follow you', `${G.companions().length} / ${Object.keys(D.COMPANIONS).length}`, () => openCompanions()));
-    list.append(nav('Titles', tNow ? 'Wearing: ' + G.titleName(tNow, P.name) : 'No title worn', `${tOwn} / ${D.TITLES.length}`, () => openTitles()));
-    list.append(nav('Trophies', 'Level-60 rares and world bosses, shared by all your characters', `${G.trophyCount()} / ${G.trophyList().length}`, () => openTrophies()));
-    { const own = effectsOwned(); list.append(nav('Effects', 'Every item effect: which you own, and where the rest drop', `${Object.keys(D.EFFECTS).filter((k) => own.has(k)).length} / ${Object.keys(D.EFFECTS).length}`, () => openEffects())); }
-    if (G.WARDROBE_PLACES) { let got = 0, all = 0; for (const pl of G.WARDROBE_PLACES) { const w = G.wardrobeAll(pl); all += w.length; got += w.filter((o) => o.have).length; } list.append(nav('Looks', 'The wardrobe, shared by all your characters', `${got} / ${all}`, () => openWardrobe())); }
+    if (D.COMPANIONS) list.append(nav('Companions', G.S.player.companion ? 'With you: ' + D.COMPANIONS[G.S.player.companion].name : 'Small friends that follow you', `${G.companions().length}/${Object.keys(D.COMPANIONS).length}`, () => openCompanions()));
+    list.append(nav('Titles', tNow ? 'Wearing: ' + G.titleName(tNow, P.name) : 'No title worn', `${tOwn}/${D.TITLES.length}`, () => openTitles()));
+    list.append(nav('Trophies', 'Level-60 rares and world bosses, shared by all your characters', `${G.trophyCount()}/${G.trophyList().length}`, () => openTrophies()));
+    { const own = effectsOwned(); list.append(nav('Effects', 'Every item effect: which you own, and where the rest drop', `${Object.keys(D.EFFECTS).filter((k) => own.has(k)).length}/${Object.keys(D.EFFECTS).length}`, () => openEffects())); }
+    if (G.WARDROBE_PLACES) { let got = 0, all = 0; for (const pl of G.WARDROBE_PLACES) { const w = G.wardrobeAll(pl); all += w.length; got += w.filter((o) => o.have).length; } list.append(nav('Looks', 'The wardrobe, shared by all your characters', `${got}/${all}`, () => openWardrobe())); }
     list.append(nav('War Mode', P.level < 6 ? 'Enemy players show up from level 6' : `Honor ${G.pvpStats().honor.toLocaleString('en-US')}`, G.S.flags.warMode ? 'On' : 'Off', () => openWarMode()));
     b.append(h('div', { class: 'sec-h' }, 'Story and collections'), list);
   }
@@ -3709,7 +3709,7 @@
         const xs = list.filter((x) => zoneOf(x) === z), open = ui.trophyZone === z;
         box.append(h('button', { class: 'row nav', 'aria-expanded': String(open), onclick: () => { ui.trophyZone = open ? null : z; ui.sheetFn(); } },
           h('div', { class: 't' }, h('b', null, z), h('small', null, xs.map((x) => lab(x).name).join(' · '))),
-          h('div', { class: 'r tnum' }, `${xs.filter((x) => got[x.key]).length} / ${xs.length}`, h('span', { class: 'nav-arr' }, open ? '▾' : '›'))));
+          h('div', { class: 'r tnum' }, `${xs.filter((x) => got[x.key]).length}/${xs.length}`, h('span', { class: 'nav-arr' }, open ? '▾' : '›'))));
         if (open) box.append(h('div', { class: 'trophies' }, ...xs.map(plaque)));
       }
       b.append(box, h('p', { class: 'ai-note', style: { marginTop: '8px' } }, `First kill of a rare or world boss, by any of your characters. Level-60 rares spawn every 6h (marked on the map). ${G.TROPHY_TITLE} trophies: title "${T ? G.titleName(T, G.S.player.name) : ''}". Cosmetic.`));
@@ -4559,7 +4559,7 @@
   // from a tap: make sure there is a Google token (may open Google's window), then run fn
   function withCloud(fn) { return CLOUD.token(true).then(fn).catch(cloudError); }
   function cloudSummary() {
-    if (!CLOUD.available()) return 'not here';
+    if (!CLOUD.available()) return 'Unavailable'; // a standard status word (#495)
     if (!CLOUD.on()) return 'Off';
     const st = CLOUD.state();
     if (st.lastError && st.lastError.code === 'auth') return 'Reconnect';
@@ -4996,7 +4996,7 @@
           h('small', null, `${ropts.length === 1 ? 'The one dungeon you can reach' : `A random dungeon from the ${ropts.length} you can reach`}: +15 Mentor Marks, a bonus blue and gold.`)), // issue #14
         rr && S.queue ? queuedChip() : h('button', { class: 'chip ' + (rr ? 'gold' : 'why'), disabled: !rr, onclick: () => { closeSheet(); G.startRoulette(); renderAll(); } }, rr ? 'Go' : 'Done')));
       let mine = all.filter(atLevel).sort(byLevel);
-      b.append(h('div', { class: 'sec-h' }, 'At your level', h('small', null, `level ${P.level}`)));
+      b.append(h('div', { class: 'sec-h' }, 'At your level', h('small', null, `${P.level}`))); // the level once (#495)
       if (!mine.length) {
         // between brackets: offer the closest you have outlevelled, synced down
         mine = all.filter(doable).sort((a, c) => c.A.maxLvl - a.A.maxLvl).slice(0, 4);
@@ -5013,7 +5013,7 @@
       const ofKind = all.filter((x) => actKind(x.A) === tab).sort(byLevel);
       const now = ofKind.filter(atLevel), up = ofKind.filter((x) => !doable(x)), low = ofKind.filter((x) => doable(x) && P.level > x.A.maxLvl);
       if (tab === 'pvp') b.append(honorRow()); // your Honor rank and the next step (#57)
-      b.append(h('div', { class: 'sec-h' }, 'At your level', h('small', null, `level ${P.level}`)));
+      b.append(h('div', { class: 'sec-h' }, 'At your level', h('small', null, `${P.level}`))); // the level once (#495)
       if (!now.length) b.append(h('p', { class: 'ai-note', style: { margin: 0 } }, up.length ? `None at your level. The next opens at level ${up[0].A.minLvl}.` : 'You have outlevelled all of these; they are below, synced to fit.'));
       for (const x of now) b.append(row(x, false));
       if (up.length) b.append(...foldSec('gf.up.' + tab, 'Coming up', `${up.length} more from level ${up[0].A.minLvl}`, up.map((x) => row(x, false)), false));
@@ -5617,7 +5617,7 @@
 
   // ============================================================ character creation
   // the roles a class can queue as, read from its data (#245: Warrior and Priest gained Damage, and a hand-written list missed it)
-  const roleLine = (c) => { const r = D.CLASSES[c].roles || [D.CLASSES[c].role]; return r.length >= 3 ? 'Any role' : r.length === 1 ? { tank: 'Tank', healer: 'Healer', dps: 'Damage' }[r[0]] : r.map((x) => ({ tank: 'Tank', healer: 'Heal', dps: 'Dmg' })[x]).join(' / '); };
+  const roleLine = (c) => { const r = D.CLASSES[c].roles || [D.CLASSES[c].role]; return r.length >= 3 ? 'Any role' : r.length === 1 ? { tank: 'Tank', healer: 'Healer', dps: 'Damage' }[r[0]] : r.map((x) => ({ tank: 'Tank', healer: 'Heal', dps: 'Damage' })[x]).join(' / '); // one word for damage (#495) };
   const CLASS_BLURB = {
     warrior: 'Tank or damage. Wears mail, holds the enemy\'s attention or hits hard. Rage builds as you hit and get hit.',
     mage: 'Damage. Fire and frost from range. Fragile, and thirsty for mana.',
@@ -5944,7 +5944,7 @@
     const questScene = (qid, on) => { const ch = qid && window.CS && CS.CHAPTERS.find((c) => c.scene && [].concat(c.quest).includes(qid) && (c.on || 'done') === on && c.shots && !CS.unlocked().has(c.id)); if (ch) ui.pendingChapter = ch.id; };
     G.on('questAccept', (d) => questScene(d && d.qid, 'accept'));
     G.on('questDone', (d) => questScene(d && d.qid, 'done'));
-    G.on('levelup', (d) => { const ch = window.CS && CS.CHAPTERS.find((c) => c.level === d.level && c.shots && c.id !== 'intro' && (!c.scene || c.beat) && (!c.faction || c.faction === G.myFaction()) && !CS.unlocked().has(c.id) && chapterReady(c)); if (ch) ui.pendingChapter = ch.id; renderAll(); banner('Level ' + d.level, d.learned.length ? 'New: ' + d.learned.map((a) => D.ABILITIES[a].name).join(', ') : 'Health and mana restored'); });
+    G.on('levelup', (d) => { const ch = window.CS && CS.CHAPTERS.find((c) => c.level === d.level && c.shots && c.id !== 'intro' && (!c.scene || c.beat) && (!c.faction || c.faction === G.myFaction()) && !CS.unlocked().has(c.id) && chapterReady(c)); if (ch) ui.pendingChapter = ch.id; renderAll(); banner('Level ' + d.level, d.learned.length ? 'New: ' + d.learned.map((a) => D.ABILITIES[a].name).join(', ') : D.CLASSES[G.S.player.cls].resource === 'mana' ? 'Health and mana restored' : 'Health restored'); }); // no mana to a Warrior (#492)
     G.on('combat', onCombat);
     G.on('instanceEnter', (d) => {
       if (d.act && (D.ACTIVITIES[d.act] || {}).event) lwIntro(d.act); // a festival run's first-entry story
