@@ -123,3 +123,18 @@ test('Join and Run it are greyed with the reason while queued or a Deserter (#48
   G.leaveQueue ? G.leaveQueue() : (S.queue = null); S.flags.deserterUntil = W.now() + 120000;
   const [x] = SOC.actions(lfg); assert.ok(x.disabled && /^Deserter/.test(x.label), x.label);
 });
+
+test('a clock set back moves who just posted LFG and which chat lines were heard (#484)', () => {
+  const t0 = W.now(); const { S } = W.character(20); const id = S.id;
+  S.lfAt = { [S.bots[0].id]: t0 }; S.chatHeard = { someLine: t0 };
+  G.save(); G.logout(); W.setNow(t0 - 86400000); G.load(id);
+  assert.ok(G.S.lfAt[S.bots[0].id] <= W.now(), 'LFG post not in the future'); assert.ok(G.S.chatHeard.someLine <= W.now(), 'chat line not in the future');
+});
+
+test('an imported save code counts the time since it was made (#480)', async () => {
+  const t0 = W.now(); const { S } = W.character(20); S.player.place = D.ACTIVITIES.deadmines.where;
+  G.queueFor('deadmines'); S.queue.popAt = W.now() - 1; G.update(0.5); G.acceptPop(); assert.ok(G.S.run);
+  const code = await G.encodeSave(G.S); for (const c of G.characters()) if (c.id !== G.S.id) G.deleteCharacter(c.id); // room for one more
+  W.setNow(t0 + 7 * 86400000); const id = await G.importSave(code); const rep = G.load(id);
+  assert.ok(rep.away > 6 * 86400000, `away ${rep.away}`); assert.ok(!G.S.run, 'the stale run ended');
+});

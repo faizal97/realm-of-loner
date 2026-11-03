@@ -375,7 +375,7 @@
     // an imported save becomes its own character; the caller opens it with G.load so it goes through the same fixes as any old save
     S.id = 'c' + now().toString(36) + Math.floor(Math.random() * 1e4).toString(36);
     if (!Array.isArray(S.chat)) S.chat = [];
-    G.S = S; G.fight = null; G.save(); return S.id;
+    G.writeSave(S); return S.id; // stored with its own lastSeen, so loading it counts the time since the code was made (#480)
   };
   G.wipeSave = function () { if (G.S) G.deleteCharacter(G.S.id); G.S = null; };
 
@@ -396,7 +396,8 @@
     // chat, guild, auctions, invites, Help Wanted, casts, meals and fishing (#436-#439)
     for (const o of [S.soc, S.flags, S.ah, S.helpWanted, P.casting, P.eating, P.drinking, P.fishing]) move(o, 0);
     for (const m of S.chat || []) if (m.act) move(m.act, 0);
-    for (const [o, k] of [[P, 'potionAt'], [P, 'ghostUntil'], [P, 'hearthAt'], [S, 'lfAt']]) { const v = o[k]; if (typeof v === 'number' && v > 1e12 && v < S.lastSeen + 30 * 86400000) o[k] = v + d; }
+    move(S.lfAt, 0); move(S.chatHeard, 0); // maps of bot or line to a time (#484)
+    for (const [o, k] of [[P, 'potionAt'], [P, 'ghostUntil'], [P, 'hearthAt']]) { const v = o[k]; if (typeof v === 'number' && v > 1e12 && v < S.lastSeen + 30 * 86400000) o[k] = v + d; }
   }
 
   // Time away: rested XP, the server moving on, a news digest.
