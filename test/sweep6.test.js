@@ -398,3 +398,10 @@ test('leaving and rejoining a guild in the same week keeps its weekly goal (#453
   SOC.leaveGuild(); G.joinGuild(g);
   assert.strictEqual(SOC.week().got, got);
 });
+
+test('a story scene during a run does not use up par time (#454)', () => {
+  W.character(20); const S = G.S; S.player.place = D.ACTIVITIES.deadmines.where;
+  G.queueFor('deadmines'); S.queue.popAt = W.now() - 1; G.update(0.5); G.acceptPop();
+  G.paused = true; try { W.advance(38); } finally { G.paused = false; }
+  assert.ok(G.runClock() < 2, `run clock ${G.runClock()}`);
+});

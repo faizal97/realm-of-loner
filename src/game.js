@@ -4419,7 +4419,7 @@
   }
   // ---------- dungeon bonuses: beat par time (fast pays), clear flawless (careful pays); a good group can get both
   const MOMENTUM_WINDOW = 5000, MOMENTUM_MAX = 5;
-  G.runClock = function () { const R = G.S.run; return R ? Math.max(0, ((R.finishedAt || now()) - R.started) / 1000) + (R.fastSecs || 0) : 0; }; // fastSecs: fight time gained at 2x or 3x
+  G.runClock = function () { const R = G.S.run; return R ? Math.max(0, ((R.finishedAt || now()) - R.started) / 1000 - (R.pausedSecs || 0)) + (R.fastSecs || 0) : 0; }; // fastSecs: fight time gained at 2x or 3x
   // v10.3: level-60 clears pay Mentor Marks, the currency for gear upgrades (Trials will pay more)
   G.clearMarks = (act) => { const A = D.ACTIVITIES[act], Dg = A && A.dungeon && D.DUNGEONS[A.dungeon]; return !Dg || (A.maxLvl || D.LEVEL_CAP) < D.LEVEL_CAP ? 0 : Dg.raid ? 15 : 5; };
   // Par times (v10.4): the data's par was set when every run also waited for loot rolls; rolls no longer hold the group,
@@ -4581,6 +4581,7 @@
     const fast = G.fight && G.speed > 1 && !G.isPvp(G.fight) ? G.speed : 1;
     if (G.speed > 1 && G.isPvp(G.fight) && !pvpSpeedTold) { pvpSpeedTold = true; emit('infoToast', 'PvP fights run at normal speed.'); }
     if (fast > 1 && S.run && !S.run.finishedAt) S.run.fastSecs = (S.run.fastSecs || 0) + dt * (fast - 1);
+    if (G.paused && S.run && !S.run.finishedAt) S.run.pausedSecs = (S.run.pausedSecs || 0) + dt; // a story scene's time isn't the run's (#454)
     acc += dt * fast;
     if (S.player.fishing) try { fishTick(); } catch (e) { console.error(e); } // fishing (v10.9)
     socAcc += dt; if (socAcc >= 1) { socAcc = 0; if (root.SOC) try { SOC.tick(); } catch (e) { console.error(e); } try { G.brawlTick(); } catch (e) { console.error(e); } G.lnTick(); }
