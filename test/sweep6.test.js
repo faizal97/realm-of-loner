@@ -425,3 +425,11 @@ test('a battleground joined from chat starts at full health and ends your trip (
   assert.ok(S.bg, 'in the battleground');
   assert.strictEqual(P.hp, null, 'full health'); assert.strictEqual(P.travel, null, 'trip over');
 });
+
+test('leaving a battleground mid-match gives Deserter and counts as played (#458)', () => {
+  W.character(30); const S = G.S, bg = Object.keys(D.ACTIVITIES).find((k) => D.ACTIVITIES[k].bg && D.ACTIVITIES[k].minLvl <= 30);
+  G.bgStart(bg); const n0 = G.pvpStats().bgPlayed || 0;
+  G.leaveBg();
+  assert.ok(!S.bg); assert.ok(S.flags.deserterUntil > W.now(), 'Deserter');
+  assert.strictEqual(G.pvpStats().bgPlayed, n0 + 1);
+});

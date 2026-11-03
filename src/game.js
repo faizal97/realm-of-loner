@@ -3379,7 +3379,13 @@
   // why a world party can't grow now (#415): the group finder, or PvP (a battleground, a brawl, a duel); null when it can
   G.partyBlock = () => { const S = G.S; if (S.run || S.queue) return 'Not while in the group finder.'; if (G.bgBusy() || (S.brawl && S.brawl.phase !== 'done') || S.duelOn) return 'Not during PvP.'; return null; };
   G.bgBusy = () => !!(G.S.bg && G.S.bg.phase !== 'done'); // a finished battleground (the result screen) never blocks invites or groups (#30)
-  G.leaveBg = function () { const S = G.S; if (!S.bg) return; if (G.fight && G.fight.kind === 'bg') return toast('Finish the fight first.'); S.bg = null; emit('instanceLeave', {}); emit('change'); G.save(); };
+  G.leaveBg = function () {
+    const S = G.S; if (!S.bg) return; if (G.fight && G.fight.kind === 'bg') return toast('Finish the fight first.');
+    if (S.bg.phase !== 'done') { // left mid-match: played and lost, with the same Deserter as a run (#458)
+      const P = S.player; P.pvp = G.pvpStats(); P.pvp.bgPlayed = (P.pvp.bgPlayed || 0) + 1;
+      S.flags.deserterUntil = now() + DESERTER; sys(`You left before the end: Deserter for ${DESERTER / 60000} minutes.`);
+    }
+    S.bg = null; emit('instanceLeave', {}); emit('change'); G.save(); };
   G.bgStart = startBg; // sims
 
   // ============================================================ world party (grouping with nearby players)
