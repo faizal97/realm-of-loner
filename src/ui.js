@@ -568,7 +568,7 @@
     if (!G.fight) { const b = sc.querySelector('img.bg'); if (b && b.classList.contains('cam')) { b.classList.remove('cam'); b.style.translate = ''; } ui.cam = null; } // out of a fight the view is still
     const place = D.PLACES[P.place];
     const title = S.brawl ? 'The Bloodsand Brawl' : S.bg ? D.BG[S.bg.key].name : S.run ? S.run.name : P.travel ? 'On the road' : place.name;
-    const sub = S.brawl ? (S.brawl.phase === 'done' ? (S.brawl.champion ? 'Champion' : 'Finished') : `Round ${S.brawl.round} of ${G.BRAWL.rounds}`) : S.bg ? `Round ${S.bg.round} of ${D.BG[S.bg.key].rounds} · you ${S.bg.score.us}, them ${S.bg.score.them}` : S.run ? S.run.pulls[Math.min(S.run.idx, S.run.pulls.length - 1)].label : P.travel ? 'to ' + D.PLACES[P.travel.to].name + (P.route && P.route.length ? ` · then ${D.PLACES[P.route[P.route.length - 1]].name}` : '') : place.zone;
+    const sub = S.brawl ? (S.brawl.phase === 'done' ? (S.brawl.champion ? 'Champion' : 'Finished') : `Round: ${S.brawl.round}/${G.BRAWL.rounds}`) : S.bg ? `Round: ${S.bg.round}/${D.BG[S.bg.key].rounds} · you ${S.bg.score.us}, them ${S.bg.score.them}` : S.run ? S.run.pulls[Math.min(S.run.idx, S.run.pulls.length - 1)].label : P.travel ? 'to ' + D.PLACES[P.travel.to].name + (P.route && P.route.length ? ` · then ${D.PLACES[P.route[P.route.length - 1]].name}` : '') : place.zone;
     // the place name, and under it the run menu and the battle speed (#67, the game designer's call): top-left, where the
     // party stands, so they never sit on an enemy's or a boss's nameplate (enemies stand right)
     // the strip along the scene's top (#83, the game designer's call): the place name, "N online", the battle speed and the
@@ -978,7 +978,7 @@
   // the battleground panel (v10.7): the banners, what the scouts saw, where your group and the pair go (facts only)
   function bgPanel(p) {
     const S = G.S, bg = S.bg, C = D.BG[bg.key], sp = G.bgSplit(), nm = (m) => m.name.split('-')[0];
-    p.append(h('div', { class: 'sec-h' }, C.name, h('small', null, bg.phase === 'done' ? 'finished' : `round ${bg.round} of ${C.rounds} · first to ${C.win}`)));
+    p.append(h('div', { class: 'sec-h' }, C.name, h('small', null, bg.phase === 'done' ? 'finished' : `Round: ${bg.round}/${C.rounds} · first to ${C.win}`)));
     p.append(h('div', { class: 'bg-score' }, h('div', { class: 'us' }, h('small', null, 'You'), h('b', { class: 'tnum' }, String(bg.score.us))), h('div', { class: 'them' }, h('small', null, 'Them'), h('b', { class: 'tnum' }, String(bg.score.them)))));
     if (bg.phase === 'done') {
       p.append(h('div', { class: 'ai-box' }, h('div', { class: 'ai-row' }, h('span', null, 'Result'), h('b', null, bg.result === 'win' ? 'Victory' : bg.result === 'draw' ? 'A draw' : 'Defeat')),
@@ -1022,13 +1022,13 @@
   function brawlPanel(p) {
     const S = G.S, P = S.player, br = S.brawl, B = G.BRAWL, nm = (x) => (x.you ? 'You' : x.name.split('-')[0]);
     const who = (x) => (x.you ? h('b', { style: { color: 'var(--gold)' } }, 'You') : h('b', { class: 'cls-' + x.cls }, nm(x)));
-    p.append(h('div', { class: 'sec-h' }, 'The Bloodsand Brawl', h('small', null, br.phase === 'done' ? (br.champion ? 'champion' : 'finished') : `round ${br.round} of ${B.rounds}`)));
+    p.append(h('div', { class: 'sec-h' }, 'The Bloodsand Brawl', h('small', null, br.phase === 'done' ? (br.champion ? 'champion' : 'finished') : `Round: ${br.round}/${B.rounds}`)));
     const row = (k, v, html) => h('div', { class: 'ai-row' }, h('span', null, k), html ? h('b', { html: v }) : h('b', null, v));
     if (br.phase === 'done') {
       const out = br.results.length;
       p.append(h('div', { class: 'ai-box' },
         row('Result', br.champion ? 'Bloodsand Champion' : `Out in round ${out}`),
-        row('Rounds won', `${br.wins} of ${B.rounds}`),
+        row('Rounds won', `${br.wins}/${B.rounds}`),
         br.reward.money ? row('Money', moneyHtml(br.reward.money), true) : null,
         br.reward.xp ? row('Experience', br.reward.xp.toLocaleString() + ' XP') : null,
         br.reward.marks ? row('Mentor Marks', '+' + br.reward.marks) : null));
@@ -2894,7 +2894,7 @@
         const past = G.pastMonthCloaks();
         if (past.length) {
           const have = new Set(acc.looks || []), miss = past.filter((id) => !have.has(D.ITEMS[id].look.join(':')));
-          b.append(h('div', { class: 'sec-h' }, 'Past Trialsworn cloaks', h('small', null, `you have ${past.length - miss.length} of ${past.length}`)));
+          b.append(h('div', { class: 'sec-h' }, 'Past Trialsworn cloaks', h('small', null, `You have: ${past.length - miss.length}/${past.length}`)));
           if (!miss.length) b.append(h('p', { class: 'ai-note' }, 'You have every past month\'s cloak. This month\'s is earned in the Trials: Trial 10 in time.'));
           else b.append(h('div', { class: 'list' }, ...miss.map((id) => { const it = D.ITEMS[id]; return h('button', { class: 'row', onclick: () => { G.buyMonthCloak(id); ui.sheetFn(); } },
             h('div', { class: 'ic' }, img(art('icon', 'trialsworn_hourglass'))), h('div', { class: 't' }, h('b', { style: { color: D.QUALITY[4].color } }, it.name), h('small', null, `${window.TRIALS.name(it.month)} · a look for your back`)), h('div', { class: 'r' }, `${G.MONTH_CLOAK_COST} ✦`)); })));
@@ -3180,7 +3180,7 @@
       if (pl === 'back' || pl === 'ranged') g.append(cell('hidden', h('span', { class: 'lbl' }, 'Hidden')));
       for (const o of all) g.append(cell(o.key, img(art('icon', o.icon)), o.have ? 'qb' + o.q : 'locked', o.name));
       const got = all.filter((o) => o.have).length;
-      b.append(h('div', { class: 'sec-h' }, 'Looks', h('small', null, `${got} of ${all.length} collected`)), g);
+      b.append(h('div', { class: 'sec-h' }, 'Looks', h('small', null, `Collected: ${got}/${all.length}`)), g);
       const info = h('div', { style: { marginTop: '10px' } });
       if (tried) info.append(h('b', { class: tried.have ? 'q' + tried.q : '' }, tried.name), h('div', { class: 'ai-note' }, tried.have ? (tried.source || 'In your collection') : `Not collected. ${tried.source ? 'Drops from ' + tried.source + '.' : tried.hidden ? 'Above your level.' : 'Found in the world.'}`));
       const same = (P.wardrobe || {})[pl] === (t || undefined) || (!t && !(P.wardrobe || {})[pl]);
@@ -3211,13 +3211,13 @@
       add('sword', w.open && !fought ? `The Bloodsand Brawl: open until ${brawlClock(w.closesAt)}` : `The Bloodsand Brawl: opens at ${brawlClock(w.open ? new Date(w.opensAt.getTime() + G.BRAWL.every * 3600000) : w.opensAt)}`,
         `${D.PLACES[G.BRAWL.place].name}, ${D.PLACES[G.BRAWL.place].zone} · ${G.brawlChestOpen() ? 'chest open today' : 'chest taken today'}`, () => { closeSheet(); if (P.place !== G.BRAWL.place) routeDialog(G.BRAWL.place); }); }
     { const fr = P.level >= cap && G.featuredRaid(); if (fr) add('hearthstone', `Featured raid: ${D.ACTIVITIES[fr].name}`, G.featuredClaimed() ? `Bonus taken · a new raid ${clockAt('week')}` : `First clear: +${G.FEATURED_MARKS} Mentor Marks · until ${untilAt('week')}`, () => { ui.gfTab = 'raid'; closeSheet(); openSocial('groups'); }); }
-    if (P.level >= cap && window.TRIALS && TRIALS.open(TRIALS.season(new Date()))) { add('journal', `${TRIALS.name(TRIALS.season(new Date()))} Trials: rating ${G.trialRating()}`, `Realm rank #${G.trialBoard().rank} of ${G.trialBoard().of}`, () => { ui.gfTab = 'trials'; closeSheet(); openSocial('groups'); }); }
+    if (P.level >= cap && window.TRIALS && TRIALS.open(TRIALS.season(new Date()))) { add('journal', `${TRIALS.name(TRIALS.season(new Date()))} Trials: rating ${G.trialRating()}`, `Realm rank: #${G.trialBoard().rank}/${G.trialBoard().of}`, () => { ui.gfTab = 'trials'; closeSheet(); openSocial('groups'); }); }
     // the next thing that opens with a level
     const nexts = [[D.TALENT_START, 'Talents'], [D.RIDING.lvl, 'Riding'], [cap, 'Trials, raids and gear upgrades']].filter(([l]) => P.level < l).sort((x, y) => x[0] - y[0]);
     if (nexts.length) add('journal', `Next at level ${nexts[0][0]}: ${nexts[0][1]}`, null, null);
     b.append(h('div', { class: 'sec-h' }, 'Open to you now', h('small', null, 'tap one to go there')), h('div', { class: 'list' }, ...rows));
     // progress: bounded numbers only, and only what no row below already shows (level is in the sheet's title)
-    const prog = [], pr = (label, a, n) => prog.push(h('div', { class: 'ai-row' }, h('span', null, label), h('b', { class: 'tnum' }, n != null ? `${a} of ${n}` : a)));
+    const prog = [], pr = (label, a, n) => prog.push(h('div', { class: 'ai-row' }, h('span', null, label), h('b', { class: 'tnum' }, n != null ? `${a}/${n}` : a)));
     const cx = P.codex || {}, dAll = Object.keys(D.ACTIVITIES).filter((k) => D.ACTIVITIES[k].dungeon && (D.ACTIVITIES[k].size || 5) <= 5 && G.activityBlock(k) !== 'hidden'), rAll = Object.keys(D.ACTIVITIES).filter((k) => (D.ACTIVITIES[k].size || 5) > 5 && G.activityBlock(k) !== 'hidden');
     pr('Dungeons cleared', dAll.filter((k) => cx[k] && cx[k].clears).length, dAll.length);
     if (rAll.length) pr('Raids cleared', rAll.filter((k) => cx[k] && cx[k].clears).length, rAll.length);
@@ -3658,7 +3658,7 @@
   function openTitles() {
     openSheet('titles', 'Titles', 'Tap an earned title to wear it', (b, title) => {
       const P = G.S.player, own = D.TITLES.filter(G.titleUnlocked), rest = D.TITLES.filter((t) => !G.titleUnlocked(t));
-      title.querySelector('small').textContent = `${own.length} of ${D.TITLES.length} earned · tap one to wear it`;
+      title.querySelector('small').textContent = `Earned: ${own.length}/${D.TITLES.length} · tap one to wear it`;
       const row = (name, sub, worn, fn) => h('button', { class: 'row nav' + (fn ? '' : ' off') + (worn ? ' sel-char' : ''), onclick: fn }, h('div', { class: 't' }, h('b', null, name), sub ? h('small', { style: { whiteSpace: 'normal' } }, sub) : null), h('div', { class: 'r' }, worn ? 'Wearing' : ''));
       const list = h('div', { class: 'list' }, row('No title', null, !P.title, () => { G.setTitle(null); ui.sheetFn(); }));
       for (const t of own) list.append(row(G.titleName(t, P.name), t.how, P.title === t.id, () => { G.setTitle(t.id); ui.sheetFn(); }));
@@ -3671,7 +3671,7 @@
   function openTrophies() {
     openSheet('trophies', 'Trophies', 'Shared by all your characters', (b, title) => {
       const list = G.trophyList(), got = G.trophies(), T = D.TITLES.find((x) => x.id === 'biggame'), L = G.S.player.level, lab = (x) => G.trophyLabel(x, L, !!got[x.key]);
-      title.querySelector('small').textContent = `${G.trophyCount()} of ${list.length} taken · shared by all your characters`;
+      title.querySelector('small').textContent = `Taken: ${G.trophyCount()}/${list.length} · shared by all your characters`;
       const zoneOf = (x) => lab(x).zone, zones = [...new Set(list.map(zoneOf))].sort((a, b) => (a === 'Beyond your level') - (b === 'Beyond your level')), box = h('div', { class: 'list' }); // hidden places last
       const plaque = (x) => { const t = got[x.key], l = lab(x);
         return h('div', { class: 'plaque' + (t ? '' : ' not') }, h('div', { class: 'pq-art' }, img(mobArt(x.key))), h('b', null, l.name), h('small', null, l.place + (x.boss ? ' · world boss' : '')),
@@ -3694,11 +3694,11 @@
   function openEffects() {
     openSheet('effects', 'Effects', 'Shared by all your characters', (b, title) => {
       const owned = G.ownedEffectItems(), have = effectsOwned(), keys = Object.keys(D.EFFECTS);
-      title.querySelector('small').textContent = `Effects you own: ${keys.filter((k) => have.has(k)).length} of ${keys.length} · shared by all your characters`;
+      title.querySelector('small').textContent = `Effects you own: ${keys.filter((k) => have.has(k)).length}/${keys.length} · shared by all your characters`;
       const groups = [...new Set(keys.map((k) => FX_GROUP[D.EFFECTS[k].role] || 'Other'))];
       for (const g of groups) {
         const ks = keys.filter((k) => (FX_GROUP[D.EFFECTS[k].role] || 'Other') === g);
-        b.append(h('div', { class: 'sec-h' }, g, h('small', null, `${ks.filter((k) => have.has(k)).length} of ${ks.length} owned`)),
+        b.append(h('div', { class: 'sec-h' }, g, h('small', null, `Owned: ${ks.filter((k) => have.has(k)).length}/${ks.length}`)),
           h('div', { class: 'list' }, ...ks.map((k) => { const F = D.EFFECTS[k];
             return h('button', { class: 'row', onclick: () => openEffect(k, owned) }, h('div', { class: 'ic' }, img(art('icon', F.icon))),
               h('div', { class: 't' }, h('b', { class: 'eff' }, F.name), h('small', { style: { whiteSpace: 'normal' } }, `When: ${F.fires}`)),
@@ -3721,7 +3721,7 @@
     showDialog([h('h3', { class: 'eff' }, F.name), h('p', null, F.desc(ref.lvl || 1, D.fxGrow(ref.fxScale, k))),
       h('p', { class: 'ai-note' }, best ? `At the numbers of your ${best.name}.` : 'At the numbers of a level-60 drop.'),
       h('div', { class: 'ai-box' }, ...facts.map((t) => h('div', null, t))),
-      h('div', { class: 'sec-h' }, 'Items with it', h('small', null, `${ids.filter((id) => owned[id]).length} of ${ids.length} owned`)), h('div', { class: 'list' }, ...rows),
+      h('div', { class: 'sec-h' }, 'Items with it', h('small', null, `Owned: ${ids.filter((id) => owned[id]).length}/${ids.length}`)), h('div', { class: 'list' }, ...rows),
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: closeDialog }, 'Got it'))], true);
   }
   // ---- Honor ranks (#57): where you are on the ladder and the next step, as bounded numbers; tap for the whole ladder
@@ -3744,8 +3744,8 @@
   const rankIcon = (rank, f) => img(art('icon', `honor_${f}_${Math.max(1, rank)}`));
   function honorRow() {
     const f = G.myFaction(), hon = G.pvpStats().honor, r = G.honorRank(hon), fmt = (n) => n.toLocaleString('en-US');
-    const title = r.rank ? `Rank ${r.rank} of ${r.of}: ${G.rankName(r.rank, f)}` : `No Honor rank yet (${r.of} ranks)`;
-    const sub = r.next ? `${fmt(hon)} of ${fmt(r.nextAt)} Honor to Rank ${r.next}: ${G.rankName(r.next, f)}` : `${fmt(hon)} Honor: the top of the ladder`;
+    const title = r.rank ? `Rank ${r.rank}/${r.of}: ${G.rankName(r.rank, f)}` : `No Honor rank yet (${r.of} ranks)`;
+    const sub = r.next ? `Honor: ${fmt(hon)}/${fmt(r.nextAt)} to Rank ${r.next}: ${G.rankName(r.next, f)}` : `${fmt(hon)} Honor: the top of the ladder`;
     return h('button', { class: 'row nav', style: { gridTemplateColumns: '34px 1fr auto' }, onclick: () => openLadder() }, h('div', { class: 'ic', style: r.rank ? null : { opacity: 0.35 } }, rankIcon(r.rank, f)),
       h('div', { class: 't' }, h('b', null, title), h('small', { style: { whiteSpace: 'normal' } }, sub)), h('div', { class: 'r' }, h('span', { class: 'nav-arr' }, '›')));
   }
@@ -4096,7 +4096,7 @@
     const have = crafted.filter((it) => looks.has(it.look[0] + ':' + it.look[1])).length;
     const rows = [h('div', { class: 'row' }, h('div', { class: 'ic' }, img(art('icon', R.keepsake))), h('div', { class: 't' }, h('b', { class: done ? 'q4' : '' }, R.name), h('small', null, done ? 'Earned: a look for your back, in the wardrobe' : `Keepsake: reach 300 (you have ${p.skill})`))),
       h('div', { class: 'row' }, h('div', { class: 'ic' }, img(art('icon', 'journal'))), h('div', { class: 't' }, h('b', { class: done ? 'q4' : '' }, G.titleName(t, G.S.player.name)), h('small', null, done ? 'Earned: wear it from Hero → Journey → Titles' : 'Title: reach 300')))];
-    if (crafted.length) rows.push(h('div', { class: 'row' }, h('div', { class: 'ic' }, itemIcon(crafted[0])), h('div', { class: 't' }, h('b', null, `Crafted looks: ${have} of ${crafted.length}`), h('small', { style: { whiteSpace: 'normal' } }, crafted.map((it) => `${it.name}${looks.has(it.look[0] + ':' + it.look[1]) ? ' ✓' : ''}`).join(' · ') + '. Only from crafting.'))));
+    if (crafted.length) rows.push(h('div', { class: 'row' }, h('div', { class: 'ic' }, itemIcon(crafted[0])), h('div', { class: 't' }, h('b', null, `Crafted looks: ${have}/${crafted.length}`), h('small', { style: { whiteSpace: 'normal' } }, crafted.map((it) => `${it.name}${looks.has(it.look[0] + ':' + it.look[1]) ? ' ✓' : ''}`).join(' · ') + '. Only from crafting.'))));
     return h('div', null, h('div', { class: 'sec-h' }, 'Collections', h('small', null, 'for every character on this device')), h('div', { class: 'list' }, ...rows));
   }
   // unlearning a profession (#145): free and anywhere, after a confirmation that says what is lost and what is kept; from
@@ -4485,7 +4485,7 @@
     G.mailReadAll();
     openSheet('mail', 'Mail', ' ', (b, title) => { // ' ': the subtitle is set below, as it changes
       const L = G.mail().slice().reverse(), here = G.mailboxHere(), waiting = L.filter(G.mailWaiting).length;
-      title.querySelector('small').textContent = here ? 'A mailbox is here' : waiting ? 'Items are taken at a mailbox, in any town' : `${L.length} of ${G.MAIL_KEEP} letters`;
+      title.querySelector('small').textContent = here ? 'A mailbox is here' : waiting ? 'Items are taken at a mailbox, in any town' : `Letters: ${L.length}/${G.MAIL_KEEP}`;
       if (!L.length) { b.append(h('div', { class: 'people' }, 'No mail. Letters about your auctions arrive here.')); return; }
       const list = h('div', { class: 'list' });
       for (const m of L) {
@@ -4693,7 +4693,7 @@
     const Rec = G.trials(), rating = G.trialRating(), board = G.trialBoard(), wk = Rec.week && Rec.week.id === T.period(new Date()).id ? Rec.week : { n: 0, paid: false }, days = T.daysLeft();
     b.append(h('div', { class: 'sec-h' }, `${T.name(k)} Trials`, h('small', null, k === -1 ? `until ${T.name(0)}` : `${days} day${days === 1 ? '' : 's'} left`))); if (pre) b.append(pre);
     b.append(h('div', { class: 'row' }, h('div', { class: 'ic' }, img(art('icon', 'journal'))),
-      h('div', { class: 't' }, h('b', null, `Rating ${rating} · Realm rank #${board.rank} of ${board.of}`), h('small', { style: { whiteSpace: 'normal' } }, `This week: ${Math.min(4, wk.n)} of 4 Trials at your best or higher${wk.paid ? ' · bonus paid' : ' · +25 Mentor Marks'}`))));
+      h('div', { class: 't' }, h('b', null, `Rating ${rating} · Realm rank: #${board.rank}/${board.of}`), h('small', { style: { whiteSpace: 'normal' } }, `This week: ${Math.min(4, wk.n)}/4 Trials at your best or higher${wk.paid ? ' · bonus paid' : ' · +25 Mentor Marks'}`))));
     const weekOmens = T.omensFor(T.period(new Date()).id);
     if (weekOmens.length) b.append(h('div', { class: 'chips', style: { margin: '6px 0 0' } }, h('small', { class: 'dim', style: { alignSelf: 'center' } }, `Omens, until ${G.whenText(G.nextChange('omens'))}:`), ...weekOmens.map((k) => omenChip(k, T.TIER_LVL[T.OMENS[k].tier]))));
     b.append(h('div', { class: 'btn-row', style: { margin: '6px 0' } }, h('button', { class: 'btn alt', onclick: () => openTrialBoard() }, 'Leaderboard'), h('button', { class: 'btn alt', onclick: () => openTrialHistory() }, 'History')));
@@ -4702,7 +4702,7 @@
       const mc = k >= 0 ? G.monthCloak(k) : null, mHave = mc && (G.account().looks || []).includes(mc.look.join(':')), mPaid = ((got.monthPaid || []).includes(k));
       const month = k < 0 ? 'The Preseason has no monthly cloak.' : mc ? `This month: the ${mc.name} for Trial 10 in time${mHave ? ' ✓' : ''}.` : `No cloak this month: Trial 10 in time pays ${G.MONTH_FALLBACK_MARKS} Mentor Marks${mPaid ? ' ✓' : ''}.`;
       b.append(h('div', { class: 'row' }, h('div', { class: 'ic' }, img(art('icon', 'trialsworn_hourglass'))),
-        h('div', { class: 't' }, h('b', null, `Trialsworn set · ${Object.keys(TS).filter((x) => TS[x].lvl != null && got[x]).length} of ${Object.keys(TS).filter((x) => TS[x].lvl != null).length}`), h('small', { style: { whiteSpace: 'normal' } }, [part('cloak', 'Cloak'), part('weapons', 'weapon looks'), part('mount', 'Charger'), part('t15', 'glowing set'), part('t20', 'radiant set')].join(' · ') + ' (in time, for all your characters).'),
+        h('div', { class: 't' }, h('b', null, `Trialsworn set: ${Object.keys(TS).filter((x) => TS[x].lvl != null && got[x]).length}/${Object.keys(TS).filter((x) => TS[x].lvl != null).length}`), h('small', { style: { whiteSpace: 'normal' } }, [part('cloak', 'Cloak'), part('weapons', 'weapon looks'), part('mount', 'Charger'), part('t15', 'glowing set'), part('t20', 'radiant set')].join(' · ') + ' (in time, for all your characters).'),
           h('small', { style: { whiteSpace: 'normal', color: 'var(--gold)' } }, month),
           (() => { const ids = G.yearCloaks('year1'), have = new Set(G.account().looks || []), n1 = ids.filter((i) => have.has(D.ITEMS[i].look.join(':'))).length; return h('small', { style: { whiteSpace: 'normal' } }, got.year1 ? `The first year: all 12 cloaks · the ${D.MOUNTS.trialsworn_year1.name} ✓` : `The first year: ${n1} of ${ids.length} cloaks · all ${ids.length} give the ${D.MOUNTS.trialsworn_year1.name}`); })())));
     }
@@ -4886,7 +4886,7 @@
           h('div', { class: 'r tnum' }, String(r.rating))));
         prev = r.rank;
       }
-      b.append(h('p', { class: 'ai-note' }, `Rank #${bd.rank} of ${bd.of}. Top 10 at month's end earns a title.`), list);
+      b.append(h('p', { class: 'ai-note' }, `Rank: #${bd.rank}/${bd.of}. Top 10 at month's end earns a title.`), list);
     });
   }
   function openTrialHistory() {
