@@ -3032,8 +3032,8 @@
   }
   function openVendor(npc) {
     ui.lastSale = null; ui.saleAt = 0;
-    openSheet('vendor', D.NPCS[npc].name, 'Tap to buy · your money: ' + G.moneyText(G.S.player.money), (b, t) => {
-      const sub = t.querySelector('small'); sub.textContent = 'Tap to buy · your money: ';
+    openSheet('vendor', D.NPCS[npc].name, 'Money: ' + G.moneyText(G.S.player.money), (b, t) => {
+      const sub = t.querySelector('small'); sub.textContent = 'Money: '; // the rows have Buy, the Sell heading says how to sell (#466)
       const cash = h('span', { class: 'vend-money' }, G.moneyText(G.S.player.money)); sub.append(cash);
       // the money answers the tap (#168): a gold flash once, where the eye checks
       // timed from the sale, so the re-renders a sale causes continue one flash instead of cutting it
@@ -3043,8 +3043,7 @@
       const ls = ui.lastSale;
       // in the sheet's fixed header, under the money row, so it stays in sight while you tap the bag slots below
       t.querySelectorAll('.last-sale').forEach((x) => x.remove());
-      t.append(h('div', { class: 'last-sale' }, !ls ? h('span', { class: 'muted' }, 'Tap an item in your bags below to sell it.')
-        : ['Sold ', ls.item ? h('b', { class: 'q' + (ls.item.q || 0) }, ls.item.name) : `${ls.many} ${ls.grey ? 'grey ' : ''}item${ls.many > 1 ? 's' : ''}`, ls.item && ls.n > 1 ? ` ×${ls.n}` : '', h('span', { html: ' for ' + moneyHtml(ls.money) })]));
+      t.append(h('div', { class: 'last-sale' }, !ls ? '' : ['Sold ', ls.item ? h('b', { class: 'q' + (ls.item.q || 0) }, ls.item.name) : `${ls.many} ${ls.grey ? 'grey ' : ''}item${ls.many > 1 ? 's' : ''}`, ls.item && ls.n > 1 ? ` ×${ls.n}` : '', h('span', { html: ' for ' + moneyHtml(ls.money) })]));
       const stock = G.vendorStock(npc);
       const list = h('div', { class: 'list' });
       for (const it of stock) {
@@ -3977,8 +3976,8 @@
         P.bags.forEach((x, i) => { if (!G.ahTrade(x.item)) return; const v = G.ahValue(x.item) * x.n;
           // each price shows its facts (issue #20): how likely it sells within a day, and the deposit; no button is picked for you
           const dep = G.ahDeposit(x.item, x.n), odds = (f) => { const c = G.ahSellChance(f); return c >= 0.95 ? 'almost surely' : c <= 0.05 ? 'hardly ever' : `about ${Math.round(c * 10)} in 10`; };
-          list.append(itemRow(x.item, x.n, G.moneyText(v), () => showDialog([h('h3', null, `Sell ${x.item.name}`), x.item.pw ? h('p', null, 'Its upgrades are lost with it.') : null, h('p', null, `Players usually pay about ${G.moneyText(v)}. The higher the price, the less likely it sells within a day. The deposit of ${G.moneyText(dep)} comes back only if it sells; the house takes 5% of a sale.`),
-            h('div', { class: 'list' }, ...[0.8, 1, 1.3, 1.6].map((f) => h('button', { class: 'row', onclick: () => { closeDialog(); G.ahPost(i, Math.round(v * f)); ui.sheetFn(); } }, h('div', { class: 't' }, h('b', null, G.moneyText(Math.round(v * f))), h('small', null, `Sells within a day: ${odds(f)} · deposit ${G.moneyText(dep)}`))))),
+          list.append(itemRow(x.item, x.n, G.moneyText(v), () => showDialog([h('h3', null, `Sell ${x.item.name}`), x.item.pw ? h('p', null, 'Its upgrades are lost with it.') : null, h('div', { class: 'ai-box' }, ...[['Usual price', G.moneyText(v)], ['Deposit', `${G.moneyText(dep)} · back if it sells`], ['House cut', '5%']].map(([k, val]) => h('div', { class: 'ai-row' }, h('span', null, k), h('b', null, val)))), // label + value (#466)
+            h('div', { class: 'list' }, ...[0.8, 1, 1.3, 1.6].map((f) => h('button', { class: 'row', onclick: () => { closeDialog(); G.ahPost(i, Math.round(v * f)); ui.sheetFn(); } }, h('div', { class: 't' }, h('b', null, G.moneyText(Math.round(v * f))), h('small', null, `Sells within a day: ${odds(f)}`))))),
             h('button', { class: 'btn alt wide', onclick: closeDialog }, 'Cancel')], true), `Vendor pays ${G.moneyText((x.item.sell || 0) * x.n)}`)); });
         if (!list.children.length) list.append(h('div', { class: 'people' }, 'Nothing in your bags to sell. Gear, trade goods, potions and bags can go up for auction.'));
       } else {
