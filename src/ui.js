@@ -233,8 +233,8 @@
   // ------------------------------------------------------------ formatting
   // money as coins, like the original: "12 (gold) 4 (silver) 30 (copper)"; the words stay for screen readers.
   // compact (the player frame): only the two largest coins, so it fits beside the name
-  // the group finder's rows while you're queued (#169): the bar at the top already names what for
-  const queuedChip = () => h('button', { class: 'chip why', disabled: true }, 'Queued');
+  // the group finder's other rows while you're queued (#169): the queue is the reason, not a queue for each of them (#427)
+  const queuedChip = () => h('button', { class: 'chip why', disabled: true }, 'In another queue');
   function moneyHtml(c, compact, noZero) {
     const m = G.money(c);
     let parts = [];
@@ -4909,7 +4909,7 @@
     for (const r of roles) roleRow.append(roles.length > 1
       ? h('button', { class: 'chip' + (G.role() === r ? ' gold' : ''), disabled: !!S.queue, onclick: () => { G.setRole(r); ui.sheetFn(); } }, ROLE_NAME[r] || r)
       : h('span', { class: 'chip gold' }, ROLE_NAME[r] || r));
-    if (roles.length > 1) roleRow.append(h('span', { class: 'gf-hint' }, 'tanks and healers find groups faster'));
+    if (roles.length > 1) roleRow.append(h('span', { class: 'gf-hint' }, S.queue ? 'leave the queue to change it' : 'tanks and healers find groups faster'));
     top.append(roleRow);
     if (S.queue) top.append(h('div', { class: 'gf-queue' }, h('span', null, 'In queue: ', h('b', null, D.ACTIVITIES[S.queue.act].name + (S.queue.trial ? ` · Trial ${S.queue.trial}` : '')), S.queue.popped ? ' · Group ready' : ''),
       S.queue.popped ? h('button', { class: 'chip gold', onclick: () => showPop(S.queue) }, 'Open') : null, // the pop, if it was closed (#325); the button is the action, the status is the line (#397)
