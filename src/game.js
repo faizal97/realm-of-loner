@@ -3394,6 +3394,8 @@
   // in a group, a queue, a fight, a battleground or a brawl still going: no other group can start (#354)
   G.groupBusy = () => { const S = G.S; return !!(S.run || S.queue || G.fight || G.bgBusy() || (S.brawl && S.brawl.phase !== 'done')); };
   // why a world party can't grow now (#415): the group finder, or PvP (a battleground, a brawl, a duel); null when it can
+  // why a group from chat can't be joined now, for its greyed button (#483): the same refusals the join itself makes
+  G.joinWhy = function () { const S = G.S, dl = (S.flags.deserterUntil || 0) - now(); return G.partyBlock() || (G.fight ? 'Finish the fight first.' : null) || (dl > 0 ? `Deserter: ${Math.ceil(dl / 60000)} min left` : null); };
   G.partyBlock = () => { const S = G.S; if (S.run || S.queue) return 'Not while in the group finder.'; if (G.bgBusy() || (S.brawl && S.brawl.phase !== 'done') || S.duelOn) return 'Not during PvP.'; return null; };
   G.bgBusy = () => !!(G.S.bg && G.S.bg.phase !== 'done'); // a finished battleground (the result screen) never blocks invites or groups (#30)
   G.leaveBg = function () {

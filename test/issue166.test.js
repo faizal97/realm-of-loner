@@ -26,8 +26,8 @@ test('a refused Help leaves the request open and says why', () => {
   S.helpWanted = [{ id: 'hw1', act, role: 'dps', posterName: 'Someone', expires: now() + 60000 }];
   S.flags.deserterUntil = now() + 60000;
   const m = req({ kind: 'help_wanted', hw: 'hw1', bot: S.bots[0].id });
-  const said = SOC.actions(m)[0].fn();
-  assert.match(said, /Deserter/);
+  const [x] = SOC.actions(m); // greyed with the reason before the tap (#483)
+  assert.ok(x.disabled); assert.match(x.label, /Deserter/);
   assert.strictEqual(m.act.state, 'open');
 });
 

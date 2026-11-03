@@ -528,7 +528,11 @@
     const help = () => { weekProgress('help', 1); };
     const helpOnFinish = () => { const R = G.S.run || G.S.bg; if (R) R.soc = Object.assign({}, R.soc, { help: true }); }; // a group joined from chat counts once its run (or battleground) is done (#420)
     // someone who left the realm can't duel, buy, sell, carry or send materials (#447); a gift already sent still arrives
-    if (!b && (['duel', 'carry', 'wts', 'wtb'].includes(a.kind) || (a.kind === 'craft_order' && !a.sent))) return [{ label: "They're gone", disabled: true, why: true, fn: () => null }];
+    if (!b && (['duel', 'carry', 'wts', 'wtb', 'swap'].includes(a.kind) || (a.kind === 'craft_order' && !a.sent))) return [{ label: "They're gone", disabled: true, why: true, fn: () => null }]; // a swap too (#482)
+    // a group can't be joined while queued, in a run, in PvP, in a fight or a Deserter: greyed with the reason, as Help is (#483)
+    // a guild night starts later, so only a Deserter's sign-up is greyed
+    const joinWhy = ['lfg', 'trial_lfg', 'carry', 'help_wanted'].includes(a.kind) ? G.joinWhy() : a.kind === 'g_event' && !a.signed && /^Deserter/.test(G.joinWhy() || '') ? G.joinWhy() : null;
+    if (joinWhy) return [{ label: joinWhy.replace(/\.$/, ''), disabled: true, why: true, fn: () => null }, decline];
     if (a.kind === 'ln_stew') return [{ label: 'Give a bowl', primary: true, fn: () => G.lnGiveStew(m) }, decline]; // Longnight Stew
     if (a.kind === 'lfg') {
       return [{ label: `Join as ${roleName(a.role)}`, primary: true, fn: () => { if (G.joinChatGroup(a.act, a.role, { leader: a.leader, guild: a.guild ? P.guild : null, soc: { kind: a.guild ? 'g_run' : 'lfg', leader: a.leader } })) { close(); helpOnFinish(); } } }, decline]; // the leader remembers you once it's done (#338)

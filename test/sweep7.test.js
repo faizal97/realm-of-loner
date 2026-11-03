@@ -105,3 +105,21 @@ test('crafting with full bags starts when its materials empty a slot (#486)', ()
   const [m] = Object.keys(r.mats); P.bags = [{ item: G.copyItem(m), n: r.mats[m] }]; fillBags(P);
   assert.strictEqual(G.craft(r.id, 1), true);
 });
+
+const chatReq = (act) => ({ ch: 'whisper', act: Object.assign({ state: 'open', posted: W.now(), until: W.now() + 5 * 60000 }, act) });
+
+test('a swap from someone who left the realm is greyed (#482)', () => {
+  W.character(20); G.addItem(G.copyItem('linen_cloth'), 6);
+  const m = chatReq({ kind: 'swap', bot: 'nobody', item: 'linen_cloth', n: 5, itemData: G.genGear('chest', 20, 2, { atype: 'mail' }) });
+  const [first] = SOC.actions(m); assert.strictEqual(first.label, "They're gone"); assert.ok(first.disabled);
+});
+
+test('Join and Run it are greyed with the reason while queued or a Deserter (#483)', () => {
+  const { S } = W.character(20); S.player.place = D.ACTIVITIES.deadmines.where;
+  const lfg = chatReq({ kind: 'lfg', bot: S.bots[0].id, leader: S.bots[0].id, act: 'deadmines', role: 'dps' });
+  const carry = chatReq({ kind: 'carry', bot: S.bots[0].id, act: 'deadmines', tip: 500 });
+  G.queueFor('deadmines');
+  for (const m of [lfg, carry]) { const [x] = SOC.actions(m); assert.ok(x.disabled, x.label); assert.strictEqual(x.label, 'Not while in the group finder'); }
+  G.leaveQueue ? G.leaveQueue() : (S.queue = null); S.flags.deserterUntil = W.now() + 120000;
+  const [x] = SOC.actions(lfg); assert.ok(x.disabled && /^Deserter/.test(x.label), x.label);
+});
