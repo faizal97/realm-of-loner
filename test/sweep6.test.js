@@ -433,3 +433,16 @@ test('leaving a battleground mid-match gives Deserter and counts as played (#458
   assert.ok(!S.bg); assert.ok(S.flags.deserterUntil > W.now(), 'Deserter');
   assert.strictEqual(G.pvpStats().bgPlayed, n0 + 1);
 });
+
+test('a battleground joined from chat counts toward the weekly requests goal when it ends (#420)', () => {
+  const { S, P } = W.character(30); P.guild = 1;
+  let w = SOC.week(); let tries = 0; while (w.kind !== 'help' && tries++ < 8) { P.guild = (P.guild + 1) % 5; S.soc.week = null; w = SOC.week(); }
+  assert.strictEqual(w.kind, 'help'); const got = w.got;
+  const bg = Object.keys(D.ACTIVITIES).find((k) => D.ACTIVITIES[k].bg && D.ACTIVITIES[k].minLvl <= 30), b = S.bots.find((y) => B.factionOf(y) === G.myFaction());
+  const m = { id: 9300, ch: 'lfg', from: b.name, text: 'LFM', act: { kind: 'lfg', act: bg, role: 'dps', leader: b.id, state: 'open', until: W.now() + 240000 } }; S.chat.push(m);
+  SOC.actions(m)[0].fn(); assert.ok(S.bg, 'in the battleground');
+  const C = D.BG[S.bg.key]; S.bg.round = C.rounds;
+  G.bgGo(C.banners[0][0], C.banners[1][0]);
+  for (let k = 0; k < 200 && S.bg.phase !== 'done'; k++) { if (G.fight) for (const e of G.fight.enemies) if (!e.dead) e.hp = 1; W.advance(0.5); }
+  assert.strictEqual(S.bg.phase, 'done'); assert.strictEqual(SOC.week().got, got + 1);
+});

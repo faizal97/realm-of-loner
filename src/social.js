@@ -520,7 +520,7 @@
     const close = (st) => { a.state = st || 'done'; G.emitChange(); };
     const decline = { label: 'No thanks', fn: () => { close('declined'); if (b && (a.whisper || a.guild) && chance(0.6)) reply(tone(b) === 'rude' ? pick(['k whatever', 'ok', 'fine', 'whatever', 'ok then']) : pick(['np', 'ok no worries', 'all good', 'no problem!', 'all good!', 'no stress'])); } };
     const help = () => { weekProgress('help', 1); };
-    const helpOnFinish = () => { const R = G.S.run; if (R) R.soc = Object.assign({}, R.soc, { help: true }); }; // a group joined from chat counts once its run is done (#420)
+    const helpOnFinish = () => { const R = G.S.run || G.S.bg; if (R) R.soc = Object.assign({}, R.soc, { help: true }); }; // a group joined from chat counts once its run (or battleground) is done (#420)
     // someone who left the realm can't duel, buy, sell, carry or send materials (#447); a gift already sent still arrives
     if (!b && (['duel', 'carry', 'wts', 'wtb'].includes(a.kind) || (a.kind === 'craft_order' && !a.sent))) return [{ label: "They're gone", disabled: true, why: true, fn: () => null }];
     if (a.kind === 'ln_stew') return [{ label: 'Give a bowl', primary: true, fn: () => G.lnGiveStew(m) }, decline]; // Longnight Stew
@@ -744,7 +744,7 @@
   };
   G.on('kill', (d) => { try { SOC.onKill(d.mob); } catch (e) { console.error(e); } });
   G.on('runComplete', (d) => { try { SOC.onRunComplete(d); } catch (e) { console.error(e); } });
-  G.on('bgEnd', (d) => { try { const b = d && d.leader != null && botById(d.leader); if (b) befriend(b); } catch (e) { console.error(e); } }); // a battleground from chat, played to its end (#362)
+  G.on('bgEnd', (d) => { try { const b = d && d.leader != null && botById(d.leader); if (b) befriend(b); if (d && d.help) weekProgress('help', 1); } catch (e) { console.error(e); } }); // a battleground from chat, played to its end (#362)
 
   // ------------------------------------------------------------ quick replies (for any message from someone)
   SOC.replies = function (m) {

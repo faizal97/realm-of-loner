@@ -3372,7 +3372,7 @@
     else G.addMarks(won ? C.marksAtCap.win : C.marksAtCap.loss, C.name);
     bg.phase = 'done'; bg.result = won ? 'win' : draw ? 'draw' : 'loss'; bg.reward = { honor, money };
     sys(`${C.name}: ${won ? 'victory' : draw ? 'a draw' : 'defeat'}, ${bg.score.us} to ${bg.score.them}. +${honor} Honor.`);
-    emit('bgEnd', { result: bg.result, leader: bg.leader }); emit('change'); G.save();
+    emit('bgEnd', { result: bg.result, leader: bg.leader, help: !!(bg.soc && bg.soc.help) }); emit('change'); G.save();
   }
   // in a group, a queue, a fight, a battleground or a brawl still going: no other group can start (#354)
   G.groupBusy = () => { const S = G.S; return !!(S.run || S.queue || G.fight || G.bgBusy() || (S.brawl && S.brawl.phase !== 'done')); };
