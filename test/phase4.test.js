@@ -93,7 +93,7 @@ test('a voice never ends a line twice or says its word twice, and a pasted ad ke
   const { S } = W.character(30);
   for (const b of S.bots.slice(0, 120)) for (const line of ['brania hehe', 'oh beliel <3', 'yes!!', 'the group finder is so good honestly', 'gl everyone']) {
     const t = B.voiced(b, line), v = B.voice(b);
-    if (line !== 'gl everyone') assert.ok(!t.endsWith(v.suf) || !v.suf, `no ending after "${line}": ${t}`);
+    if (line !== 'gl everyone') for (const e of [v.suf, v.suf2]) assert.ok(!e || !t.endsWith(e), `no ending after "${line}": ${t}`);
     const w = t.toLowerCase().match(/[a-z]+/g) || []; for (const x of ['ngl', 'tbh', 'honestly']) assert.ok(w.filter((y) => y === x).length <= 1, t);
   }
   const ad = 'Hello friend! Cheapest gold on the server, 1000g for $10, visit our site!';
@@ -132,4 +132,57 @@ test('no two reply templates read the same, even with a voice ending (#73)', () 
       if (seen.has(k) && seen.get(k) !== set + i) assert.fail(`${set}${i} "${base + e}" reads as ${seen.get(k)}`); if (!e) seen.set(k, set + i); }
   });
   for (const [set, arr] of Object.entries(B.THREAD)) arr.forEach((f, i) => { for (const e of ends.slice(1)) { const k = key(f('Zed') + e); if (seen.has(k) && seen.get(k) !== set + i) assert.fail(`${set}${i} + "${e}" reads as ${seen.get(k)}`); } });
+});
+
+test('an answer in General or LFG never comes from the bot that asked (#73)', () => {
+  const { S } = W.character(30);
+  const my = B.factionOf(S.bots.find((b) => B.factionOf(b) === ((D.RACES[S.player.race] || {}).faction || 'alliance')));
+  S.bots = S.bots.filter((b) => B.factionOf(b) === my).slice(0, 2);
+  const on = B.isOnline; B.isOnline = () => true;
+  try {
+    const self = []; let answers = 0;
+    for (let s = 0; s < 12 * 3600; s += 1) {
+      const t = W.now() + s * 1000, n0 = S.chat.length, p0 = new Set(S.pending || []);
+      B.chatTick(S, t);
+      const said = S.chat.slice(n0).filter((m) => m.ch === 'general' || m.ch === 'lfg');
+      for (const p of S.pending || []) if (!p0.has(p) && !p.strict && !p.then && (p.ch === 'general' || p.ch === 'lfg')) {
+        const q = said.find((m) => m.ch === p.ch); if (!q) continue; answers++;
+        if (q.fromId === p.bot) self.push(q.text + ' -> ' + p.text);
+      }
+    }
+    assert.ok(answers >= 3, `${answers} answers`);
+    assert.deepStrictEqual(self, []);
+  } finally { B.isOnline = on; }
+});
+
+test('a voice is a habit, not every line: no bot starts or ends most lines with the same word (#73)', () => {
+  const { S } = W.character(30);
+  const worst = [];
+  for (const b of S.bots.slice(0, 150)) {
+    const v = B.voice(b), n = 400, cnt = {};
+    for (let i = 0; i < n; i++) { const t = B.voiced(b, 'that run was fun');
+      for (const w of [v.pre, v.pre2]) if (w && t.startsWith(w)) { cnt['p' + w] = (cnt['p' + w] || 0) + 1; break; }
+      for (const w of [v.suf, v.suf2]) if (w && t.endsWith(w)) { cnt['s' + w] = (cnt['s' + w] || 0) + 1; break; } }
+    const top = Math.max(0, ...Object.values(cnt)); if (top / n > 0.45) worst.push(`${b.name} ${Math.round(top / n * 100)}%`);
+  }
+  assert.deepStrictEqual(worst, []);
+});
+
+test('an answer never echoes the line it answers word for word (#73)', () => {
+  const { S } = W.character(30);
+  const cry = ['ok ok', 'blood and dust!', 'FOR THE KRUGAR', 'as you say'];
+  for (const said of ['blood and dust!', 'ok ok lol', 'for the krugar']) for (let i = 0; i < 40; i++) {
+    S.chatHeard = {};
+    const a = B.pickHeard(S, 'an9.', cry, said);
+    assert.notStrictEqual(a.toLowerCase().replace(/!$/, ''), said.toLowerCase().replace(/ lol$/, '').replace(/!$/, ''), `${said} -> ${a}`);
+  }
+});
+
+test('an answer with every reply heard this hour stays silent instead of repeating one (#73)', () => {
+  const { S } = W.character(30);
+  const cry = ['ok ok', 'blood and dust!', 'FOR THE KRUGAR', 'as you say'];
+  S.chatHeard = {}; const got = [];
+  for (let i = 0; i < 6; i++) got.push(B.pickHeard(S, 'an9.', cry, 'tbh for the krugar'));
+  assert.deepStrictEqual(got.filter(Boolean).length, new Set(got.filter(Boolean)).size, got.join(' | '));
+  assert.ok(got.includes(null), got.join(' | '));
 });

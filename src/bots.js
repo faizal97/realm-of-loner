@@ -552,18 +552,21 @@
   B.voice = function (b) {
     if (!b || b.id == null || b.legend || typeof b.id !== 'number') return null;
     const id = b.id | 0;
-    return { pre: V_PRE[Math.floor(hash(id, 7301) * V_PRE.length)], suf: V_SUF[Math.floor(hash(id, 7302) * V_SUF.length)], rate: 0.25 + hash(id, 7303) * 0.6, short: hash(id, 7304) < 0.35 };
+    const other = (L, h1, h2) => { const first = L[Math.floor(h1 * L.length)], ws = L.filter((w) => w && w !== first); return ws[Math.floor(h2 * ws.length)]; }; // the second habit is a word, never the first
+    return { pre: V_PRE[Math.floor(hash(id, 7301) * V_PRE.length)], suf: V_SUF[Math.floor(hash(id, 7302) * V_SUF.length)], pre2: other(V_PRE, hash(id, 7301), hash(id, 7305)), suf2: other(V_SUF, hash(id, 7302), hash(id, 7306)), rate: 0.25 + hash(id, 7303) * 0.45, short: hash(id, 7304) < 0.35 };
   };
   B.voiced = function (b, s) {
     const v = B.voice(b); if (!v || s == null || /\bour site\b/i.test(s)) return s; // a gold seller's ad is pasted, not typed
     let t = String(s);
     if (v.short) for (const [re, w] of V_SHORT) t = t.replace(re, w);
     if (t === t.toUpperCase() && /[A-Z]{3}/.test(t)) return t; // a shout stays a shout
-    const has = (w) => new RegExp('\\b' + w.trim() + '\\b', 'i').test(t), pre = v.pre.trim(), suf = v.suf.trim();
+    // two habits for each end, so a voice is felt without the same word on every line
+    const P = crand() < 0.5 ? v.pre2 : v.pre, X = crand() < 0.5 ? v.suf2 : v.suf;
+    const has = (w) => new RegExp('\\b' + w.trim() + '\\b', 'i').test(t), pre = P.trim(), suf = X.trim();
     let added = '';
-    if (pre && crand() < v.rate && !V_PRE_RE.test(t) && !/^[A-Z]{2}/.test(t) && !has(pre)) { t = v.pre + t.charAt(0).toLowerCase() + t.slice(1); added = pre; }
+    if (pre && crand() < v.rate && !V_PRE_RE.test(t) && !/^[A-Z]{2}/.test(t) && !has(pre)) { t = P + t.charAt(0).toLowerCase() + t.slice(1); added = pre; }
     // no friendly ending on an angry line, none twice, never the word it started with
-    if (suf && crand() < v.rate && !(b.toxic > 0.6) && !V_END_RE.test(t.replace(/[.]+$/, '')) && suf !== added && !(/^\w+$/.test(suf) && has(suf))) t += v.suf;
+    if (suf && crand() < v.rate && !(b.toxic > 0.6) && !V_END_RE.test(t.replace(/[.]+$/, '')) && suf !== added && !(/^\w+$/.test(suf) && has(suf))) t += X;
     return t;
   };
 
@@ -785,9 +788,13 @@
     return null;
   };
   // a reply's or request's words (no bot memory): one not heard in the last hour if any is left, else the one heard longest ago
-  B.pickHeard = function (S, k, arr) {
-    const H = S.chatHeard || (S.chatHeard = {}), t = Date.now(), idx = arr.map((_, i) => i), when = (i) => Math.max(H[k + i] || 0, H[wordsKey(arr[i])] || 0);
-    const fresh = idx.filter((i) => !(when(i) > t - HEARD_MS)), i = fresh.length ? cpick(fresh) : idx.reduce((a, b) => (when(b) < when(a) ? b : a));
+  // said: the line being answered, so an answer never echoes it word for word ('blood and dust!' → 'blood and dust!'),
+  // and with every answer heard this hour there is none (null)
+  B.pickHeard = function (S, k, arr, said) {
+    const H = S.chatHeard || (S.chatHeard = {}), t = Date.now(); if (said) for (const w of [said, bareLine(said), bareLine('_ ' + said).replace(/^_ /, '')]) H[wordsKey(w)] = t;
+    const idx = arr.map((_, i) => i), when = (i) => Math.max(H[k + i] || 0, H[wordsKey(arr[i])] || 0);
+    const fresh = idx.filter((i) => !(when(i) > t - HEARD_MS)); if (said && !fresh.length) return null; // an answer with nothing fresh to say says nothing
+    const i = fresh.length ? cpick(fresh) : idx.reduce((a, b) => (when(b) < when(a) ? b : a));
     H[k + i] = H[wordsKey(arr[i])] = t; return arr[i];
   };
   B.heard = function (S, b, k, text) {
@@ -835,7 +842,7 @@
     const c = ctx(S); c.rl = S.player.level;
     const myF =(D.RACES[S.player.race] || {}).faction || 'alliance';
     const mineBots = S.bots.filter((b) => B.factionOf(b) === myF);
-    const onl = () => { for (let i = 0; i < 12; i++) { const b = cpick(mineBots); if (B.isOnline(b, date)) return b; } return cpick(mineBots.length ? mineBots : S.bots); };
+    const onl = (not) => { for (let i = 0; i < 12; i++) { const b = cpick(mineBots); if (b !== not && B.isOnline(b, date)) return b; } const rest = (mineBots.length ? mineBots : S.bots).filter((x) => x !== not); return rest.length ? cpick(rest) : null; }; // not: an answer never comes from the bot that asked
     c.horde = myF === 'horde';
     // pool: how many lines the channel has; a line heard is held back an hour (HEARD_MS), so the channel never talks
     // faster than its pool lasts an hour (#337: a burst for 15 minutes, then near silence for 45)
@@ -869,9 +876,9 @@
       for (const A of ANSWERS) {
         const mm = lower(text).match(A.q);
         if (mm && cchance(0.75)) {
-          const r = onl();
+          const r = onl(b), a = r && B.pickHeard(S, 'an' + ANSWERS.indexOf(A) + '.', A.a(mm), text); if (!a) break;
           S.pending = S.pending || [];
-          S.pending.push({ at: now + 2500 + crand() * 5000, bot: r.id, ch: 'general', text: sloppy(r, B.pickHeard(S, 'an' + ANSWERS.indexOf(A) + '.', A.a(mm))) });
+          S.pending.push({ at: now + 2500 + crand() * 5000, bot: r.id, ch: 'general', text: sloppy(r, a) });
           break;
         }
       }
@@ -880,7 +887,7 @@
       const b = onl();
       const text = b.level >= 6 ? line(b, 'lfg', [keyed('lf', LFG_CHATTER)]) : null;
       if (text) B.thread(S, b, 'lfg', text, now, date); // #73
-      if (text) for (const A of ANSWERS) { const mm = lower(text).match(A.q); if (mm && cchance(0.6)) { const r = onl(); S.pending = S.pending || []; S.pending.push({ at: now + 3000 + crand() * 5000, bot: r.id, ch: 'lfg', text: sloppy(r, B.pickHeard(S, 'an' + ANSWERS.indexOf(A) + '.', A.a(mm))) }); break; } }
+      if (text) for (const A of ANSWERS) { const mm = lower(text).match(A.q); if (mm && cchance(0.6)) { const r = onl(b), a = r && B.pickHeard(S, 'an' + ANSWERS.indexOf(A) + '.', A.a(mm), text); if (!a) break; S.pending = S.pending || []; S.pending.push({ at: now + 3000 + crand() * 5000, bot: r.id, ch: 'lfg', text: sloppy(r, a) }); break; } }
     }
     if (due('say', 32, 76, SAY_NEAR.length)) {
       const near = B.onlineIn(S, S.player.place, date).filter((b) => B.factionOf(b) === B.factionOf(S.player));
