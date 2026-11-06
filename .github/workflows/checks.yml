@@ -103,7 +103,7 @@ jobs:
         with:
           node-version: 26
       - name: The build and its gates (a dev build, #92), but effects, prof, social and brawl (the effects and gates jobs run those)
-        run: python3 build.py --dev --skip=effects,prof,social,brawl
+        run: python3 build.py --dev --skip=effects,prof,social,brawl,chat
       - name: The pass/fail sims the build doesn't run (tools/ci-sim-gates.txt, seed 0)
         run: |
           for s in $(grep -v '^#' tools/ci-sim-gates.txt); do
@@ -126,7 +126,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        sims: [prof, social, brawl]
+        sims: [prof, social, brawl, chat]
     env:
       TZ: Asia/Jakarta
     steps:
@@ -143,7 +143,9 @@ jobs:
           for s in $SIMS; do
             args=""; [ "$s" = brawl ] && args=48 # build.py runs brawl with 48
             echo "::group::$s"; start=$(date +%s)
-            node "sim/$s.js" $args || { echo "::error title=Gate::sim/$s.js failed"; exit 1; }
+            if [ "$s" = chat ]; then # build.py runs the chat gates on seeds 0 and 1 (#73)
+              GATE=1 SEED=0 node sim/chatrepeat.js && GATE=1 SEED=1 node sim/chatrepeat.js || { echo "::error title=Gate::chat (sim/chatrepeat.js GATE=1) failed"; exit 1; }
+            else node "sim/$s.js" $args || { echo "::error title=Gate::sim/$s.js failed"; exit 1; }; fi
             echo "::endgroup::$s: $(( $(date +%s) - start ))s"
           done
   effects: # its own job, so publish-dev doesn't wait for it, in 12 shards at once (SHARD=i/n in sim/effects.js, packed by cost; about an hour as one since #149)

@@ -179,6 +179,7 @@
     G.emitChat();
     return m;
   }
+  SOC.gearFits = (b, lvl) => !!b && b.level + 3 >= lvl; // #73: an item a bot may offer or talk about: at most 3 levels above its own
   const myBots = () => { const S = G.S, f = G.myFaction(), d = new Date(); return S.bots.filter((b) => B.factionOf(b) === f && B.isOnline(b, d)); };
   const openActs = (pred) => G.S.chat.filter((m) => m.act && m.act.state === 'open' && (!pred || pred(m.act)));
   const due = (k, a, b) => { const n = state().next; const t = now(); if (!n[k]) n[k] = t + rnd(a, b) * 1000; if (t >= n[k]) { n[k] = 0; return true; } return false; };
@@ -308,7 +309,7 @@
     const k = pick(acts), A = D.ACTIVITIES[k];
     const bots = guild ? G.S.bots.filter((b) => b.guild === P.guild && B.isOnline(b, new Date())) : myBots();
     const free = bots.filter((b) => !B.lfRecent(G.S, b)), near = free.filter((b) => b.level >= A.minLvl - 2 && b.level <= (A.maxLvl || D.LEVEL_CAP) + 5); // #70: not a bot already looking for another group; #364: of the dungeon's levels, not a level 60 in a level 20 dungeon
-    const lead = pick(near.length ? near : free.filter((b) => b.level >= A.minLvl - 2)) || pick(free);
+    const lead = pick(near.length ? near : free.filter((b) => b.level >= A.minLvl - 2)); // #73: never a bot below the dungeon's level (no fallback to anyone free)
     if (!lead) return;
     const role = pick(G.roles());
     const size = A.size || 5, have = rint(1, size - 1);
@@ -350,7 +351,10 @@
     // asking you to group (a kill or a quest) comes from someone within 3 levels of you: a level 4 at your level 31's side
     // dies to the first pull (a player's report)
     const groups = kind === 'help_kill' || kind === 'quest_team';
-    const b = pick(groups ? myBots().filter((x) => Math.abs(x.level - P.level) <= SOC.GROUP_LEVELS) : myBots()); if (!b) return;
+    // #73: gear and crafting a bot offers, asks for or asks about fit its own level (an item at most 3 above it): a level-5
+    // bot doesn't sell, swap, order or admire level-37 gear
+    const gearLvl = kind === 'wts' || kind === 'swap' ? P.level + 1 : kind === 'ask_gear' ? (P.equip.weapon && P.equip.weapon.lvl) || P.level : kind === 'craft_order' && ct && D.ITEMS[ct.makes] ? D.ITEMS[ct.makes].lvl || 1 : 0;
+    const b = pick(groups ? myBots().filter((x) => Math.abs(x.level - P.level) <= SOC.GROUP_LEVELS) : gearLvl ? myBots().filter((x) => SOC.gearFits(x, gearLvl)) : myBots()); if (!b) return;
     const W = (text, act) => post('whisper', b, text, Object.assign({ whisper: true, bot: b.id }, act));
     if (kind === 'help_kill') {
       const h = huntTarget(); const M = D.MOBS[h.mob]; const pay = Math.round(M.lvl[1] * 12 * h.n + 50); const at = D.PLACES[h.place].name;
@@ -404,7 +408,7 @@
     }
   }
   function makeTrade() {
-    const b = pick(myBots()); if (!b) return;
+    const b = pick(myBots().filter((x) => SOC.gearFits(x, G.S.player.level + 1))); if (!b) return; // #73: its own level's gear
     const it = offerItem(); if (!it) return;
     const price = Math.round((it.sell || 10) * rnd(4.5, 7));
     post('general', b, pickT('s356', [`WTS ${link(it)} ${coin(price)} pst`, `selling ${link(it)}, ${coin(price)}`, `${link(it)} for ${coin(price)}, anyone?`, `cleaning my bags: ${link(it)} ${coin(price)}`, `${link(it)}, ${coin(price)} or best offer`, `${link(it)}, ${coin(price)}, whisper me`, `anyone need ${link(it)}? ${coin(price)}`, `${link(it)} for sale, ${coin(price)}, cheaper than the AH`]), { kind: 'wts', bot: b.id, itemData: it, price, until: now() + 6 * 60000 });
@@ -493,7 +497,7 @@
       const k = pick(acts), A = D.ACTIVITIES[k];
       post('whisper', b, pickT('s439', [`hey its ${b.name}${f.where ? ' from ' + D.PLACES[f.where].name : ''}! want to run ${A.name} with me?`, `${P.name}! doing ${A.name}, want in? would be fun`, `we still need someone for ${A.name}, u in? :)`, `${P.name}, got a spot in ${A.name} if u want it`, `remember me? we're doing ${A.name}, join?`]), { kind: 'lfg', whisper: true, bot: b.id, act: k, role: pick(G.roles()), leader: b.id, until: now() + 5 * 60000 });
     } else {
-      const gift = chance(0.5) ? offerItem() : null;
+      const gift = chance(0.5) && SOC.gearFits(b, P.level + 1) ? offerItem() : null; // #73: gear at the friend's own level, else gold
       const gold = Math.round(P.level * rnd(20, 50));
       post('whisper', b, gift ? pickT('s443', [`hey, found this and thought of u: ${link(gift)}`, `thanks again for the help, have this ${link(gift)}`, `ty for last time, this is for u: ${link(gift)}`]) : pick([`thanks again for earlier! sent u ${coin(gold)}`, `still grateful for the help, here's ${coin(gold)}`, `sent u ${coin(gold)}, for the help that day`]), { kind: 'gift', whisper: true, bot: b.id, itemData: gift, gold: gift ? 0 : gold, until: now() + 10 * 60000 });
     }

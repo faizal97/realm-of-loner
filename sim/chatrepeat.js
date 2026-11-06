@@ -162,3 +162,20 @@ console.log(`\n== #69 at reader level ${LV}: by the issue's rule (dungeons, raid
 if (C69.kinds) console.log('  #69 flagged lines by kind: ' + Object.entries(C69.kinds).sort((x, y) => y[1] - x[1]).map(([k, n]) => `${k} ${n}`).join(' · '));
 console.log('\n== examples (up to 4 each)'); for (const k of Object.keys(ex)) console.log(`${k}: ` + ex[k].slice(0, 4).join(' ‖ '));
 if (process.env.JSON) console.log('JSON ' + JSON.stringify({ ID, thread, contra, W, MEM }));
+// #73: every chat target, gated (GATE=1 exits 1 on a miss; build.py runs seeds 0 and 1)
+if (process.env.GATE) {
+  const rate = (w, k) => { const L = lines.filter((l) => l.pm < w); return L.length ? (L.filter((l) => l[k]).length / L.length) * 100 : 0; };
+  const perP = {}; for (const l of lines) { const k = l.p + '|' + l.ch + '|' + l.tk; perP[k] = (perP[k] || 0) + 1; }
+  const maxHr = Math.max(0, ...Object.values(perP)) / (DAYS * PLAY_MIN / 60);
+  const firstT = Math.min(...firstRep.tmpl.map((x) => (x == null ? Infinity : x)));
+  const threadPct = ((thread.reply + thread.names) / lines.length) * 100, ownMed = med(selfRep.map((x) => x.rep)) * 100;
+  const T = [
+    ['template repeats, first hour', rate(60, 'rT'), '<=', 20], ['template repeats, first day', rate(PLAY_MIN, 'rT'), '<=', 40], ['template repeats, week', rate(DAYS * PLAY_MIN, 'rT'), '<=', 70],
+    ['exact repeats, week', rate(DAYS * PLAY_MIN, 'rE'), '<=', 30], ['first template repeat (min of play)', firstT, '>=', 30], ['any one template, an hour per player', maxHr, '<=', 2],
+    ['a bot repeating its own template (median %)', ownMed, '<=', 5], ['lines above the speaker\'s level + 3', ID.above, '<=', 0], ['wrong time-of-day lines', W.tod, '<=', 0],
+    ['wrong busy/quiet lines', W.busy, '<=', 0], ['memory lines with no record', MEM.n - MEM.met, '<=', 0], ['contradictions', contra.n, '<=', 0],
+    ['lines in a thread (%)', threadPct, '>=', 25], ['Reveals terms above the reader\'s level', C69.reveal, '<=', 0]];
+  let miss = 0; console.log('\n== #73 chat gates');
+  for (const [n, v, op, lim] of T) { const ok = op === '<=' ? v <= lim : v >= lim; if (!ok) miss++; console.log(`${ok ? 'ok  ' : 'MISS'} ${n}: ${typeof v === 'number' ? +v.toFixed(1) : v} (${op} ${lim})`); }
+  if (miss) { console.log(`${miss} chat target(s) missed`); process.exit(1); }
+}

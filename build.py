@@ -15,7 +15,7 @@ SKIP = set(next((a[7:] for a in sys.argv[1:] if a.startswith('--skip=')), '').sp
 # whose changes since touch only notes/ and app/pubspec.yaml (the version commit), and no code changed here since.
 # Otherwise the build stops. --local-gates runs every gate on this machine instead (GitHub down, or a run you doubt).
 SIM_GATES = {'cloudsync', 'friends', 'legends', 'upgrades', 'wardrobe', 'sellspeed', 'news', 'trials', 'reactions', 'hard',
-             'worldboss', 'streams', 'population', 'distance', 'brawl', 'prof', 'social', 'auction', 'effects', 'rares', 'consumables', 'music'}
+             'worldboss', 'streams', 'population', 'distance', 'brawl', 'prof', 'social', 'auction', 'effects', 'rares', 'consumables', 'music', 'chat'}
 NO_CODE = lambda p: p.startswith('notes/') or p == 'app/pubspec.yaml'
 def ci_passed():
     git = lambda *a: subprocess.run(['git', '-C', R, *a], capture_output=True, text=True).stdout
@@ -43,8 +43,8 @@ if not DEV and not SKIP and '--local-gates' not in sys.argv[1:]:
     SKIP = set(SIM_GATES)
 # a gate run quietly: on failure its own output is shown (its FAIL lines, or its last lines), so a failure on the CI runner
 # says why without a rerun
-def quiet(cmd):
-    r = subprocess.run(cmd, stdout=subprocess.PIPE, text=True)
+def quiet(cmd, **kw):
+    r = subprocess.run(cmd, stdout=subprocess.PIPE, text=True, **kw)
     if r.returncode != 0:
         lines = r.stdout.splitlines(); fails = [l for l in lines if 'FAIL' in l]
         print('\n'.join((fails or lines[-15:])[:30]))
@@ -87,6 +87,8 @@ if 'streams' not in SKIP and quiet(['node', os.path.join(R, 'sim', 'streams.js')
     sys.exit('build stopped: chat moved an outcome; chat must draw from the cosmetic stream (node sim/streams.js shows where, #74)')
 if 'population' not in SKIP and quiet(['node', os.path.join(R, 'sim', 'population.js')]).returncode != 0:
     sys.exit('build stopped: the realm\'s population misses a target (node sim/population.js lists which, #71)')
+if 'chat' not in SKIP and any(quiet(['node', os.path.join(R, 'sim', 'chatrepeat.js')], env=dict(os.environ, GATE='1', SEED=sd)).returncode != 0 for sd in ('0', '1')):
+    sys.exit('build stopped: chat misses a target (GATE=1 SEED=0 node sim/chatrepeat.js lists which, #73)')
 if 'distance' not in SKIP and subprocess.run(['node', os.path.join(R, 'sim', 'distance.js')]).returncode != 0:
     sys.exit('build stopped: a distance rule is broken (node sim/distance.js lists which)')
 if 'brawl' not in SKIP and subprocess.run(['node', os.path.join(R, 'sim', 'brawl.js'), '48']).returncode != 0:
