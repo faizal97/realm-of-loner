@@ -180,6 +180,15 @@
     return m;
   }
   SOC.gearFits = (b, lvl) => !!b && b.level + 3 >= lvl; // #73: an item a bot may offer or talk about: at most 3 levels above its own
+  // #73: an item's level for that rule: its own, else (materials, bolts, bags) the lowest skill of a recipe that makes or
+  // uses it / 5, as a bag's level is read for rare recipes (game.js)
+  let MAT_LVL = null;
+  SOC.itemLvl = function (x) {
+    const id = typeof x === 'string' ? x : x && x.id, it = D.ITEMS[id] || (typeof x === 'object' ? x : null);
+    if (it && it.lvl) return it.lvl;
+    if (!MAT_LVL) { MAT_LVL = {}; for (const r of Object.values(D.RECIPES || {})) { const l = Math.max(1, Math.round(r.sk[0] / 5)); for (const m of [r.makes, ...Object.keys(r.mats || {})]) if (!(MAT_LVL[m] <= l)) MAT_LVL[m] = l; } }
+    return MAT_LVL[id] || 1;
+  };
   const myBots = () => { const S = G.S, f = G.myFaction(), d = new Date(); return S.bots.filter((b) => B.factionOf(b) === f && B.isOnline(b, d)); };
   const openActs = (pred) => G.S.chat.filter((m) => m.act && m.act.state === 'open' && (!pred || pred(m.act)));
   const due = (k, a, b) => { const n = state().next; const t = now(); if (!n[k]) n[k] = t + rnd(a, b) * 1000; if (t >= n[k]) { n[k] = 0; return true; } return false; };
@@ -353,8 +362,12 @@
     const groups = kind === 'help_kill' || kind === 'quest_team';
     // #73: gear and crafting a bot offers, asks for or asks about fit its own level (an item at most 3 above it): a level-5
     // bot doesn't sell, swap, order or admire level-37 gear
-    const gearLvl = kind === 'wts' || kind === 'swap' ? P.level + 1 : kind === 'ask_gear' ? (P.equip.weapon && P.equip.weapon.lvl) || P.level : kind === 'craft_order' && ct && D.ITEMS[ct.makes] ? D.ITEMS[ct.makes].lvl || 1 : 0;
-    const b = pick(groups ? myBots().filter((x) => Math.abs(x.level - P.level) <= SOC.GROUP_LEVELS) : gearLvl ? myBots().filter((x) => SOC.gearFits(x, gearLvl)) : myBots()); if (!b) return;
+    // (materials a bot buys or asks for count too, and a bot doesn't admire gear 10+ levels below its own)
+    const matBag = kind === 'wtb' ? pick(sellable()) : kind === 'swap' ? pick(sellable().filter((x) => x.n >= 5)) : null;
+    const gearLvl = kind === 'wts' ? P.level + 1 : kind === 'swap' ? Math.max(P.level + 1, SOC.itemLvl(matBag.item)) : kind === 'wtb' ? SOC.itemLvl(matBag.item)
+      : kind === 'ask_gear' ? (P.equip.weapon && P.equip.weapon.lvl) || P.level : kind === 'craft_order' && ct ? SOC.itemLvl(ct.makes) : 0;
+    const fits = (x) => SOC.gearFits(x, gearLvl) && (kind !== 'ask_gear' || x.level <= gearLvl + 10);
+    const b = pick(groups ? myBots().filter((x) => Math.abs(x.level - P.level) <= SOC.GROUP_LEVELS) : gearLvl ? myBots().filter(fits) : myBots()); if (!b) return;
     const W = (text, act) => post('whisper', b, text, Object.assign({ whisper: true, bot: b.id }, act));
     if (kind === 'help_kill') {
       const h = huntTarget(); const M = D.MOBS[h.mob]; const pay = Math.round(M.lvl[1] * 12 * h.n + 50); const at = D.PLACES[h.place].name;
@@ -369,7 +382,7 @@
         `"${Q.name}" is so slow solo lol, team up?`, `im doing "${Q.name}" at ${D.PLACES[qt.place].name} too, party?`,
         `both on "${Q.name}"? lets share kills`, `hey, "${Q.name}" buddy? i'll invite`, `${M.name} spawns are slow, want to group for "${Q.name}"?`, `same quest! "${Q.name}", duo it?`]), Object.assign({ kind: 'quest_team', until: now() + 20 * 60000 }, qt));
     } else if (kind === 'wtb') {
-      const bag = pick(sellable()); const it = bag.item; const n = Math.min(bag.n, rint(5, 20)); const price = Math.max(n * 3, Math.round((it.sell || 1) * n * rnd(2.5, 4)));
+      const bag = matBag; const it = bag.item; const n = Math.min(bag.n, rint(5, 20)); const price = Math.max(n * 3, Math.round((it.sell || 1) * n * rnd(2.5, 4)));
       W(pickT('s315', [`hey u have ${link(it)}? ill buy ${n} for ${coin(price)}`, `wtb ${n} ${link(it)} for ${coin(price)}, u selling?`, `need ${n} ${link(it)} for my profession, ${coin(price)}?`,
         `buying ${link(it)} x${n}, ${coin(price)}, better than the vendor`, `can i buy ${n} of ur ${link(it)}? ${coin(price)}`,
         `do u have spare ${link(it)}? ${n} for ${coin(price)}`, `paying ${coin(price)} for ${n} ${link(it)}, vendor gives way less`, `levelling my profession, need ${n} ${link(it)}. ${coin(price)}?`]), { kind: 'wtb', item: it.id, n, price });
@@ -379,7 +392,7 @@
         `${link(it)} dropped for me but its ur armor type. ${coin(price)}?`, `selling ${link(it)} cheap, ${coin(price)}, looks like an upgrade for u`,
         `hey, ${link(it)} is yours for ${coin(price)} if u want it`, `no one in my group can use ${link(it)}, ${coin(price)}?`, `${link(it)} for ${coin(price)}? figured id ask u first`]), { kind: 'wts', itemData: it, price });
     } else if (kind === 'swap') {
-      const bag = pick(sellable().filter((x) => x.n >= 5)); const n = Math.min(bag.n, rint(5, 12)); const it = offerItem(); if (!it) return;
+      const bag = matBag; const n = Math.min(bag.n, rint(5, 12)); const it = offerItem(); if (!it) return;
       W(pickT('s325', [`trade u my ${link(it)} for ${n} ${link(bag.item)}?`, `swap? my ${link(it)} for ur ${n} ${link(bag.item)}`, `need ${n} ${link(bag.item)}, ill give u ${link(it)} for them`, `i have ${link(it)}, u have ${n} ${link(bag.item)}. trade?`, `fair trade? ${link(it)} for ${n} ${link(bag.item)}`]), { kind: 'swap', item: bag.item.id, n, itemData: it });
     } else if (kind === 'where') {
       const q = whereQuestion(); if (!q) return;
@@ -447,12 +460,13 @@
     if (kind === 'g_run') return makeLfg(true, { dungeonOnly: true });
     if (kind === 'g_elite') return makeLfg(true, { elite: true });
     if (kind === 'g_mats') {
-      const mats = Object.keys(D.ITEMS).filter((k) => D.ITEMS[k].slot === 'mat' && (D.ITEMS[k].lvl || 1) <= P.level + 5);
+      const mats = Object.keys(D.ITEMS).filter((k) => D.ITEMS[k].slot === 'mat' && SOC.itemLvl(k) <= P.level + 5);
       const have = sellable().filter((b) => b.n >= 5);
       const it = have.length && chance(0.7) ? pick(have).item : D.ITEMS[pick(mats.length ? mats : ['linen_cloth'])];
       if (!it) return;
-      const n = rint(5, 15);
-      post('guild', mate, pickT('s396', [`can anyone spare ${n} ${link(it)}? need them for crafting`, `looking for ${n} ${link(it)}, will pay back`, `anyone got ${n} ${link(it)} lying around?`, `guild bank is out of ${link(it)}, anyone? ${n} would do`, `short on ${link(it)} for guild crafting, need ${n}`, `${n} ${link(it)} from anyone who can spare them? will pay`]), { kind: 'g_mats', guild: true, bot: mate.id, item: it.id, n, pay: Math.round((it.sell || 1) * n * 3), until: now() + 12 * 60000 });
+      const n = rint(5, 15), ml = SOC.itemLvl(it); // #73: asked by a guildmate at that material's level
+      const who = SOC.gearFits(mate, ml) ? mate : pick(G.S.bots.filter((x) => x.guild === P.guild && B.isOnline(x, new Date()) && SOC.gearFits(x, ml))); if (!who) return;
+      post('guild', who, pickT('s396', [`can anyone spare ${n} ${link(it)}? need them for crafting`, `looking for ${n} ${link(it)}, will pay back`, `anyone got ${n} ${link(it)} lying around?`, `guild bank is out of ${link(it)}, anyone? ${n} would do`, `short on ${link(it)} for guild crafting, need ${n}`, `${n} ${link(it)} from anyone who can spare them? will pay`]), { kind: 'g_mats', guild: true, bot: who.id, item: it.id, n, pay: Math.round((it.sell || 1) * n * 3), until: now() + 12 * 60000 });
       return;
     }
     if (kind === 'g_help') {
@@ -467,7 +481,8 @@
     }
     if (kind === 'g_event') {
       const acts = joinableActs({ dungeonOnly: true }); if (!acts.length) return;
-      const k = pick(acts), A = D.ACTIVITIES[k], off = guildOfficer(), mins = rint(2, 4);
+      const k = pick(acts), A = D.ACTIVITIES[k], mins = rint(2, 4), lvOk = (x) => x && x.level >= A.minLvl - 2; // #73: announced by someone at the dungeon's level
+      let off = guildOfficer(); if (!lvOk(off)) off = pick(G.S.bots.filter((x) => x.guild === P.guild && B.isOnline(x, new Date()) && lvOk(x))); if (!off) return;
       post('guild', off, pickT('s412', [`GUILD NIGHT: ${A.name} in ${mins} min! sign up here`, `guild event in ${mins} min, ${A.name}. who's coming?`, `${A.name} guild run starting in ${mins} min, bonus standing for everyone who shows`, `${A.name} guild run in ${mins} min, sign up!`, `event: ${A.name} in ${mins} min. let's fill it with guildies`]), { kind: 'g_event', guild: true, bot: off.id, act: k, startAt: now() + mins * 60000, until: now() + (mins + 3) * 60000, signed: false });
       return;
     }
@@ -477,11 +492,11 @@
   // guildmates chat among themselves, and about you
   function guildTalk() {
     const P = G.S.player, a = onlineMate(); if (!a) return;
-    const lines = [`just dinged ${Math.min(D.LEVEL_CAP, a.level + 1)}!`, `this week's goal is going well`, `who's online tonight?`, `lol i fell off the lift again`, `brb food`, `gz everyone on the weekly progress`, SOC.motd(P.guild).toLowerCase(),
+    const lines = [`just dinged ${a.level}!`, // #73: its own level, not one it hasn't reached `this week's goal is going well`, `who's online tonight?`, `lol i fell off the lift again`, `brb food`, `gz everyone on the weekly progress`, SOC.motd(P.guild).toLowerCase(),
       'finally finished my set', 'repair bills are killing me', 'love seeing everyone online', 'who else is on their alt tonight?', 'rolled a new alt, starting zones are so peaceful', 'best guild on the server, no contest'];
     if (P.level >= 10) lines.push(`${P.name} carrying the guild again`, `thanks for the help earlier ${P.name}`);
     // #70: a fresh line that's true from this mate (B.freshLine: not heard in the last hour, not one it said lately)
-    const r = B.freshLine(G.S, a, 'guild', lines.map((l, i) => ['gt' + i, () => l]), {}, true); if (!r) return;
+    const r = B.freshLine(G.S, a, 'guild', lines.map((l, i) => ['gt' + i, () => l]), {}); if (!r) return; // #73: in its own voice
     const m = post('guild', a, r.text); if (m) B.heard(G.S, a, r.k, r.text);
     const b = m && chance(0.5) && onlineMate(a.id), re = b && B.freshLine(G.S, b, 'guild', ['lol', 'same', 'nice', 'gz!', 'haha', 'yep', 'lmao', 'o/'].map((l, i) => ['gr' + i, () => l]), {}, true);
     if (re) { G.S.pending.push({ at: now() + rnd(3000, 9000), bot: b.id, ch: 'guild', text: voice(b, re.text) }); B.heard(G.S, b, re.k, re.text); }

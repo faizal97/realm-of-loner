@@ -46,7 +46,7 @@ if not DEV and not SKIP and '--local-gates' not in sys.argv[1:]:
 def quiet(cmd, **kw):
     r = subprocess.run(cmd, stdout=subprocess.PIPE, text=True, **kw)
     if r.returncode != 0:
-        lines = r.stdout.splitlines(); fails = [l for l in lines if 'FAIL' in l]
+        lines = r.stdout.splitlines(); fails = [l for l in lines if 'FAIL' in l or 'MISS' in l]
         print('\n'.join((fails or lines[-15:])[:30]))
     return r
 # the data must check out before anything is built
@@ -87,8 +87,9 @@ if 'streams' not in SKIP and quiet(['node', os.path.join(R, 'sim', 'streams.js')
     sys.exit('build stopped: chat moved an outcome; chat must draw from the cosmetic stream (node sim/streams.js shows where, #74)')
 if 'population' not in SKIP and quiet(['node', os.path.join(R, 'sim', 'population.js')]).returncode != 0:
     sys.exit('build stopped: the realm\'s population misses a target (node sim/population.js lists which, #71)')
-if 'chat' not in SKIP and any(quiet(['node', os.path.join(R, 'sim', 'chatrepeat.js')], env=dict(os.environ, GATE='1', SEED=sd)).returncode != 0 for sd in ('0', '1')):
-    sys.exit('build stopped: chat misses a target (GATE=1 SEED=0 node sim/chatrepeat.js lists which, #73)')
+for sd in (() if 'chat' in SKIP else ('0', '1')):
+    if quiet(['node', os.path.join(R, 'sim', 'chatrepeat.js')], env=dict(os.environ, GATE='1', SEED=sd)).returncode != 0:
+        sys.exit(f'build stopped: chat misses a target (GATE=1 SEED={sd} node sim/chatrepeat.js lists which, #73)')
 if 'distance' not in SKIP and subprocess.run(['node', os.path.join(R, 'sim', 'distance.js')]).returncode != 0:
     sys.exit('build stopped: a distance rule is broken (node sim/distance.js lists which)')
 if 'brawl' not in SKIP and subprocess.run(['node', os.path.join(R, 'sim', 'brawl.js'), '48']).returncode != 0:

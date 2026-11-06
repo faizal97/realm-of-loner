@@ -32,7 +32,7 @@ test('a guild line gets a reply from a guildmate that names the speaker, and now
       B.thread(S, b, 'guild', 'grats on the ding!', W.now(), new Date(W.now()));
       const r = S.pending.find((p) => p.bot !== b.id);
       if (r) { replies++; assert.ok(r.ch === 'guild' && mates.some((m) => m.id === r.bot), 'from a guildmate, in Guild'); assert.ok(r.text.toLowerCase().includes(b.name.toLowerCase()), 'names the speaker: ' + r.text); }
-      if (r && S.pending.some((p) => p.bot === b.id && p.at > r.at)) backs++;
+      if (r && r.then) { r.then(); if (S.pending.some((p) => p.bot === b.id && p.at > r.at)) backs++; } // the answer back is chosen once the reply posts
     }
     assert.ok(replies >= 12, `${replies} of 40 got a reply`);
     assert.ok(backs >= 1, `${backs} answered back`);
@@ -62,4 +62,74 @@ test('a bot offers, orders or asks about gear only at its own level (#73)', () =
     }
   }
   assert.deepStrictEqual(bad, []);
+});
+
+test('a thread reads the line without the voice, and grats to someone else is not a ding (#73)', () => {
+  assert.strictEqual(B.threadKind('grats on the ding!'), 'up');
+  assert.strictEqual(B.threadKind('ok finally 30!'), 'ding');
+  assert.strictEqual(B.threadKind('where is Hogger? heh'), 'q');
+});
+
+test('a guild reply is dropped once you leave the guild, and a reply never comes from a stand-in (#73)', () => {
+  const { S, P } = W.character(30);
+  G.joinGuild(SOC.myGuilds().find((x) => x.min <= 30).g);
+  const mates = S.bots.filter((b) => b.guild === P.guild);
+  const on = B.isOnline; B.isOnline = () => true;
+  try {
+    const said = () => S.chat.filter((m) => m.ch === 'guild' && m.fromId != null).length;
+    let queued = 0;
+    for (let i = 0; i < 30 && !queued; i++) { S.pending = []; S.chatHeard = {}; S.botSaid = {}; B.thread(S, mates[i % mates.length], 'guild', 'that last run was fun', W.now(), new Date(W.now())); queued = S.pending.length; }
+    assert.ok(queued, 'a reply was queued');
+    const keep = S.pending.slice();
+    SOC.leaveGuild(); const n0 = said(); W.setNow(W.now() + 20000); B.chatTick(S, W.now());
+    assert.strictEqual(said(), n0, 'not posted after leaving');
+    S.pending = keep.map((p) => Object.assign({}, p, { unless: undefined })); const gone = S.pending[0].bot;
+    S.bots = S.bots.filter((b) => b.id !== gone); const n1 = S.chat.length; B.chatTick(S, W.now());
+    assert.ok(!S.chat.slice(n1).some((m) => m.text === keep[0].text), 'nobody else says it');
+  } finally { B.isOnline = on; }
+});
+
+test('a voice never ends a line twice or says its word twice, and a pasted ad keeps its words (#73)', () => {
+  const { S } = W.character(30);
+  for (const b of S.bots.slice(0, 120)) for (const line of ['brania hehe', 'oh beliel <3', 'yes!!', 'the group finder is so good honestly', 'gl everyone']) {
+    const t = B.voiced(b, line), v = B.voice(b);
+    if (line !== 'gl everyone') assert.ok(!t.endsWith(v.suf) || !v.suf, `no ending after "${line}": ${t}`);
+    const w = t.toLowerCase().match(/[a-z]+/g) || []; for (const x of ['ngl', 'tbh', 'honestly']) assert.ok(w.filter((y) => y === x).length <= 1, t);
+  }
+  const ad = 'Hello friend! Cheapest gold on the server, 1000g for $10, visit our site!';
+  for (const b of S.bots.slice(0, 60)) { b.toxic = 0.9; b.skill = 0.1; S.chatHeard = {}; S.botSaid = {}; const r = B.freshLine(S, b, 'whisper', [['x0', () => ad]], {}); if (r) assert.strictEqual(r.text, ad); }
+});
+
+test("a story line says 'the' mid-sentence and 'with the guild' only for the guild they're in (#73)", () => {
+  const { S } = W.character(60);
+  const k = Object.keys(D.ACTIVITIES).find((x) => /^The /.test(D.ACTIVITIES[x].name) && D.ACTIVITIES[x].minLvl <= 30);
+  const b = S.bots[0]; b.level = D.ACTIVITIES[k].minLvl + 2; b.guild = 2;
+  b.hist = [{ t: W.now() - 3600000, k: 'clear', v: k, w: 1 }];
+  const out = B.HIST_LINES.map((f) => f({ me: b, rl: 60 })).filter(Boolean);
+  assert.ok(out.some((l) => /cleared the /.test(l)), out.join(' | '));
+  assert.ok(!out.some((l) => /with the guild/.test(l)), 'cleared with another guild');
+});
+
+test('materials and unlevelled crafts have a level for who may ask for them (#73)', () => {
+  W.character(30);
+  const r = Object.values(D.RECIPES).find((x) => !D.ITEMS[x.makes].lvl && x.sk[0] >= 100);
+  assert.strictEqual(SOC.itemLvl(r.makes), Math.round(r.sk[0] / 5));
+  const m = Object.keys(r.mats)[0]; assert.ok(SOC.itemLvl(m) >= 1 && SOC.itemLvl(m) <= SOC.itemLvl(r.makes));
+});
+
+test('a bot whose friends list came out empty gets friends once there are people (#73)', () => {
+  const { S } = W.character(30);
+  const b = S.bots[0]; b.pals = []; b.rival = null;
+  assert.ok(B.circle(S, b).pals.length >= 1);
+});
+
+test('no two reply templates read the same, even with a voice ending (#73)', () => {
+  W.character(30);
+  const key = (t) => t.toLowerCase().replace(/[.!?]+$/, '').trim(), seen = new Map();
+  const ends = ['', ' lol', ' haha', ' :)', ' xD', ' tbh', ' fr', ' ngl', ' :D', ' lmao', ' heh', ' ^^', ' o/'];
+  for (const [set, arr] of Object.entries(B.THREAD)) arr.forEach((f, i) => {
+    const base = f('Zed'); for (const e of ends) { const k = key(base + e); if (e && k === key(base)) continue;
+      if (seen.has(k) && seen.get(k) !== set + i) assert.fail(`${set}${i} "${base + e}" reads as ${seen.get(k)}`); if (!e) seen.set(k, set + i); }
+  });
+  for (const [set, arr] of Object.entries(B.THREAD)) arr.forEach((f, i) => { for (const e of ends.slice(1)) { const k = key(f('Zed') + e); if (seen.has(k) && seen.get(k) !== set + i) assert.fail(`${set}${i} + "${e}" reads as ${seen.get(k)}`); } });
 });

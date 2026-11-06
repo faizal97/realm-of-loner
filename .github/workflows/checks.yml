@@ -102,7 +102,7 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 26
-      - name: The build and its gates (a dev build, #92), but effects, prof, social and brawl (the effects and gates jobs run those)
+      - name: The build and its gates (a dev build, #92), but effects, prof, social, brawl and chat (the effects and gates jobs run those)
         run: python3 build.py --dev --skip=effects,prof,social,brawl,chat
       - name: The pass/fail sims the build doesn't run (tools/ci-sim-gates.txt, seed 0)
         run: |

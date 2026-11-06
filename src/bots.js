@@ -334,7 +334,7 @@
   // level), picked by hash; the rival is the same class within 5 levels
   B.circle = function (S, b) {
     const f = B.factionOf(b), here = (id) => id != null && S.bots.some((x) => x.id === id && B.factionOf(x) === f); // their own side only (#309): an older pick from the other side is made again
-    if (!(b.pals && b.pals.every(here) && (b.rival == null || here(b.rival)))) {
+    if (!(b.pals && b.pals.length && b.pals.every(here) && (b.rival == null || here(b.rival)))) { // an empty list is picked again (#73)
       const near = (x) => x !== b && B.factionOf(x) === f && Math.abs(x.level - b.level) <= 5, by = (a, c) => hash(b.id, a.id) - hash(b.id, c.id);
       const mates = b.guild >= 0 ? S.bots.filter((x) => x !== b && x.guild === b.guild) : [];
       b.pals = (mates.length >= 2 ? mates : S.bots.filter(near)).sort(by).slice(0, 2).map((x) => x.id);
@@ -546,8 +546,9 @@
   // replies and party chat only; a request keeps its words (social.js). Cosmetic stream only.
   const V_PRE = ['', '', '', 'ok ', 'honestly ', 'man ', 'ngl ', 'tbh ', 'yo ', 'welp ', 'oh '];
   const V_SUF = ['', '', ' lol', ' haha', ' :)', ' xD', ' tbh', ' fr', ' ngl', ' :D', ' lmao', ' heh', ' ^^', ' o/'];
-  const V_SHORT = [[/\byou\b/g, 'u'], [/\byour\b/g, 'ur'], [/\bare\b/g, 'r'], [/\bplease\b/g, 'pls'], [/\bthanks\b/g, 'thx'], [/\breally\b/g, 'rly'], [/\bprobably\b/g, 'prob'], [/\bbecause\b/g, 'cuz']];
-  const V_PRE_RE = /^(ok|honestly|man|ngl|tbh|yo|welp|oh|lol|haha)\b/i, V_SUF_RE = /\b(lol|haha|lmao|xd|tbh|fr|ngl|heh)$|[:^o][)D^/]$/i;
+  const V_SHORT = [[/\byou\b(?!')/g, 'u'], [/\byour\b/g, 'ur'], [/\bare\b/g, 'r'], [/\bplease\b/g, 'pls'], [/\bthanks\b/g, 'thx'], [/\breally\b/g, 'rly'], [/\bprobably\b/g, 'prob'], [/\bbecause\b/g, 'cuz']];
+  const V_PRE_RE = /^(ok|honestly|man|ngl|tbh|yo|welp|oh|lol|haha)\b/i;
+  const V_END_RE = /(\b(lol|haha|hah|hehe|heh|lmao|xd|tbh|fr|ngl|honestly)|[:^o;][)(dDpP^/3]|<3|[!?]{2})$/i; // a line that already ends in a habit, an emote or !!/??
   B.voice = function (b) {
     if (!b || b.id == null || b.legend || typeof b.id !== 'number') return null;
     const id = b.id | 0;
@@ -557,8 +558,12 @@
     const v = B.voice(b); if (!v || s == null || /\bour site\b/i.test(s)) return s; // a gold seller's ad is pasted, not typed
     let t = String(s);
     if (v.short) for (const [re, w] of V_SHORT) t = t.replace(re, w);
-    if (v.pre && crand() < v.rate && !V_PRE_RE.test(t) && !/^[A-Z]{2}/.test(t)) t = v.pre + t.charAt(0).toLowerCase() + t.slice(1);
-    if (v.suf && crand() < v.rate && !V_SUF_RE.test(t.replace(/[.!?]+$/, ''))) t += v.suf;
+    if (t === t.toUpperCase() && /[A-Z]{3}/.test(t)) return t; // a shout stays a shout
+    const has = (w) => new RegExp('\\b' + w.trim() + '\\b', 'i').test(t), pre = v.pre.trim(), suf = v.suf.trim();
+    let added = '';
+    if (pre && crand() < v.rate && !V_PRE_RE.test(t) && !/^[A-Z]{2}/.test(t) && !has(pre)) { t = v.pre + t.charAt(0).toLowerCase() + t.slice(1); added = pre; }
+    // no friendly ending on an angry line, none twice, never the word it started with
+    if (suf && crand() < v.rate && !(b.toxic > 0.6) && !V_END_RE.test(t.replace(/[.]+$/, '')) && suf !== added && !(/^\w+$/.test(suf) && has(suf))) t += v.suf;
     return t;
   };
 
@@ -570,54 +575,59 @@
   const RE_SAD = /\b(rip|pain|died|wiped?|hates me|joke|never again|lost|lag|why|broke|scare|creeps|confusing|slow|forever|ganked|repair|worst|burnt)\b/;
   const RE_UP = /\b(gz|grats|love|fun|great|good|nice|flawless|legend|hype|pretty|vibe|comfiest|best|perfect|clean|smooth|happy|relaxing|peaceful)\b/;
   const THREAD = {
-    ding: [(n) => `gz ${n}!`, (n) => `grats ${n}`, (n) => `${n} gz, about time`, (n) => `gz ${n}, catching up to me`, (n) => `nice one ${n}`, (n) => `${n} grats!! o/`,
-      (n) => `woo ${n}`, (n) => `gz gz ${n}`, (n) => `look at you ${n}`, (n) => `${n} big ding`, (n) => `well done ${n}`, (n) => `${n} gratz`, (n) => `${n} congrats!`, (n) => `ayy ${n}`, (n) => `${n} levels so fast`, (n) => `proud of you ${n}`, (n) => `${n} the grind pays off`, (n) => `${n} nicely done`],
+    ding: [(n) => `gz ${n}!`, (n) => `grats ${n}`, (n) => `${n} gz, about time`, (n) => `gz ${n}, well earned`, (n) => `nice one ${n}`, (n) => `${n} grats!! o/`,
+      (n) => `woo ${n}`, (n) => `gz gz ${n}`, (n) => `look at you ${n}`, (n) => `${n} big ding`, (n) => `well done ${n}`, (n) => `${n} gratz`, (n) => `${n} congrats!`, (n) => `ayy ${n}`, (n) => `${n} on a roll`, (n) => `proud of you ${n}`, (n) => `${n} the grind pays off`, (n) => `${n} nicely done`],
     q: [(n) => `${n} no clue tbh`, (n) => `good question ${n}`, (n) => `${n} i was wondering the same`, (n) => `${n} check the guide site maybe`, (n) => `idk ${n}, someone will know`,
       (n) => `${n} not sure, sorry`, (n) => `same q here ${n}`, (n) => `${n} hmm, no idea`, (n) => `${n} i think so? not sure`, (n) => `${n} beats me`, (n) => `oh ${n}, wish i knew`, (n) => `${n} good one, dunno`, (n) => `${n} someone in general will know`, (n) => `${n} no idea, sorry!`, (n) => `hmm good point ${n}`, (n) => `${n} asking the real questions`, (n) => `${n} following, i want to know too`],
-    sad: [(n) => `rip ${n}`, (n) => `${n} same tbh`, (n) => `feel that ${n}`, (n) => `${n} oof`, (n) => `pain, ${n}`, (n) => `${n} it gets better i promise`,
+    sad: [(n) => `rip ${n}`, (n) => `${n} felt that`, (n) => `feel that ${n}`, (n) => `${n} oof`, (n) => `pain, ${n}`, (n) => `${n} it gets better i promise`,
       (n) => `${n} lol i feel you`, (n) => `hang in there ${n}`, (n) => `${n} big oof`, (n) => `${n} that's rough`, (n) => `sending hugs ${n}`, (n) => `${n} been there`, (n) => `${n} ugh, same`, (n) => `poor ${n}`, (n) => `${n} you'll get it`, (n) => `${n} happens to the best of us`, (n) => `${n} lol rough day`],
     up: [(n) => `${n} true`, (n) => `agreed ${n}`, (n) => `${n} 100%`, (n) => `facts ${n}`, (n) => `${n} right?`, (n) => `${n} for real`,
       (n) => `this, ${n}`, (n) => `${n} couldn't agree more`, (n) => `${n} yes!!`, (n) => `${n} so true`, (n) => `exactly ${n}`, (n) => `${n} love that`, (n) => `${n} same here`, (n) => `${n} big agree`, (n) => `${n} yesss`, (n) => `well said ${n}`, (n) => `${n} best feeling`],
     any: [(n) => `${n} lol`, (n) => `haha ${n}`, (n) => `${n} same`, (n) => `lol ${n}`, (n) => `${n} xD`, (n) => `oh hey ${n}`,
       (n) => `${n} o/`, (n) => `classic ${n}`, (n) => `${n} mood`, (n) => `${n} relatable`, (n) => `hi ${n}`, (n) => `${n} hehe`, (n) => `${n} lmao`, (n) => `${n} hah`, (n) => `${n} fair`, (n) => `${n} honestly`, (n) => `yo ${n}`, (n) => `${n} :D`, (n) => `${n} ok that's funny`],
-    rival: [(n) => `${n} i was there first`, (n) => `sure ${n}, sure`, (n) => `${n} lucky`, (n) => `bet i beat you to it ${n}`, (n) => `${n} show off`,
-      (n) => `${n} not bad. not great either`, (n) => `cute ${n}`, (n) => `${n} watch your back`, (n) => `${n} beginner's luck`, (n) => `${n} i'll catch up`, (n) => `oh look, ${n} again bragging`],
-    back: [(n) => `ty ${n}`, (n) => `haha ${n}`, (n) => `${n} shh`, (n) => `${n} you know it`, (n) => `thx ${n} :)`, (n) => `${n} ikr`,
-      (n) => `${n} <3`, (n) => `${n} hehe ty`, (n) => `glad it's not just me ${n}`, (n) => `${n} cheers`, (n) => `${n} haha yep`, (n) => `${n} right??`, (n) => `${n} :)`, (n) => `${n} thank u`, (n) => `${n} hehe yes`],
+    rival: [(n) => `${n} took you long enough`, (n) => `sure ${n}, sure`, (n) => `${n} lucky`, (n) => `${n} finally lol`, (n) => `${n} show off`,
+      (n) => `${n} not bad. not great either`, (n) => `cute ${n}`, (n) => `${n} watch your back`, (n) => `${n} beginner's luck`, (n) => `${n} don't let it go to your head`, (n) => `oh look, ${n} bragging`],
+    back: [(n) => `ty ${n}`, (n) => `${n} hahaha`, (n) => `${n} shh`, (n) => `${n} you know it`, (n) => `thx ${n} :)`, (n) => `${n} ikr`,
+      (n) => `${n} <3`, (n) => `${n} hehe ty`, (n) => `${n} cheers`, (n) => `${n} haha`, (n) => `${n} :)`, (n) => `${n} thank u`, (n) => `${n} hehe thx`],
     backRival: [(n) => `${n} keep dreaming`, (n) => `whatever ${n}`, (n) => `${n} we'll see`, (n) => `${n} lol ok`, (n) => `${n} jealous much`],
   };
   B.THREAD = THREAD;
-  B.threadKind = (text) => { const s = lower(text); return RE_DING.test(s) ? 'ding' : RE_Q.test(s) ? 'q' : RE_SAD.test(s) ? 'sad' : RE_UP.test(s) ? 'up' : 'any'; };
+  // read without the speaker's voice (a habit word at either end), and congratulating someone else isn't one's own ding
+  const bareLine = (s) => lower(s).replace(/^(ok|honestly|man|ngl|tbh|yo|welp|oh) /, '').replace(/\s+(lol|haha|lmao|xd|tbh|fr|ngl|heh|:\)|:d|\^\^|o\/)$/, '').trim();
+  B.threadKind = (text) => { const s = bareLine(text); return /\b(gz|grats|congrats|gratz)\b/.test(s) ? 'up' : RE_DING.test(s) ? 'ding' : RE_Q.test(s) ? 'q' : RE_SAD.test(s) ? 'sad' : RE_UP.test(s) ? 'up' : 'any'; };
   const nameOf = (b) => (crand() < 0.5 ? lower(b.name) : b.name);
   // b said text on ch at now: maybe a reply (and a reply back), queued in S.pending
   B.thread = function (S, b, ch, text, now, date) {
-    if (!b || b.id == null || !b.name || !['guild', 'general', 'lfg'].includes(ch)) return;
+    if (!b || typeof b.id !== 'number' || !b.name || !['guild', 'general', 'lfg'].includes(ch)) return;
     const kind = B.threadKind(text), on = (x) => x && x !== b && x.id !== b.id && B.isOnline(x, date);
-    const { pals, rival } = B.circle(S, b);
+    const roll = crand(), pg = ch === 'guild' ? S.player.guild : null; // one draw, then only the scans that roll can use
     let who = null, rel = 'pal';
     if (ch === 'guild') {
-      const mine = pals.filter((x) => on(x) && x.guild === b.guild), mates = mine.length ? mine : S.bots.filter((x) => on(x) && x.guild === b.guild);
-      if (mates.length && cchance(0.6)) who = cpick(mates);
+      if (roll < 0.6) { const { pals } = B.circle(S, b), mine = pals.filter((x) => on(x) && x.guild === b.guild); const mates = mine.length ? mine : S.bots.filter((x) => on(x) && x.guild === b.guild); if (mates.length) who = cpick(mates); }
     } else {
-      if (rival && on(rival) && (kind === 'ding' || kind === 'up') && cchance(0.35)) { who = rival; rel = 'rival'; }
-      else {
-        const pf = pals.filter(on), mates = b.guild >= 0 ? S.bots.filter((x) => on(x) && x.guild === b.guild && B.factionOf(x) === B.factionOf(b)) : [];
-        if (pf.length && cchance(ch === 'lfg' ? 0.4 : 0.75)) who = cpick(pf);
-        else if (mates.length && cchance(ch === 'lfg' ? 0.25 : 0.4)) who = cpick(mates); // a guildmate who saw it (#73)
+      const pPal = ch === 'lfg' ? 0.4 : 0.75, pMate = ch === 'lfg' ? 0.25 : 0.4;
+      if (roll < Math.max(pPal, 0.35)) {
+        const { pals, rival } = B.circle(S, b);
+        if (kind === 'ding' && rival && on(rival) && roll < 0.35) { who = rival; rel = 'rival'; } // a rival answers a ding, nothing else
+        else { const pf = pals.filter(on); if (pf.length && roll < pPal) who = cpick(pf); }
       }
+      if (!who && b.guild >= 0 && crand() < pMate) { const mates = S.bots.filter((x) => on(x) && x.guild === b.guild && B.factionOf(x) === B.factionOf(b)); if (mates.length) who = cpick(mates); } // a guildmate who saw it
     }
     if (!who) return;
-    const say = (from, to, set, at) => {
+    // a reply goes out only from its own bot (strict: not from a stand-in if they left), in Guild only while the player is
+    // still in that guild, and the answer back is chosen only once the reply has posted (then)
+    const queue = (from, to, set, at, then) => {
       const n = nameOf(to), r = B.freshLine(S, from, ch, keyed('th' + set + '.', THREAD[set]).map(([k, f]) => [k, () => f(n)]), {});
       if (!r) return false;
       B.heard(S, from, r.k, r.text);
-      (S.pending = S.pending || []).push({ at, bot: from.id, ch, text: r.text });
+      (S.pending = S.pending || []).push({ at, bot: from.id, ch, text: r.text, strict: true, unless: ch === 'guild' ? () => S.player.guild !== pg : undefined, then });
       return true;
     };
+    const back = rel === 'rival' ? 'backRival' : kind === 'ding' || kind === 'up' || kind === 'any' ? 'back' : null;
     const at = now + 2500 + crand() * 6000;
-    if (!say(who, b, rel === 'rival' ? 'rival' : kind, at)) return;
-    if (cchance(0.35)) say(b, who, rel === 'rival' ? 'backRival' : 'back', at + 3000 + crand() * 5000);
+    queue(who, b, rel === 'rival' ? 'rival' : kind, at, back && cchance(0.35) ? () => queue(b, who, back, Date.now() + 3000 + crand() * 5000) : undefined);
   };
+
 
   // ---- #73: a person talks about their own story (B.note, #72): only what happened to them in the last 3 days, a level
   // only while it's still theirs, and only what the reader's level may read (B.histText). c.me: the speaker, c.rl: the
@@ -625,16 +635,17 @@
   const HIST_MS = 3 * 86400000;
   const histNow = (c, k) => { const h = (c.me && c.me.hist) || [], t = Date.now(); for (let i = h.length - 1; i >= 0; i--) if (h[i].k === k && h[i].t > t - HIST_MS && h[i].t <= t) return B.histText(h[i], c.rl) ? h[i] : null; return null; };
   const histLvl = (c) => { const e = histNow(c, 'lvl'); return e && e.v === c.me.level ? e.v : null; };
-  const histAct = (c) => { const e = histNow(c, 'clear'); return e && D.ACTIVITIES[e.v] ? D.ACTIVITIES[e.v].name : null; };
+  const histAct = (c, mid) => { const e = histNow(c, 'clear'); if (!e || !D.ACTIVITIES[e.v]) return null; const n = D.ACTIVITIES[e.v].name; return mid ? n.replace(/^The /, 'the ') : n; };
+  const histOurs = (c) => { const e = histNow(c, 'clear'); return e && e.w === c.me.guild && c.me.guild >= 0 ? histAct(c) : null; }; // cleared with the guild they're in now
   const histItem = (c) => { const e = histNow(c, 'item'); return e && D.ITEMS[e.v] ? D.ITEMS[e.v].name : null; };
   const histGuild = (c) => { const e = histNow(c, 'joined'); return e && GUILDS[e.v] && c.me.guild === e.v ? GUILDS[e.v] : null; };
   const HIST = [
     (c) => { const v = histLvl(c); return v && `ding ${v}`; },
     (c) => { const v = histLvl(c); return v && `${v} finally`; },
     (c) => { const v = histLvl(c); return v && (v >= D.LEVEL_CAP ? `${v}!! made it` : `${v} now, slowly getting there`); },
-    (c) => { const a = histAct(c); return a && `finally cleared ${a}`; },
-    (c) => { const a = histAct(c); return a && `that ${a} clear was so clean`; },
-    (c) => { const a = histAct(c); return a && `${a} went smooth with the guild`; },
+    (c) => { const a = histAct(c, true); return a && `finally cleared ${a}`; },
+    (c) => { const a = histAct(c, true); return a && `that ${a} clear was so clean`; },
+    (c) => { const a = histOurs(c); return a && `${a} went smooth with the guild`; },
     (c) => { const i = histItem(c); return i && `got ${i}, so happy`; },
     (c) => { const i = histItem(c); return i && `${i} dropped for me!!`; },
     (c) => { const i = histItem(c); return i && `finally got ${i}`; },
@@ -768,7 +779,7 @@
     for (let i = 0; i < 6 && ok.length; i++) {
       const [k, f] = ok.splice(Math.floor(crand() * ok.length), 1)[0];
       const said = f(c); if (said == null || said === false) { i--; continue; } // a line with nothing true to say (#73's story lines) costs no try
-      const text = raw ? said : sloppy(b, B.voiced(b, said)); // #73: in the speaker's own voice
+      const text = raw || /\bour site\b/i.test(said) ? said : B.voiced(b, sloppy(b, said)); // #73: in the speaker's own voice, added after sloppy() so its emotes keep their case; a gold seller's ad is pasted as is
       if (!(cd[wordsKey(text)] > t - HEARD_MS) && B.lineFits(S, text, b, ch)) return { k, text };
     }
     return null;
@@ -842,9 +853,11 @@
         if (p.unless && p.unless()) continue; // a line whose reason went away (a guild application withdrawn, #416)
         let bot;
         if (p.fromName) { const gm = S.group && S.group.members.find((m) => m.name === p.fromName); bot = { name: p.fromName, cls: gm ? gm.cls : null, id: p.bot, legend: !!(gm && gm.legend) }; }
-        else bot = S.bots.find((b) => b.id === p.bot) || onl();
-        B.post(S, p.ch, bot, p.text);
+        else bot = S.bots.find((b) => b.id === p.bot) || (p.strict ? null : onl());
+        if (!bot) continue; // #73: a thread's line only from its own bot
+        const posted = B.post(S, p.ch, bot, p.text);
         if (p.onPost) p.onPost(bot);
+        if (posted && p.then) p.then(); // #73: an answer back only to a reply that was said
       }
     }
     // #70: about half the old volume (General every 18–44 s at a quiet hour, not 9–22), and each line a fresh template
@@ -922,7 +935,7 @@
     if (bot && bot.legend && root.D && D.LEGENDS && D.LEGENDS[bot.legend]) { const c = D.LEGENDS[bot.legend].cameo || {}; const L = c[kind] || LEGEND_VOICE[kind] || LEGEND_VOICE.hello; return L[Math.floor(crand() * L.length)]; }
     // #73: bigger pools (party had about 45 lines in all), each said in the speaker's own voice (B.voiced)
     const T = {
-      hello: ['hi', 'hey all', 'yo', 'sup', 'hello', 'o/', 'halo', 'hey hey', 'hiya', 'evening folks', 'hi all, first time here', 'heya', 'greetings', 'hi o/'],
+      hello: ['hi', 'hey all', 'yo', 'sup', 'hello', 'o/', 'halo', 'hey hey', 'hiya', 'hi all, first time here', 'heya', 'greetings', 'hi o/'],
       pull: ['pulling', 'go go', 'inc', 'lets go', 'here we go', 'moving on', 'next pack', 'on it', 'charging in', 'go'], // no "ready?": nothing on screen answers it (#159)
       wipe: bot.toxic > 0.6 ? ['healer??', 'wow', 'omg this group', 'who pulled that', 'gg noobs', 'unreal', 'are we serious', 'cmon'] : ['lol wipe', 'oops', 'rip', 'my bad', 'run back?', 'that went well', 'well that happened', 'we got this next time', 'ouch', 'ok that hurt'],
       win: ['nice', 'ez', 'gj', 'yay', 'good', 'clean', 'nice one all', 'smooth', 'well played', 'that was fun', 'woo', 'gg'],
