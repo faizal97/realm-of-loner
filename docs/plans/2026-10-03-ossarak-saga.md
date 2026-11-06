@@ -130,6 +130,10 @@ in `2026-10-03-v11-story-options.md`.
     v11 (havent detemermined yet what version but its the last)". The last v10 release (its number isn't set) is a
     pre-patch leading into The Ashen Coronation. **Parked like the rest of Chapter 1:** not designed or filed until he
     asks.
+    **Scope (decided 2026-11-07):** the pre-patch's story campaign is endgame content, open only to characters who have
+    finished the Stormveil Isle story (The Drowned Crown) or the endgame raids. Characters below that get the pre-patch's
+    events and activities, not the campaign. So the campaign can build on the level-60 Reveals freely; only the events'
+    and activities' text has to hold at every level.
 
 ## Agreed as a direction (still open to his refinement)
 
@@ -143,8 +147,9 @@ in `2026-10-03-v11-story-options.md`.
    dungeons, the Spire raid's bosses, the story beat by beat, the end cinematic teasing the Reach, the logo, and
    canon's new Timeline, Names and Reveals.
 2. **The pre-patch (decision 20), when he asks:**
-   - which story beats tease the coronation and Kethriax without leaking the level-60 Reveals (a pre-patch reaches
-     every level, so its text is checked at every level);
+   - the campaign's story beats into the coronation and Kethriax (endgame only, see decision 20's scope, so the
+     level-60 Reveals are known; the events and activities open to every level still keep to each level's Reveals);
+   - the exact gate: which finished story or raid opens the campaign;
    - whether systems changes land early in the pre-patch, so v11.0 is only content;
    - a small pre-patch event;
    - whether the Ruinfall Saga emblem and Chapter 1's logo debut there;
