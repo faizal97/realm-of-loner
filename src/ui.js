@@ -2927,10 +2927,10 @@
           const stock = G.qmStock(), looks = G.qmLooks(), own = new Set(acc.looks || []), mine = new Set(P.mounts || []);
           const row = (ref) => { const [kind, a1, a2] = ref.split(':'); if (kind === 'mount') { const M = D.MOUNTS[a1], c = G.qmPrice(M.marks, ref), have = mine.has(a1);
               return h('button', { class: 'row', disabled: have || !P.riding, onclick: () => { G.buyMount(a1); ui.sheetFn(); } }, h('div', { class: 'ic' }, img(art('icon', 'mount_' + a1))), h('div', { class: 't' }, h('b', { style: { color: D.QUALITY[4].color } }, M.name), h('small', null, have ? 'Owned' : !P.riding ? 'Learn Riding first' : 'Mount · every character · swift')), h('div', { class: 'r' }, have ? '' : `${c} ✦`)); }
-            const L = looks.find((x) => x.place === a1 && x.key === a2), c = G.qmPrice(L.cost, ref), have = own.has(a1 + ':' + a2);
+            const L0 = looks.find((x) => x.place === a1 && x.key === a2), c = G.qmPrice(L0.cost, ref), have = own.has(a1 + ':' + a2), L = Object.assign({}, L0, { name: G.lookLabel(L0.name, '', P.level, have).name }); // a name beyond your level stays hidden
             return h('button', { class: 'row', disabled: have, onclick: () => { G.buyQmLook(a1, a2); ui.sheetFn(); } }, h('div', { class: 'ic' }, img(art('icon', L.icon))), h('div', { class: 't' }, h('b', { class: 'q' + L.q }, L.name), h('small', null, have ? 'In your wardrobe' : `Look · ${D.SLOT_LABEL[a1] || a1}`)), h('div', { class: 'r' }, have ? '' : `${c} ✦`)); };
           b.append(h('div', { class: 'sec-h' }, 'This week', h('small', null, `${Math.round(D.QM_STOCK_OFF * 100)}% off · changes on Monday`)), h('div', { class: 'list' }, ...stock.map(row)));
-          const RAIDS = { vesh: "Veshmira's Lair", mc: 'The Magma Throne', tc: 'The Tidecrown Citadel' };
+          const RAIDS = {}; for (const [pre, nm] of [['vesh', "Veshmira's Lair"], ['mc', 'The Magma Throne'], ['tc', 'The Tidecrown Citadel']]) RAIDS[pre] = G.nameable(nm, P.level) ? nm : 'A raid beyond your level';
           const nav = h('div', { class: 'list' });
           for (const pre in D.QM_COLOURS) {
             const mineL = looks.filter((x) => x.key.startsWith(pre + '_')), got = mineL.filter((x) => own.has(x.place + ':' + x.key)).length;
@@ -3268,7 +3268,7 @@
         h('button', { class: 'btn', disabled: same || (tried && !tried.have), onclick: () => { G.setWardrobe(pl, t || null); toast(t === 'hidden' ? `${WPLACE[pl]} hidden.` : tried ? `Showing ${tried.name}.` : 'Showing your gear.', true); ui.sheetFn(); } }, same ? 'Showing' : 'Show this')));
       b.append(info);
       // Renown dyes (#504): a dye tints the look shown here, if it is one drawn from a palette (raid and festival sets)
-      const shown = G.gearLooks(Object.assign({}, P, { dyes: {} }))[pl], dn = (P.dyes || {})[pl] || 0;
+      const shown = (G.gearLooks(Object.assign({}, P, { dyes: {} })) || {})[pl], dn = (P.dyes || {})[pl] || 0; // gearLooks is null when nothing is worn
       if (G.renown() && G.dyeable(shown)) {
         const dr = h('div', { class: 'chips' }, h('button', { class: 'chip' + (!dn ? ' gold' : ''), onclick: () => { G.setDye(pl, 0); ui.sheetFn(); } }, 'No dye'));
         for (let n = G.renown(); n >= 1; n--) { const d = D.dye(n); dr.append(h('button', { class: 'chip' + (dn === n ? ' gold' : ''), onclick: () => { G.setDye(pl, n); ui.sheetFn(); } }, h('span', { style: { display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', marginRight: '4px', background: `hsl(${d.hue},${Math.round(55 * d.sat)}%,${Math.round(45 + d.lit * 100)}%)` } }), d.name)); }
@@ -3885,7 +3885,7 @@
         if (P.riding) {
           const row = h('div', { class: 'chips' }, h('button', { class: 'chip' + (!P.mount ? ' gold' : ''), onclick: () => { G.setMount(null); ui.sheetFn(); } }, 'On foot'));
           for (const k of (P.mounts || [])) row.append(h('button', { class: 'chip' + (P.mount === k ? ' gold' : ''), onclick: () => { G.setMount(k); ui.sheetFn(); } }, img(art('icon', 'mount_' + k)), ' ', D.MOUNTS[k].name));
-          b.append(h('div', { class: 'sec-h' }, 'Mount', h('small', null, P.mount ? 'roads are 40% faster' : 'walking')), row);
+          b.append(h('div', { class: 'sec-h' }, 'Mount', h('small', null, P.mount ? `roads are ${Math.round((1 - G.rideSpeed()) * 100)}% faster` : 'walking')), row);
           if (G.mountTints()) { const tr = h('div', { class: 'chips' }, h('button', { class: 'chip' + (!P.mountTint ? ' gold' : ''), onclick: () => { G.setMountTint(0); ui.sheetFn(); } }, 'Own colour')); for (let n = 1; n <= G.mountTints(); n++) tr.append(h('button', { class: 'chip' + (P.mountTint === n ? ' gold' : ''), onclick: () => { G.setMountTint(n); ui.sheetFn(); } }, `Tint ${n}`)); b.append(h('div', { class: 'sec-h' }, 'Mount tint', h('small', null, `from Renown: ${G.mountTints()}`)), tr); } // #504
         }
         b.append(h('div', { class: 'sec-h' }, 'Equipment', h('small', null, 'tap to inspect')));

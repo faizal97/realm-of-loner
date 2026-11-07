@@ -1188,7 +1188,7 @@
     if (M.swift && !P.expertRiding) return toast('Learn Expert Riding first.');
     if (P.money < M.cost) return toast(`You need ${G.moneyText(M.cost)}.`);
     P.money -= M.cost; P.mounts.push(key); P.mount = key;
-    loot(`You bought a ${M.name}. Every road is 40% faster now.`); emit('change'); G.save();
+    loot(`You bought a ${M.name}. Every road is ${Math.round((1 - G.rideSpeed()) * 100)}% faster now.`); emit('change'); G.save();
   };
   G.refreshAccountMounts = function () { const P = G.S.player, a = G.account(); P.mounts = P.mounts || []; for (const k of a.mounts || []) if (D.MOUNTS[k] && !P.mounts.includes(k)) P.mounts.push(k); };
   G.setMount = function (key) { const P = G.S.player; if (key && !(P.mounts || []).includes(key)) return; P.mount = key || null; emit('change'); G.save(); };
@@ -2800,7 +2800,8 @@
     }
     for (const Q of G.qmLooks()) { // the Quartermaster's colours (#506), once the class could show the set's look
       const it = D.ITEMS[Q.id]; if (Q.place !== place || !G.canUseItem(it, P.cls) || (it.faction && it.faction !== G.myFaction())) continue;
-      out.push({ key: Q.key, name: Q.name, icon: Q.icon, q: Q.q, lvl: (it.lvl || 60) + 0.5, source: `Mentor Quartermaster: ${Q.cost} Mentor Marks`, have: have.has(Q.key) });
+      const lb = G.lookLabel(Q.name, `Mentor Quartermaster: ${Q.cost} Mentor Marks`, P.level, have.has(Q.key)); // a name beyond your level stays hidden (lorekeeper)
+      out.push({ key: Q.key, name: lb.name, icon: Q.icon, q: Q.q, lvl: (it.lvl || 60) + 0.5, source: lb.source, have: have.has(Q.key), hidden: lb.hidden });
     }
     out.sort((a, b) => a.lvl - b.lvl || a.name.localeCompare(b.name));
     for (const o of G.wardrobeOptions(place)) if (o.keepsake) out.push(Object.assign({ lvl: 60, have: true, source: 'A Legend\'s keepsake' }, o));

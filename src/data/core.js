@@ -675,7 +675,7 @@
   // the set's own Normal palette turned by the tint, so every accent keeps its contrast
   D.QM_COLOURS = {
     vesh: [['Verdigris', { rot: 150, sat: 1, lit: 0 }], ['Bone', { rot: 0, sat: 0.25, lit: 0.22 }]],
-    mc: [['Frostfire', { rot: 190, sat: 1, lit: 0 }], ['Obsidian', { rot: 260, sat: 0.6, lit: -0.12 }]],
+    mc: [['Glacial', { rot: 190, sat: 1, lit: 0 }], ['Obsidian', { rot: 260, sat: 0.6, lit: -0.12 }]],
     tc: [['Coral', { rot: 140, sat: 1.1, lit: 0.04 }], ['Abyssal', { rot: 60, sat: 0.9, lit: -0.15 }]],
   };
   D.QM_LOOK_COST = { armour: 60, weapon: 70 }; D.QM_STOCK = 3; D.QM_STOCK_OFF = 0.2;
