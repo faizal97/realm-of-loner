@@ -3108,6 +3108,26 @@
       h('p', null, `Costs ${inf.cost} Mentor Marks. You have ${marks}. Its look stays the same.`),
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', disabled: marks < inf.cost, onclick: () => { closeDialog(); G.upgradeItem(where); if (ui.sheetFn) ui.sheetFn(); } }, 'Upgrade'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Cancel'))], true);
   }
+  // Reforge (#503): reroll an item's effect or its stats for Mentor Marks, then Keep or Revert the result
+  const canReforge = (it) => G.canReforge(it, 'effect') || G.canReforge(it, 'stats');
+  function rfLine(it) {
+    const NAME = { str: 'Strength', agi: 'Agility', sta: 'Stamina', int: 'Intellect', spi: 'Spirit' }, F = G.effectOf(it);
+    return [h('div', null, Object.entries(it.stats || {}).map(([k, v]) => `+${v} ${NAME[k] || k}`).join(', ')), F ? h('div', { class: 'eff' }, `${F.name}: ${F.desc(it.lvl || 1, D.fxGrow(it.fxScale, it.effect))}`) : null];
+  }
+  function reforgeDialog(where) {
+    const P = G.S.player, it = where.slot ? P.equip[where.slot] : P.bags[where.bag].item, cost = G.reforgeCost(it), marks = G.account().marks;
+    const go = (kind) => { closeDialog(); const r = G.reforge(where, kind); if (!r) return; showDialog([h('h3', null, `Reforged ${r.old.name}`),
+      h('div', { class: 'sec-h' }, 'Before'), ...rfLine(r.old), h('div', { class: 'sec-h' }, 'After'), ...rfLine(r.next),
+      h('p', { class: 'ai-note' }, `Marks spent: ${r.cost}. Next reforge of this item: ${G.reforgeCost(r.next)}.`),
+      h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { G.reforgeKeep(); closeDialog(); if (ui.sheetFn) ui.sheetFn(); } }, 'Keep'), h('button', { class: 'btn alt', onclick: () => { G.reforgeRevert(); closeDialog(); if (ui.sheetFn) ui.sheetFn(); } }, 'Revert'))], true); };
+    showDialog([h('h3', null, `Reforge ${it.name}?`), ...rfLine(it),
+      h('p', null, `Costs ${cost} Mentor Marks. You have ${marks}. You see the result, then Keep it or Revert.`),
+      h('p', { class: 'ai-note' }, 'Effect: another effect for your role. Stats: a new pair, same total.'),
+      h('div', { class: 'btn-row' },
+        G.canReforge(it, 'effect') ? h('button', { class: 'btn', disabled: marks < cost, onclick: () => go('effect') }, 'Reforge effect') : null,
+        h('button', { class: 'btn', disabled: marks < cost, onclick: () => go('stats') }, 'Reforge stats'),
+        h('button', { class: 'btn alt', onclick: closeDialog }, 'Cancel'))], true);
+  }
   const canUpgrade = (it) => G.upgradeInfo(it).room;
   function throwAway(idx) {
     const b = G.S.player.bags[idx]; if (!b) return;
@@ -3160,6 +3180,7 @@
         const acts = h('div', { class: 'btn-row' });
         if (D.GEAR_SLOTS.includes(it.slot)) acts.append(h('button', { class: 'btn', disabled: !G.canUseItem(it) || it.lvl > P.level, onclick: () => { G.equip(ui.bagSel); ui.bagSel = null; ui.sheetFn(); } }, 'Equip'));
         if (canUpgrade(it)) acts.append(h('button', { class: 'btn alt', onclick: () => upgradeDialog({ bag: ui.bagSel }) }, 'Upgrade'));
+        if (canReforge(it)) acts.append(h('button', { class: 'btn alt', onclick: () => reforgeDialog({ bag: ui.bagSel }) }, 'Reforge'));
         if (it.slot === 'food' || it.slot === 'drink') acts.append(h('button', { class: 'btn', onclick: () => { G.consume(it.slot); closeSheet(); } }, 'Use'));
         if (G.usable(it)) acts.append(h('button', { class: 'btn', onclick: () => { G.useItem(ui.bagSel); ui.bagSel = null; ui.sheetFn(); } }, it.slot === 'bag' ? 'Equip bag' : it.slot === 'recipe' ? 'Learn' : 'Use'));
         if (it.id === 'hearthstone') acts.append(h('button', { class: 'btn', onclick: () => { G.hearth(); closeSheet(); } }, 'Use'));
@@ -3837,7 +3858,7 @@
         const gear = h('div', { class: 'gear' });
         for (const slot of D.GEAR_SLOTS) {
           const it = P.equip[slot];
-          gear.append(h('button', { class: 'row' + (it ? '' : ' off'), onclick: () => { if (it) showDialog(itemTip(it, h('div', { class: 'btn-row', style: { marginTop: '8px' } }, h('button', { class: 'btn alt', onclick: () => { G.unequip(slot); closeDialog(); ui.sheetFn(); } }, 'Unequip'), canUpgrade(it) ? h('button', { class: 'btn', onclick: () => { closeDialog(); upgradeDialog({ slot }); } }, 'Upgrade') : null)), true); } },
+          gear.append(h('button', { class: 'row' + (it ? '' : ' off'), onclick: () => { if (it) showDialog(itemTip(it, h('div', { class: 'btn-row', style: { marginTop: '8px' } }, h('button', { class: 'btn alt', onclick: () => { G.unequip(slot); closeDialog(); ui.sheetFn(); } }, 'Unequip'), canUpgrade(it) ? h('button', { class: 'btn', onclick: () => { closeDialog(); upgradeDialog({ slot }); } }, 'Upgrade') : null, canReforge(it) ? h('button', { class: 'btn alt', onclick: () => { closeDialog(); reforgeDialog({ slot }); } }, 'Reforge') : null)), true); } },
             h('div', { class: 'ic' }, it ? img(art('icon', it.icon)) : ''),
             h('div', { class: 't' }, h('b', { class: it ? 'q' + it.q : '' }, it ? it.name : 'Empty'), h('small', null, D.SLOT_LABEL[slot])), h('div')));
         }

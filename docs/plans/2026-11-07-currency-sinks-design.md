@@ -56,7 +56,7 @@ Measured at 82cd5df, numbers on #181: a raid-geared level 60, seeds 0–2, ~600 
 
 ## 3. Reforge (Marks)
 
-At the Mentor Quartermaster:
+From the item (the Reforge button next to Upgrade, in the bags and on the character sheet):
 
 - **Reforge effect:** a different effect from those the slot can carry, at the same strength.
 - **Reforge stats:** moves the secondary stats around at the same total power.

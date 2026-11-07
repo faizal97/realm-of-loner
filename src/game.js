@@ -2788,6 +2788,49 @@
     P.money -= cost; for (const s in (P.equip || {})) if (G.hasDur(P.equip[s], s)) P.equip[s].dur = 100;
     sys(`Repaired${kit ? ' with a kit' : ''} for ${G.moneyText(cost)}.`); emit('change'); G.save(); return true;
   };
+  // ---- Reforge (#503, docs/plans/2026-11-07-currency-sinks-design.md §3): Mentor Marks reroll a level-57+ blue or purple's
+  // effect (another effect for your role, its stats re-priced by the effects' own costs) or its stats (new stat pair, the
+  // same total). You see the result and Keep or Revert it; the Marks are spent either way. Each reforge of an item costs
+  // REFORGE_GROW times the last, so chasing the perfect roll never runs out. No power is added: totals stay the same.
+  G.REFORGE_BASE = 20; G.REFORGE_GROW = 1.5;
+  const RF_STATS = ['str', 'agi', 'sta', 'int', 'spi'], RF_ROLES = { tank: ['tank', 'survival', 'resource'], healer: ['healing', 'survival', 'resource'], dps: ['damage', 'survival', 'resource'] };
+  G.reforgeCost = (it) => Math.round(G.REFORGE_BASE * Math.pow(G.REFORGE_GROW, (it && it.reforges) || 0));
+  G.canReforge = (it, kind) => !!it && !it.heirloom && !it.lookOnly && D.GEAR_SLOTS.includes(it.slot) && (it.q || 0) >= 3 && (it.lvl || 0) >= D.UPGRADE.minLvl
+    && (kind === 'effect' ? !!G.effectOf(it) : Object.keys(it.stats || {}).length > 0);
+  const rfSum = (st) => Object.values(st || {}).reduce((a, b) => a + b, 0);
+  const rfSpread = (total, keys) => { const o = {}; let left = total; keys.forEach((k, i) => { const v = i === keys.length - 1 ? Math.max(1, left) : Math.max(1, Math.round(total / keys.length)); o[k] = v; left -= v; }); return o; };
+  const rfScale = (st, f) => { const o = {}; for (const k in st || {}) o[k] = Math.max(1, Math.round(st[k] * f)); return o; };
+  G.reforgeEffects = (it) => { const roles = RF_ROLES[G.role()] || RF_ROLES.dps, ks = Object.keys(D.EFFECTS).filter((k) => k !== it.effect); const fit = ks.filter((k) => roles.includes(D.EFFECTS[k].role)); return fit.length ? fit : ks; };
+  G.reforged = function (it, kind, pickFn) {
+    const nx = JSON.parse(JSON.stringify(it)), pk = pickFn || ((a) => a[Math.floor(Math.random() * a.length)]);
+    if (kind === 'effect') {
+      const k = pk(G.reforgeEffects(it)), f = (1 - D.effectCost(k)) / Math.max(0.05, 1 - D.effectCost(it.effect));
+      nx.effect = k; nx.stats = rfScale(it.stats, f); if (nx.base) nx.base.stats = rfScale(it.base.stats, f); if (nx.pw) nx.pw = Math.round(it.pw * f * 100) / 100;
+    } else {
+      const cur = Object.keys(it.stats || {}), n = Math.max(1, Math.min(2, cur.length)); let keys;
+      for (let i = 0; i < 20; i++) { const pool = RF_STATS.slice(); keys = []; while (keys.length < n) { const k = pk(pool); keys.push(k); pool.splice(pool.indexOf(k), 1); } if (keys.slice().sort().join() !== cur.slice().sort().join()) break; }
+      nx.stats = rfSpread(rfSum(it.stats), keys); if (nx.base) nx.base.stats = rfSpread(rfSum(it.base.stats), keys);
+    }
+    nx.reforges = (it.reforges || 0) + 1; return nx;
+  };
+  const rfAt = (where) => { const P = G.S.player; return where.slot ? P.equip[where.slot] : (P.bags[where.bag] || {}).item; };
+  const rfPut = (where, it) => { const P = G.S.player; if (where.slot) P.equip[where.slot] = it; else P.bags[where.bag].item = it; };
+  G.reforge = function (where, kind) {
+    const it = rfAt(where); if (!G.canReforge(it, kind)) return null;
+    if (G.fight) { toast('You are in combat.'); return null; }
+    const cost = G.reforgeCost(it), a = G.account();
+    if (a.marks < cost) { toast(`You need ${cost} Mentor Marks.`); return null; }
+    a.marks -= cost; G.saveAccount(a);
+    const nx = G.reforged(it, kind), old = JSON.parse(JSON.stringify(it)); old.reforges = nx.reforges; // a revert keeps the count: the Marks are spent
+    rfPut(where, nx); G.S.reforge = { where, old, kind };
+    sys(`Reforged ${it.name} for ${cost} Mentor Marks.`); emit('change'); G.save(); return { old, next: nx, cost };
+  };
+  G.reforgeKeep = function () { if (!G.S.reforge) return; delete G.S.reforge; G.save(); emit('change'); };
+  G.reforgeRevert = function () {
+    const r = G.S.reforge; if (!r) return false; delete G.S.reforge;
+    const cur = rfAt(r.where); if (!cur || cur.id !== r.old.id) { G.save(); return false; } // the item moved: keep what it has
+    rfPut(r.where, r.old); sys(`${r.old.name}: back to how it was.`); emit('change'); G.save(); return true;
+  };
   G.upgradeInfo = function (it) {
     const U = D.UPGRADE, none = { ok: false, room: false, cost: 0 };
     if (!it || it.heirloom || !D.GEAR_SLOTS.includes(it.slot) || !U.cap[it.q] || (it.lvl || 0) < U.minLvl) return none;

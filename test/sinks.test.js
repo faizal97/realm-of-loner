@@ -54,3 +54,37 @@ test('repairs cost gold by item level and quality, restore every piece, and a ki
   const m1 = P.money, kc = G.repairAllCost(true); assert.strictEqual(G.repairAll(true), true); assert.strictEqual(m1 - P.money, kc);
   S.run = null;
 });
+
+test('Reforge costs 20 x 1.5^n per item, rerolls the effect or stats at the same budget, and Revert brings it back (#503)', () => {
+  const { P } = character(60, 'warrior', 'human');
+  const id = Object.keys(D.ITEMS).find((k) => { const i = D.ITEMS[k]; return i.effect && i.lvl >= 57 && i.q >= 3 && D.effectCost(i.effect) > 0; });
+  G.addItem(G.copyItem(id), 1); const bag = P.bags.length - 1, where = { bag };
+  const a = G.account(); a.marks = 1000; G.saveAccount(a);
+  const it0 = JSON.parse(JSON.stringify(P.bags[bag].item)), sum = (st) => Object.values(st).reduce((x, y) => x + y, 0);
+  assert.strictEqual(G.reforgeCost(it0), 20);
+  const r = G.reforge(where, 'stats');
+  assert.ok(r && r.cost === 20 && G.account().marks === 980);
+  assert.strictEqual(sum(r.next.stats), sum(it0.stats), 'stats: same total');
+  assert.notDeepStrictEqual(Object.keys(r.next.stats).sort(), Object.keys(it0.stats).sort(), 'stats: a new pair');
+  assert.strictEqual(G.reforgeCost(P.bags[bag].item), 30);
+  assert.strictEqual(G.reforgeRevert(), true);
+  assert.deepStrictEqual(P.bags[bag].item.stats, it0.stats, 'Revert: the old stats');
+  assert.strictEqual(G.reforgeCost(P.bags[bag].item), 30, 'a revert keeps the count: the Marks were spent');
+  const e = G.reforge(where, 'effect'); G.reforgeKeep();
+  assert.notStrictEqual(e.next.effect, it0.effect);
+  const want = Math.round(sum(it0.stats) * (1 - D.effectCost(e.next.effect)) / (1 - D.effectCost(it0.effect)));
+  assert.ok(Math.abs(sum(e.next.stats) - want) <= Object.keys(it0.stats).length, `effect: stats re-priced by the effects' costs (${sum(e.next.stats)} vs ${want})`);
+  assert.strictEqual(e.cost, 30); assert.strictEqual(G.reforgeCost(P.bags[bag].item), 45);
+});
+
+test('Reforge needs a level-57+ blue or purple, an effect to reroll one, and enough Marks (#503)', () => {
+  const { P } = character(60, 'warrior', 'human');
+  assert.strictEqual(G.canReforge({ slot: 'chest', q: 2, lvl: 60, stats: { str: 5 } }, 'stats'), false, 'not a green');
+  assert.strictEqual(G.canReforge({ slot: 'chest', q: 3, lvl: 40, stats: { str: 5 } }, 'stats'), false, 'not below 57');
+  assert.strictEqual(G.canReforge({ slot: 'chest', q: 3, lvl: 60, stats: { str: 5 } }, 'effect'), false, 'no effect to reroll');
+  assert.strictEqual(G.canReforge({ slot: 'chest', q: 4, lvl: 60, stats: { str: 5 } }, 'stats'), true);
+  G.addItem({ id: 'rf_test', name: 'Test Plate', slot: 'chest', q: 4, lvl: 60, stats: { str: 9, sta: 9 }, sell: 1 }, 1);
+  const a = G.account(); a.marks = 5; G.saveAccount(a);
+  assert.strictEqual(G.reforge({ bag: P.bags.length - 1 }, 'stats'), null);
+  assert.strictEqual(G.account().marks, 5);
+});
