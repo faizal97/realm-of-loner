@@ -255,6 +255,7 @@
     if (S.bg && S.bg.phase === 'fight') { const go = S.bg.go; if (go) { sys('You left the battleground fight: it counts as lost.'); endBgFight({ over: 'loss', enemies: [], bg: { banner: go.group, name: bgName(S.bg, go.group) } }); } else S.bg.phase = 'choose'; } // a battleground, the same (#408)
     if (S.brawl && S.brawl.phase === 'fight') { S.brawl.phase = 'choose'; const foe = G.brawlOpponent(); if (foe) endBrawlFight({ over: 'loss', brawl: { foe: foe.name } }); else S.brawl.phase = 'done'; }
     try { G.refreshHeirlooms(); } catch (e) { /* older save */ }
+    try { G.refreshAccountMounts(); } catch (e) { /* older save */ }
     restack(S.player); // #485
     pruneBounties(); // #154
     G.lwRevokeTest(); // rewards from a test build's season stay in test builds
@@ -506,7 +507,8 @@
       if ((sets.defias || 0) >= D.SETS.defias.mask) g.mask = 'defias';
       if (c.keepsake) g.back = c.keepsake; // a Legend character's own keepsake (v10.2)
       for (const pl in c.wardrobe || {}) { if (c.wardrobe[pl] === 'hidden') delete g[pl]; else g[pl] = c.wardrobe[pl]; } // the wardrobe (v10.3)
-      for (const pl in c.dyes || {}) if (G.dyeable(g[pl]) && c.dyes[pl]) { g[pl] = g[pl].replace(/_hard$/, '') + '_dy' + c.dyes[pl]; if (root.ART_DYE) root.ART_DYE(g[pl]); } // a Renown dye (#504)
+      for (const pl in c.dyes || {}) if (G.dyeable(g[pl]) && c.dyes[pl]) g[pl] = g[pl].replace(/_(hard|q[ab])$/, '') + '_dy' + c.dyes[pl]; // a Renown dye (#504)
+      if (root.ART_DYE) for (const pl in g) if (/_(dy\d+|q[ab])$/.test(g[pl])) root.ART_DYE(g[pl]); // dyes and the Quartermaster's colours are drawn on first use (#506)
     } else if (c.level >= 10 && c.id != null) {
       // players you pass in the world: some capped ones have farmed The Smugglers' Deep
       if (B.hash(c.id, 71) < 0.15) g.back = 'cape_brotherhood';
@@ -598,7 +600,7 @@
   G.freesSlot = (id, n) => { const P = G.S.player; for (let i = P.bags.length - 1; i >= 0 && n > 0; i--) { const b = P.bags[i]; if (b.item.id !== id) continue; if (b.n <= n) return true; n -= b.n; } return false; };
   // stacks over 20 from a save before #440 split into 20s where the room allows; nothing is ever dropped (#485)
   function restack(P) {
-    for (const [list, cap] of [[P.bags || [], G.bagCap()], [P.bank || [], BANK_SLOTS]]) for (let i = 0; i < list.length; i++) {
+    for (const [list, cap] of [[P.bags || [], G.bagCap()], [P.bank || [], G.bankSlots()]]) for (let i = 0; i < list.length; i++) {
       const b = list[i]; if (b.n <= STACK || !G.stackable(b.item) || list.length + Math.ceil(b.n / STACK) - 1 > cap) continue;
       let rest = b.n - STACK; b.n = STACK;
       while (rest > 0) { list.splice(++i, 0, { item: Object.assign({}, b.item), n: Math.min(STACK, rest) }); rest -= STACK; }
@@ -1151,7 +1153,18 @@
     const p = D.PLACES[from], q = D.PLACES[dest], secs = p.links[dest];
     if (!secs) return 0;
     const via = !!(p.via && p.via[dest]), near = !via && q && p.zone && p.zone === q.zone; // same zone, on foot or mounted (#107)
-    return Math.max(1, Math.round(secs * (near ? D.IN_ZONE_HOP : 1) * (G.mounted() && !via ? D.RIDING.speed : 1)));
+    return Math.max(1, Math.round(secs * (near ? D.IN_ZONE_HOP : 1) * (G.mounted() && !via ? G.rideSpeed() : 1)));
+  };
+  // Expert Riding (#506): at 60, for gold; with a swift mount the roads are 70% faster instead of 40%
+  G.rideSpeed = () => { const P = G.S.player, M = D.MOUNTS[P.mount]; return P.expertRiding && M && M.swift ? D.EXPERT_RIDING.speed : D.RIDING.speed; };
+  G.learnExpertRiding = function () {
+    const P = G.S.player, X = D.EXPERT_RIDING;
+    if (P.expertRiding) return toast('You already know Expert Riding.');
+    if (!P.riding) return toast('Learn Riding first.');
+    if (P.level < X.lvl) return toast(`Requires level ${X.lvl}.`);
+    if (P.money < X.cost) return toast(`You need ${G.moneyText(X.cost)}.`);
+    P.money -= X.cost; P.expertRiding = true;
+    loot('You have learned Expert Riding. On a swift mount every road is 70% faster.'); emit('change'); G.save();
   };
   G.learnRiding = function () {
     const P = G.S.player;
@@ -1163,14 +1176,21 @@
   };
   G.buyMount = function (key) {
     const P = G.S.player, M = D.MOUNTS[key];
-    if (!M || M.faction !== G.myFaction()) return;
+    if (!M || (M.faction !== G.myFaction() && !M.marks)) return; // a Marks mount suits any faction (#506)
     P.mounts = P.mounts || [];
     if (P.mounts.includes(key)) { P.mount = key; emit('change'); return; }
     if (!P.riding) return toast('Learn Riding first.');
+    if (M.marks) { // a Mentor Quartermaster mount (#506): Mentor Marks, every character on the account
+      const a = G.account(), c = G.qmPrice(M.marks, 'mount:' + key); if (a.marks < c) return toast(`You need ${c} Mentor Marks.`);
+      a.marks -= c; a.mounts = (a.mounts || []).concat([key]); G.saveAccount(a); P.mounts.push(key); P.mount = key;
+      loot(`You bought a ${M.name} for every character.`); emit('change'); G.save(); return;
+    }
+    if (M.swift && !P.expertRiding) return toast('Learn Expert Riding first.');
     if (P.money < M.cost) return toast(`You need ${G.moneyText(M.cost)}.`);
     P.money -= M.cost; P.mounts.push(key); P.mount = key;
     loot(`You bought a ${M.name}. Every road is 40% faster now.`); emit('change'); G.save();
   };
+  G.refreshAccountMounts = function () { const P = G.S.player, a = G.account(); P.mounts = P.mounts || []; for (const k of a.mounts || []) if (D.MOUNTS[k] && !P.mounts.includes(k)) P.mounts.push(k); };
   G.setMount = function (key) { const P = G.S.player; if (key && !(P.mounts || []).includes(key)) return; P.mount = key || null; emit('change'); G.save(); };
   // Routes (v9.4): the quickest way to any place you can reach, skipping enemy towns. { path: [from, ..., to], secs }
   G.route = function (from, to) {
@@ -2108,13 +2128,21 @@
 
 
   // ============================================================ bank and auction house (capitals)
-  const BANK_SLOTS = 24, AH_CUT = 0.05, AH_LIFE = 24 * 3600000;
-  G.BANK_SLOTS = BANK_SLOTS;
+  const AH_CUT = 0.05, AH_LIFE = 24 * 3600000;
+  // the bank: 24 slots, and up to 3 tabs of 12 more bought with gold (#506), per character
+  G.BANK_BASE = 24; G.BANK_TAB = 12; G.BANK_TAB_COST = [500000, 1000000, 2000000];
+  G.bankSlots = () => G.BANK_BASE + G.BANK_TAB * Math.min(G.BANK_TAB_COST.length, (G.S && G.S.player.bankTabs) || 0);
+  G.buyBankTab = function () {
+    const P = G.S.player, n = P.bankTabs || 0, c = G.BANK_TAB_COST[n];
+    if (c == null) return toast('Your bank has every tab.');
+    if (P.money < c) return toast(`You need ${G.moneyText(c)}.`);
+    P.money -= c; P.bankTabs = n + 1; sys(`Bank tab ${n + 1} bought: ${G.bankSlots()} slots.`); emit('change'); G.save();
+  };
   G.bankDeposit = function (idx) {
     const P = G.S.player, b = P.bags[idx]; if (!b) return;
     P.bank = P.bank || [];
-    if (G.stackable(b.item) && stackSlots(P.bank, b.item, b.n) <= Math.max(0, BANK_SLOTS - P.bank.length)) { P.bags.splice(idx, 1); putStack(P.bank, b.item, b.n); emit('change'); return; } // stacks of 20 (#440)
-    if (P.bank.length >= BANK_SLOTS) return toast(P.bank.length > BANK_SLOTS ? `Your bank holds ${P.bank.length - BANK_SLOTS} over from rewards. Take something out first.` : 'Your bank is full.');
+    if (G.stackable(b.item) && stackSlots(P.bank, b.item, b.n) <= Math.max(0, G.bankSlots() - P.bank.length)) { P.bags.splice(idx, 1); putStack(P.bank, b.item, b.n); emit('change'); return; } // stacks of 20 (#440)
+    if (P.bank.length >= G.bankSlots()) return toast(P.bank.length > G.bankSlots() ? `Your bank holds ${P.bank.length - G.bankSlots()} over from rewards. Take something out first.` : 'Your bank is full.');
     P.bank.push(b); P.bags.splice(idx, 1); emit('change');
   };
   G.bankWithdraw = function (idx) {
@@ -2646,6 +2674,7 @@
     // the green damage curve (random gear at q2) at that share
     if (H.wtype) { it.wtype = H.wtype; it.speed = H.speed; const dps = (1.6 + L * 0.45) * 1.1 * SH * (H.wtype === 'staff' ? 1.35 : 1); it.dmg = [Math.max(1, Math.round(dps * H.speed * 0.7)), Math.max(2, Math.round(dps * H.speed * 1.3))]; }
     else if (H.slot === 'back') it.armor = Math.max(1, Math.round((D.SLOT_ARMOR.back || 3) * 0.3 * (L + 2) * 0.9 * 1.1 * SH));
+    else if (H.atype) { it.atype = H.atype; it.armor = Math.max(1, Math.round((D.SLOT_ARMOR[H.slot] || 3) * D.GEAR_BASES[H.atype].arm * (L + 2) * 0.9 * 1.1 * SH)); } // armour heirlooms (#506)
     it.source = 'Grows with you. A little weaker than quest gear. +5% experience.';
     return it;
   };
@@ -2655,6 +2684,32 @@
     for (const b of P.bags.concat(P.bank || [])) if (b.item && b.item.heirloom) b.item = G.makeHeirloom(b.item.id, P.level); // the bank too (#442)
   };
   G.heirloomXpBonus = function () { let n = 0; for (const s in (G.S.player.equip || {})) if (G.S.player.equip[s] && G.S.player.equip[s].heirloom) n++; return Math.min(3, n) * 5; };
+  // ---- The Mentor Quartermaster's catalogue (#506): each raid set look (armour and weapons) in two colours, the Marks
+  // mounts, and a weekly stock of QM_STOCK of them at QM_STOCK_OFF off, picked from the week and the catalogue so
+  // every device agrees and nothing changes mid-week.
+  G.qmLooks = function () {
+    const seen = new Set(), out = [];
+    for (const id of Object.keys(D.ITEMS).sort()) {
+      const it = D.ITEMS[id], l = it.look; if (!l || seen.has(l[1]) || /_hard$/.test(l[1])) continue;
+      const pre = l[1].split('_')[0], C = D.QM_COLOURS[pre]; if (!C) continue; seen.add(l[1]);
+      C.forEach((c, i) => out.push({ id, place: l[0], key: l[1] + (i ? '_qb' : '_qa'), name: `${it.name} (${c[0]})`, icon: it.icon, q: it.q, cost: D.QM_LOOK_COST[l[0] === 'weapon' || l[0] === 'ranged' ? 'weapon' : 'armour'] }));
+    }
+    return out;
+  };
+  G.qmStock = function () {
+    const pool = G.qmLooks().map((x) => 'look:' + x.place + ':' + x.key).concat(Object.keys(D.MOUNTS).filter((k) => D.MOUNTS[k].marks).map((k) => 'mount:' + k)).sort();
+    const wk = weekKey(), seed = [...wk].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7), out = []; let i = 0; // B.hash takes a number: the week as one
+    while (out.length < Math.min(D.QM_STOCK, pool.length) && i < 50) { const k = pool[Math.floor(B.hash(seed, 9100 + i) * pool.length)]; if (!out.includes(k)) out.push(k); i++; }
+    return out;
+  };
+  G.qmPrice = (cost, ref) => (G.qmStock().includes(ref) ? Math.round(cost * (1 - D.QM_STOCK_OFF)) : cost);
+  G.buyQmLook = function (place, key) {
+    const L = G.qmLooks().find((x) => x.place === place && x.key === key); if (!L) return false;
+    const a = G.account(), lk = place + ':' + key; a.looks = a.looks || [];
+    if (a.looks.includes(lk)) { toast('You have this look.'); return false; }
+    const c = G.qmPrice(L.cost, 'look:' + lk); if (a.marks < c) { toast(`You need ${c} Mentor Marks.`); return false; }
+    a.marks -= c; a.looks.push(lk); G.saveAccount(a); loot(`New look: ${L.name}. It is in your wardrobe.`); emit('change'); G.save(); return true;
+  };
   // ---- Renown (#504, docs/plans/2026-11-07-currency-sinks-design.md §4): an endless account rank bought with Marks and gold
   // together. Rank r costs RENOWN_MARKS and RENOWN_GOLD times (1 + r/10): a straight line, so the next rank always stays
   // in reach and keeps taking what is left over. Rewards are looks and status only: dye r, a title tier every 5, a mount
@@ -2695,6 +2750,7 @@
   G.lookItem = function (place, key) { // an item that has this look, for its name, icon and the class rules
     if (!lookItems) { lookItems = {}; for (const id in D.ITEMS) { const l = D.ITEMS[id].look; if (l && !lookItems[l[0] + ':' + l[1]]) lookItems[l[0] + ':' + l[1]] = D.ITEMS[id]; } }
     const hk = /_hard$/.test(key) && lookItems[place + ':' + key.slice(0, -5)];
+    if (!lookItems[place + ':' + key] && !hk && /_q[ab]$/.test(key)) { const Q = G.qmLooks().find((x) => x.place === place && x.key === key); if (Q) return Object.assign({}, D.ITEMS[Q.id], { name: Q.name, look: [place, key] }); } // the Quartermaster's colours (#506)
     return lookItems[place + ':' + key] || (hk ? Object.assign({}, hk, { name: hk.name + ' (Hard)', look: [place, key] }) : null);
   };
   // raid pieces with a look also have a Hard recolour (dropped on Hard); the collection log lists both
@@ -2741,6 +2797,10 @@
       const src = mo && have.has(l[1]) ? ((tw.earned || []).includes(it.month) ? `Earned in ${mo}` : 'Bought with Mentor Marks') : mo && root.TRIALS && it.month < root.TRIALS.season(new Date()) ? `${it.source}, or ${G.MONTH_CLOAK_COST} Mentor Marks at the Mentor Quartermaster now` : it.source || null;
       seen.add(l[1]); { const lb = G.lookLabel(it.name, src, P.level, have.has(l[1])); out.push({ key: l[1], name: lb.name, icon: it.icon, q: it.q, lvl: it.lvl || 1, source: lb.source, have: have.has(l[1]), hidden: lb.hidden }); }
       if (G.hardLookIds().has(id)) { const hv = have.has(l[1] + '_hard'), lb = G.lookLabel(it.name + ' (Hard)', 'Drops on Hard', P.level, hv); out.push({ key: l[1] + '_hard', name: lb.name, icon: it.icon, q: it.q, lvl: (it.lvl || 1) + 0.5, source: lb.source, have: hv, hidden: lb.hidden }); }
+    }
+    for (const Q of G.qmLooks()) { // the Quartermaster's colours (#506), once the class could show the set's look
+      const it = D.ITEMS[Q.id]; if (Q.place !== place || !G.canUseItem(it, P.cls) || (it.faction && it.faction !== G.myFaction())) continue;
+      out.push({ key: Q.key, name: Q.name, icon: Q.icon, q: Q.q, lvl: (it.lvl || 60) + 0.5, source: `Mentor Quartermaster: ${Q.cost} Mentor Marks`, have: have.has(Q.key) });
     }
     out.sort((a, b) => a.lvl - b.lvl || a.name.localeCompare(b.name));
     for (const o of G.wardrobeOptions(place)) if (o.keepsake) out.push(Object.assign({ lvl: 60, have: true, source: 'A Legend\'s keepsake' }, o));

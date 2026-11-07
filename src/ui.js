@@ -83,6 +83,8 @@
     let svg = '';
     try {
       if (kind === 'story') svg = window.ART && ART.story ? (((ART.story.keys || {}).scenes || []).includes(arg) ? ART.story.scene(arg) : ART.story.actor(arg)) : '';
+      else if (kind === 'mount' && D.MOUNTS[arg] && D.MOUNTS[arg].art && window.ART_RECOLOR) svg = ART_RECOLOR(ART.mount(D.MOUNTS[arg].art), D.MOUNTS[arg].tint); // a re-tinted mount (#506)
+      else if (kind === 'icon' && /^mount_/.test(arg) && D.MOUNTS[arg.slice(6)] && D.MOUNTS[arg.slice(6)].art && window.ART_RECOLOR) svg = ART_RECOLOR(ART.icon('mount_' + D.MOUNTS[arg.slice(6)].art), D.MOUNTS[arg.slice(6)].tint);
       else if (window.ART && ART[kind]) svg = ART[kind](arg);
     } catch (e) { svg = ''; }
     if (!svg) svg = placeholder(kind);
@@ -2921,6 +2923,24 @@
             h('div', { class: 'r' }, owned ? 'Copy' : `${H.cost} ✦`)));
         }
         b.append(list, h('p', { class: 'ai-note' }, 'Earned from Help Wanted (group finder) and the daily Roulette.'));
+        { // the Quartermaster's catalogue (#506): this week's stock first, then each raid's colours and the mounts
+          const stock = G.qmStock(), looks = G.qmLooks(), own = new Set(acc.looks || []), mine = new Set(P.mounts || []);
+          const row = (ref) => { const [kind, a1, a2] = ref.split(':'); if (kind === 'mount') { const M = D.MOUNTS[a1], c = G.qmPrice(M.marks, ref), have = mine.has(a1);
+              return h('button', { class: 'row', disabled: have || !P.riding, onclick: () => { G.buyMount(a1); ui.sheetFn(); } }, h('div', { class: 'ic' }, img(art('icon', 'mount_' + a1))), h('div', { class: 't' }, h('b', { style: { color: D.QUALITY[4].color } }, M.name), h('small', null, have ? 'Owned' : !P.riding ? 'Learn Riding first' : 'Mount · every character · swift')), h('div', { class: 'r' }, have ? '' : `${c} ✦`)); }
+            const L = looks.find((x) => x.place === a1 && x.key === a2), c = G.qmPrice(L.cost, ref), have = own.has(a1 + ':' + a2);
+            return h('button', { class: 'row', disabled: have, onclick: () => { G.buyQmLook(a1, a2); ui.sheetFn(); } }, h('div', { class: 'ic' }, img(art('icon', L.icon))), h('div', { class: 't' }, h('b', { class: 'q' + L.q }, L.name), h('small', null, have ? 'In your wardrobe' : `Look · ${D.SLOT_LABEL[a1] || a1}`)), h('div', { class: 'r' }, have ? '' : `${c} ✦`)); };
+          b.append(h('div', { class: 'sec-h' }, 'This week', h('small', null, `${Math.round(D.QM_STOCK_OFF * 100)}% off · changes on Monday`)), h('div', { class: 'list' }, ...stock.map(row)));
+          const RAIDS = { vesh: "Veshmira's Lair", mc: 'The Magma Throne', tc: 'The Tidecrown Citadel' };
+          const nav = h('div', { class: 'list' });
+          for (const pre in D.QM_COLOURS) {
+            const mineL = looks.filter((x) => x.key.startsWith(pre + '_')), got = mineL.filter((x) => own.has(x.place + ':' + x.key)).length;
+            nav.append(h('button', { class: 'row', onclick: () => openSheet('qm_' + pre, RAIDS[pre] || pre, `Colours: ${D.QM_COLOURS[pre].map((c) => c[0]).join(', ')}`, (b2) => { b2.append(h('div', { class: 'list' }, ...mineL.map((x) => row('look:' + x.place + ':' + x.key)))); }) },
+              h('div', { class: 'ic' }, img(art('icon', mineL[0] ? mineL[0].icon : 'chest_mail'))), h('div', { class: 't' }, h('b', null, `${RAIDS[pre] || pre} colours`), h('small', null, `Collected: ${got}/${mineL.length}`)), h('div', { class: 'r' }, '›')));
+          }
+          const mk = Object.keys(D.MOUNTS).filter((k) => D.MOUNTS[k].marks);
+          b.append(h('div', { class: 'sec-h' }, 'Raid set colours', h('small', null, 'looks for the wardrobe')), nav);
+          b.append(h('div', { class: 'sec-h' }, 'Mounts', h('small', null, `Owned: ${mk.filter((k) => mine.has(k)).length}/${mk.length}`)), h('div', { class: 'list' }, ...mk.map((k) => row('mount:' + k))));
+        }
         { // Renown (#504): the endless account rank
           const r = G.renown(), c = G.renownCost(r + 1), canBuy = acc.marks >= c.marks && P.money >= c.gold;
           b.append(h('div', { class: 'sec-h' }, 'Renown', h('small', null, `Renown: ${r} · shared by all your characters`)));
@@ -3990,11 +4010,12 @@
   const itemRow = (it, n, right, onclick, sub) => h('button', { class: 'row', onclick },
     h('div', { class: 'ic' }, itemIcon(it)), h('div', { class: 't' }, h('b', { style: { color: (D.QUALITY[it.q || 1] || D.QUALITY[1]).color } }, it.name + (n > 1 ? ` ×${n}` : '')), h('small', null, sub || (it.lvl ? `Level ${it.lvl} ${D.SLOT_LABEL[it.slot] || it.slot}` : ''))), h('div', { class: 'r tnum' }, right || ''));
   function openBank() {
-    openSheet('bank', 'Bank', `${G.BANK_SLOTS} slots · tap to move`, (b, title) => {
+    openSheet('bank', 'Bank', `${G.bankSlots()} slots · tap to move`, (b, title) => {
       const P = G.S.player; P.bank = P.bank || [];
-      const over = P.bank.length - G.BANK_SLOTS; // rewards and expired auctions are never lost: they may overfill the bank (issue #25)
-      title.querySelector('small').textContent = over > 0 ? `${P.bank.length} items in ${G.BANK_SLOTS} slots · ${P.bags.length}/${G.bagCap()} in your bags · tap to move` : `${P.bank.length}/${G.BANK_SLOTS} in the bank · ${P.bags.length}/${G.bagCap()} in your bags · tap to move`;
-      if (over > 0) b.append(h('p', { class: 'ai-note', style: { margin: '0 0 6px' } }, `${P.bank.length} items in ${G.BANK_SLOTS} slots: ${over} over from rewards. Take something out to deposit again.`));
+      const over = P.bank.length - G.bankSlots(); // rewards and expired auctions are never lost: they may overfill the bank (issue #25)
+      title.querySelector('small').textContent = over > 0 ? `${P.bank.length} items in ${G.bankSlots()} slots · ${P.bags.length}/${G.bagCap()} in your bags · tap to move` : `${P.bank.length}/${G.bankSlots()} in the bank · ${P.bags.length}/${G.bagCap()} in your bags · tap to move`;
+      if (over > 0) b.append(h('p', { class: 'ai-note', style: { margin: '0 0 6px' } }, `${P.bank.length} items in ${G.bankSlots()} slots: ${over} over from rewards. Take something out to deposit again.`));
+      { const n = P.bankTabs || 0, c = G.BANK_TAB_COST[n]; if (c != null) b.append(h('button', { class: 'btn alt wide', disabled: P.money < c, onclick: () => { G.buyBankTab(); ui.sheetFn(); } }, h('span', { html: `Buy bank tab ${n + 1} (+${G.BANK_TAB} slots) · ` + moneyHtml(c, false, true) }))); } // #506
       b.append(h('div', { class: 'sec-h' }, 'In the bank', h('small', null, 'tap to take')));
       const bank = h('div', { class: 'list' }); P.bank.forEach((x, i) => bank.append(itemRow(x.item, x.n, '↑', () => { G.bankWithdraw(i); ui.sheetFn(); })));
       if (!P.bank.length) bank.append(h('div', { class: 'people' }, 'Empty. Keep gear sets, quest leftovers and heirlooms here.'));
@@ -4148,11 +4169,17 @@
     const list = h('div', { class: 'list' });
     for (const [k, M] of Object.entries(D.MOUNTS)) {
       if (M.faction !== G.myFaction()) continue;
-      const owned = (P.mounts || []).includes(k);
-      list.append(h('button', { class: 'row' + (!owned && !P.riding ? ' why' : ''), disabled: !owned && !P.riding, onclick: () => { G.buyMount(k); ui.sheetFn(); } },
+      const owned = (P.mounts || []).includes(k), noX = M.swift && !P.expertRiding; // a swift mount needs Expert Riding (#506)
+      list.append(h('button', { class: 'row' + (!owned && (!P.riding || noX) ? ' why' : ''), disabled: !owned && (!P.riding || noX), onclick: () => { G.buyMount(k); ui.sheetFn(); } },
         h('div', { class: 'ic' }, img(art('icon', 'mount_' + k))),
-        h('div', { class: 't' }, h('b', { style: { color: D.QUALITY[1].color } }, M.name), h('small', null, owned ? (P.mount === k ? 'Riding this one' : 'Owned · tap to ride') : !P.riding ? 'Learn Riding first' : `${D.RACES[M.race].name} mount · every road 40% faster`)),
+        h('div', { class: 't' }, h('b', { style: { color: D.QUALITY[M.swift ? 3 : 1].color } }, M.name), h('small', null, owned ? (P.mount === k ? 'Riding this one' : 'Owned · tap to ride') : !P.riding ? 'Learn Riding first' : noX ? 'Learn Expert Riding first' : M.swift ? `Swift ${D.RACES[M.race].name} mount · 70% faster with Expert Riding` : `${D.RACES[M.race].name} mount · every road 40% faster`)),
         h('div', { class: 'r' }, owned ? '' : G.moneyText(M.cost))));
+    }
+    if (P.riding) { // Expert Riding (#506)
+      const X = D.EXPERT_RIDING, xLow = P.level < X.lvl, xShort = X.cost - P.money;
+      b.append(h('div', { class: 'sec-h' }, 'Expert Riding', h('small', null, P.expertRiding ? 'swift mounts: roads 70% faster' : `from level ${X.lvl}`)));
+      if (!P.expertRiding) b.append(h('button', { class: 'btn wide' + (xLow || xShort > 0 ? ' why' : ''), disabled: xLow || xShort > 0, onclick: () => { G.learnExpertRiding(); ui.sheetFn(); } },
+        xLow ? `Expert Riding at level ${X.lvl} · ${G.moneyText(X.cost)}` : xShort > 0 ? ['Need ', h('span', { html: moneyHtml(xShort, false, true) }), ' more'] : `Learn Expert Riding · ${G.moneyText(X.cost)}`));
     }
     b.append(list, h('p', { class: 'ai-note' }, 'Boats, zeppelins, gryphons and the tram keep their own time.'));
   }

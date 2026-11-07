@@ -130,6 +130,9 @@ const ACTIONS = {
   buyRenown: () => G.buyRenown(),
   setDye: () => { G.setDye('chest', 1); G.setDye('chest', 0); },
   setMountTint: () => { G.setMountTint(1); G.setMountTint(0); },
+  buyQmLook: () => { const L = G.qmLooks()[0]; G.buyQmLook(L.place, L.key); },
+  buyBankTab: () => G.buyBankTab(),
+  learnExpertRiding: () => { G.S.player.riding = true; G.learnExpertRiding(); },
   repairAll: () => { G.wear(); G.repairAll(false); if (inRun()) { G.wear(); G.repairAll(true); } },
 };
 

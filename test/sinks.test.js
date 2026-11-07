@@ -132,3 +132,39 @@ test('every level-57+ consumable recipe takes a vendor reagent priced by level; 
   P.place = Object.keys(D.PLACES).find((k) => D.PLACES[k].vendor === npc);
   assert.ok(G.vendorStock(npc).some((it) => it.id === 'crystal_vial'), 'a city vendor sells the reagents');
 });
+
+test('the chase list: Expert Riding with a swift mount, bank tabs, Marks mounts for every character, Quartermaster colours, the weekly stock (#506)', () => {
+  const { S, P } = character(60, 'warrior', 'human');
+  P.riding = true; P.mounts = []; P.money = 1e8;
+  G.buyMount('swift_horse'); assert.ok(!P.mounts.includes('swift_horse'), 'a swift mount needs Expert Riding');
+  G.learnExpertRiding(); assert.ok(P.expertRiding);
+  G.buyMount('swift_horse'); assert.ok(P.mounts.includes('swift_horse'));
+  P.mount = 'swift_horse'; assert.strictEqual(G.rideSpeed(), D.EXPERT_RIDING.speed);
+  G.buyMount('horse'); P.mount = 'horse'; assert.strictEqual(G.rideSpeed(), D.RIDING.speed, 'a plain mount keeps 40%');
+  assert.strictEqual(G.bankSlots(), 24);
+  const m0 = P.money; G.buyBankTab(); G.buyBankTab(); G.buyBankTab(); G.buyBankTab();
+  assert.strictEqual(G.bankSlots(), 60); assert.strictEqual(m0 - P.money, 3500000);
+  const a = G.account(); a.marks = 100000; a.looks = []; a.mounts = []; G.saveAccount(a);
+  const k = 'mentor_warhorse', price = G.qmPrice(D.MOUNTS[k].marks, 'mount:' + k);
+  G.buyMount(k); assert.ok(P.mounts.includes(k)); assert.strictEqual(100000 - G.account().marks, price);
+  assert.ok(G.account().mounts.includes(k), 'every character gets it');
+  P.mounts = []; G.refreshAccountMounts(); assert.ok(P.mounts.includes(k));
+  const looks = G.qmLooks(); assert.strictEqual(looks.length, 52, '26 raid set looks in two colours');
+  const L = looks.find((x) => x.place === 'chest' && G.canUseItem(D.ITEMS[x.id], P.cls));
+  assert.strictEqual(G.buyQmLook(L.place, L.key), true);
+  assert.ok(G.wardrobeOptions(L.place).some((o) => o.key === L.key), 'the bought colour is in the wardrobe');
+  assert.strictEqual(G.setWardrobe(L.place, L.key), true);
+  assert.strictEqual(G.gearLooks(P)[L.place], L.key);
+  const st = G.qmStock(); assert.strictEqual(st.length, 3); assert.strictEqual(new Set(st).size, 3);
+  assert.deepStrictEqual(G.qmStock(), st, 'the same all week');
+  const ref = st[0], base = ref.startsWith('mount:') ? D.MOUNTS[ref.split(':')[1]].marks : looks.find((x) => 'look:' + x.place + ':' + x.key === ref).cost;
+  assert.strictEqual(G.qmPrice(base, ref), Math.round(base * 0.8));
+  void S;
+});
+
+test('the chase list holds about 10x the old sinks (#506)', () => {
+  const marks = Object.values(D.HEIRLOOMS).reduce((x, H) => x + H.cost, 0) + G.qmLooks().reduce((x, L) => x + L.cost, 0) + Object.values(D.MOUNTS).reduce((x, M) => x + (M.marks || 0), 0);
+  const gold = D.EXPERT_RIDING.cost + Object.values(D.MOUNTS).filter((M) => M.swift && M.cost && M.faction === 'alliance').reduce((x, M) => x + M.cost, 0) + G.BANK_TAB_COST.reduce((x, y) => x + y, 0);
+  assert.ok(marks >= 8000, `the account's Mark catalogue: ${marks} (plus ~400 of upgrades per character)`);
+  assert.ok(gold >= 9000000, `new gold sinks per character: ${gold / 10000}g`);
+});

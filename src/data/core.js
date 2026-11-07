@@ -443,6 +443,11 @@
     heirloom_bow: { name: 'Veteran\'s Longbow', slot: 'ranged', wtype: 'bow', speed: 2.8, stat: ['agi', 'sta'], cost: 50, icon: 'bow' },
     heirloom_cloak: { name: 'Veteran\'s Cloak', slot: 'back', stat: ['sta', 'agi'], cost: 40, icon: 'cloak' },
     heirloom_ring: { name: 'Veteran\'s Band', slot: 'finger', stat: ['sta', 'int'], cost: 40, icon: 'ring' },
+    // #506: armour heirlooms (the +XP still counts 3 pieces at most)
+    heirloom_jerkin: { name: 'Veteran\'s Jerkin', slot: 'chest', atype: 'leather', stat: ['agi', 'sta'], cost: 60, icon: 'chest_leather' },
+    heirloom_legguards: { name: 'Veteran\'s Legguards', slot: 'legs', atype: 'mail', stat: ['str', 'sta'], cost: 60, icon: 'legs' },
+    heirloom_handwraps: { name: 'Veteran\'s Handwraps', slot: 'hands', atype: 'cloth', stat: ['int', 'spi'], sp: true, cost: 60, icon: 'gloves' },
+    heirloom_boots: { name: 'Veteran\'s Boots', slot: 'feet', atype: 'leather', stat: ['agi', 'sta'], cost: 60, icon: 'boots' },
   };
   // Gear upgrades (v10.3): Mentor Marks raise a level-57+ blue or purple item one step at a time. A step adds 3% of the
   // ceiling (the power of the item's own family in the ceiling raid's loot); purples stop at 100% of it, blues at 92%.
@@ -606,6 +611,7 @@
   // ---- mounts (v5.1): learn riding at 40 from a stable master in a capital, then buy a mount.
   // Riding makes every road 40% faster (boats, zeppelins, gryphons and trams keep their time).
   D.RIDING = { lvl: 40, cost: 400000, speed: 0.6 };
+  D.EXPERT_RIDING = { lvl: 60, cost: 3000000, speed: 0.3 }; // #506: with a swift mount, roads 70% faster
   // a hop between two places in the same zone takes this share of its listed time (#107): nearby is quick, while hops
   // into another zone, boats and other 'via' routes keep theirs, so distance stays far away. The mount's speed applies on top.
   D.IN_ZONE_HOP = 0.5;
@@ -646,7 +652,33 @@
     raptor: { name: 'Emerald Raptor', race: 'troll', faction: 'horde', cost: 100000 },
     kodo: { name: 'Grey Dustback', race: 'tauren', faction: 'horde', cost: 100000 },
     skeletal_horse: { name: 'Red Skeletal Horse', race: 'undead', faction: 'horde', cost: 100000 },
+    // #506 the chase list: a swift version of each faction mount (gold, needs Expert Riding to run at its speed) and the
+    // Mentor Quartermaster's mounts (Mentor Marks, any faction, swift). Each is an existing mount's drawing in new colours
+    // (art: the base key, tint: a hue turn, saturation factor and lightness shift).
+    swift_horse: { name: 'Swift Palomino', race: 'human', faction: 'alliance', cost: 750000, swift: true, art: 'horse', tint: { rot: 18, sat: 1.2, lit: 0.12 } },
+    swift_ram: { name: 'Swift White Ram', race: 'dwarf', faction: 'alliance', cost: 750000, swift: true, art: 'ram', tint: { rot: 0, sat: 0.3, lit: 0.22 } },
+    swift_mechanostrider: { name: 'Swift Blue Clockwork Trike', race: 'gnome', faction: 'alliance', cost: 750000, swift: true, art: 'mechanostrider', tint: { rot: 210, sat: 1, lit: 0 } },
+    swift_nightsaber: { name: 'Swift Frostcat', race: 'nightelf', faction: 'alliance', cost: 750000, swift: true, art: 'nightsaber', tint: { rot: 0, sat: 0.35, lit: 0.18 } },
+    swift_wolf: { name: 'Swift Grey Wolf', race: 'orc', faction: 'horde', cost: 750000, swift: true, art: 'wolf', tint: { rot: 0, sat: 0.2, lit: 0.1 } },
+    swift_raptor: { name: 'Swift Red Raptor', race: 'troll', faction: 'horde', cost: 750000, swift: true, art: 'raptor', tint: { rot: 270, sat: 1.1, lit: 0.05 } },
+    swift_kodo: { name: 'Swift Dustback', race: 'tauren', faction: 'horde', cost: 750000, swift: true, art: 'kodo', tint: { rot: 25, sat: 1.5, lit: -0.05 } },
+    swift_skeletal_horse: { name: 'Swift Green Skeletal Horse', race: 'undead', faction: 'horde', cost: 750000, swift: true, art: 'skeletal_horse', tint: { rot: 120, sat: 1, lit: 0 } },
+    mentor_warhorse: { name: 'Mentor\'s Warhorse', marks: 500, swift: true, art: 'horse', tint: { rot: 200, sat: 0.9, lit: -0.05 } },
+    mentor_ram: { name: 'Ironbound Ram', marks: 550, swift: true, art: 'ram', tint: { rot: 160, sat: 0.6, lit: -0.1 } },
+    mentor_wolf: { name: 'Duskmane Wolf', marks: 600, swift: true, art: 'wolf', tint: { rot: 250, sat: 1.3, lit: -0.08 } },
+    mentor_raptor: { name: 'Goldcrest Raptor', marks: 650, swift: true, art: 'raptor', tint: { rot: 60, sat: 1.2, lit: 0.05 } },
+    mentor_kodo: { name: 'Ashen Dustback', marks: 700, swift: true, art: 'kodo', tint: { rot: 0, sat: 0.25, lit: -0.1 } },
+    mentor_saber: { name: 'Moonlit Shadowcat', marks: 800, swift: true, art: 'nightsaber', tint: { rot: 180, sat: 1.1, lit: 0.05 } },
+    mentor_trike: { name: 'Gilded Clockwork Trike', marks: 900, swift: true, art: 'mechanostrider', tint: { rot: 15, sat: 1.1, lit: 0.04 } },
   };
+  // #506: the Mentor Quartermaster's two colours for each raid's set looks (armour and weapons): <look>_qa and <look>_qb,
+  // the set's own Normal palette turned by the tint, so every accent keeps its contrast
+  D.QM_COLOURS = {
+    vesh: [['Verdigris', { rot: 150, sat: 1, lit: 0 }], ['Bone', { rot: 0, sat: 0.25, lit: 0.22 }]],
+    mc: [['Frostfire', { rot: 190, sat: 1, lit: 0 }], ['Obsidian', { rot: 260, sat: 0.6, lit: -0.12 }]],
+    tc: [['Coral', { rot: 140, sat: 1.1, lit: 0.04 }], ['Abyssal', { rot: 60, sat: 0.9, lit: -0.15 }]],
+  };
+  D.QM_LOOK_COST = { armour: 60, weapon: 70 }; D.QM_STOCK = 3; D.QM_STOCK_OFF = 0.2;
   // ---- quest reward families
   // generated gear's stat budget by level and quality (#141). Up to 50 a blue is about 20% over a green and a purple
   // 15% over a blue (a blue was a green plus 1 point, and purples didn't drop before 60); level 60 keeps v10.4's numbers,

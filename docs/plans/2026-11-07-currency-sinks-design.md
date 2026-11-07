@@ -80,24 +80,25 @@ From the item (the Reforge button next to Upgrade, in the bags and on the charac
 
 ## 5. The chase list
 
-### Mentor Marks
+### Mentor Marks (as built)
 
 | Item | Marks |
 |---|---|
-| Raid set recolours: 3 raids × 2 colours, ~40 a piece | ~1,900 |
-| Raid weapon looks, ~50 each | ~1,200 |
-| Level-60 dungeon set recolours: 4 dungeons, ~30 a piece | ~960 |
-| Quartermaster mounts: 7, 400–800 each, Marks only | ~4,200 |
-| More heirlooms: head, shoulders, chest, legs, 60 each (+XP still capped at 3 pieces) | 240 |
-| Existing: heirlooms, upgrades, Trialsworn cloaks | ~920 |
-| **Total** | **~9,400 (≈10.2×)** |
+| Raid set colours: all 26 raid set looks (14 armour, 12 weapons) in 2 Quartermaster colours each, 60 an armour look, 70 a weapon look | 3,360 |
+| Quartermaster mounts: 7, 500–900 each, Marks only, any faction, every character, swift | 4,700 |
+| Armour heirlooms: chest, legs, hands, feet, 60 each (+XP still capped at 3 pieces) | 240 |
+| Existing: heirlooms 370 per account, upgrades ~400 per character, Trialsworn cloaks | ~920 |
+| **Total** | **~9,200 (≈10×)** |
 
-### Gold
+Level-60 dungeon set recolours were dropped: those looks are not drawn from a palette, so a recolour would be new art
+for every piece. The raid colours carry their share instead.
+
+### Gold (as built, per character)
 
 | Item | Gold |
 |---|---|
-| Expert Riding at 60: roads 70% faster | 300g |
-| A fast version of the faction's 4 mounts, 75g each | 300g |
+| Expert Riding at 60: with a swift mount, roads 70% faster | 300g |
+| A swift version of the faction's 4 mounts, 75g each | 300g |
 | Bank tabs: 3 × 12 slots | 50g + 100g + 200g |
 | Existing | ~99g |
 | **Total** | **~1,050g (≈10.6×)** |
@@ -110,9 +111,9 @@ From the item (the Reforge button next to Upgrade, in the bags and on the charac
 
 ### Art
 
-- Recolours (palette swaps): 6 raid sets and 4 dungeon sets.
-- New: 7 mounts, raid weapon looks and 4 heirloom icons.
-- Re-tints: 4 fast mounts.
+- Raid colours and Renown dyes: the raid sets' own palette drawings in a new palette (`ART_DYE`).
+- Mounts: existing mount drawings re-tinted (`ART_RECOLOR`), so no new drawings.
+- Heirloom icons: the existing armour icons.
 
 ## 6. Income: raid Marks
 

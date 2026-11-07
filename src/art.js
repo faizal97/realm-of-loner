@@ -2645,8 +2645,12 @@
     var ch = function (t) { t = (t + 1) % 1; var v = t < 1 / 6 ? p + (q - p) * 6 * t : t < 0.5 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; return ('0' + Math.round(v * 255).toString(16)).slice(-2); };
     return '#' + ch(hk + 1 / 3) + ch(hk) + ch(hk - 1 / 3);
   }
+  /* any SVG in new colours (#506: the Quartermaster's and swift mounts are existing drawings re-tinted) */
+  W.ART_RECOLOR = function (svg, d) { return String(svg || '').replace(/#([0-9a-f]{6}|[0-9a-f]{3})\b/gi, function (h) { return dyeHex(h, d); }); };
   function dyePal(N, d) { var o = {}, k; for (k in N) { var v = N[k]; o[k] = typeof v === 'string' && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v) ? dyeHex(v, d) : v; } return o; }
   W.ART_DYE = function (key) {
+    var q = /^((\w+?)_.*)_q([ab])$/.exec(key || ''), QC = q && W.D && W.D.QM_COLOURS && W.D.QM_COLOURS[q[2]];
+    if (q) { var RQ = RSREG[q[1]], tq = QC && QC[q[3] === 'a' ? 0 : 1]; if (!RQ || !tq) return false; if (!RQ[key]) { RQ.reg(key, dyePal(RQ.N, tq[1])); RQ[key] = 1; } return true; } // the Quartermaster's colours (#506)
     var m = /^(.*)_dy(\d+)$/.exec(key || ''), R = m && RSREG[m[1]], dd = m && W.D && W.D.dye && W.D.dye(+m[2]);
     if (!R || !dd) return false; if (!R[key]) { R.reg(key, dyePal(R.N, dd)); R[key] = 1; } return true;
   };
