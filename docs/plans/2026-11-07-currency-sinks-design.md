@@ -22,8 +22,8 @@ Measured at 82cd5df, numbers on #181: a raid-geared level 60, seeds 0–2, ~600 
 - **Chase list:** about 10× today's sinks: ~9,400 Marks and ~1,050g. That is ~40 days at 1 h/day for Marks and ~24 days
   for gold (vendor value).
 - **Permanent sinks:** they never run out, and spending grows with play.
-  - Gold: repairs take ~20% of an average level-60 player's gold income (a poor player ~40%, a clean one under 10%), and
-    consumable reagents ~10%.
+  - Gold: repairs follow deaths: ~1% of gold for clean play, up to ~30% for a group that wipes (see Measured below).
+    Consumable reagents take ~5–10% from everyone who keeps them up.
   - Marks: Reforge takes ~25–35% for a player chasing effects on their best items.
   - Renown takes whatever is left.
 - **Nothing adds power past the ceiling.** Progression stays horizontal.
@@ -41,6 +41,20 @@ Measured at 82cd5df, numbers on #181: a raid-geared level 60, seeds 0–2, ~600 
   - repair gold per hour at bot skill 0.5, 0.72 and 0.9, at level 30 and at level 60;
   - levelling is never squeezed.
 - Also answers #185 (wipes cost almost nothing).
+
+**Measured (`30c6cad`, `sim/economy.js`, raid-geared level 60, seeds 0–2, 30 runs per cell, k = 80): repairs as % of gold**
+
+| Activity | Player skill 0.5 | 0.72 | 0.9 |
+|---|---|---|---|
+| Trial 8 | 1% | 1% | 1% |
+| Veshmira's Lair, repeat clears | 16% (seeds: 27, 32, 2) | 16% | 9% |
+| Dungeon Roulette | 6% | 7% | 3% |
+
+- Your own skill barely moves the bill: a raid-geared player seldom dies, and wipes come mostly from weaker teammates.
+- The first target (~20% for an average player) was dropped. Reaching it would take about double `k`, and a group that
+  wipes would then lose 50–60% of its gold to repairs, mostly for teammates it didn't choose.
+- `k` stays at 80. Repairs are a price on dying; a player who never dies is drained by reagents, the gold chase list and
+  Renown instead.
 
 ## 2. Consumable reagents (gold)
 
