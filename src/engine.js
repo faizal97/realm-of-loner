@@ -58,13 +58,13 @@
     let weapon = null;
     for (const slot in (char.equip || {})) {
       const it = char.equip[slot];
-      if (!it) continue;
+      if (!it || it.dur === 0) continue; // broken (#502): nothing until it is repaired
       add(it.stats);
       if (it.armor) s.armor += it.armor;
       if (it.sp) s.sp += it.sp;
       if (slot === 'weapon') weapon = it;
     }
-    const ranged = (char.equip || {}).ranged;
+    const ranged = (char.equip || {}).ranged && char.equip.ranged.dur !== 0 ? char.equip.ranged : null; // a broken bow shoots nothing (#502)
     add(extra);
     const TM = E.talentMods(char);
     add(TM.stat);
@@ -528,7 +528,7 @@
   E.itemEffects = function (char) {
     const out = {};
     for (const s in (char && char.equip) || {}) {
-      const it = char.equip[s], F = it && it.effect && D.EFFECTS && D.EFFECTS[it.effect]; if (!F) continue;
+      const it = char.equip[s], F = it && it.dur !== 0 && it.effect && D.EFFECTS && D.EFFECTS[it.effect]; if (!F) continue;
       const L = it.lvl || 1, f = D.fxGrow ? D.fxGrow(it.fxScale, it.effect) : Math.min(1.5, it.fxScale || 1); /* the effect's strength from its upgrade (#37) */ if (!out[it.effect] || out[it.effect].lvl * out[it.effect].f < L * f) out[it.effect] = { key: it.effect, lvl: L, f, item: it.name };
     }
     return out;

@@ -1671,6 +1671,7 @@
         row.append(h('button', { class: 'btn' + (done ? ' done' : ''), 'data-ready': G.role() === 'tank' ? null : '', 'aria-disabled': done ? 'true' : null, onclick: (e) => { if (e.currentTarget.classList.contains('done')) return; G.runReady(); renderPanel(); } }, G.role() === 'tank' ? 'Pull' : done ? 'Ready ✓' : 'Ready'));
       }
       if (R.phase === 'done' && S.player.quests.defias_brotherhood === undefined && !S.player.done.defias_brotherhood && R.act === 'deadmines') row.append(h('div', { style: { fontSize: '13px', color: 'var(--muted)' } }, 'Tip: Marshal Brede in Brackenford has a quest for Blackwell.'));
+      if (R.phase === 'rest' && Object.values(S.player.equip || {}).some((it) => G.hasDur(it) && G.durOf(it) <= 20)) { const kc = G.repairAllCost(true); row.append(h('button', { class: 'btn alt', onclick: () => G.repairAll(true) }, h('span', { html: 'Repair kit · ' + moneyHtml(kc, false, true) }))); } // #502: damaged gear, mid-run
       row.append(h('button', { class: 'btn alt', onclick: confirmLeaveGroup }, R.phase === 'done' ? 'Leave group' : 'Leave'));
       actions.append(row);
     }
@@ -2342,6 +2343,7 @@
         t.append(h('div', { class: 'st' }, `(${((it.dmg[0] + it.dmg[1]) / 2 / it.speed).toFixed(1)} damage per second)`));
       }
       if (it.armor) t.append(h('div', { class: 'st' }, `${it.armor} Armor`));
+      if (!who && G.hasDur(it)) { const d = G.durOf(it); t.append(h('div', { class: d ? 'st' : 'red', style: d && d <= 20 ? { color: '#ff8a5a' } : null }, d ? `Durability: ${d}%` : 'Broken: no stats until repaired')); } // #502
       for (const k in (it.stats || {})) t.append(h('div', { class: 'st' }, `+${it.stats[k]} ${statName[k] || k}`));
       if (it.sp) t.append(h('div', { class: 'gr' }, `Equip: Increases damage and healing done by magical spells and effects by up to ${it.sp}.`));
       // an item effect (v10.10): its rule with real numbers at the item's level, "counts once", and what it did last run
@@ -3061,6 +3063,8 @@
             stack ? h('button', { class: 'chip', onclick: () => { G.buy(it, 5); ui.sheetFn(); } }, '×5') : null)));
       }
       b.append(list);
+      const rep = G.repairAllCost(); // #502
+      b.append(h('button', { class: 'btn wide', disabled: !rep, onclick: () => { G.repairAll(false); ui.sheetFn(); } }, rep ? h('span', { html: 'Repair all · ' + moneyHtml(rep, false, true) }) : 'Nothing to repair'));
       b.append(h('div', { class: 'sec-h' }, 'Sell', h('small', null, 'tap an item to sell it')));
       const junk = G.S.player.bags.filter((x) => x.item.q === 0).length;
       b.append(h('button', { class: 'btn alt wide', disabled: !junk, onclick: () => { G.sellJunk(); ui.sheetFn(); } }, junk ? `Sell all grey items (${junk})` : 'No grey items to sell'));

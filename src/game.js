@@ -2093,7 +2093,7 @@
       }
     } else {
       for (const e of C.enemies) if (e.inst) { e.inst.state = 'alive'; }
-      P.deaths++; P.hp = 0;
+      P.deaths++; P.hp = 0; G.wear();
       P.ghostUntil = now() + 15000;
       sys('You have died. Your spirit runs back to your body...');
       if (crand() < 0.3) { const near = B.onlineIn(S, P.place, new Date()); if (near.length) B.post(S, 'say', cpick(near), cpick(['rip', 'oof', 'lol rip', 'u ok?'])); }
@@ -2760,6 +2760,34 @@
   const upBase = (it) => it.base || { stats: Object.assign({}, it.stats), armor: it.armor && it.armor - (it.kit || 0), sp: it.sp, dmg: it.dmg && it.dmg.slice() }; // a kit's armour is not part of the base (#406)
   // An upgraded item stores the power it reached (it.pw, in stat points), not a step count, so a new ceiling raid never
   // changes an item on its own, and the label is a percentage of the ceiling that never grows past 100.
+  // ---- Repairs (#502, docs/plans/2026-11-07-currency-sinks-design.md §1): each death takes DUR_LOSS% durability from every
+  // worn piece that has it (not rings or cloaks); a party wipe is your death. At 0% a piece is broken and gives nothing
+  // until it is repaired for gold. A full repair costs REPAIR_K x item level x the quality's factor, so raid gear costs the
+  // most; REPAIR_K is tuned by sim/economy.js to about 20% of an average level-60 player's gold income.
+  G.REPAIR_K = 80; G.DUR_LOSS = 10; G.KIT_MULT = 1.25;
+  const REPAIR_Q = [0.5, 0.75, 1, 1.5, 2.5, 1.5]; // poor .. epic, heirloom as blue
+  G.hasDur = (it, slot) => !!it && !it.lookOnly && D.GEAR_SLOTS.includes(slot || it.slot) && !['finger', 'back'].includes(slot || it.slot);
+  G.durOf = (it) => (it && it.dur != null ? it.dur : 100);
+  G.repairCost = (it) => (G.hasDur(it) ? Math.round(((100 - G.durOf(it)) / 100) * G.REPAIR_K * Math.max(1, it.lvl || 1) * (REPAIR_Q[it.q || 0] || 1)) : 0);
+  G.repairAllCost = (kit) => { let c = 0; const E2 = G.S.player.equip || {}; for (const s in E2) c += G.repairCost(E2[s]); return Math.round(c * (kit ? G.KIT_MULT : 1)); };
+  G.wear = function () {
+    const P = G.S.player, broke = [], low = []; if (!P || P.level < 10 || !(root.document || root.WEAR_ON)) return; // nothing wears before level 10; Node sims measure repaired gear unless they set WEAR_ON (the tests and sim/economy.js do)
+    for (const s in (P.equip || {})) {
+      const it = P.equip[s]; if (!G.hasDur(it, s) || G.durOf(it) <= 0) continue;
+      const was = G.durOf(it); it.dur = Math.max(0, was - G.DUR_LOSS);
+      if (!it.dur) broke.push(it.name); else if (was > 20 && it.dur <= 20) low.push(it.name);
+    }
+    if (broke.length) { toast(`Broken: ${broke.join(', ')}. Repair at a vendor.`); sys(`Broken: ${broke.join(', ')}. A broken item gives no stats until it is repaired.`); }
+    else if (low.length) sys(`Damaged: ${low.join(', ')} (20% durability or less). Repair at a vendor.`);
+  };
+  G.repairAll = function (kit) {
+    const P = G.S.player, cost = G.repairAllCost(kit);
+    if (!cost) { toast('Nothing to repair.'); return false; }
+    if (kit && !G.S.run) { toast('A repair kit is for inside a dungeon. Repair at a vendor.'); return false; }
+    if (P.money < cost) { toast(`You need ${G.moneyText(cost)}.`); return false; }
+    P.money -= cost; for (const s in (P.equip || {})) if (G.hasDur(P.equip[s], s)) P.equip[s].dur = 100;
+    sys(`Repaired${kit ? ' with a kit' : ''} for ${G.moneyText(cost)}.`); emit('change'); G.save(); return true;
+  };
   G.upgradeInfo = function (it) {
     const U = D.UPGRADE, none = { ok: false, room: false, cost: 0 };
     if (!it || it.heirloom || !D.GEAR_SLOTS.includes(it.slot) || !U.cap[it.q] || (it.lvl || 0) < U.minLvl) return none;
@@ -3116,7 +3144,7 @@
       if (mates.length && crand() < 0.5) B.post(S, 'say', cpick(mates), cpick(['gj', 'nice', 'ez', 'get rekt lol', 'thx for the help', 'ty']));
       f.nextAmbush = now() + AMBUSH_GAP * rnd(0.8, 1.5);
     } else {
-      P.pvp.deaths++; P.deaths++; P.hp = 0;
+      P.pvp.deaths++; P.deaths++; P.hp = 0; G.wear();
       P.ghostUntil = now() + 15000;
       sys(`${info.name} killed you. Your spirit runs back to your body...`);
       if (mates.length && crand() < 0.4) B.post(S, 'say', cpick(mates), cpick(['rip', 'gankers smh', 'we will get him', 'u ok?']));
@@ -4211,6 +4239,7 @@
         if (talker) partySay(talker, B.partyLine(talker.bot, 'win'));
       }
       R.deaths = (R.deaths || 0) + C.allies.filter((u) => u.dead && u.kind !== 'pet').length;
+      if (pu && pu.dead) G.wear(); // you died, the group won (#502)
       R.lastFightEnd = now();
       // rez the fallen
       const healerAlive = C.allies.find((u) => u.role === 'healer' && !u.dead);
@@ -4230,7 +4259,7 @@
         for (const m of S.group.members) if (m.cameo && !m.gone) { const P = S.player; P.legendMem = P.legendMem || {}; const mem = G.legendMemory(m.legend); P.legendMem[m.legend] = Object.assign(mem, { n: (mem.n || 0) + 1, where: R.name }); } // the memory on the Hero screen
       } else { R.phase = 'rest'; R.restUntil = now() + 6500 * (PACE[R.pace || 'normal'].rest); }
     } else {
-      R.wipes++; R.momentum = 0;
+      R.wipes++; R.momentum = 0; G.wear(); // a wipe is your death (#502)
       R.phase = 'wipe'; R.restUntil = now() + 12000;
       sys('Your party has been defeated. Running back...');
       const alive = S.group.members.filter((m) => !m.gone);

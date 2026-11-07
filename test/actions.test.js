@@ -17,7 +17,7 @@ const fromUi = (() => {
 
 // reads that a handler calls to decide or show something; no state changes, and covered by the actions that use them
 const NOT_ACTIONS = new Set(['partySize', 'healsAllies', 'firstDungeonLvl', 'friendElsewhere', 'lnHardOpen', 'lnSnowWhy', 'rehearsalOpen', 'isHealPick', 'canDiscard', 'canUseItem', 'characters', 'copyItem', 'displayName', 'effectOf', 'enemyTown', 'isUpgrade', 'knownProfIds',
-  'legendOn', 'lwHardOpen', 'moneyText', 'profs', 'rankName', 'role', 'travelSecs', 'treeSpent', 'usable',
+  'legendOn', 'lwHardOpen', 'moneyText', 'hasDur', 'durOf', 'repairAllCost', 'profs', 'rankName', 'role', 'travelSecs', 'treeSpent', 'usable',
   // these end or replace the character (the test world runs one): load, logout and wipeSave have their own test below
   'load', 'logout', 'wipeSave']);
 
@@ -125,6 +125,7 @@ const ACTIONS = {
   setWarMode: () => { G.setWarMode(true); G.setWarMode(false); },
   setInvites: () => { G.setInvites(false); G.setInvites(true); },
   setSpeed: () => G.setSpeed(2),
+  repairAll: () => { G.wear(); G.repairAll(false); if (inRun()) { G.wear(); G.repairAll(true); } },
 };
 
 test('every action a button can call is covered here (or listed as not an action)', () => {

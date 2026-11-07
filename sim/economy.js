@@ -4,6 +4,7 @@
 const ROOT = require('path').join(__dirname, '..');
 require(ROOT + '/sim/_seed.js');
 globalThis.localStorage = (() => { const m = new Map(); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k) }; })();
+globalThis.WEAR_ON = true; // gear wears on death, so a run's repair bill is measured (#502)
 const RealDate = Date; let t = new RealDate(2026, 10, 3, 12).getTime(); // Tue 2026-11-03 12:00 local
 globalThis.Date = class extends RealDate { constructor(...a) { if (a.length) super(...a); else super(t); } static now() { return t; } };
 for (const f of ['data', 'engine', 'bots', 'game', 'trials', 'social']) { try { require(ROOT + '/src/' + f + '.js'); } catch (e) { if (f !== 'social') throw e; } }
@@ -36,11 +37,11 @@ function inv() {
   for (const b of [].concat(P.bags || [], P.bank || [])) { const it = b.item; if (!sellable(it)) continue; vend += (it.sell || 1) * b.n; items += b.n; q[it.q || 0] += b.n; ah += G.ahTrade(it) ? Math.round(G.ahValue(it) * 0.8 * 0.95) * b.n : (it.sell || 1) * b.n; }
   return { vend, ah, items, q };
 }
-function snap() { return { marks: G.account().marks, coin: G.S.player.money, inv: inv(), t }; }
+function snap() { return { marks: G.account().marks, coin: G.S.player.money, inv: inv(), rep: G.repairAllCost ? G.repairAllCost() : 0, t }; }
 function diff(a, b, extra) {
-  return Object.assign({ act: ACT, seed: +(process.env.SEED || 0), marks: b.marks - a.marks, coin: b.coin - a.coin, vend: b.inv.vend - a.inv.vend, ah: b.inv.ah - a.inv.ah, items: b.inv.items - a.inv.items, blues: b.inv.q[3] - a.inv.q[3], purples: b.inv.q[4] - a.inv.q[4], greens: b.inv.q[2] - a.inv.q[2], secs: Math.round((b.t - a.t) / 1000) }, extra || {});
+  return Object.assign({ act: ACT, seed: +(process.env.SEED || 0), marks: b.marks - a.marks, coin: b.coin - a.coin, rep: b.rep - a.rep, vend: b.inv.vend - a.inv.vend, ah: b.inv.ah - a.inv.ah, items: b.inv.items - a.inv.items, blues: b.inv.q[3] - a.inv.q[3], purples: b.inv.q[4] - a.inv.q[4], greens: b.inv.q[2] - a.inv.q[2], secs: Math.round((b.t - a.t) / 1000) }, extra || {});
 }
-const botify = (skill) => { if (G.fight && G.pUnit && G.pUnit.kind === 'player') { G.pUnit.kind = 'bot'; G.pUnit.bot = { skill: skill || 0.72, react: 0.45 }; G.pUnit.role = G.role(); } };
+const botify = (skill) => { if (G.fight && G.pUnit && G.pUnit.kind === 'player') { G.pUnit.kind = 'bot'; G.pUnit.bot = { skill: skill || +(process.env.SKILL || 0.72), react: 0.45 }; G.pUnit.role = G.role(); } };
 function rolls() {
   const R = G.S.run; if (!R) return;
   (R.rolls || []).forEach((r, i) => { if (!r.done && !r.player) { try { G.roll(i, r.item && D.GEAR_SLOTS.includes(r.item.slot) && G.canUseItem(r.item) && G.isUpgrade && G.isUpgrade(r.item) ? 'need' : 'greed'); } catch (e) {} } });
