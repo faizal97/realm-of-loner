@@ -4464,7 +4464,15 @@
   const MOMENTUM_WINDOW = 5000, MOMENTUM_MAX = 5;
   G.runClock = function () { const R = G.S.run; return R ? Math.max(0, ((R.finishedAt || now()) - R.started) / 1000 - (R.pausedSecs || 0)) + (R.fastSecs || 0) : 0; }; // fastSecs: fight time gained at 2x or 3x
   // v10.3: level-60 clears pay Mentor Marks, the currency for gear upgrades (Trials will pay more)
-  G.clearMarks = (act) => { const A = D.ACTIVITIES[act], Dg = A && A.dungeon && D.DUNGEONS[A.dungeon]; return !Dg || (A.maxLvl || D.LEVEL_CAP) < D.LEVEL_CAP ? 0 : Dg.raid ? 15 : 5; };
+  // Level-60 clears pay Marks (#501): a dungeon 5; a raid RAID_MARKS on its first clear of the week, then the dungeon rate,
+  // so repeating one short raid is no longer the best way to earn Marks. raidWeek is per character, like the Hard bonus.
+  G.RAID_MARKS = 15; G.CLEAR_MARKS = 5;
+  G.clearMarks = (act) => { const A = D.ACTIVITIES[act], Dg = A && A.dungeon && D.DUNGEONS[A.dungeon]; return !Dg || (A.maxLvl || D.LEVEL_CAP) < D.LEVEL_CAP ? 0 : Dg.raid && !G.raidWeek().got['marks:' + act] ? G.RAID_MARKS : G.CLEAR_MARKS; };
+  G.payClearMarks = (act) => {
+    const m = G.clearMarks(act), Dg = m && D.DUNGEONS[D.ACTIVITIES[act].dungeon]; if (!m) return 0;
+    const first = Dg.raid && m === G.RAID_MARKS; if (Dg.raid) G.raidWeek().got['marks:' + act] = true;
+    G.addMarks(m, first ? "this raid's first clear this week" : 'a level-60 clear'); return m;
+  };
   // Par times (v10.4): the data's par was set when every run also waited for loot rolls; rolls no longer hold the group,
   // so runs are about 18% faster and par is 15% shorter everywhere (the speed bonus and Trials both use it)
   G.PAR_SCALE = 0.85;
@@ -4482,7 +4490,7 @@
     if (R.hard) cx.hard = (cx.hard || 0) + 1; // Hard clears (v10.7), shown in the codex
     if (Dg.raid && !R.trial) featuredClear(R.act);
     if (R.trial) G.trialDone(R, secs, TR().par(Dg, R.omens)); // Trials pay their own Marks, against their own par
-    else if (P.level >= D.LEVEL_CAP && G.clearMarks(R.act)) G.addMarks(G.clearMarks(R.act), 'a level-60 clear');
+    else if (P.level >= D.LEVEL_CAP) G.payClearMarks(R.act);
     R.bonus = { secs: Math.round(secs), par: G.par(Dg), speed, flawless };
     if (speed) {
       // the speed chest: half the time a blue from this dungeon's bosses, otherwise a green

@@ -117,7 +117,7 @@ for (const act of raids) {
     [Dg.bossMult, Dg.trashMult] = saved; return S;
   };
   const m0 = G.account().marks; const S1 = runOnce(); const m1 = G.account().marks;
-  check(S1.run && S1.run.phase === 'done' && m1 - m0 === G.clearMarks(act) + G.FEATURED_MARKS && G.featuredClaimed(), `the featured clear pays +${G.FEATURED_MARKS} once (${m1 - m0})`);
+  check(S1.run && S1.run.phase === 'done' && m1 - m0 === G.RAID_MARKS + G.FEATURED_MARKS && G.featuredClaimed(), `the featured clear pays +${G.FEATURED_MARKS} once, on the raid's own first-clear Marks (${m1 - m0})`);
   const P1 = S1.player; P1.level = 60; S1.run = null; S1.group = null; P1.place = D.ACTIVITIES[act].where;
   G.queueFor(act); G.acceptPop(); const m2a = G.account().marks;
   const saved = [Dg.bossMult, Dg.trashMult]; Dg.bossMult = { hp: 1, dmg: 1 }; Dg.trashMult = { hp: 1, dmg: 1 };
@@ -128,7 +128,7 @@ for (const act of raids) {
     G.update(0.1); t += 100;
   }
   [Dg.bossMult, Dg.trashMult] = saved;
-  check(G.account().marks - m2a === G.clearMarks(act), `the second clear that week pays only the normal Marks (${G.account().marks - m2a})`);
+  check(G.account().marks - m2a === G.CLEAR_MARKS && G.clearMarks(act) === G.CLEAR_MARKS, `the second clear that week pays only the repeat Marks (#501) (${G.account().marks - m2a})`);
 }
 // the raid sets (v10.7): every raid has looks; a Hard drop carries the Hard recolour; the wardrobe lists both; the
 // featured bonus gives a look you do not have; a whole raid on Hard gives its title
