@@ -117,3 +117,18 @@ test('dyes never run out and never repeat a name (#504)', () => {
   const names = new Set(); for (let n = 1; n <= 300; n++) { const d = D.dye(n); assert.ok(d && d.name); names.add(d.name); }
   assert.strictEqual(names.size, 300);
 });
+
+test('every level-57+ consumable recipe takes a vendor reagent priced by level; full use costs ~4g an hour (#505)', () => {
+  const { P } = character(60, 'warrior', 'human');
+  const makes = (r) => D.ITEMS[r.makes];
+  for (const r of Object.values(D.RECIPES)) {
+    const it = makes(r), rg = D.REAGENT_FOR(it);
+    if (rg) assert.strictEqual(r.mats[rg], 1, `${r.id} takes a ${D.ITEMS[rg].name}`);
+    else for (const k of ['crystal_vial', 'fine_spice']) assert.ok(!r.mats[k], `${r.id} (level ${it && it.lvl}) needs no level-60 reagent`);
+  }
+  const hour = 0.5 * D.ITEMS.crystal_vial.cost + 2 * D.ITEMS.fine_spice.cost; // a flask lasts 2 h, a meal 30 min
+  assert.ok(hour >= 30000 && hour <= 50000, `the full set costs ${hour} copper an hour`);
+  const npc = D.PLACES[Object.keys(D.PLACES).find((k) => D.PLACES[k].vendor && D.PLACES[k].city)].vendor;
+  P.place = Object.keys(D.PLACES).find((k) => D.PLACES[k].vendor === npc);
+  assert.ok(G.vendorStock(npc).some((it) => it.id === 'crystal_vial'), 'a city vendor sells the reagents');
+});

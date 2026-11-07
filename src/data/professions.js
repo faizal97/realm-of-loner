@@ -569,4 +569,22 @@
   D.PROF_TRAINERS = TRAIN;
   // riding trainers in the capitals (v5.1)
   for (const [npc, caps] of [['stable_alliance', ['stormwind', 'ironforge', 'darnassus']], ['stable_horde', ['orgrimmar', 'thunder_bluff', 'undercity']]]) for (const p of caps) if (D.PLACES[p] && !D.PLACES[p].npcs.includes(npc)) D.PLACES[p].npcs.push(npc);
+  // ---- Reagents (#505, docs/plans/2026-11-07-currency-sinks-design.md §2): every endgame consumable (level 57+: the
+  // flasks, elixirs and Well Fed meals a level-60 player keeps up) also takes one vendor-only reagent, priced REAGENT_C x
+  // its level, so keeping them up costs about 10% of a level-60 player's gold income (a flask lasts 2 h, a meal 30 min).
+  // Level-50 stones and kits, which crafters make to level the skill, take none. The consumable's value rises by the
+  // reagent's price over the auction house's x5, so bots selling it include the reagent.
+  D.REAGENT_C = 250;
+  D.item('crystal_vial', { name: 'Crystal Vial', slot: 'mat', q: 1, icon: 'sturdy_vial', sell: 1, cost: 0 });
+  D.item('fine_spice', { name: 'Fine Spice', slot: 'mat', q: 1, icon: 'cooking_spices', sell: 1, cost: 0 });
+  D.REAGENT_FOR = (it) => !it || (it.lvl || 0) < 57 ? null : it.flask || it.slot === 'elixir' ? 'crystal_vial' : it.wellFed ? 'fine_spice' : null;
+  for (const r of Object.values(R)) {
+    const it = D.ITEMS[r.makes], rg = D.REAGENT_FOR(it); if (!rg) continue;
+    const price = Math.round(D.REAGENT_C * it.lvl), RG = D.ITEMS[rg];
+    RG.cost = Math.max(RG.cost, price); // one price per reagent: the dearest level that uses it (level 60)
+  }
+  for (const r of Object.values(R)) {
+    const it = D.ITEMS[r.makes], rg = D.REAGENT_FOR(it); if (!rg) continue;
+    r.mats = Object.assign({}, r.mats, { [rg]: 1 }); it.sell = (it.sell || 1) + Math.round(D.ITEMS[rg].cost / 5 / (r.n || 1));
+  }
 })(typeof window !== 'undefined' ? window : globalThis);

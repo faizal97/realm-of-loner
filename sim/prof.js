@@ -353,7 +353,7 @@ for (const [g, c] of [['mining', 'blacksmithing'], ['herbalism', 'alchemy'], ['s
   }
   console.log(`tier-4 fishing at 290: ${JSON.stringify(got)}`);
   ok(!other && got.common > 100 && got.big > 5 && got.rare >= 1, 'tier-4 water bites only tier-4 fish, and a following reel still lands big and rare ones');
-  G.addItem(G.copyItem('thunderhead_marlin'), 3); G.cook('ck_marlin_steak', 3, 'normal'); tick(15);
+  G.addItem(G.copyItem('thunderhead_marlin'), 3); G.addItem(G.copyItem('fine_spice'), 3); G.cook('ck_marlin_steak', 3, 'normal'); tick(15); // an endgame meal takes Fine Spice (#505)
   ok(G.countItem('marlin_steak') === 3, 'a cook at 280 makes Thunderhead Marlin Steaks');
   const beast = Object.keys(D.MOBS).find((k) => D.MOBS[k].family === 'beast' && !D.MOBS[k].boss); let meat = 0; for (let i = 0; i < 200; i++) meat += G.rollLoot(beast, 55).items.filter((it) => it.id === 'marbled_haunch').length;
   ok(meat > 40, `level-55 beasts give marbled haunch (${meat}/200)`);

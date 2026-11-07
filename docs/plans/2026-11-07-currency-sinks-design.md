@@ -44,15 +44,17 @@ Measured at 82cd5df, numbers on #181: a raid-geared level 60, seeds 0–2, ~600 
 
 ## 2. Consumable reagents (gold)
 
-- Every level-60 consumable recipe also needs one vendor-only reagent, sold by trade-goods vendors:
-  - **Crystal Vial**: flasks and elixirs.
+- Every endgame consumable (level 57+: the flasks and the Well Fed meals) also needs one vendor-only reagent, sold by
+  city vendors:
+  - **Crystal Vial**: flasks.
   - **Fine Spice**: meals.
-  - **Tempering Flux**: stones and kits.
-- Price: `reagentCost = c × item level`. `c` is tuned by sim so that keeping the full set up for an hour costs ~10% of
-  gold income.
-- Bots selling consumables in chat and on the auction house include the reagent in their price.
+- Price: `reagentCost = 250 × item level` (15s at level 60). Keeping a flask and a meal up for an hour costs about 3.75g,
+  ~9% of gold income.
+- Level-50 stones and armour kits take no reagent: crafters make them to level the skill, and a reagent there would
+  squeeze levelling (sim/prof.js caught it).
+- The consumable's value rises by the reagent's price, so bots selling it on the auction house include the reagent.
 - The consumables' 5% edge is unchanged, and content stays tuned without them.
-- Content-proof: the reagent is one field per recipe.
+- Content-proof: the reagent is one field per recipe, picked from the item's kind and level.
 
 ## 3. Reforge (Marks)
 

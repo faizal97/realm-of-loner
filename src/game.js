@@ -755,7 +755,7 @@
   G.vendorStock = function (npc) {
     const base = vendorBase(npc);
     const pl = D.PLACES[G.S.player.place];
-    if (pl && pl.vendor === npc) return base.concat(['empty_vial', 'coarse_thread', 'small_pouch', 'smithing_coal', 'fine_thread', 'sturdy_vial', 'cooking_spices'].map(G.copyItem)); // Expert supplies (v10.9)
+    if (pl && pl.vendor === npc) return base.concat(['empty_vial', 'coarse_thread', 'small_pouch', 'smithing_coal', 'fine_thread', 'sturdy_vial', 'cooking_spices', 'crystal_vial', 'fine_spice'].map(G.copyItem)); // Expert supplies (v10.9); level-60 reagents (#505)
     return base;
   };
   function vendorBase(npc) {
