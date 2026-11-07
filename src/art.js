@@ -2625,12 +2625,31 @@
       hem: D`M${H0[0]},${H0[1]}` + hs, at: at
     };
   }
-  function rsChest(key, fn, N, H) { GCHEST[key] = function (o) { fn(o, N); }; GCHEST[key + '_hard'] = function (o) { fn(o, H); }; }
+  /* every palette look is also kept with its Normal palette, so ART.dye can draw it in any dye (#504, #506) */
+  var RSREG = {};
+  function rsChest(key, fn, N, H) { GCHEST[key] = function (o) { fn(o, N); }; GCHEST[key + '_hard'] = function (o) { fn(o, H); }; RSREG[key] = { N: N, reg: function (k, P) { GCHEST[k] = function (o) { fn(o, P); }; } }; }
   function rsLegs(key, fn, N, H) {
     GLEGS[key] = { pants: N.pants, fx: function (c, g, L, f) { return fn(c, g, L, f, N); } };
     GLEGS[key + '_hard'] = { pants: H.pants, fx: function (c, g, L, f) { return fn(c, g, L, f, H); } };
+    RSREG[key] = { N: N, reg: function (k, P) { GLEGS[k] = { pants: P.pants, fx: function (c, g, L, f) { return fn(c, g, L, f, P); } }; } };
   }
-  function rsBack(key, mk, N, H) { GBACK[key] = mk(N); GBACK[key + '_hard'] = mk(H); }
+  function rsBack(key, mk, N, H) { GBACK[key] = mk(N); GBACK[key + '_hard'] = mk(H); RSREG[key] = { N: N, reg: function (k, P) { GBACK[k] = mk(P); } }; }
+  /* dyes (#504, #506): <key>_dy<n> is a palette look's Normal palette with every colour turned by dye n (D.dye: a hue
+     turn, a saturation factor and a lightness shift), registered the first time it is asked for */
+  function dyeHex(hex, d) {
+    var x = hex.length === 4 ? hex.replace(/^#(.)(.)(.)$/, '#$1$1$2$2$3$3') : hex, r = parseInt(x.substr(1, 2), 16) / 255, g = parseInt(x.substr(3, 2), 16) / 255, b = parseInt(x.substr(5, 2), 16) / 255;
+    var mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, h = 0, s = 0, dd = mx - mn;
+    if (dd) { s = l > 0.5 ? dd / (2 - mx - mn) : dd / (mx + mn); h = mx === r ? (g - b) / dd + (g < b ? 6 : 0) : mx === g ? (b - r) / dd + 2 : (r - g) / dd + 4; h *= 60; }
+    h = d.hue != null ? d.hue : (h + (d.rot || 0) + 360) % 360; s = Math.max(0, Math.min(1, s * d.sat)); l = Math.max(0.02, Math.min(0.96, l + d.lit)); // a dye sets one hue, keeping each colour's light and dark
+    var q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q, hk = h / 360;
+    var ch = function (t) { t = (t + 1) % 1; var v = t < 1 / 6 ? p + (q - p) * 6 * t : t < 0.5 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; return ('0' + Math.round(v * 255).toString(16)).slice(-2); };
+    return '#' + ch(hk + 1 / 3) + ch(hk) + ch(hk - 1 / 3);
+  }
+  function dyePal(N, d) { var o = {}, k; for (k in N) { var v = N[k]; o[k] = typeof v === 'string' && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v) ? dyeHex(v, d) : v; } return o; }
+  W.ART_DYE = function (key) {
+    var m = /^(.*)_dy(\d+)$/.exec(key || ''), R = m && RSREG[m[1]], dd = m && W.D && W.D.dye && W.D.dye(+m[2]);
+    if (!R || !dd) return false; if (!R[key]) { R.reg(key, dyePal(R.N, dd)); R[key] = 1; } return true;
+  };
 
   /* ---- Veshmira's Lair: the Brood Mother's hoard and the false court's finery. Black dragon scale with gold trim,
      small horns and claws. Hard: blacker scale, the gold dimmed to violet steel, every edge glowing storm violet. ---- */
@@ -3212,6 +3231,7 @@
   function rsW(base, x) { var o = {}, k; for (k in base) o[k] = base[k]; for (k in x) o[k] = x[k]; return o; }
   function rsWeapon(key, fn, kind, N, H) {
     [[key, N], [key + '_hard', H]].forEach(function (v) { var f = function (c) { return fn(c, v[1]); }; GW[v[0]] = f; WP[v[0]] = f; GKIND[v[0]] = kind; });
+    RSREG[key] = { N: N, reg: function (k, P) { var f = function (c) { return fn(c, P); }; GW[k] = f; WP[k] = f; GKIND[k] = kind; } };
   }
   /* a grip of colour col with a spiral wrap, half-width w, from y0 (top) to y1 */
   function rsGrip(c, w, y0, y1, col, wrap) {

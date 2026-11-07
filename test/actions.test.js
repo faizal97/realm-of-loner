@@ -17,7 +17,7 @@ const fromUi = (() => {
 
 // reads that a handler calls to decide or show something; no state changes, and covered by the actions that use them
 const NOT_ACTIONS = new Set(['partySize', 'healsAllies', 'firstDungeonLvl', 'friendElsewhere', 'lnHardOpen', 'lnSnowWhy', 'rehearsalOpen', 'isHealPick', 'canDiscard', 'canUseItem', 'characters', 'copyItem', 'displayName', 'effectOf', 'enemyTown', 'isUpgrade', 'knownProfIds',
-  'legendOn', 'lwHardOpen', 'moneyText', 'hasDur', 'durOf', 'repairAllCost', 'canReforge', 'profs', 'rankName', 'role', 'travelSecs', 'treeSpent', 'usable',
+  'legendOn', 'lwHardOpen', 'moneyText', 'hasDur', 'durOf', 'repairAllCost', 'canReforge', 'renown', 'mountTints', 'profs', 'rankName', 'role', 'travelSecs', 'treeSpent', 'usable',
   // these end or replace the character (the test world runs one): load, logout and wipeSave have their own test below
   'load', 'logout', 'wipeSave']);
 
@@ -127,6 +127,9 @@ const ACTIONS = {
   setSpeed: () => G.setSpeed(2),
   reforgeKeep: () => { const P = G.S.player, s = Object.keys(P.equip).find((k) => G.canReforge(P.equip[k], 'stats')); if (s) G.reforge({ slot: s }, 'stats'); G.reforgeKeep(); },
   reforgeRevert: () => { const P = G.S.player, s = Object.keys(P.equip).find((k) => G.canReforge(P.equip[k], 'stats')); if (s) G.reforge({ slot: s }, 'stats'); G.reforgeRevert(); },
+  buyRenown: () => G.buyRenown(),
+  setDye: () => { G.setDye('chest', 1); G.setDye('chest', 0); },
+  setMountTint: () => { G.setMountTint(1); G.setMountTint(0); },
   repairAll: () => { G.wear(); G.repairAll(false); if (inRun()) { G.wear(); G.repairAll(true); } },
 };
 

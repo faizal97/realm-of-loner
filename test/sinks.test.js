@@ -88,3 +88,32 @@ test('Reforge needs a level-57+ blue or purple, an effect to reroll one, and eno
   assert.strictEqual(G.reforge({ bag: P.bags.length - 1 }, 'stats'), null);
   assert.strictEqual(G.account().marks, 5);
 });
+
+test('Renown costs Marks and gold on a straight line and pays a dye each rank, a title tier every 5, a tint every 10 (#504)', () => {
+  const { P } = character(60, 'warrior', 'human');
+  assert.deepStrictEqual(G.renownCost(1), { marks: 110, gold: 110000 });
+  assert.deepStrictEqual(G.renownCost(10), { marks: 200, gold: 200000 });
+  assert.deepStrictEqual(G.renownCost(50), { marks: 600, gold: 600000 });
+  const a = G.account(); a.marks = 100000; a.renown = 0; G.saveAccount(a); P.money = 1e9;
+  for (let i = 0; i < 10; i++) assert.strictEqual(G.buyRenown(), true);
+  assert.strictEqual(G.renown(), 10);
+  let spent = 0; for (let r = 1; r <= 10; r++) spent += G.renownCost(r).marks;
+  assert.strictEqual(100000 - G.account().marks, spent);
+  assert.strictEqual(G.mountTints(), 1);
+  const title = D.TITLES.find((t) => t.id === 'renowned');
+  assert.ok(G.titleUnlocked(title));
+  assert.match(G.titleName(title, 'Tester'), /the Renowned II$/);
+  assert.strictEqual(G.setDye('chest', 11), false, 'only dyes you have');
+  assert.strictEqual(G.setDye('chest', 3), true);
+  P.wardrobe = { chest: 'mc_robe' };
+  assert.strictEqual(G.gearLooks(P).chest, 'mc_robe_dy3', 'a raid set look takes the dye');
+  P.wardrobe = { chest: 'mc_robe_hard' };
+  assert.strictEqual(G.gearLooks(P).chest, 'mc_robe_dy3', 'a Hard look dyes from the set\'s own design');
+  const b = G.account(); b.marks = 0; G.saveAccount(b);
+  assert.strictEqual(G.buyRenown(), false, 'no Marks, no rank');
+});
+
+test('dyes never run out and never repeat a name (#504)', () => {
+  const names = new Set(); for (let n = 1; n <= 300; n++) { const d = D.dye(n); assert.ok(d && d.name); names.add(d.name); }
+  assert.strictEqual(names.size, 300);
+});

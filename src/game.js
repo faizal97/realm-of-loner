@@ -506,6 +506,7 @@
       if ((sets.defias || 0) >= D.SETS.defias.mask) g.mask = 'defias';
       if (c.keepsake) g.back = c.keepsake; // a Legend character's own keepsake (v10.2)
       for (const pl in c.wardrobe || {}) { if (c.wardrobe[pl] === 'hidden') delete g[pl]; else g[pl] = c.wardrobe[pl]; } // the wardrobe (v10.3)
+      for (const pl in c.dyes || {}) if (G.dyeable(g[pl]) && c.dyes[pl]) { g[pl] = g[pl].replace(/_hard$/, '') + '_dy' + c.dyes[pl]; if (root.ART_DYE) root.ART_DYE(g[pl]); } // a Renown dye (#504)
     } else if (c.level >= 10 && c.id != null) {
       // players you pass in the world: some capped ones have farmed The Smugglers' Deep
       if (B.hash(c.id, 71) < 0.15) g.back = 'cape_brotherhood';
@@ -2654,6 +2655,29 @@
     for (const b of P.bags.concat(P.bank || [])) if (b.item && b.item.heirloom) b.item = G.makeHeirloom(b.item.id, P.level); // the bank too (#442)
   };
   G.heirloomXpBonus = function () { let n = 0; for (const s in (G.S.player.equip || {})) if (G.S.player.equip[s] && G.S.player.equip[s].heirloom) n++; return Math.min(3, n) * 5; };
+  // ---- Renown (#504, docs/plans/2026-11-07-currency-sinks-design.md §4): an endless account rank bought with Marks and gold
+  // together. Rank r costs RENOWN_MARKS and RENOWN_GOLD times (1 + r/10): a straight line, so the next rank always stays
+  // in reach and keeps taking what is left over. Rewards are looks and status only: dye r, a title tier every 5, a mount
+  // tint every 10, and the number on the player card.
+  G.RENOWN_MARKS = 100; G.RENOWN_GOLD = 100000;
+  G.renown = () => G.account().renown || 0;
+  G.renownCost = (r) => { const f = 1 + r / 10; return { marks: Math.round(G.RENOWN_MARKS * f), gold: Math.round(G.RENOWN_GOLD * f) }; }; // r: the rank being bought
+  G.mountTints = () => Math.floor(G.renown() / 10);
+  G.buyRenown = function () {
+    const a = G.account(), r = (a.renown || 0) + 1, c = G.renownCost(r), P = G.S.player;
+    if (a.marks < c.marks) { toast(`You need ${c.marks} Mentor Marks.`); return false; }
+    if (P.money < c.gold) { toast(`You need ${G.moneyText(c.gold)}.`); return false; }
+    a.marks -= c.marks; P.money -= c.gold; a.renown = r; G.saveAccount(a);
+    const got = [`dye: ${D.dye(r).name}`]; if (r % 5 === 0) got.push(`title tier: ${G.titleName(D.TITLES.find((t) => t.id === 'renowned'), P.name)}`); if (r % 10 === 0) got.push(`mount tint ${r / 10}`);
+    loot(`Renown ${r}. New ${got.join(', ')}.`); emit('change'); G.save(); return true;
+  };
+  // a dye on one place of the wardrobe (0 or null: none); only palette-drawn looks take a dye
+  G.dyeable = (key) => typeof key === 'string' && /^(vesh|mc|tc|lw|ln)_/.test(key) && !/_dy\d+$/.test(key);
+  G.setDye = function (place, n) {
+    const P = G.S.player; if (n && (n < 1 || n > G.renown())) return false;
+    P.dyes = Object.assign({}, P.dyes); if (n) P.dyes[place] = n; else delete P.dyes[place]; G.save(); emit('change'); return true;
+  };
+  G.setMountTint = function (n) { const P = G.S.player; if (n && (n < 1 || n > G.mountTints())) return false; P.mountTint = n || 0; G.save(); emit('change'); return true; };
   G.buyHeirloom = function (id) {
     const a = G.account(), H = D.HEIRLOOMS[id]; if (!H) return;
     const owned = a.heirlooms.includes(id);
@@ -2890,9 +2914,11 @@
     if (n.guildRank != null) return Math.max(G.S.player.guildRankBest || 0, root.SOC ? SOC.rank() : -1) >= n.guildRank; // earned once, kept after leaving (#448)
     if (n.trial) return ((G.S.player.trials || {}).bestEver || 0) >= n.trial; // Trials (v10.4): best level beaten in time
     if (n.trialRank) { const r = (G.S.player.trials || {}).bestRank; return !!r && r <= n.trialRank; } // a month's final realm rank
+    if (n.renown) return G.renown() >= n.renown; // #504
     return Object.keys(n).every((k) => (r[k] || 0) >= n[k]);
   };
-  G.titleName = function (t, name) { const horde = (D.RACES[G.S.player.race] || {}).faction === 'horde'; return (horde && t.horde ? t.horde : t.name).replace('%s', name); };
+  const ROMAN = (n) => { let o = '', x = n; for (const [v, r] of [[1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']]) while (x >= v) { o += r; x -= v; } return o; };
+  G.titleName = function (t, name) { const horde = (D.RACES[G.S.player.race] || {}).faction === 'horde'; return (horde && t.horde ? t.horde : t.name).replace('%s', name) + (t.id === 'renowned' && G.renown() >= 10 ? ' ' + ROMAN(Math.floor(G.renown() / 5)) : ''); }; // Renown's tier: one more every 5 ranks (#504)
   G.setTitle = function (id) { const t = D.TITLES.find((x) => x.id === id); if (id && (!t || !G.titleUnlocked(t))) return; G.S.player.title = id || null; emit('change'); G.save(); };
   G.displayName = function () { const P = G.S.player, t = P.title && D.TITLES.find((x) => x.id === P.title); return t ? G.titleName(t, P.name) : P.name; };
   // Help Wanted: bot groups ask for a helper in the group finder. The group summons you, so you can

@@ -551,6 +551,15 @@
     D.HONOR_RANKS.forEach((r, i) => { if (!r.look) return; const id = `honor_${f}_${r.look}`;
       D.item(id, { name: names[n++], slot: 'back', q: 4, lvl: i + 1, look: ['back', id], lookOnly: true, faction: f, icon: r.look === 'banner' ? 'honor_banner_' + f : r.look === 'tabard' ? 'honor_tabard_' + f : 'cloak', source: `Honor rank ${i + 1}` }); });
   }
+  // Dyes (#504): Renown rank n unlocks dye n. A dye tints a palette-drawn look (raid and festival sets, raid weapons) to
+  // one hue: 12 colours, then each again in a shade, then all of it again with a numeral, so the list never runs out.
+  D.DYE_HUES = [['Crimson', 355], ['Ember', 18], ['Amber', 38], ['Moss', 72], ['Verdant', 120], ['Jade', 155], ['Teal', 180], ['Azure', 210], ['Indigo', 238], ['Violet', 268], ['Orchid', 298], ['Rose', 330]];
+  D.DYE_SHADES = [['', 1, 0], ['Deep', 1, -0.12], ['Pale', 0.6, 0.12], ['Dusk', 0.7, -0.2], ['Bright', 1.3, 0.05], ['Ashen', 0.35, 0]];
+  D.dye = function (n) {
+    if (!(n >= 1)) return null; const i = n - 1, H = D.DYE_HUES[i % 12], S = D.DYE_SHADES[Math.floor(i / 12) % D.DYE_SHADES.length], round = Math.floor(i / (12 * D.DYE_SHADES.length));
+    const R = ['', ' II', ' III', ' IV', ' V', ' VI', ' VII', ' VIII', ' IX', ' X'];
+    return { n, name: (S[0] ? S[0] + ' ' : '') + H[0] + (round ? (R[round] || ' ' + (round + 1)) : ''), hue: H[1], sat: S[1], lit: S[2], rot: 0 };
+  };
   D.TITLES = [
     { id: 'tried', name: '%s the Tried', need: { trial: 10 }, how: 'Beat par in a Trial 10' },
     { id: 'unbroken', name: '%s the Unbroken', need: { trial: 15 }, how: 'Beat par in a Trial 15' },
@@ -558,6 +567,7 @@
     { id: 'realm_ten', name: '%s of the Ten', need: { trialRank: 10 }, how: 'Finish a month of Trials in your realm\'s top 10' },
     { id: 'realm_first', name: 'Champion %s', need: { trialRank: 1 }, how: 'Finish a month of Trials first on your realm' },
     { id: 'mentor', name: '%s the Mentor', need: { mentor: 5 }, how: 'Help 5 groups through Help Wanted' },
+    { id: 'renowned', name: '%s the Renowned', need: { renown: 5 }, how: 'Reach Renown 5 (a tier for every 5 ranks)' }, // #504: the tier shows after the name
     { id: 'guide', name: '%s the Guide', need: { mentor: 25 }, how: 'Help 25 groups through Help Wanted' },
     { id: 'flawless', name: '%s the Flawless', need: { flawless: 10 }, how: 'Clear dungeons without a wipe 10 times' },
     { id: 'swift', name: '%s the Swift', need: { speed: 10 }, how: 'Beat par time 10 times' },

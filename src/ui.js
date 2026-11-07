@@ -690,7 +690,7 @@
       const mw = 36, ml = 18, mb = 4, mh = mw * 400 / 240 * 128 / 160; // mount height in % of scene height
       const hw = mw * 0.56, hb = mb + mh * (1 - 4.6 / 128) - hw * 400 / 240 - mh * (RACE_Y[P.race] || 0) / 128;
       sc.append(spriteEl(art('hero', looks(P)), { l: ml + mw * 0.17, b: hb, w: hw }, 'walker'));
-      sc.append(spriteEl(art('mount', P.mount), { l: ml, b: mb, w: mw }, 'walker'));
+      const mEl = spriteEl(art('mount', P.mount), { l: ml, b: mb, w: mw }, 'walker'); if (P.mountTint) mEl.style.filter = `hue-rotate(${P.mountTint * 36}deg)`; sc.append(mEl); // a Renown mount tint (#504)
     }
     if (P.travel) sc.append(h('div', { class: 'castbar', id: 'travelbar', style: { bottom: G.mounted() ? '74%' : '40%' } }, h('i'), h('b', null, 'Traveling to ' + D.PLACES[P.travel.to].name)));
     if (P.ghostUntil) sc.append(h('div', { class: 'overlay-msg' }, h('div', null, h('h3', null, 'You are dead'), h('p', { id: 'ghost-t' }, 'Running back to your body...'))));
@@ -2921,6 +2921,12 @@
             h('div', { class: 'r' }, owned ? 'Copy' : `${H.cost} ✦`)));
         }
         b.append(list, h('p', { class: 'ai-note' }, 'Earned from Help Wanted (group finder) and the daily Roulette.'));
+        { // Renown (#504): the endless account rank
+          const r = G.renown(), c = G.renownCost(r + 1), canBuy = acc.marks >= c.marks && P.money >= c.gold;
+          b.append(h('div', { class: 'sec-h' }, 'Renown', h('small', null, `Renown: ${r} · shared by all your characters`)));
+          b.append(h('p', { class: 'ai-note' }, 'Each rank: a dye for raid and festival looks. Every 5: a title tier. Every 10: a mount tint. No stats.'));
+          b.append(h('button', { class: 'btn wide', disabled: !canBuy, onclick: () => { G.buyRenown(); ui.sheetFn(); } }, h('span', { html: `Reach Renown ${r + 1} · ${c.marks} ✦ + ` + moneyHtml(c.gold, false, true) })));
+        }
         // past months' Trialsworn cloaks (v10.7): only the ones you are missing, so the list stays short
         const past = G.pastMonthCloaks();
         if (past.length) {
@@ -3241,6 +3247,13 @@
       info.append(h('div', { class: 'btn-row', style: { marginTop: '8px' } },
         h('button', { class: 'btn', disabled: same || (tried && !tried.have), onclick: () => { G.setWardrobe(pl, t || null); toast(t === 'hidden' ? `${WPLACE[pl]} hidden.` : tried ? `Showing ${tried.name}.` : 'Showing your gear.', true); ui.sheetFn(); } }, same ? 'Showing' : 'Show this')));
       b.append(info);
+      // Renown dyes (#504): a dye tints the look shown here, if it is one drawn from a palette (raid and festival sets)
+      const shown = G.gearLooks(Object.assign({}, P, { dyes: {} }))[pl], dn = (P.dyes || {})[pl] || 0;
+      if (G.renown() && G.dyeable(shown)) {
+        const dr = h('div', { class: 'chips' }, h('button', { class: 'chip' + (!dn ? ' gold' : ''), onclick: () => { G.setDye(pl, 0); ui.sheetFn(); } }, 'No dye'));
+        for (let n = G.renown(); n >= 1; n--) { const d = D.dye(n); dr.append(h('button', { class: 'chip' + (dn === n ? ' gold' : ''), onclick: () => { G.setDye(pl, n); ui.sheetFn(); } }, h('span', { style: { display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', marginRight: '4px', background: `hsl(${d.hue},${Math.round(55 * d.sat)}%,${Math.round(45 + d.lit * 100)}%)` } }), d.name)); }
+        b.append(h('div', { class: 'sec-h' }, 'Dye', h('small', null, `Dyes: ${G.renown()} · from Renown`)), dr);
+      } else if (G.renown()) b.append(h('p', { class: 'ai-note' }, 'Dyes from Renown work on raid and festival set looks.'));
     });
   }
   // Journey overview (v10.5): facts only, never advice (docs/design-mindset.md). "Open to you" lists what exists for you
@@ -3848,11 +3861,12 @@
           h('div', null, h('span', null, 'Money'), h('b', { html: moneyHtml(P.money) })),
           h('div', null, h('span', null, 'Played'), h('b', { class: 'tnum' }, fmtTime(P.played * 1000))),
           h('div', null, h('span', null, 'Kills'), h('b', { class: 'tnum' }, P.kills)),
-          h('div', null, h('span', null, 'Deaths'), h('b', { class: 'tnum' }, P.deaths))));
+          h('div', null, h('span', null, 'Deaths'), h('b', { class: 'tnum' }, P.deaths)), G.renown() ? h('div', null, h('span', null, 'Renown'), h('b', { class: 'tnum' }, G.renown())) : null)); // #504
         if (P.riding) {
           const row = h('div', { class: 'chips' }, h('button', { class: 'chip' + (!P.mount ? ' gold' : ''), onclick: () => { G.setMount(null); ui.sheetFn(); } }, 'On foot'));
           for (const k of (P.mounts || [])) row.append(h('button', { class: 'chip' + (P.mount === k ? ' gold' : ''), onclick: () => { G.setMount(k); ui.sheetFn(); } }, img(art('icon', 'mount_' + k)), ' ', D.MOUNTS[k].name));
           b.append(h('div', { class: 'sec-h' }, 'Mount', h('small', null, P.mount ? 'roads are 40% faster' : 'walking')), row);
+          if (G.mountTints()) { const tr = h('div', { class: 'chips' }, h('button', { class: 'chip' + (!P.mountTint ? ' gold' : ''), onclick: () => { G.setMountTint(0); ui.sheetFn(); } }, 'Own colour')); for (let n = 1; n <= G.mountTints(); n++) tr.append(h('button', { class: 'chip' + (P.mountTint === n ? ' gold' : ''), onclick: () => { G.setMountTint(n); ui.sheetFn(); } }, `Tint ${n}`)); b.append(h('div', { class: 'sec-h' }, 'Mount tint', h('small', null, `from Renown: ${G.mountTints()}`)), tr); } // #504
         }
         b.append(h('div', { class: 'sec-h' }, 'Equipment', h('small', null, 'tap to inspect')));
         const gear = h('div', { class: 'gear' });
