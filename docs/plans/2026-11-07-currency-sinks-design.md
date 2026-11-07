@@ -61,7 +61,8 @@ Measured at 82cd5df, numbers on #181: a raid-geared level 60, seeds 0–2, ~600 
 From the item (the Reforge button next to Upgrade, in the bags and on the character sheet):
 
 - **Reforge effect:** a different effect from those the slot can carry, at the same strength.
-- **Reforge stats:** moves the secondary stats around at the same total power.
+- **Reforge stats:** moves the stats around at the same total power, only into stats your class uses (those it gains
+  0.8+ of a level, from the class data), so every roll is a real option.
 - After either one, you choose **Keep** or **Revert**. The Marks are spent either way.
 - Cost: `20 × 1.5^n` Marks, where `n` is that item's own reforge count (20, 30, 45, 68, 101…). A new drop starts at 20.
 - The item keeps its power and upgrade level. Total power never passes the ceiling.

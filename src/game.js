@@ -2878,7 +2878,9 @@
   // same total). You see the result and Keep or Revert it; the Marks are spent either way. Each reforge of an item costs
   // REFORGE_GROW times the last, so chasing the perfect roll never runs out. No power is added: totals stay the same.
   G.REFORGE_BASE = 20; G.REFORGE_GROW = 1.5;
-  const RF_STATS = ['str', 'agi', 'sta', 'int', 'spi'], RF_ROLES = { tank: ['tank', 'survival', 'resource'], healer: ['healing', 'survival', 'resource'], dps: ['damage', 'survival', 'resource'] };
+  const RF_STATS = ['str', 'agi', 'sta', 'int', 'spi'];
+  G.reforgeStats = (cls) => { const C = D.CLASSES[cls || G.S.player.cls]; return RF_STATS.filter((k) => C.gain[k] >= 0.8); }; // the stats a class grows in (0.8+ a level) are the ones it uses
+  const RF_ROLES = { tank: ['tank', 'survival', 'resource'], healer: ['healing', 'survival', 'resource'], dps: ['damage', 'survival', 'resource'] };
   G.reforgeCost = (it) => Math.round(G.REFORGE_BASE * Math.pow(G.REFORGE_GROW, (it && it.reforges) || 0));
   G.canReforge = (it, kind) => !!it && !it.heirloom && !it.lookOnly && D.GEAR_SLOTS.includes(it.slot) && (it.q || 0) >= 3 && (it.lvl || 0) >= D.UPGRADE.minLvl
     && (kind === 'effect' ? !!G.effectOf(it) : Object.keys(it.stats || {}).length > 0);
@@ -2893,7 +2895,7 @@
       nx.effect = k; nx.stats = rfScale(it.stats, f); if (nx.base) nx.base.stats = rfScale(it.base.stats, f); if (nx.pw) nx.pw = Math.round(it.pw * f * 100) / 100;
     } else {
       const cur = Object.keys(it.stats || {}), n = Math.max(1, Math.min(2, cur.length)); let keys;
-      for (let i = 0; i < 20; i++) { const pool = RF_STATS.slice(); keys = []; while (keys.length < n) { const k = pk(pool); keys.push(k); pool.splice(pool.indexOf(k), 1); } if (keys.slice().sort().join() !== cur.slice().sort().join()) break; }
+      for (let i = 0; i < 20; i++) { const pool = G.reforgeStats(); keys = []; while (keys.length < n) { const k = pk(pool); keys.push(k); pool.splice(pool.indexOf(k), 1); } if (keys.slice().sort().join() !== cur.slice().sort().join()) break; }
       nx.stats = rfSpread(rfSum(it.stats), keys); if (nx.base) nx.base.stats = rfSpread(rfSum(it.base.stats), keys);
     }
     nx.reforges = (it.reforges || 0) + 1; return nx;

@@ -77,6 +77,14 @@ test('Reforge costs 20 x 1.5^n per item, rerolls the effect or stats at the same
   assert.strictEqual(e.cost, 30); assert.strictEqual(G.reforgeCost(P.bags[bag].item), 45);
 });
 
+test('Reforge stats only rolls stats your class uses (gain 0.8+ a level), never the same pair back (#503)', () => {
+  const seen = (cls) => { character(60, cls, 'human'); const out = new Set(); const it = { slot: 'chest', q: 3, lvl: 60, stats: { sta: 20, str: 21 } }; for (let i = 0; i < 200; i++) for (const k of Object.keys(G.reforged(it, 'stats').stats)) out.add(k); return [...out].sort().join(); };
+  assert.strictEqual(seen('warrior'), 'agi,sta,str', 'a warrior never rolls Intellect or Spirit');
+  assert.strictEqual(seen('mage'), 'int,spi,sta', 'a mage never rolls Strength or Agility');
+  assert.strictEqual(seen('bard'), 'agi,int,spi,sta');
+  for (const cls in D.CLASSES) assert.ok(G.reforgeStats(cls).length >= 3, `${cls} has a pair to reroll into`);
+});
+
 test('Reforge needs a level-57+ blue or purple, an effect to reroll one, and enough Marks (#503)', () => {
   const { P } = character(60, 'warrior', 'human');
   assert.strictEqual(G.canReforge({ slot: 'chest', q: 2, lvl: 60, stats: { str: 5 } }, 'stats'), false, 'not a green');
