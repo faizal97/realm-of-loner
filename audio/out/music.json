@@ -551,5 +551,9 @@
   "bars": 16,
   "key": "C minor",
   "loop_s": 34.2857
+ },
+ "ruinfall_opening": {
+  "loop_s": 73.6,
+  "source": "the saga theme, trimmed (not composed here)"
  }
 }

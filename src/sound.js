@@ -91,6 +91,7 @@
 
   // is this track in the game? (music ships only once approved: audio/approved.txt)
   SND.has = (name) => !!((root.AUDIO_DATA && root.AUDIO_DATA['music_' + name]) || (root.AUDIO_FILES || []).includes(name));
+  SND.preload = (name) => load('music_' + name); // a track decoded ahead, so it starts the moment it is asked for (a movie's song)
   SND.inlined = (name) => !!(root.AUDIO_DATA && root.AUDIO_DATA['music_' + name]);
   // Background loop with a 1.5s crossfade. Loop points come from music.json so the seam is exact.
   // fallback: the track to play if this one cannot be loaded (a file that is missing or fails)

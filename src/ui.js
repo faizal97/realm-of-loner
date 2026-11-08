@@ -5386,11 +5386,13 @@
     G.paused = true;
     const P = G.S.player;
     const startPlace = D.PLACES[D.RACES[P.race || 'human'].start];
-    return CS.play(ch, {
+    // a movie waits (up to 6 s) for its song to load, then starts it with the first shot, so the cuts land on the beat
+    const ready = ch.movie && ch.music && window.SND && SND.preload ? Promise.race([SND.preload(ch.music), new Promise((r) => setTimeout(r, 6000))]) : Promise.resolve();
+    return ready.then(() => { if (ch.movie && window.SND) { ui.csMusic = ch.music; SND.music(ch.music, true); } }).then(() => CS.play(ch, {
       art, heroUrl: art('hero', looks(P)), name: P.name, zone: startPlace.zone,
       startScene: startPlace.scene, hereScene: D.PLACES[P.place].scene,
       setMusic: (m) => { ui.csMusic = m; G.paused = !!m || !!(window.CS && CS.playing); },
-    }).then(() => { G.paused = false; P.story = P.story || {}; P.story[id] = true; G.save(); if (ch.then && CS.byId(ch.then) && !CS.unlocked().has(ch.then)) ui.pendingChapter = ch.then; },
+    })).then(() => { G.paused = false; P.story = P.story || {}; P.story[id] = true; G.save(); if (ch.then && CS.byId(ch.then) && !CS.unlocked().has(ch.then)) ui.pendingChapter = ch.then; },
       () => { G.paused = false; }); // a chapter that fails to play lets the game go on (#355)
   }
   // a Legend's first cameo: about 5 seconds in the run's own first scene; they walk in and say one line
@@ -5687,7 +5689,7 @@
       }
     });
   }
-  const chapterReady = (c) => !c.after || c.after.some((q) => G.S && G.S.player.done[q]);
+  const chapterReady = (c) => (!c.after || c.after.some((q) => G.S && G.S.player.done[q])) && (!c.movie || (D.PREPATCH && D.PREPATCH.live && G.prepatchOpen())); // the saga's opening movie: once you reach the pre-patch
   function openTheater() {
     openSheet('theater', 'Theater', 'Replay the story chapters you have reached', (b) => {
       const un = window.CS ? CS.unlocked() : new Set();
@@ -5703,9 +5705,9 @@
         if (!ch.instance && ch === ordered[0]) list.append(h('div', { class: 'sec-h' }, 'Story'));
         const P = G.S.player, passed = ch.scene && (ch.faction ? ch.faction === G.myFaction() : true) && (ch.quest ? [].concat(ch.quest).some((q) => P.done[q] || (ch.on === 'accept' && P.quests[q])) : P.level >= ch.level);
         const open = (un.has(ch.id) || (ch.legend && !ch.scene) || passed) && ch.shots; // legend lore open from the start; scenes once seen or passed
-        list.append(h('button', { class: 'row' + (open ? '' : ' locked'), onclick: () => { if (open && G.fight) toast('Not during a fight.'); else if (open) { closeSheet(); playChapter(ch.id); } else toast(ch.scene ? 'Plays during a quest. Keep going!' : ch.instance ? 'Enter the dungeon to unlock.' : ch.shots ? `Reach level ${ch.level} to unlock.` : 'Arrives with a later update.'); } },
+        list.append(h('button', { class: 'row' + (open ? '' : ' locked'), onclick: () => { if (open && G.fight) toast('Not during a fight.'); else if (open) { closeSheet(); playChapter(ch.id); } else toast(ch.scene ? 'Plays during a quest. Keep going!' : ch.instance ? 'Enter the dungeon to unlock.' : ch.movie ? 'Clear a level-60 raid to unlock.' : ch.shots ? `Reach level ${ch.level} to unlock.` : 'Arrives with a later update.'); } },
           h('div', { class: 'ic' }, h('span', { class: 'mark' + (open ? '' : ' grey') }, open ? '▶' : '·')),
-          h('div', { class: 't' }, h('b', null, ch.scene && !open ? (ch.legend ? 'A Legend scene' : 'A story scene') : ch.title), h('small', null, ch.scene ? (open ? `${ch.legend ? 'Legend' : 'Story'} scene · level ${ch.level}` : `Plays during a quest (level ${ch.level})`) : ch.legend ? 'Legend lore' : ch.instance ? (open ? 'Dungeon intro' : 'Plays the first time you enter') : ch.id === 'intro' ? 'Plays after you create a character' : `Level ${ch.level}`)),
+          h('div', { class: 't' }, h('b', null, ch.scene && !open ? (ch.legend ? 'A Legend scene' : 'A story scene') : ch.title), h('small', null, ch.scene ? (open ? `${ch.legend ? 'Legend' : 'Story'} scene · level ${ch.level}` : `Plays during a quest (level ${ch.level})`) : ch.legend ? 'Legend lore' : ch.instance ? (open ? 'Dungeon intro' : 'Plays the first time you enter') : ch.id === 'intro' ? 'Plays after you create a character' : ch.movie ? 'Opening movie' : `Level ${ch.level}`)),
           h('div', { class: 'r' }, open ? 'Play' : ch.shots ? 'Locked' : 'Coming')));
       }
       b.append(list);

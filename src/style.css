@@ -612,6 +612,12 @@ img { max-width: 100%; display: block; }
 .cs-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
 .cs-title { position: absolute; left: 0; right: 0; top: 38%; text-align: center; font: 26px/1.1 var(--display); color: var(--gold); text-shadow: 0 2px 6px #000, 0 0 24px rgba(240, 199, 94, .6); opacity: 0; transition: opacity 1s; pointer-events: none; padding-inline: 16px; text-wrap: balance; }
 .cs-title.show { opacity: 1; }
+.cs-card { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center; padding-inline: 8%; pointer-events: none; z-index: 97; }
+.cs-card-mark { width: 100%; }
+.cs-card-mark svg { display: block; width: auto; height: min(56vh, 200px); max-width: 92%; margin: 0 auto; filter: drop-shadow(0 6px 18px #000); } /* fits a 16:9 stage either way round */
+.cs-card-kicker { font: 11px/1.3 var(--display); color: #c8b890; letter-spacing: .3em; text-shadow: 0 1px 4px #000; }
+.cs-card-text { font: 22px/1.15 var(--display); color: var(--gold); letter-spacing: .04em; text-shadow: 0 2px 6px #000, 0 0 24px rgba(240, 199, 94, .45); text-wrap: balance; }
+.cs-card-sub { font: 12px/1.3 var(--display); color: #e8dcc0; letter-spacing: .12em; text-shadow: 0 1px 4px #000; text-wrap: balance; }
 .cs-title.mark { top: 14%; padding-inline: 0; text-shadow: none; filter: drop-shadow(0 6px 18px #000); } /* clear of the picture's bottom edge (#528) */
 .cs-title.mark svg, .mode-mark svg { display: block; width: 100%; height: auto; }
 .cs-title.mark svg { width: min(96vw, 520px); margin: 0 auto; } /* as wide as a phone allows: the marks' small lettering stays readable (#528) */
@@ -629,6 +635,21 @@ img { max-width: 100%; display: block; }
 .cs-p { position: absolute; bottom: -8px; width: 4px; height: 4px; border-radius: 50%; animation: csRise 4s linear infinite; }
 .cs-p.embers { background: #ffb24a; box-shadow: 0 0 6px #ff7a1a; }
 .cs-p.snow { background: #fff; top: -8px; bottom: auto; animation-name: csFall; opacity: .85; }
+.cs-p.ash { background: #b8b0a4; width: 3px; height: 3px; top: -8px; bottom: auto; animation-name: csFall; opacity: .7; }
+.cs-actor.silhouette { filter: brightness(0) drop-shadow(0 0 10px rgba(255, 120, 40, .55)); }
+/* the saga's opening movie (src/opening.js): a picture only, letterboxed and graded; sizes follow the picture's width */
+.cs.movie .cs-cap, .cs.movie .cs-bar, .cs.movie .cs-title { display: none !important; }
+.cs.movie .cs-stage { container-type: inline-size; }
+.cs.movie .cs-bg { filter: saturate(.85) contrast(1.08); }
+.cs.movie .cs-fx { background: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, .6) 100%); z-index: 96; }
+.cs.movie .cs-stage::before, .cs.movie .cs-stage::after { content: ''; position: absolute; left: 0; right: 0; height: 12%; background: #000; z-index: 98; }
+.cs.movie .cs-stage::before { top: 0; } .cs.movie .cs-stage::after { bottom: 0; }
+.cs.movie .cs-card { gap: 1cqw; }
+.cs.movie .cs-card.low { justify-content: flex-end; padding-bottom: 15%; }
+.cs.movie .cs-card-mark svg { height: 31cqw; }
+.cs.movie .cs-card-kicker { font-size: max(10px, 2.35cqw); letter-spacing: .28em; color: #f0e4c8; text-shadow: 0 1px 4px #000, 0 0 14px #000; }
+.cs.movie .cs-card-text { font-size: max(14px, 3.45cqw); }
+.cs.movie .cs-card-sub { font-size: max(10px, 1.9cqw); }
 @keyframes csRise { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-300px) translateX(30px); opacity: 0; } }
 @keyframes csFall { from { transform: translateY(0); } to { transform: translateY(320px) translateX(-24px); } }
 .theater .row.locked { opacity: .45; }

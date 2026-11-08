@@ -5,7 +5,13 @@
 const { spawn } = require('child_process');
 const fs = require('fs'), path = require('path');
 const CH = process.argv[2] || 'legend_lyveus', OUT = process.argv[3] || path.join(__dirname, 'out', 'rec');
-const FPS = 30, SCALE = +(process.env.SCALE || 1080 / 390);
+// A trailer (art/promo/trailers/*.js): INJECT=<file> runs in the page and defines window.TRAILER (a chapter that never
+// ships in the game) and window.TRAILER_PLAY(); VW/VH set the viewport (a 16:9 video: VW=640 VH=360 SCALE=3), and
+// CLIP=stage records the picture only (the trailer puts its captions on the picture).
+// __FILE(path)__ in it becomes that file's text as a JS string (a logo SVG from art/), path from the repo root
+const INJECT = process.env.INJECT ? fs.readFileSync(process.env.INJECT, 'utf8').replace(/__FILE\(([^)]+)\)__/g, (_, f) => JSON.stringify(fs.readFileSync(path.join(__dirname, '..', '..', f), 'utf8'))) : '';
+const VW = +(process.env.VW || 390), VH = +(process.env.VH || 844), STAGE_ONLY = process.env.CLIP === 'stage';
+const FPS = 30, SCALE = +(process.env.SCALE || 1080 / VW);
 fs.mkdirSync(OUT, { recursive: true });
 for (const f of fs.readdirSync(OUT)) if (/^f\d+\.jpg$/.test(f)) fs.unlinkSync(path.join(OUT, f));
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
@@ -26,7 +32,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const js = async (expr) => { const r = await send('Runtime.evaluate', { expression: `(async()=>{${expr}})()`, awaitPromise: true, returnByValue: true }); return r.result && r.result.result && r.result.result.value; };
   const jsSync = async (expr) => { const r = await send('Runtime.evaluate', { expression: `(()=>{${expr}})()`, returnByValue: true }); return r.result && r.result.result && r.result.result.value; };
   await send('Page.enable'); await send('Runtime.enable');
-  await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: SCALE, mobile: true });
+  await send('Emulation.setDeviceMetricsOverride', { width: VW, height: VH, deviceScaleFactor: SCALE, mobile: true });
   await send('Page.navigate', { url: 'http://localhost:8777/' }); await sleep(2500);
   await js(`localStorage.clear(); G.newGame({name:'Aldric',cls:'paladin',race:'human'}); G.S.player.level=12; G.S.player.story={intro:true,ch1:true}; G.S.flags.warModeAsked=true; G.save(); try{localStorage.setItem('azsolo.story', JSON.stringify(['intro','ch1','${CH}']));}catch(e){} return true;`);
   await send('Page.navigate', { url: 'http://localhost:8777/' }); await sleep(2500);
@@ -36,16 +42,17 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   // a clean video: no Skip button, no "Tap to continue"
   await js(`const st=document.createElement('style'); st.textContent='.cs-skip,.cs-tap{opacity:0!important}'; document.head.appendChild(st); return true;`);
   await js(`${H} click(/^Hero$/, '.tab, button, nav button'); await new Promise(r=>setTimeout(r,700)); click(/Theater/); await new Promise(r=>setTimeout(r,900)); return true;`);
-  const title = await jsSync(`return CS.byId('${CH}').title;`);
+  if (INJECT) { await js(INJECT + '\n;return true;'); }
+  const title = INJECT ? await jsSync(`return TRAILER.title;`) : await jsSync(`return CS.byId('${CH}').title;`);
   // freeze the clock, then start the chapter
   await send('Emulation.setVirtualTimePolicy', { policy: 'pause' });
-  const ok = await jsSync(`const t=CS.byId('${CH}').title; const row=[...document.querySelectorAll('.row')].find(b=>b.textContent.includes(t)); if(row) row.click(); return !!row;`);
+  const ok = INJECT ? await jsSync(`TRAILER_PLAY(); return true;`) : await jsSync(`const t=CS.byId('${CH}').title; const row=[...document.querySelectorAll('.row')].find(b=>b.textContent.includes(t)); if(row) row.click(); return !!row;`);
   if (!ok) { console.log('could not find', title, 'in the Theater'); process.exit(1); }
   const step = (ms) => new Promise((r) => { budgetDone = r; send('Emulation.setVirtualTimePolicy', { policy: 'advance', budget: ms }); });
   let n = 0, started = false, clip = null, tail = 0;
   for (let guard = 0; guard < FPS * 240; guard++) {
     await step(1000 / FPS);
-    const st = await jsSync(`const s=document.querySelector('.cs .cs-stage'), c=document.querySelector('.cs .cs-cap'); if(!s) return null; const a=s.getBoundingClientRect(), b=c?c.getBoundingClientRect():a; return {x:a.left, y:a.top, w:a.width, h:Math.max(a.bottom,b.bottom)-a.top, playing: !!CS.playing};`);
+    const st = await jsSync(`const s=document.querySelector('.cs .cs-stage'), c=document.querySelector('.cs .cs-cap'); if(!s) return null; const a=s.getBoundingClientRect(), b=c?c.getBoundingClientRect():a; return {x:a.left, y:a.top, w:a.width, h:(${STAGE_ONLY}?a.bottom:Math.max(a.bottom,b.bottom))-a.top, playing: !!CS.playing};`);
     if (st && st.playing) started = true;
     if (!st) { if (started && ++tail > 3) break; continue; }
     if (!clip) clip = { x: Math.round(st.x), y: Math.round(st.y), width: Math.round(st.w), height: Math.round(st.h / 2) * 2, scale: 1 };

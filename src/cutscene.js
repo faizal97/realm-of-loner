@@ -640,16 +640,17 @@
     if (!ch || !ch.shots || CS.playing) return Promise.resolve();
     CS.unlock(ch.id);
     return new Promise((resolve) => {
-      const wrap = document.createElement('div'); wrap.className = 'cs';
+      const wrap = document.createElement('div'); wrap.className = 'cs' + (ch.movie ? ' movie' : ''); /* a movie: a picture only, timed to its song */
       wrap.innerHTML = `<div class="cs-bar"></div><div class="cs-stage"><div class="cs-cam"><img class="cs-bg" alt=""></div><div class="cs-fx"></div><div class="cs-flash"></div><div class="cs-title"></div></div>
         <div class="cs-cap"><b class="cs-who"></b><span class="cs-text"></span><i class="cs-tap">Tap to continue</i></div><button class="cs-skip" type="button">Skip</button>`;
       document.getElementById('app').append(wrap);
       const $ = (s) => wrap.querySelector(s);
       const stage = $('.cs-stage'), cam = $('.cs-cam'), bg = $('.cs-bg'), fx = $('.cs-fx'), flash = $('.cs-flash');
       CS.playing = ch; CS.music = ch.music || null; if (env.setMusic) env.setMusic(CS.music);
-      let shotIdx = -1, timers = [], anims = [], skipShot = null, done = false;
+      let shotIdx = -1, timers = [], anims = [], skipShot = null, done = false, clock = 0;
+      const movieT0 = performance.now();
       const fill = (t) => t.replace('{name}', env.name).replace('{zone}', env.zone);
-      const clear = () => { timers.forEach(clearTimeout); timers = []; anims.forEach((a) => { try { a.finish(); } catch (e) { } }); anims = []; };
+      const clear = () => { timers.forEach(clearTimeout); timers = []; anims.forEach((a) => { try { a.finish(); if (a.effect && a.effect.target === stage) a.cancel(); } catch (e) { } }); anims = []; }; /* a fade or shake on the stage ends with its shot: a fadeout before the last shot must not keep the next one dark */
       const finish = () => { if (done) return; done = true; clear(); clearTimeout(armTimer); wrap.classList.add('cs-out'); setTimeout(() => wrap.remove(), 450); CS.playing = null; CS.music = null; if (env.setMusic) env.setMusic(null); resolve(); };
       // guard against stray taps: a cutscene often starts right after a tap on a dialog (whose close button sits where
       // Skip is), so taps are ignored at first, Skip asks for a second tap, and a shot needs a moment before a tap moves on
@@ -668,6 +669,7 @@
         clearTimeout(armTimer); armTimer = setTimeout(disarm, ARM);
       });
       wrap.addEventListener('click', () => {
+        if (ch.movie) return; /* a movie keeps time with its song: only Skip ends it */
         const now = performance.now();
         if (now - t0 < GRACE || now - shotAt < SHOT_GRACE) return;
         if (armed) disarm();
@@ -682,6 +684,7 @@
       function src(a) {
         const [kind, key] = a.split(':');
         if (kind === 'hero') return env.heroUrl;
+        if (kind === 'look') { const [cls, race, gender] = key.split('.'); return env.art('hero', { cls, race, gender: gender || 'm', skin: 0, hair: 0 }); } /* any class and race, as a hero sprite */
         if (kind === 'scene' && key === '@start') return env.art('scene', env.startScene);
         if (kind === 'scene' && key === '@here') return env.art('scene', env.hereScene);
         return env.art(kind, key);
@@ -706,13 +709,29 @@
         if (shotIdx >= ch.shots.length) return finish();
         const shot = ch.shots[shotIdx];
         // swap backdrop and actors
-        stage.querySelectorAll('.cs-actor').forEach((n) => n.remove());
+        stage.querySelectorAll('.cs-actor, .cs-card').forEach((n) => n.remove());
         fx.innerHTML = '';
-        bg.src = src(shot.bg);
+        bg.style.visibility = shot.bg ? '' : 'hidden'; if (shot.bg) bg.src = src(shot.bg);
+        bg.style.filter = shot.filter || ''; /* a shot's own grade on the backdrop only (a trailer darkens a sunny scene, its figures stay clear) */
+        // a card on the picture: a mark (SVG from the art packs) and/or a line of big text, fading in at `at` and out
+        // before the shot ends (a trailer's words; a shot with no bg is a card on black)
+        if (shot.card) {
+          const c = shot.card, cd = document.createElement('div'); cd.className = 'cs-card' + (c.mark ? ' has-mark' : '') + (c.cls ? ' ' + c.cls : '');
+          if (c.mark) { const m = document.createElement('div'); m.className = 'cs-card-mark'; m.innerHTML = c.mark; cd.append(m); }
+          for (const [k, v] of [['kicker', c.kicker], ['text', c.text], ['sub', c.sub]]) if (v) { const t = document.createElement('div'); t.className = 'cs-card-' + k; t.textContent = v; cd.append(t); }
+          stage.append(cd);
+          const inAt = (c.at || 0) * 1000, outAt = (c.out != null ? c.out : shot.dur - 0.9) * 1000;
+          if (c.still) { /* already on screen: a cut inside a longer card keeps it up, no fade in */ }
+          else if (c.drift) { /* the card fades in and keeps drifting toward the viewer for the whole shot */
+            anims.push(cd.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 1200, delay: inAt, easing: 'ease-out', fill: 'both' }));
+            anims.push(cd.animate([{ transform: 'scale(.94)' }, { transform: 'scale(' + c.drift + ')' }], { duration: shot.dur * 1000, easing: 'linear', fill: 'both' }));
+          } else anims.push(cd.animate([{ opacity: 0, transform: 'scale(.96)' }, { opacity: 1, transform: 'scale(1)' }], { duration: 900, delay: inAt, easing: 'ease-out', fill: 'both' }));
+          if (outAt < shot.dur * 1000) timers.push(setTimeout(() => anims.push(cd.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 800, fill: 'forwards' })), outAt));
+        }
         const [c0, c1] = shot.cam || [[0, 0, 1], [0, 0, 1]];
         anims.push(cam.animate([{ transform: `translate(${c0[0]}%, ${c0[1]}%) scale(${c0[2]})` }, { transform: `translate(${c1[0]}%, ${c1[1]}%) scale(${c1[2]})` }], { duration: shot.dur * 1000, easing: 'ease-in-out', fill: 'forwards' }));
         for (const ac of (shot.actors || [])) {
-          const el = document.createElement('img'); el.className = 'cs-actor' + (ac.anim ? ' ' + ac.anim : ''); el.alt = '';
+          const el = document.createElement('img'); el.className = 'cs-actor' + (ac.anim ? ' ' + ac.anim : '') + (ac.cls ? ' ' + ac.cls : ''); el.alt = '';
           el.src = src(ac.a);
           el.style.left = ac.x + '%'; el.style.bottom = (ac.y || 0) + '%'; el.style.width = ac.w + '%';
           const sx = ac.flip ? -1 : 1;
@@ -727,15 +746,19 @@
         }
         for (const f of (shot.fx || [])) {
           const [name, at] = f.split('@'); const t = at ? +at * 1000 : 0;
-          if (name === 'fadein') anims.push(stage.animate([{ filter: 'brightness(0)' }, { filter: 'brightness(1)' }], { duration: 1200, easing: 'ease-out' }));
-          if (name === 'fadeout') timers.push(setTimeout(() => anims.push(stage.animate([{ filter: 'brightness(1)' }, { filter: 'brightness(0)' }], { duration: 1400, fill: 'forwards' })), shot.dur * 1000 - 1400));
+          /* fadein@0.4 / fadeout@0.5: a shorter fade, in seconds (a trailer's quick cuts) */
+          const fd = (d) => (at ? +at * 1000 : d);
+          if (name === 'fadein') anims.push(stage.animate([{ filter: 'brightness(0)' }, { filter: 'brightness(1)' }], { duration: fd(1200), easing: 'ease-out' }));
+          if (name === 'fadeout') timers.push(setTimeout(() => anims.push(stage.animate([{ filter: 'brightness(1)' }, { filter: 'brightness(0)' }], { duration: fd(1400), fill: 'forwards' })), shot.dur * 1000 - fd(1400)));
           if (name === 'flash') timers.push(setTimeout(() => anims.push(flash.animate([{ opacity: 0 }, { opacity: 0.95, offset: 0.08 }, { opacity: 0 }], { duration: 900 })), t));
           if (name === 'shake') timers.push(setTimeout(() => anims.push(stage.animate([0, -6, 5, -4, 3, -2, 0].map((x, i) => ({ transform: `translate(${x}px, ${i % 2 ? 2 : -2}px)` })), { duration: 700 })), t || 600));
-          if (name === 'embers' || name === 'snow') particles(name);
+          if (name === 'embers' || name === 'snow' || name === 'ash') particles(name);
         }
         for (const line of (shot.lines || [])) timers.push(setTimeout(() => typeLine(line), line.t * 1000));
         if (!(shot.lines || []).length) { $('.cs-who').hidden = true; $('.cs-text').textContent = ''; }
-        const end = setTimeout(next, shot.dur * 1000); timers.push(end);
+        /* a movie's shots are timed from its start, not one after another, so a late frame never pushes it off the beat */
+        clock += shot.dur * 1000;
+        const end = setTimeout(next, ch.movie ? Math.max(0, movieT0 + clock - performance.now()) : shot.dur * 1000); timers.push(end);
         // a tap jumps to the end of the shot (first tap finishes the typing)
         skipShot = () => { next(); };
       }
