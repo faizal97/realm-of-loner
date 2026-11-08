@@ -4,6 +4,7 @@
  "talents.js",
  "bard.js",
  "interrupts.js",
+ "prepatch.js",
  "zones/elwynn.js",
  "zones/dunmorogh.js",
  "zones/teldrassil.js",

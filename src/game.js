@@ -902,10 +902,12 @@
     const f = G.fight && G.pUnit && G.pUnit.form;
     if (f) {
       const all = [...new Set(C.abilities.concat(Object.keys(D.ABILITIES).filter((a) => D.ABILITIES[a].cls === P.cls)))]; // Maul, Growl, Swipe live only in the form
-      return all.filter((a) => { const A = D.ABILITIES[a]; return A.lvl <= P.level && (A.form === f || A.shapeshift || A.anyForm); });
+      return all.filter((a) => { const A = D.ABILITIES[a]; return A.lvl <= P.level && G.learned(a) && (A.form === f || A.shapeshift || A.anyForm); });
     }
-    return C.abilities.filter((a) => D.ABILITIES[a].lvl <= P.level);
+    return C.abilities.filter((a) => D.ABILITIES[a].lvl <= P.level && G.learned(a));
   };
+  // an ability a class quest teaches (the pre-patch's, #512–#521): known once that quest is done
+  G.learned = (a) => { const A = D.ABILITIES[a]; return !A || !A.learn || !!(G.S && G.S.player.done && G.S.player.done[A.learn]); };
 
   G.xpForKill = function (mobLvl, elite) {
     const P = G.S.player;

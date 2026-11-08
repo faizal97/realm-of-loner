@@ -39,7 +39,7 @@ test('the bar has one instrument button, out of a fight only, with the instrumen
 
 function ART_ICON_KEYS() {
   // the Bard's icons live in art_legends.js, its interrupt in art_icons14.js (#179)
-  return ['art_legends.js', 'art_icons14.js'].flatMap((f) => [...fs.readFileSync(path.join(__dirname, '..', 'src', f), 'utf8')
+  return ['art_legends.js', 'art_icons14.js', 'art_icons15.js'].flatMap((f) => [...fs.readFileSync(path.join(__dirname, '..', 'src', f), 'utf8')
     .matchAll(/^ {4}([a-z_]+): function \(c\)/gm)].map((m) => m[1]));
 }
 

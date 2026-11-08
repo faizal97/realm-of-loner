@@ -27,7 +27,7 @@ test('the kit: daggers and staves, 24 abilities (Sour Note, the interrupt every 
   assert.deepStrictEqual(B.roles, ['healer', 'dps']);
   assert.ok(!B.hidden, 'pickable on a live build (#255)');
   for (const r in D.RACES) assert.ok(D.RACES[r].classes.includes('bard'), `${r}: can be a Bard`);
-  assert.strictEqual(B.abilities.filter((id) => !D.ABILITIES[id].instrument).length, 24);
+  assert.strictEqual(B.abilities.filter((id) => !D.ABILITIES[id].instrument && !D.ABILITIES[id].learn).length, 24); // the pre-patch's Duet (#521, taught by a quest) is counted apart
   assert.strictEqual(D.ABILITIES.grand_finale.name, 'Standing Ovation');
   for (const id of ['song_of_rest', 'dirge', 'marching_song', 'ballad_of_blades']) assert.ok(D.ABILITIES[id].song, `${id} is a song`);
   for (const id of ['hearthsong', 'anthem_of_stone']) assert.ok(D.ABILITIES[id].buff && !D.ABILITIES[id].song, `${id} stays a buff`);
