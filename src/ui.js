@@ -3386,7 +3386,7 @@
     openSheet('events', 'Events', 'Yearly festivals', (b) => {
       const list = h('div', { class: 'list' });
       for (const k in D.EVENTS || {}) list.append(h('button', { class: 'row nav', onclick: () => (k === 'longnight' ? openLongnight() : openLanternwake()) }, h('div', { class: 'ic' }, img(art('icon', 'event_' + k))),
-        h('div', { class: 't' }, h('b', null, D.EVENTS[k].name), h('small', null, `${evDates(k)} · ${lwStatus(k)}`)), h('div', { class: 'r' }, '›')));
+        h('div', { class: 't' }, h('b', null, D.EVENTS[k].name), h('small', null, `${evDates(k)} · ${lwStatus(k)}`)), h('div', { class: 'r' }, h('span', { class: 'nav-arr' }, '›'))));
       b.append(list);
     });
   }

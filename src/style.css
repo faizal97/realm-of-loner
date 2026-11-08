@@ -326,6 +326,7 @@ img { max-width: 100%; display: block; }
 .drop-link { display: inline; padding: 0; margin: 0; min-height: 0; background: none; border: 0; font: inherit; text-decoration: underline dotted; text-underline-offset: 2px; cursor: pointer; }
 .row.off { opacity: .45; }
 .row.nav { grid-template-columns: 1fr auto; }
+.row.nav:has(> .ic) { grid-template-columns: 34px 1fr auto; } /* a nav row with an icon keeps its text and › on one line */
 .tag-hard { display: inline-block; margin-left: 6px; padding: 0 5px; border: 1px solid #ff8a5a; border-radius: 3px; color: #ff8a5a; font: 700 10px/16px var(--body); vertical-align: 1px; }
 .row.nav.hard { border-color: #6a3a22; }
 .nav-arr { margin-left: 8px; font: 700 18px/1 var(--body); color: var(--gold); vertical-align: -1px; }
