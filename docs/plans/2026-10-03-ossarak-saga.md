@@ -146,7 +146,7 @@ in `2026-10-03-v11-story-options.md`.
 1. ~~**Chapter 1's final names**~~ **Decided 2026-11-08:** The Ashen Court, The Saltpenny Vault, Cinderpeak Spire (see the Chapter 1 design). Was: **Chapter 1's design** (`2026-10-03-ch1-ashen-coronation-design.md`; the game designer wrote it for his approval): the zone around the Spire, the two faction
    dungeons, the Spire raid's bosses, the story beat by beat, the end cinematic teasing the Reach, the logo, and
    canon's new Timeline, Names and Reveals.
-2. **The pre-patch (decision 20), when he asks:**
+2. **The pre-patch (decision 20): decided 2026-11-08, see `2026-11-08-prepatch-design.md`.** The questions it answered:
    - the campaign's story beats into the coronation and Kethriax (endgame only, see decision 20's scope, so the
      level-60 Reveals are known; the events and activities open to every level still keep to each level's Reveals);
    - the exact gate: which finished story or raid opens the campaign;
