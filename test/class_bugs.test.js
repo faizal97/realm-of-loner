@@ -82,7 +82,7 @@ test('Cleave can light Battle Fury', () => {
   const { C, u, e } = fight(60, 'warrior');
   const p = D.PROCS.warrior.find((x) => x.aura === 'battle_fury');
   const chance = p.chance; p.chance = 1;
-  try { use(C, u, 'cleave', e); } finally { p.chance = chance; }
+  try { for (let i = 0; i < 10 && !E.lit(u, 'slam'); i++) use(C, u, 'cleave', e); } finally { p.chance = chance; } // a swing can miss: the proc needs a hit
   assert.ok(E.lit(u, 'slam'), 'Slam is lit');
 });
 

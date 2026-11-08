@@ -251,7 +251,7 @@
     { const t = now(), P = S.player; if (P.ghostUntil > t + 15000) P.ghostUntil = t + 15000; if (P.hearthAt > t + 15 * 60000) P.hearthAt = t + 15 * 60000; if ((S.flags.deserterUntil || 0) > t + DESERTER) S.flags.deserterUntil = t + DESERTER; }
     // a duel or brawl round left by closing the app is lost, never undone (#380, #381)
     if (S.duelOn) { const d = S.duelOn; delete S.duelOn; S.player.hp = Math.max(1, Math.round(G.vitals().maxHp * 0.05)); if (d.wager) S.player.money = Math.max(0, S.player.money - d.wager); sys(`You left the duel with ${d.name}: it counts as lost.${d.wager ? ' You paid ' + G.moneyText(d.wager) + '.' : ''}`); }
-    for (const k in S.world || {}) { const w = S.world[k]; for (const m of (w.mobs || []).concat(Object.values(w.named || {}))) if (m.state === 'fight') m.state = 'alive'; } // a fight the app closed on ended with it (#409)
+    for (const k in S.world || {}) { const w = S.world[k]; for (const m of (w.mobs || []).concat(w.event || [], Object.values(w.named || {}))) if (m.state === 'fight') m.state = 'alive'; } // a fight the app closed on ended with it (#409)
     if (S.bg && S.bg.phase === 'fight') { const go = S.bg.go; if (go) { sys('You left the battleground fight: it counts as lost.'); endBgFight({ over: 'loss', enemies: [], bg: { banner: go.group, name: bgName(S.bg, go.group) } }); } else S.bg.phase = 'choose'; } // a battleground, the same (#408)
     if (S.brawl && S.brawl.phase === 'fight') { S.brawl.phase = 'choose'; const foe = G.brawlOpponent(); if (foe) endBrawlFight({ over: 'loss', brawl: { foe: foe.name } }); else S.brawl.phase = 'done'; }
     try { G.refreshHeirlooms(); } catch (e) { /* older save */ }
@@ -982,8 +982,23 @@
     W.named = W.named || {};
     for (const k in W.named) if (!(P.named || {})[k] && W.named[k].state !== 'fight') delete W.named[k];
     for (const k in (P.named || {})) if (!W.named[k] && D.MOBS[k]) W.named[k] = { state: 'alive', until: 0, id: 'n_' + k, key: k, level: D.MOBS[k].lvl[0] };
+    syncCollectors(W, P);
     return W;
   }
+  // ---- the pre-patch's debt collectors (#522): a few per levelling place at its own level, only while D.PREPATCH.live
+  G.collectorsHere = (P) => !!(D.PREPATCH && D.PREPATCH.live && P && P.pool && P.lvl && !P.safe && !P.gate && (P.mobs || []).length);
+  const collectorKey = (P) => P.lvl[0] >= 30 ? 'ledger_collector' : 'debt_collector'; // no Ledger name below 30
+  function spawnCollector(P) { return { id: 'c' + (MOBID++) + '_' + Math.floor(Math.random() * 1e6), key: collectorKey(P), level: rint(P.lvl[0], P.lvl[1]), state: 'alive', until: 0, by: null }; }
+  function syncCollectors(W, P) {
+    if (!G.collectorsHere(P)) { if (W.event) W.event = W.event.filter((m) => m.state === 'fight'); return; }
+    W.event = (W.event || []).filter((m) => D.MOBS[m.key]);
+    while (W.event.length < D.PREPATCH.collectors) W.event.push(spawnCollector(P));
+  }
+  // a torn debt note for a collector that isn't grey to you
+  G.collectorKill = function (key, level) {
+    const P = G.S.player; if (!(D.MOBS[key] || {}).collector || P.level - level >= 5) return 0;
+    P.debtNotes = (P.debtNotes || 0) + 1; sys('Torn debt note: ' + P.debtNotes); return 1;
+  };
   // ---- rare hunts (v10.10.0-beta.5, #43; design docs/plans/2026-10-03-rare-hunts-design.md): a level-60 rare appears once
   // in each 6-hour window (UTC) for 30 minutes or until killed. Its time is a pure function of its own key and the window
   // (no stored state, so every device agrees, nothing drifts, and adding a rare moves no other); "last seen" is computed
@@ -1045,13 +1060,14 @@
     let r = Math.random() * tot, key = keep || P.mobs[0][0];
     if (!keep) for (const m of P.mobs) { r -= m[1]; if (r <= 0) { key = m[0]; break; } }
     const M = D.MOBS[key];
+    if (M.placeLvl) return spawnCollector(P);
     return { id: 'm' + (MOBID++) + '_' + Math.floor(Math.random() * 1e6), key, level: rint(M.lvl[0], M.lvl[1]), state: 'alive', until: 0, by: null };
   }
   G.placeMobs = function () {
     const P = D.PLACES[G.S.player.place];
     if (!P || !P.pool && !P.named) return [];
     const W = placeState(G.S.player.place);
-    const list = W.mobs.slice();
+    const list = W.mobs.concat(W.event || []);
     // a rare goes first only if it is at most 2 levels above you; a stronger one waits after the normal creatures, its
     // level still red on the card (v10.9, issue #10: a level-4 rare was the first thing a level-1 player tapped)
     const L = G.S.player.level;
@@ -1068,7 +1084,7 @@
     const inParty = new Set(S.wparty ? S.wparty.members.map((m) => m.bot && m.bot.id) : []);
     const near = B.onlineIn(S, id, new Date(t)).filter((b) => !inParty.has(b.id)); // your own party never takes a mob from you (#313)
     const n = Math.min(5, near.length);
-    const all = W.mobs.concat(Object.values(W.named));
+    const all = W.mobs.concat(W.event || [], Object.values(W.named));
     for (const m of all) {
       if (m.state === 'fight') continue;
       if (m.id.startsWith('n_') && G.isHunt(m.key)) { m.state = G.huntUp(m.key, t) ? 'alive' : 'away'; continue; } // the hunt's schedule, not a respawn timer; no bot takes it (#43)
@@ -2097,7 +2113,7 @@
           e.inst.until = now() + (named ? D.PLACES[P.place].named[e.key] * 1000 : rnd(15, 28) * 1000);
           if (named && G.isHunt(e.key)) { P.huntKilled = P.huntKilled || {}; P.huntKilled[e.key] = G.huntNow(e.key, now()).w; e.inst.state = 'away'; G.takeTrophy(e.key); } // gone until its next window (#43)
         }
-        onKill(e.key); G.lwKill(e.level, e.elite); G.lnKill(e.level, e.elite); // festival candles and Kindling
+        onKill(e.key); G.collectorKill(e.key, e.level); G.lwKill(e.level, e.elite); G.lnKill(e.level, e.elite); // festival candles and Kindling
         if (e.inst && e.inst.id.startsWith('n_') && !D.MOBS[e.key].boss) G.epicDrop('rare', e.level); // a rare's purple chance (#141)
         G.gainXp(Math.round(G.xpForKill(e.level, e.elite) * share * (e.packXp || 1)), true); // a pack creature: half (#211)
         const l = rollLoot(e.key, e.level, 1 / size);

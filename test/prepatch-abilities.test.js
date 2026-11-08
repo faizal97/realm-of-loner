@@ -143,3 +143,22 @@ test('the pre-patch campaign opens at 60 after The Drowned Crown or any raid cle
   character(59, 'priest', 'human');
   assert.strictEqual(G.prepatchOpen(), false, 'never below 60');
 });
+
+test('debt collectors: every levelling place has them at its own level, no Ledger name below 30, none in towns (#522)', () => {
+  const { P } = character(20, 'warrior', 'human');
+  const places = Object.keys(D.PLACES).filter((k) => G.collectorsHere(D.PLACES[k]));
+  assert.ok(places.length > 100, `${places.length} places`);
+  for (const k of places) {
+    P.place = k; const pl = D.PLACES[k], c = G.placeMobs().filter((m) => D.MOBS[m.key].collector);
+    assert.strictEqual(c.length, D.PREPATCH.collectors, k);
+    for (const m of c) {
+      assert.ok(m.level >= pl.lvl[0] && m.level <= pl.lvl[1], `${k} ${m.level}`);
+      assert.strictEqual(m.key, pl.lvl[0] >= 30 ? 'ledger_collector' : 'debt_collector', k);
+    }
+  }
+  assert.ok(!Object.keys(D.PLACES).some((k) => D.PLACES[k].safe && G.collectorsHere(D.PLACES[k])), 'no towns');
+  P.debtNotes = 0;
+  assert.strictEqual(G.collectorKill('debt_collector', 20), 1);
+  assert.strictEqual(G.collectorKill('debt_collector', 12), 0, 'grey gives none');
+  assert.strictEqual(P.debtNotes, 1);
+});
