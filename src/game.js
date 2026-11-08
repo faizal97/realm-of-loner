@@ -2999,6 +2999,15 @@
     return true;
   };
   // Titles
+  // The pre-patch campaign (#508): open once the character has finished The Drowned Crown (its quest, either faction's)
+  // or cleared any level-60 raid. Below that, the pre-patch is its event and activities only.
+  G.PREPATCH_STORY = ['tc_crown_a', 'tc_crown_h'];
+  G.prepatchOpen = function () {
+    const P = G.S && G.S.player; if (!P || P.level < 60) return false;
+    if (G.PREPATCH_STORY.some((q) => P.done && P.done[q])) return true;
+    const r = G.records();
+    return Object.keys(D.DUNGEONS).some((k) => D.DUNGEONS[k].raid && r.clears[k] && r.clears[k].clears);
+  };
   G.records = function () {
     const P = G.S.player, cx = P.codex || {}; const pv = G.pvpStats();
     let flawless = 0, speed = 0; for (const k in cx) { flawless += cx[k].flawless || 0; speed += cx[k].speed || 0; }

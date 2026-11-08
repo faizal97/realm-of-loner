@@ -131,3 +131,15 @@ test('Duet: a party heal song reaches only the duet ally, twice as strong (#521)
   E.songHitsForTest(F, bard, { ab: heals, every: 3 }, 100, {});
   assert.strictEqual(a.hp, 1200); assert.strictEqual(b.hp, 1000);
 });
+
+test('the pre-patch campaign opens at 60 after The Drowned Crown or any raid clear, not before (#508)', () => {
+  const { P } = character(60, 'warrior', 'human');
+  assert.strictEqual(G.prepatchOpen(), false);
+  P.done = Object.assign({}, P.done, { tc_crown_a: true });
+  assert.strictEqual(G.prepatchOpen(), true, 'the story');
+  const { P: Q } = character(60, 'mage', 'orc');
+  Q.codex = Object.assign({}, Q.codex, { molten_core: { clears: 1 } });
+  assert.strictEqual(G.prepatchOpen(), true, 'a raid clear');
+  character(59, 'priest', 'human');
+  assert.strictEqual(G.prepatchOpen(), false, 'never below 60');
+});
