@@ -72,3 +72,7 @@ Needs Python 3, Flutter, and JDK 17. You can also open `dist/index.html` in a de
 - `src/game.js`, `src/ui.js`: game logic and interface
 - `src/art*.js`: all art as SVG
 - `sim/`: balance and flow simulations (`node sim/v20.js`)
+
+## Copyright
+
+© 2026 Faizal Ardian Putra (Starlight Heaven). All rights reserved. The code, art, music and story are shared here to read, report bugs and send contributions; they are not licensed for reuse or republishing.
