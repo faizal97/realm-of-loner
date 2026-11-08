@@ -2826,7 +2826,7 @@
     const money = (Q.reward.money || 0) + G.questMoney(Q.lvl);
     const box = h('div', { class: 'parch' },
       h('h3', null, Q.name),
-      Q.main ? h('div', { class: 'q-main' }, qmark('new', null, true), ' Main story · ', (() => { const c = D.chapterOf(Q.lvl); return c ? `Chapter ${c}: ${D.CHAPTER_NAMES[c]}` : `Prologue: ${D.CHAPTER_NAMES[0]}`; })()) : null,
+      Q.main ? h('div', { class: 'q-main' }, qmark('new', null, true), ' Main story · ', (() => { if (Q.arc) return Q.arc; const c = D.chapterOf(Q.lvl); // an arc of its own (the pre-patch campaign) names itself return c ? `Chapter ${c}: ${D.CHAPTER_NAMES[c]}` : `Prologue: ${D.CHAPTER_NAMES[0]}`; })()) : null,
       h('p', null, Q.text),
       questStory(qid),
       h('h4', null, 'Objectives'),
@@ -2970,7 +2970,7 @@
       }
       if (place.vendor === npc || place.gearVendor === npc) b.append(h('button', { class: 'btn wide', onclick: () => openVendor(npc) }, 'Browse goods'));
       if (npc === 'farley') b.append(h('button', { class: 'btn alt wide', disabled: P.bind === P.place, onclick: () => { G.bindHere(); ui.sheetFn(); } }, P.bind === P.place ? 'This inn is your home' : 'Make this inn your home'));
-      if (!qs.length && place.vendor !== npc && npc !== 'farley' && place.gearVendor !== npc && !/^(mentor|banker|auctioneer|crafts|stable|lw|ln)_/.test(npc)) b.append(h('p', { style: { color: 'var(--muted)' } }, 'Nothing for you right now. Come back when you have grown stronger.'));
+      if (!qs.length && place.vendor !== npc && npc !== 'farley' && place.gearVendor !== npc && !/^(mentor|banker|auctioneer|crafts|stable|lw|ln|note)_/.test(npc)) b.append(h('p', { style: { color: 'var(--muted)' } }, 'Nothing for you right now. Come back when you have grown stronger.'));
     });
   }
   window.UI_GREETING = (npc) => greeting(npc);

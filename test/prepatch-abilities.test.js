@@ -205,3 +205,10 @@ test('collectors stay where a quest still needs them after the event ends (#522)
     assert.ok(G.collectorsHere(D.PLACES[pl]), 'back for the class quest');
   } finally { D.PREPATCH.live = true; delete P.quests[D.ABILITIES.intervene.learn]; }
 });
+
+test('the campaign names its own arc in the quest screen, not the level-60 story chapter', () => {
+  const chain = Object.keys(D.QUESTS).filter((q) => D.QUESTS[q].prepatch && D.QUESTS[q].main);
+  assert.strictEqual(chain.length, 12);
+  for (const q of chain) assert.strictEqual(D.QUESTS[q].arc, 'The Notes Come Due', q);
+  assert.ok(!Object.keys(D.QUESTS).some((q) => D.QUESTS[q].arc && !D.QUESTS[q].prepatch), 'only the campaign has an arc so far');
+});

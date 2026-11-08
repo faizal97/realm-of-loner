@@ -23,7 +23,7 @@
   const qd = (mob, item, p) => { const M = D.MOBS[mob]; M.qdrops = (M.qdrops || []).concat([[item, p]]); };
   qd('ledger_collector', 'unsigned_note', 0.6); qd('ledger_collector', 'courier_satchel', 0.3); qd('brood_dragonspawn', 'thornes_book', 0.25);
 
-  const Q = (id, q, faction) => { D.QUESTS[id] = Object.assign({ lvl: 60, prepatch: true, main: true }, q, faction ? { faction } : {}); };
+  const Q = (id, q, faction) => { D.QUESTS[id] = Object.assign({ lvl: 60, prepatch: true, main: true, arc: 'The Notes Come Due' }, q, faction ? { faction } : {}); };
   const notes = { type: 'collect', item: 'unsigned_note', n: 5 }, collectors = (n) => ({ type: 'kill', mob: 'ledger_collector', n });
 
   // ---- the Accord
