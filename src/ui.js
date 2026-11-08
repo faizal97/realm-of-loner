@@ -3465,6 +3465,7 @@
     openSheet('lanternwake', 'Lanternwake', lwStatus('lanternwake'), (b, title) => {
       const Ev = D.EVENTS.lanternwake, live = G.eventLive('lanternwake'), A = D.ACTIVITIES[Ev.act];
       title.querySelector('small').textContent = `${lwDates()} · ${lwStatus('lanternwake')}`;
+      if (ART.lanternwakeLogo) b.append(h('div', { class: 'ev-logo', role: 'img', 'aria-label': 'Lanternwake', html: ART.lanternwakeLogo }));
       b.append(h('div', { class: 'ev-story' }, ...Ev.story.map((t) => h('p', null, t))));
       if (live) b.append(h('div', { class: 'sec-h' }, 'Today', h('small', null, `resets ${clockAt('day')}`)), h('div', { class: 'ev-facts' }, ...lwTodayFacts()));
       // where candles come from
@@ -3646,6 +3647,7 @@
     openSheet('longnight', 'Longnight', lwStatus('longnight'), (b, title) => {
       const E0 = LNE(), live = G.lnOn(), st = G.ln(), after = () => ui.sheetFn();
       title.querySelector('small').textContent = `${evDates('longnight')} · ${lwStatus('longnight')}`;
+      if (ART.longnightLogo) b.append(h('div', { class: 'ev-logo', role: 'img', 'aria-label': 'Longnight', html: ART.longnightLogo }));
       b.append(h('div', { class: 'ev-story ln' }, ...E0.story.map((t) => h('p', null, t))));
       if (live) b.append(h('div', { class: 'sec-h' }, 'Today', h('small', null, `resets ${clockAt('day')}`)), h('div', { class: 'ev-facts' }, ...lnTodayFacts()));
       b.append(h('div', { class: 'sec-h' }, 'Calendar', h('small', null, st ? `${st.doors.length}/${E0.doors.length} open` : `${E0.doors.length} doors, 15–30 Dec`)), lnCalendar(after));
@@ -5789,8 +5791,12 @@
   // while a festival is on, the title screens wear it (v10.13, #226): festSky() behind them, its tagline under the title
   const festNow = () => (window.G && G.liveEvents ? G.liveEvents()[0] : null);
   // while the Ruinfall Saga is on (#524), the name and the saga are one logo (art/ruinfall/wordmark.py); a festival keeps its line under it
-  const titleMark = () => sagaNow() && ART[D.SAGA.logo] ? [h('div', { class: 'title-logo', role: 'img', 'aria-label': `Realm of Loner: ${D.SAGA.name}`, html: ART[D.SAGA.logo] }),
-    festNow() ? h('div', { class: 'tagline' }, `${D.EVENTS[festNow()].name} · ${evDates(festNow())}`) : null].filter(Boolean) : [h('div', { class: 'title-lantern', html: LANTERN_MARK }),
+  // a festival with its own logo takes the title for its weeks (Longnight); else the saga's; else the lantern and name
+  const FEST_LOGO = { longnight: 'longnightLogo', lanternwake: 'lanternwakeLogo' };
+  const titleMark = () => festNow() && ART[FEST_LOGO[festNow()]] ? [h('div', { class: 'title-logo', role: 'img', 'aria-label': `Realm of Loner: ${D.EVENTS[festNow()].name}`, html: ART[FEST_LOGO[festNow()]] }),
+    h('div', { class: 'tagline' }, evDates(festNow()))]
+    : sagaNow() && ART[D.SAGA.logo] ? [h('div', { class: 'title-logo', role: 'img', 'aria-label': `Realm of Loner: ${D.SAGA.name}`, html: ART[D.SAGA.logo] }),
+    festNow() ? h('div', { class: 'tagline' }, `${D.EVENTS[festNow()].name} · ${evDates(festNow())}`) : null].filter(Boolean) : ART.gameLogo && !festNow() ? [h('div', { class: 'title-logo', role: 'img', 'aria-label': 'Realm of Loner', html: ART.gameLogo })] : [h('div', { class: 'title-lantern', html: LANTERN_MARK }),
     h('h1', { class: 'title-word' }, 'Realm ', h('span', { class: 'of' }, 'of'), ' Loner'), sagaNow() ? h('div', { class: 'tagline saga' }, h('span', { class: 'saga-mark', html: ART.emblem }), festNow() ? `${D.EVENTS[festNow()].name} · ${evDates(festNow())}` : 'The Ruinfall Saga')
       : h('div', { class: 'tagline' }, festNow() ? `${D.EVENTS[festNow()].name} · ${evDates(festNow())}` : 'A World of Your Own')];
   // the Ruinfall Saga's look (#524) from the pre-patch on, while D.SAGA is set: v11 moves D.SAGA.chapter on and swaps the logo
