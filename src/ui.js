@@ -2826,7 +2826,7 @@
     const money = (Q.reward.money || 0) + G.questMoney(Q.lvl);
     const box = h('div', { class: 'parch' },
       h('h3', null, Q.name),
-      Q.main ? h('div', { class: 'q-main' }, qmark('new', null, true), ' Main story · ', (() => { if (Q.arc) return Q.arc; const c = D.chapterOf(Q.lvl); // an arc of its own (the pre-patch campaign) names itself return c ? `Chapter ${c}: ${D.CHAPTER_NAMES[c]}` : `Prologue: ${D.CHAPTER_NAMES[0]}`; })()) : null,
+      Q.main ? h('div', { class: 'q-main' }, qmark('new', null, true), ' Main story · ', (() => { if (Q.arc) return Q.arc; /* an arc of its own (the pre-patch campaign) names itself */ const c = D.chapterOf(Q.lvl); return c ? `Chapter ${c}: ${D.CHAPTER_NAMES[c]}` : `Prologue: ${D.CHAPTER_NAMES[0]}`; })()) : null,
       h('p', null, Q.text),
       questStory(qid),
       h('h4', null, 'Objectives'),
