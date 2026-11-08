@@ -465,7 +465,7 @@
     return { cls, race: races[(x >> 3) % races.length], skin: (x >> 7) % 4, hair: (x >> 11) % 5, gender };
   }
   const P0 = (place) => Object.keys(D.PLACES).find((k) => D.PLACES[k] === place);
-  const npcOn = (n) => !D.NPCS[n] || !D.NPCS[n].event || G.eventLive(D.NPCS[n].event); // festival people only while it is on
+  const npcOn = (n) => !D.NPCS[n] || (!D.NPCS[n].event || G.eventLive(D.NPCS[n].event)) && (!D.NPCS[n].prepatch || D.PREPATCH.live); // festival people only while it is on; the pre-patch's until v11
   function npcSprites(sc, place) {
     if (!place || !(place.npcs || []).length) return;
     const rank = (n) => { const mk = G.npcMarker(n); if (D.NPCS[n].legend || n === 'hooded_stranger') return -1; return mk === '?' ? 0 : mk === '!' ? 1 : /^(mentor|banker|auctioneer|crafts|stable)_/.test(n) ? 3 : 2; };
@@ -2908,6 +2908,7 @@
       if (/^stable_/.test(npc)) stableBlock(b);
       if (npc === 'lw_keeper') lwKeeperBlock(b);
       if (npc === 'ln_keeper') lnKeeperBlock(b);
+      if (npc === 'note_clerk') noteClerkBlock(b);
       if (/^auctioneer_/.test(npc)) b.append(h('button', { class: 'btn wide', onclick: () => openAuction() }, 'Browse the auction house'));
       if (npc === 'mentor_alliance' || npc === 'mentor_horde') {
         const acc = G.account();
@@ -3432,6 +3433,18 @@
     return list;
   }
   // the Wakekeeper's stall (in the NPC sheet)
+  // the pre-patch's trade-in (#523): torn debt notes for the title or Mentor Marks
+  function noteClerkBlock(b) {
+    const P = G.S.player, have = P.debtNotes || 0, list = h('div', { class: 'list' });
+    for (const t of D.PREPATCH.trade) {
+      const own = t.kind === 'title' && !!G.account().debtBreaker, short = have < t.cost;
+      const right = own ? h('span', { class: 'ok' }, 'Owned') : h('button', { class: 'chip gold', disabled: short, onclick: (e) => { e.stopPropagation(); G.noteTrade(t.id); ui.sheetFn && ui.sheetFn(); } }, short ? `Need ${t.cost}` : `Trade · ${t.cost}`);
+      list.append(h('div', { class: 'row' }, h('div', { class: 'ic' }, img(art('icon', t.kind === 'title' ? 'journal' : 'coin'))),
+        h('div', { class: 't' }, h('b', null, t.kind === 'title' ? 'the Debt-Breaker' : `${t.marks} Mentor Marks`), h('small', null, t.kind === 'title' ? 'Title · account-wide' : 'Shared by all your characters')), h('div', { class: 'r' }, right)));
+    }
+    b.append(h('div', { class: 'sec-h' }, 'Trade', h('small', null, `Torn debt notes: ${have}`)), list,
+      h('p', { class: 'ai-note' }, 'Debt collectors carry them in every zone, at its level. Grey ones carry none. Until The Ruinfall Saga begins.'));
+  }
   function lwKeeperBlock(b) {
     const st = G.lw();
     if (!st) { b.append(h('p', { class: 'ai-note' }, `Lanternwake is over. ${lwStatus('lanternwake')}.`)); return; }

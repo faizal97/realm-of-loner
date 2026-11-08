@@ -49,7 +49,7 @@
  "zones/worldbosses.js",
  "zones/legends.js",
  "professions.js",
- "events/lanternwake.js",
+ "events/lanternwake.js", "events/debtnotes.js",
   "events/longnight.js",
  "lore.js",
  "lore_places.js",

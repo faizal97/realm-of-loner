@@ -162,3 +162,19 @@ test('debt collectors: every levelling place has them at its own level, no Ledge
   assert.strictEqual(G.collectorKill('debt_collector', 12), 0, 'grey gives none');
   assert.strictEqual(P.debtNotes, 1);
 });
+
+test('torn debt notes trade for the Debt-Breaker title once and for Mentor Marks; a clerk in every trainer town (#523)', () => {
+  const { P } = character(30, 'rogue', 'orc');
+  const a = G.account(); delete a.debtBreaker; G.saveAccount(a);
+  P.debtNotes = 44;
+  const marks = G.account().marks;
+  assert.strictEqual(G.noteTrade('debt_breaker'), true);
+  assert.ok(G.titleUnlocked(D.TITLES.find((t) => t.id === 'debt_breaker')));
+  assert.strictEqual(G.noteTrade('debt_breaker'), false, 'once');
+  assert.strictEqual(G.noteTrade('marks'), false, 'four notes left: not enough');
+  P.debtNotes = 5;
+  assert.strictEqual(G.noteTrade('marks'), true);
+  assert.strictEqual(G.account().marks, marks + 10); assert.strictEqual(P.debtNotes, 0);
+  const towns = new Set([].concat(...Object.values(D.PROF_TRAINERS)));
+  for (const p of towns) if (D.PLACES[p]) assert.ok(D.PLACES[p].npcs.includes('note_clerk'), p);
+});

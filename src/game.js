@@ -994,6 +994,17 @@
     W.event = (W.event || []).filter((m) => D.MOBS[m.key]);
     while (W.event.length < D.PREPATCH.collectors) W.event.push(spawnCollector(P));
   }
+  // the trade-in (#523): the title once (account-wide), Marks as often as you like
+  G.noteTrade = function (id) {
+    const P = G.S.player, t = (D.PREPATCH.trade || []).find((x) => x.id === id);
+    if (!t || !D.PREPATCH.live) return false;
+    if (t.kind === 'title' && G.account().debtBreaker) { toast('Already yours.'); return false; }
+    if ((P.debtNotes || 0) < t.cost) { toast(`Need ${t.cost} torn debt notes (you have ${P.debtNotes || 0}).`); return false; }
+    P.debtNotes -= t.cost;
+    if (t.kind === 'title') { const a = G.account(); a.debtBreaker = 1; G.saveAccount(a); loot('Title: the Debt-Breaker. Wear it: Hero → Journey → Titles.'); }
+    if (t.kind === 'marks') G.addMarks(t.marks, 'torn debt notes');
+    emit('change'); G.save(); return true;
+  };
   // a torn debt note for a collector that isn't grey to you
   G.collectorKill = function (key, level) {
     const P = G.S.player; if (!(D.MOBS[key] || {}).collector || P.level - level >= 5) return 0;
@@ -3042,6 +3053,7 @@
     if (n.trialRank) { const r = (G.S.player.trials || {}).bestRank; return !!r && r <= n.trialRank; } // a month's final realm rank
     if (n.renown) return G.renown() >= n.renown; // #504
     if (n.founder) return G.isFounder(); // #507
+    if (n.debtBreaker) return !!G.account().debtBreaker; // #523
     return Object.keys(n).every((k) => (r[k] || 0) >= n[k]);
   };
   const ROMAN = (n) => { let o = '', x = n; for (const [v, r] of [[1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']]) while (x >= v) { o += r; x -= v; } return o; };
