@@ -567,9 +567,6 @@
   };
   // #507 Founders: a code from the Discord's Founders channel unlocks the title and the gold mount tint on the whole account.
   // Only the code's SHA-256 is here (the repo is public): the game hashes what the player types ('ROL:' + letters and digits, upper case).
-  // Supporters thanked by name in Settings → About (donors who agreed to be named). early: donated before the Play Store
-  // launch. The list is public in the repo, so only names people chose to share. Empty: the section stays hidden.
-  D.SUPPORTERS = { early: [], later: [] };
   D.FOUNDER = { hash: '886dfd00ec5620efd2d0e471ea12d9eb0cb9e5b76fadd9df27d91aad25a01242', tint: 'sepia(1) saturate(2.6) hue-rotate(-12deg) brightness(1.08)' };
   D.TITLES = [
     { id: 'tried', name: '%s the Tried', need: { trial: 10 }, how: 'Beat par in a Trial 10' },

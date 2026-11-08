@@ -4001,7 +4001,7 @@
             h('p', { class: 'ai-note', style: { margin: 0 } }, G.isFounder() ? 'Founder is on this account: the title and the Founder gold mount tint.' : 'Have a code from the Discord? Type it here.'),
             h('div', { class: 'btn-row' }, inp, h('button', { class: 'btn alt', onclick: () => { if (G.claimCode(inp.value)) ui.sheetFn(); } }, 'Use code'))]));
         }
-        b.append(...foldSec('set.about', 'About', 'Realm of Loner', [h('p', { class: 'ai-note', style: { margin: 0 } }, ABOUT_NOTE), ...supportersNote(), privacyLink('Privacy: what the game does with data')]));
+        b.append(...foldSec('set.about', 'About', 'Realm of Loner', [h('p', { class: 'ai-note', style: { margin: 0 } }, ABOUT_NOTE), privacyLink('Privacy: what the game does with data')]));
         if (window.CLOUD) b.append(...foldSec('set.cloud', 'Cloud save', cloudSummary(), cloudKids()));
         b.append(...foldSec('set.save', 'Save', 'save codes', [h('div', { class: 'btn-row' },
           h('button', { class: 'btn alt', onclick: exportSave }, 'Copy save code'),
@@ -5764,13 +5764,6 @@
   }
 
   // Settings → About (since v10 the world, story and art are our own, so the old fan-project notice is gone)
-  // donors who agreed to be named (D.SUPPORTERS); nothing shows while both lists are empty
-  const supportersNote = () => {
-    const S = D.SUPPORTERS || {}, out = [], line = (label, names) => { if (names && names.length) out.push(h('p', { class: 'ai-note', style: { margin: '6px 0 0' } }, h('b', null, label + ': '), names.join(', '))); };
-    line('Early Supporters', S.early); line('Supporters', S.later);
-    if (out.length) out.unshift(h('div', { class: 'sec-h', style: { marginTop: '8px' } }, 'Thank you'));
-    return out;
-  };
   const ABOUT_NOTE = 'Realm of Loner: a single-player online RPG where everyone else on the realm is simulated. The world of Caldreth, its story, art, music and code are all original. Free to play, and it will stay free.';
   // the title on the character screens: the lantern from the app icon over the lettering, and the tagline
   const LANTERN_MARK = '<svg viewBox="-24 -46 48 80" aria-hidden="true"><defs><linearGradient id="tlg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff4c8"/><stop offset=".6" stop-color="#ffd67a"/><stop offset="1" stop-color="#f4a840"/></linearGradient></defs>'
