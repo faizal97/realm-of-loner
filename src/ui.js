@@ -5789,7 +5789,10 @@
   // while a festival is on, the title screens wear it (v10.13, #226): festSky() behind them, its tagline under the title
   const festNow = () => (window.G && G.liveEvents ? G.liveEvents()[0] : null);
   const titleMark = () => [h('div', { class: 'title-lantern', html: LANTERN_MARK }),
-    h('h1', { class: 'title-word' }, 'Realm ', h('span', { class: 'of' }, 'of'), ' Loner'), h('div', { class: 'tagline' }, festNow() ? `${D.EVENTS[festNow()].name} · ${evDates(festNow())}` : 'A World of Your Own')];
+    h('h1', { class: 'title-word' }, 'Realm ', h('span', { class: 'of' }, 'of'), ' Loner'), sagaNow() ? h('div', { class: 'tagline saga' }, h('span', { class: 'saga-mark', html: ART.emblem }), festNow() ? `${D.EVENTS[festNow()].name} · ${evDates(festNow())}` : 'The Ruinfall Saga')
+      : h('div', { class: 'tagline' }, festNow() ? `${D.EVENTS[festNow()].name} · ${evDates(festNow())}` : 'A World of Your Own')];
+  // the Ruinfall Saga emblem (#524) beside the tagline from the pre-patch on: the lantern stays the game's own mark
+  const sagaNow = () => !!(ART.emblem && D.PREPATCH && D.PREPATCH.live);
   // the menu's one moving piece during Lanternwake: small lanterns drifting slowly up behind the title (still with reduced motion)
   function festSky(root) {
     const k = festNow(); if (!k) return root;
@@ -5862,8 +5865,9 @@
     try { localStorage.setItem(SEEN_KEY, verNow()); } catch (e) { }
     // long notes scroll (v10.9.0 is about 3 phone screens): an × at the top and Got it at the bottom stay in view (#29)
     showDialog([h('div', { class: 'stick-head' }, h('h3', null, `What's new in v${verNow()}`), h('button', { class: 'x-close', onclick: closeDialog, 'aria-label': 'Close' }, '×')),
+      sagaNow() ? h('div', { class: 'notes-saga', html: ART.emblem, 'aria-hidden': 'true' }) : null,
       h('div', { class: 'notes', html: html || '<p>No notes were written for this version.</p>' }),
-      h('div', { class: 'stick-foot' }, h('button', { class: 'btn wide', onclick: closeDialog }, 'Got it'))], true);
+      h('div', { class: 'stick-foot' }, h('button', { class: 'btn wide', onclick: closeDialog }, 'Got it'))].filter(Boolean), true);
   }
   function whatsNewCheck(hasChars) {
     let seen = null; try { seen = localStorage.getItem(SEEN_KEY); } catch (e) { return; }

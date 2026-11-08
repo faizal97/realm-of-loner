@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="192" height="192" viewBox="0 0 192 192">
+  <!-- Realm of Loner app icon, Ruinfall Saga edition (#524): one lit lantern (you) in front of a realm of dim windows (everyone else).
+       Source of every launcher size and the browser tab icon: node art/logo/render.js -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#342a1a"/><stop offset=".55" stop-color="#1a140d"/><stop offset="1" stop-color="#0e0b08"/></linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffe9ae" stop-opacity=".95"/><stop offset=".3" stop-color="#ffc85a" stop-opacity=".6"/><stop offset=".7" stop-color="#ff9d2a" stop-opacity=".18"/><stop offset="1" stop-color="#ff9d2a" stop-opacity="0"/></radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fce38e"/><stop offset=".5" stop-color="#e6b450"/><stop offset="1" stop-color="#a0722a"/></linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff4c8"/><stop offset=".6" stop-color="#ffd67a"/><stop offset="1" stop-color="#f4a840"/></linearGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4a3620"/><stop offset=".5" stop-color="#7a5a30"/><stop offset="1" stop-color="#4a3620"/></linearGradient>
+    <clipPath id="tile"><rect x="6" y="6" width="180" height="180" rx="36"/></clipPath>
+  </defs>
+  <g clip-path="url(#tile)">
+    <rect x="0" y="0" width="192" height="192" fill="url(#bg)"/>
+    <!-- a few faint stars -->
+    <g fill="#8a7650"><circle cx="30" cy="34" r="1.4"/><circle cx="158" cy="28" r="1.2"/><circle cx="170" cy="62" r="1"/><circle cx="22" cy="70" r="1"/></g>
+    <!-- the realm: a skyline of towers, every window dim -->
+    <path d="M0,152 L0,118 L12,118 L12,104 L20,94 L28,104 L28,116 L42,116 L42,124 L50,124 L50,106 L58,96 L66,106 L66,130 L126,130 L126,106 L134,96 L142,106 L142,124 L150,124 L150,116 L164,116 L164,104 L172,94 L180,104 L180,118 L192,118 L192,152 Z" fill="#2c2217" stroke="#140f09" stroke-width="3" stroke-linejoin="round"/>
+    <g fill="#6e5a36">
+      <rect x="4" y="126" width="4" height="5"/><rect x="18" y="108" width="4" height="5"/><rect x="18" y="122" width="4" height="5"/><rect x="34" y="122" width="4" height="5"/>
+      <rect x="55" y="112" width="4" height="5"/><rect x="55" y="124" width="4" height="5"/><rect x="133" y="112" width="4" height="5"/><rect x="133" y="124" width="4" height="5"/>
+      <rect x="154" y="122" width="4" height="5"/><rect x="170" y="108" width="4" height="5"/><rect x="170" y="122" width="4" height="5"/><rect x="184" y="126" width="4" height="5"/>
+    </g>
+    <rect x="0" y="152" width="192" height="40" fill="#1b140d"/>
+    <path d="M0,152 L192,152" stroke="#140f09" stroke-width="3"/>
+    <!-- the lantern's light -->
+    <circle cx="96" cy="100" r="60" fill="url(#glow)"/>
+  </g>
+  <!-- the ring, cracked (Ruinfall, #524): fire shows through the break, two pieces fall -->
+  <defs>
+    <mask id="rfcut"><rect x="0" y="0" width="192" height="192" fill="#fff"/><polygon points="124.8,66.2 129.9,62.9 131.0,58.3 136.2,56.5 138.1,51.2 145.3,47.2 137.4,40.1 130.8,45.2 129.9,50.7 125.0,53.3 124.6,58.0 120.1,62.1" fill="#000"/></mask>
+    <filter id="rfblur" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="4.5"/></filter>
+  </defs>
+  <polyline points="122.5,64.0 127.4,60.4 128.1,55.7 133.2,53.4 134.6,48.0 141.5,43.5" fill="none" stroke="#ff7a1a" stroke-width="18" stroke-linejoin="round" filter="url(#rfblur)"/>
+  <g mask="url(#rfcut)">
+
+  <circle cx="96" cy="94" r="54" fill="none" stroke="#140f09" stroke-width="10"/>
+  <circle cx="96" cy="94" r="54" fill="none" stroke="url(#gold)" stroke-width="5.5"/>
+  <circle cx="96" cy="94" r="49.5" fill="none" stroke="#6a4c22" stroke-width="1.2" opacity=".8"/>
+  </g>
+  <polyline points="122.5,64.0 127.4,60.4 128.1,55.7 133.2,53.4 134.6,48.0 141.5,43.5" fill="none" stroke="#ff8a2a" stroke-width="5" stroke-linejoin="round"/>
+  <polyline points="122.5,64.0 127.4,60.4 128.1,55.7 133.2,53.4 134.6,48.0 141.5,43.5" fill="none" stroke="#ffe3a0" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M150,66 L158,64 L154,74 Z" fill="#e6b450" stroke="#140f09" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M159,80 L165,82 L159,88 Z" fill="#a0722a" stroke="#140f09" stroke-width="1.8" stroke-linejoin="round"/>
+  <!-- the lantern -->
+  <g transform="translate(96,102) scale(1.5)" stroke-linejoin="round">
+    <circle cx="0" cy="-37" r="5" fill="none" stroke="#140f09" stroke-width="5"/>
+    <circle cx="0" cy="-37" r="5" fill="none" stroke="url(#gold)" stroke-width="2.4"/>
+    <path d="M0,-32 L0,-29" stroke="#140f09" stroke-width="4" stroke-linecap="round"/>
+    <path d="M-13,-24 L13,-24 L9,-31 L-9,-31 Z" fill="url(#metal)" stroke="#140f09" stroke-width="3"/>
+    <path d="M-15,-24 L15,-24 L12,22 L-12,22 Z" fill="url(#glass)" stroke="#140f09" stroke-width="3.4"/>
+    <path d="M-5.5,6 C-5.5,-3 0,-9 0,-15 C3.5,-8 6.5,-3 6.5,5 C6.5,10 3.5,13 0.5,13 C-3,13 -5.5,10 -5.5,6 Z" fill="#ff9a2e" stroke="#c85a10" stroke-width="1.3"/>
+    <path d="M-2.5,7 C-2.5,2 0,-2 0.5,-6 C2.5,-1 3.5,2 3.5,6 C3.5,9 2,10.5 0.5,10.5 C-1.5,10.5 -2.5,9 -2.5,7 Z" fill="#fff0b0"/>
+    <path d="M-14.5,-9 L14,-9 M-13.5,7 L13,7" stroke="#6a4c26" stroke-width="2.2"/>
+    <path d="M0,-24 L0,22" stroke="#6a4c26" stroke-width="2.2"/>
+    <path d="M-16,22 L16,22 L12,29 L-12,29 Z" fill="url(#metal)" stroke="#140f09" stroke-width="3"/>
+  </g>
+  <!-- the gold tile border -->
+  <rect x="6" y="6" width="180" height="180" rx="36" fill="none" stroke="#140f09" stroke-width="8"/>
+  <rect x="6" y="6" width="180" height="180" rx="36" fill="none" stroke="url(#gold)" stroke-width="4.5"/>
+</svg>
