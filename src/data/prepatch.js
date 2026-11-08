@@ -47,6 +47,8 @@
   // at the place's own level (content-proof: a new zone needs nothing). Below 30 they carry no Ledger name. Each kill
   // that is not grey to you gives a torn debt note, spent at the trade-in (#523). `live` goes false when v11.0 ships.
   D.PREPATCH = { live: true, collectors: 2 };
+  // The saga's look on the title screen and in What's new (#524). chapter 0 is the pre-patch; v11.0 sets 1 and its logo
+  D.SAGA = { name: 'The Ruinfall Saga', chapter: 0, logo: 'ruinfallWord' };
   D.MOBS.debt_collector = { name: 'Debt Collector', sprite: 'defias_highwayman', lvl: [1, 60], placeLvl: true, collector: true, family: 'humanoid', hpMult: 1.1,
     drops: [['thieves_coin', 0.4]], aggro: "You're behind on your payments." };
   D.MOBS.ledger_collector = { name: 'Ledger Collector', sprite: 'defias_highwayman', lvl: [30, 60], placeLvl: true, collector: true, family: 'humanoid', hpMult: 1.1,

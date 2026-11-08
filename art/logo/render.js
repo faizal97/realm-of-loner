@@ -4,7 +4,8 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 const ROOT = path.resolve(__dirname, '..', '..');
 const RSVG = '/opt/homebrew/bin/rsvg-convert';
-const SRC = path.join(__dirname, 'icon.svg');
+// since the Ruinfall pre-patch (#524) the launcher wears the saga edition, built from icon.svg by art/ruinfall/icon2.py
+const SRC = path.join(__dirname, '..', 'ruinfall', 'icon_ruinfall.svg');
 const RES = path.join(ROOT, 'app/android/app/src/main/res');
 const out = [
   ['mipmap-mdpi/ic_launcher.png', 48], ['mipmap-hdpi/ic_launcher.png', 72], ['mipmap-xhdpi/ic_launcher.png', 96],

@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="192" height="192" viewBox="0 0 192 192">
-  <!-- Realm of Loner app icon, Ruinfall Saga edition (#524): one lit lantern (you) in front of a realm of dim windows (everyone else).
+  <!-- Realm of Loner app icon, Ruinfall Saga edition (#524), the lantern before the broken coin: one lit lantern (you) in front of a realm of dim windows (everyone else).
        Source of every launcher size and the browser tab icon: node art/logo/render.js -->
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#342a1a"/><stop offset=".55" stop-color="#1a140d"/><stop offset="1" stop-color="#0e0b08"/></linearGradient>
@@ -23,24 +23,28 @@
     <rect x="0" y="152" width="192" height="40" fill="#1b140d"/>
     <path d="M0,152 L192,152" stroke="#140f09" stroke-width="3"/>
     <!-- the lantern's light -->
-    <circle cx="96" cy="100" r="60" fill="url(#glow)"/>
+    
   </g>
-  <!-- the ring, cracked (Ruinfall, #524): fire shows through the break, two pieces fall -->
   <defs>
-    <mask id="rfcut"><rect x="0" y="0" width="192" height="192" fill="#fff"/><polygon points="124.8,66.2 129.9,62.9 131.0,58.3 136.2,56.5 138.1,51.2 145.3,47.2 137.4,40.1 130.8,45.2 129.9,50.7 125.0,53.3 124.6,58.0 120.1,62.1" fill="#000"/></mask>
-    <filter id="rfblur" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="4.5"/></filter>
+    <linearGradient id="rcRim" x1="0" y1="0" x2=".4" y2="1"><stop offset="0" stop-color="#fce38e"/><stop offset=".45" stop-color="#e0b04a"/><stop offset="1" stop-color="#8a5a1c"/></linearGradient>
+    <radialGradient id="rcFace" cx="40%" cy="30%" r="80%"><stop offset="0" stop-color="#a8742a"/><stop offset=".6" stop-color="#6e4515"/><stop offset="1" stop-color="#3e260c"/></radialGradient>
+    <filter id="rcBlur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5"/></filter>
+    <filter id="rcSoft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.1"/></filter>
+    <clipPath id="rcL"><path d="M37,84 54,78 58,90 80,86 108,98 124,96 130,110 153,113 L192,113 L192,192 L0,192 L0,84 Z"/></clipPath><clipPath id="rcR"><path d="M37,84 54,78 58,90 80,86 108,98 124,96 130,110 153,113 L192,113 L192,0 L0,0 L0,84 Z"/></clipPath>
   </defs>
-  <polyline points="122.5,64.0 127.4,60.4 128.1,55.7 133.2,53.4 134.6,48.0 141.5,43.5" fill="none" stroke="#ff7a1a" stroke-width="18" stroke-linejoin="round" filter="url(#rfblur)"/>
-  <g mask="url(#rfcut)">
-
-  <circle cx="96" cy="94" r="54" fill="none" stroke="#140f09" stroke-width="10"/>
-  <circle cx="96" cy="94" r="54" fill="none" stroke="url(#gold)" stroke-width="5.5"/>
-  <circle cx="96" cy="94" r="49.5" fill="none" stroke="#6a4c22" stroke-width="1.2" opacity=".8"/>
-  </g>
-  <polyline points="122.5,64.0 127.4,60.4 128.1,55.7 133.2,53.4 134.6,48.0 141.5,43.5" fill="none" stroke="#ff8a2a" stroke-width="5" stroke-linejoin="round"/>
-  <polyline points="122.5,64.0 127.4,60.4 128.1,55.7 133.2,53.4 134.6,48.0 141.5,43.5" fill="none" stroke="#ffe3a0" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M150,66 L158,64 L154,74 Z" fill="#e6b450" stroke="#140f09" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M159,80 L165,82 L159,88 Z" fill="#a0722a" stroke="#140f09" stroke-width="1.8" stroke-linejoin="round"/>
+  <!-- the Ledger's coin, broken (Ruinfall, #524) -->
+  <polyline points="37,84 54,78 58,90 80,86 108,98 124,96 130,110 153,113" fill="none" stroke="#ff7a1a" stroke-width="22" stroke-linejoin="round" filter="url(#rcBlur)"/>
+  <g transform="translate(-2.6,4.4)"><g clip-path="url(#rcL)"><circle cx="96" cy="92" r="66" fill="#140f09"/>
+      <circle cx="96" cy="92" r="62" fill="url(#rcRim)"/>
+      <circle cx="96" cy="92" r="54" fill="url(#rcFace)" stroke="#6a4416" stroke-width="2"/>
+      <circle cx="96" cy="92" r="46" fill="none" stroke="#c79438" stroke-width="2.4" stroke-dasharray="3 5" opacity=".7"/></g></g>
+  <g transform="translate(2.6,-4.4)"><g clip-path="url(#rcR)"><circle cx="96" cy="92" r="66" fill="#140f09"/>
+      <circle cx="96" cy="92" r="62" fill="url(#rcRim)"/>
+      <circle cx="96" cy="92" r="54" fill="url(#rcFace)" stroke="#6a4416" stroke-width="2"/>
+      <circle cx="96" cy="92" r="46" fill="none" stroke="#c79438" stroke-width="2.4" stroke-dasharray="3 5" opacity=".7"/></g></g>
+  <polyline points="37,84 54,78 58,90 80,86 108,98 124,96 130,110 153,113" fill="none" stroke="#ff7a1a" stroke-width="7" stroke-linejoin="round" filter="url(#rcSoft)"/>
+  <polyline points="37,84 54,78 58,90 80,86 108,98 124,96 130,110 153,113" fill="none" stroke="#ffe3a0" stroke-width="2.6" stroke-linejoin="round" filter="url(#rcSoft)"/>
+  <g stroke="#140f09" stroke-width="2" stroke-linejoin="round"><path d="M152,124 L162,122 L157,133 Z" fill="#e0b04a"/><path d="M162,138 L169,141 L161,148 Z" fill="#a0722a"/></g>
   <!-- the lantern -->
   <g transform="translate(96,102) scale(1.5)" stroke-linejoin="round">
     <circle cx="0" cy="-37" r="5" fill="none" stroke="#140f09" stroke-width="5"/>
