@@ -986,7 +986,7 @@
     return W;
   }
   // ---- the pre-patch's debt collectors (#522): a few per levelling place at its own level, only while D.PREPATCH.live
-  G.collectorsHere = (P) => !!(D.PREPATCH && D.PREPATCH.live && P && P.pool && P.lvl && !P.safe && !P.gate && (P.mobs || []).length);
+  G.collectorsHere = (P) => !!(D.PREPATCH && (D.PREPATCH.live || G.S && G.S.player && G.questMobs().has('ledger_collector')) && P && P.pool && P.lvl && !P.safe && !P.gate && (P.mobs || []).length);
   const collectorKey = (P) => P.lvl[0] >= 30 ? 'ledger_collector' : 'debt_collector'; // no Ledger name below 30
   function spawnCollector(P) { return { id: 'c' + (MOBID++) + '_' + Math.floor(Math.random() * 1e6), key: collectorKey(P), level: rint(P.lvl[0], P.lvl[1]), state: 'alive', until: 0, by: null }; }
   function syncCollectors(W, P) {
@@ -1114,7 +1114,7 @@
     }
     // if a quest needs a creature and none are up, hurry the next one along
     for (const key of questKeys()) {
-      const mine = W.mobs.filter((m) => m.key === key);
+      const mine = W.mobs.concat(W.event || []).filter((m) => m.key === key);
       if (!mine.length || mine.some((m) => m.state === 'alive')) continue;
       const next = mine.filter((m) => m.state === 'dead').sort((a, b) => a.until - b.until)[0];
       if (next && next.until - t > 6000) next.until = t + 6000;
@@ -1424,6 +1424,8 @@
     const Q = D.QUESTS[qid];
     if ((Q.pre || []).some((p) => !P.done[p])) return 'locked';
     if (Q.storm && !G.stormBroken()) return 'locked';
+    if (Q.prepatch && !G.prepatchOpen()) return 'locked'; // the pre-patch campaign and class quests (#508)
+    if (Q.cls && Q.cls !== P.cls) return 'locked';
     if (Q.faction && Q.faction !== G.myFaction()) return 'locked'; // the other faction's quest (v7: contested hubs)
     if (P.level < Q.lvl - 2) return 'low';
     return 'available';

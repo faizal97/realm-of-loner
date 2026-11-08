@@ -174,7 +174,7 @@ if (D.EFFECTS) {
 {
   const at = {}; for (const k in D.PLACES) for (const nk of (D.PLACES[k].npcs || [])) if (!at[nk]) at[nk] = k;
   const regionOf = (nk) => (D.PLACES[at[nk]] || {}).region, zl = D.zoneLevels();
-  for (const q in D.QUESTS) { const Q = D.QUESTS[q]; if (Q.dungeon || Q.group || q.startsWith('lg_')) continue;
+  for (const q in D.QUESTS) { const Q = D.QUESTS[q]; if (Q.dungeon || Q.group || q.startsWith('lg_') || Q.prepatch) continue; // the pre-patch sends level-60s back to the capitals on purpose (#509, #510)
     const r = regionOf(Q.turnin) || regionOf(Q.giver), z = r && zl[r];
     if (z && Q.lvl > z[1] + 2) err(`quest '${q}' is level ${Q.lvl}, but its zone (${r}) is ${z[0]}-${z[1]}: at most ${z[1] + 2} (move it, or set its level)`); }
 }

@@ -178,3 +178,30 @@ test('torn debt notes trade for the Debt-Breaker title once and for Mentor Marks
   const towns = new Set([].concat(...Object.values(D.PROF_TRAINERS)));
   for (const p of towns) if (D.PLACES[p]) assert.ok(D.PLACES[p].npcs.includes('note_clerk'), p);
 });
+
+test('the campaign and class quests: locked until the gate, each faction its own chain, each class only its own quest (#509, #510)', () => {
+  const { P } = character(60, 'warrior', 'human');
+  assert.strictEqual(G.questState('pp_a_notes'), 'locked', 'before the gate');
+  P.done = Object.assign({}, P.done, { tc_crown_a: true });
+  assert.strictEqual(G.questState('pp_a_notes'), 'available');
+  assert.strictEqual(G.questState('pp_h_notes'), 'locked', 'the other faction');
+  assert.strictEqual(G.questState(D.ABILITIES.intervene.learn), 'available');
+  assert.strictEqual(G.questState(D.ABILITIES.chronomark.learn), 'locked', 'another class');
+  for (const f of ['a', 'h']) {
+    const chain = Object.keys(D.QUESTS).filter((k) => k.startsWith(`pp_${f}_`));
+    assert.strictEqual(chain.length, 6, f);
+    for (const k of chain) for (const n of [D.QUESTS[k].giver, D.QUESTS[k].turnin]) assert.ok(Object.values(D.PLACES).some((p) => p.npcs.includes(n)), `${k}: ${n} stands somewhere`);
+  }
+});
+
+test('collectors stay where a quest still needs them after the event ends (#522)', () => {
+  const { P } = character(60, 'warrior', 'human');
+  const pl = Object.keys(D.PLACES).find((k) => D.PLACES[k].lvl && D.PLACES[k].lvl[0] >= 55 && G.collectorsHere(D.PLACES[k]));
+  D.PREPATCH.live = false;
+  try {
+    assert.ok(!G.collectorsHere(D.PLACES[pl]), 'gone when nobody needs them');
+    P.done = Object.assign({}, P.done, { tc_crown_a: true });
+    P.quests[D.ABILITIES.intervene.learn] = { prog: [] };
+    assert.ok(G.collectorsHere(D.PLACES[pl]), 'back for the class quest');
+  } finally { D.PREPATCH.live = true; delete P.quests[D.ABILITIES.intervene.learn]; }
+});

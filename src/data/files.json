@@ -54,7 +54,7 @@
  "lore.js",
  "lore_places.js",
  "lore_books.js",
- "lore_quests.js",
+ "lore_quests.js", "prepatch_quests.js",
  "main_story.js",
  "effects.js",
  "finalize.js"
