@@ -1,23 +1,8 @@
 # A chapter's logo (#524, saga decision 13): the same plate, emblem and crack as the saga wordmark, with the chapter's
 # own name and finish. Example: python3 art/ruinfall/chapter.py 1  ->  art/ruinfall/chapter1.svg (not in the game yet)
 import base64, json, os, re, sys
-from fontTools.ttLib import TTFont
-from fontTools.pens.svgPathPen import SVGPathPen
-from fontTools.pens.transformPen import TransformPen
 H = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.join(H, '..', '..')
-css = open(os.path.join(ROOT, 'fonts', 'fonts.local.css')).read()
-b = next(x for x in re.findall(r'@font-face\{[^}]*\}', css) if 'Marcellus' in x)
-tmp = os.path.join(H, '.marcellus.woff2'); open(tmp, 'wb').write(base64.b64decode(re.search(r'base64,([A-Za-z0-9+/=]+)', b).group(1)))
-F = TTFont(tmp); os.remove(tmp)
-cm, gs, hm, upm = F.getBestCmap(), F.getGlyphSet(), F['hmtx'], F['head'].unitsPerEm
-def word(text, size, x0, base, track=0.0):
-    pen = SVGPathPen(gs); k = size / upm; x = 0.0
-    for ch in text:
-        if ch == ' ': x += size * 0.32; continue
-        g = cm[ord(ch)]; gs[g].draw(TransformPen(pen, (k, 0, 0, -k, x0 + x, base))); x += hm[g][0] * k + track * size
-    return re.sub(r'(\d+\.\d)\d+', r'\1', pen.getCommands()), x - track * size
-def centred(text, size, base, track, W):
-    _, w = word(text, size, 0, 0, track); return word(text, size, (W - w) / 2, base, track)
+sys.path.insert(0, os.path.join(H, '..', 'brand')); from lockup import word, centred  # the game's face as outlines (art/brand/lockup.py)
 
 CH = {  # each chapter's finish: (light, mid, dark band, low, deep) and its lines
     1: dict(lines=[('ASHEN', 104, 0.05), ('CORONATION', 60, 0.08)], sub='THE RUINFALL SAGA  ·  CHAPTER ONE',

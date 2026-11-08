@@ -1,24 +1,10 @@
 # The Longnight logo: the game's plate, a shut door with the hearth's light under it as the keystone, LONGNIGHT in frost
 # with snow on every letter. Writes art/longnight/logo.svg and src/art_longnight_logo.js (ART.longnightLogo), shown on
 # the title screens while the festival is on. Needs fontTools + brotli (the face comes from fonts/fonts.local.css).
-import base64, json, os, re
-from fontTools.ttLib import TTFont
-from fontTools.pens.svgPathPen import SVGPathPen
-from fontTools.pens.transformPen import TransformPen
+import base64, json, os, re, sys
 H = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.join(H, '..', '..')
-css = open(os.path.join(ROOT, 'fonts', 'fonts.local.css')).read()
-b = next(x for x in re.findall(r'@font-face\{[^}]*\}', css) if 'Marcellus' in x)
-tmp = os.path.join(H, '.marcellus.woff2'); open(tmp, 'wb').write(base64.b64decode(re.search(r'base64,([A-Za-z0-9+/=]+)', b).group(1)))
-F = TTFont(tmp); os.remove(tmp)
-cm, gs, hm, upm = F.getBestCmap(), F.getGlyphSet(), F['hmtx'], F['head'].unitsPerEm
-def word(text, size, x0, base, track=0.0):
-    pen = SVGPathPen(gs); k = size / upm; x = 0.0
-    for ch in text:
-        if ch == ' ': x += size * 0.32; continue
-        g = cm[ord(ch)]; gs[g].draw(TransformPen(pen, (k, 0, 0, -k, x0 + x, base))); x += hm[g][0] * k + track * size
-    return re.sub(r'(\d+\.\d)\d+', r'\1', pen.getCommands()), x - track * size
-def centred(text, size, base, track, W):
-    _, w = word(text, size, 0, 0, track); return word(text, size, (W - w) / 2, base, track)
+sys.path.insert(0, os.path.join(H, '..', 'brand')); from lockup import word, centred  # the game's face as outlines (art/brand/lockup.py)
+
 W, Hh = 640, 300
 r1, r1w = word('REALM', 40, 0, 0, 0.08); of_, ofw = word('OF', 22, 0, 0, 0.06); r2, r2w = word('LONER', 40, 0, 0, 0.08)
 gap = 10; tot = r1w + gap + ofw + gap + r2w; nx = (W - tot) / 2; px0, px1 = nx - 34, nx + tot + 34

@@ -1,25 +1,9 @@
 # The game's name with "The Ruinfall Saga" under it: one logo (#524): Marcellus SC (the game's own display face) as outlines, carved gold, split by the
 # emblem's burning crack, the emblem above. Writes wordmark.svg and src/art_ruinfall_word.js (ART.ruinfallWord).
 # Needs fontTools + brotli and the font from fonts/fonts.local.css.
-import base64, json, os, re
-from fontTools.ttLib import TTFont
-from fontTools.pens.svgPathPen import SVGPathPen
-from fontTools.pens.transformPen import TransformPen
+import base64, json, os, re, sys
 H = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.join(H, '..', '..')
-css = open(os.path.join(ROOT, 'fonts', 'fonts.local.css')).read()
-b = next(x for x in re.findall(r'@font-face\{[^}]*\}', css) if 'Marcellus' in x)
-tmp = os.path.join(H, '.marcellus.woff2'); open(tmp, 'wb').write(base64.b64decode(re.search(r'base64,([A-Za-z0-9+/=]+)', b).group(1)))
-F = TTFont(tmp); os.remove(tmp)
-cm, gs, hm, upm = F.getBestCmap(), F.getGlyphSet(), F['hmtx'], F['head'].unitsPerEm
-
-def word(text, size, x0, base, track=0.0):
-    """outline path for text at size px, left edge x0, baseline y; returns (d, width)"""
-    pen = SVGPathPen(gs); k = size / upm; x = 0.0
-    for ch in text:
-        g = cm[ord(ch)]
-        gs[g].draw(TransformPen(pen, (k, 0, 0, -k, x0 + x, base)))
-        x += hm[g][0] * k + track * size
-    return re.sub(r'(\d+\.\d)\d+', r'\1', pen.getCommands()), x - track * size
+sys.path.insert(0, os.path.join(H, '..', 'brand')); from lockup import word, centred  # the game's face as outlines (art/brand/lockup.py)
 
 W, Hh = 640, 300
 big, bw = word('RUINFALL', 118, 0, 0, 0.04)
