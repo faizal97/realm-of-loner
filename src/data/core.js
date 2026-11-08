@@ -551,6 +551,9 @@
     D.HONOR_RANKS.forEach((r, i) => { if (!r.look) return; const id = `honor_${f}_${r.look}`;
       D.item(id, { name: names[n++], slot: 'back', q: 4, lvl: i + 1, look: ['back', id], lookOnly: true, faction: f, icon: r.look === 'banner' ? 'honor_banner_' + f : r.look === 'tabard' ? 'honor_tabard_' + f : 'cloak', source: `Honor rank ${i + 1}` }); });
   }
+  // #507 Founders: a code from the Discord's Founders channel unlocks the title and the gold mount tint on the whole account.
+  // Only the code's SHA-256 is here (the repo is public): the game hashes what the player types ('ROL:' + letters and digits, upper case).
+  D.FOUNDER = { hash: '886dfd00ec5620efd2d0e471ea12d9eb0cb9e5b76fadd9df27d91aad25a01242', tint: 'sepia(1) saturate(4) hue-rotate(-10deg) brightness(1.2) drop-shadow(0 0 2px rgba(255,214,90,.9))' };
   D.TITLES = [
     { id: 'tried', name: '%s the Tried', need: { trial: 10 }, how: 'Beat par in a Trial 10' },
     { id: 'unbroken', name: '%s the Unbroken', need: { trial: 15 }, how: 'Beat par in a Trial 15' },
@@ -558,6 +561,7 @@
     { id: 'realm_ten', name: '%s of the Ten', need: { trialRank: 10 }, how: 'Finish a month of Trials in your realm\'s top 10' },
     { id: 'realm_first', name: 'Champion %s', need: { trialRank: 1 }, how: 'Finish a month of Trials first on your realm' },
     { id: 'mentor', name: '%s the Mentor', need: { mentor: 5 }, how: 'Help 5 groups through Help Wanted' },
+    { id: 'founder', name: '%s the Founder', need: { founder: 1 }, how: 'A thank-you to the players on the Discord before the game reached the Play Store' }, // #507
     { id: 'guide', name: '%s the Guide', need: { mentor: 25 }, how: 'Help 25 groups through Help Wanted' },
     { id: 'flawless', name: '%s the Flawless', need: { flawless: 10 }, how: 'Clear dungeons without a wipe 10 times' },
     { id: 'swift', name: '%s the Swift', need: { speed: 10 }, how: 'Beat par time 10 times' },

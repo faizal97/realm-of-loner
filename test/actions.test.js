@@ -16,7 +16,7 @@ const fromUi = (() => {
 })();
 
 // reads that a handler calls to decide or show something; no state changes, and covered by the actions that use them
-const NOT_ACTIONS = new Set(['partySize', 'healsAllies', 'firstDungeonLvl', 'friendElsewhere', 'lnHardOpen', 'lnSnowWhy', 'rehearsalOpen', 'isHealPick', 'canDiscard', 'canUseItem', 'characters', 'copyItem', 'displayName', 'effectOf', 'enemyTown', 'isUpgrade', 'knownProfIds',
+const NOT_ACTIONS = new Set(['isFounder', 'partySize', 'healsAllies', 'firstDungeonLvl', 'friendElsewhere', 'lnHardOpen', 'lnSnowWhy', 'rehearsalOpen', 'isHealPick', 'canDiscard', 'canUseItem', 'characters', 'copyItem', 'displayName', 'effectOf', 'enemyTown', 'isUpgrade', 'knownProfIds',
   'legendOn', 'lwHardOpen', 'moneyText', 'profs', 'rankName', 'role', 'travelSecs', 'treeSpent', 'usable',
   // these end or replace the character (the test world runs one): load, logout and wipeSave have their own test below
   'load', 'logout', 'wipeSave']);
@@ -33,6 +33,8 @@ const inFight = () => { const m = G.placeMobs().find((x) => x.state === 'alive')
 // each action, with arguments a player's tap would give it; a missing precondition is fine (the action should refuse
 // politely), a throw is not
 const ACTIONS = {
+  claimCode: () => G.claimCode('NOT-A-CODE'), // #507
+  setFounderGold: () => { G.setFounderGold(true); G.setFounderGold(false); },
   unfriend: () => { const b = G.S.bots[0]; G.S.soc = G.S.soc || {}; G.S.soc.friends = { [b.id]: { n: 1, where: null, last: 0 } }; G.unfriend(b.id); },
   accept: () => G.accept(Object.keys(D.QUESTS)[0]),
   abandon: () => { const q = Object.keys(D.QUESTS)[0]; G.accept(q); G.abandon(first(G.S.player.quests) || q); },
