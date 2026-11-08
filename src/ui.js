@@ -692,7 +692,7 @@
       const mw = 36, ml = 18, mb = 4, mh = mw * 400 / 240 * 128 / 160; // mount height in % of scene height
       const hw = mw * 0.56, hb = mb + mh * (1 - 4.6 / 128) - hw * 400 / 240 - mh * (RACE_Y[P.race] || 0) / 128;
       sc.append(spriteEl(art('hero', looks(P)), { l: ml + mw * 0.17, b: hb, w: hw }, 'walker'));
-      const mEl = spriteEl(art('mount', P.mount), { l: ml, b: mb, w: mw }, 'walker'); if (P.mountTint) mEl.style.filter = `hue-rotate(${P.mountTint * 36}deg)`; sc.append(mEl); // a Renown mount tint (#504)
+      const mEl = spriteEl(art('mount', P.mount), { l: ml, b: mb, w: mw }, 'walker'); if (P.mountTint) mEl.style.filter = G.mountFilter(P); sc.append(mEl); // a Renown mount tint (#504)
     }
     if (P.travel) sc.append(h('div', { class: 'castbar', id: 'travelbar', style: { bottom: G.mounted() ? '74%' : '40%' } }, h('i'), h('b', null, 'Traveling to ' + D.PLACES[P.travel.to].name)));
     if (P.ghostUntil) sc.append(h('div', { class: 'overlay-msg' }, h('div', null, h('h3', null, 'You are dead'), h('p', { id: 'ghost-t' }, 'Running back to your body...'))));
@@ -3886,7 +3886,7 @@
           const row = h('div', { class: 'chips' }, h('button', { class: 'chip' + (!P.mount ? ' gold' : ''), onclick: () => { G.setMount(null); ui.sheetFn(); } }, 'On foot'));
           for (const k of (P.mounts || [])) row.append(h('button', { class: 'chip' + (P.mount === k ? ' gold' : ''), onclick: () => { G.setMount(k); ui.sheetFn(); } }, img(art('icon', 'mount_' + k)), ' ', D.MOUNTS[k].name));
           b.append(h('div', { class: 'sec-h' }, 'Mount', h('small', null, P.mount ? `roads are ${Math.round((1 - G.rideSpeed()) * 100)}% faster` : 'walking')), row);
-          if (G.mountTints()) { const tr = h('div', { class: 'chips' }, h('button', { class: 'chip' + (!P.mountTint ? ' gold' : ''), onclick: () => { G.setMountTint(0); ui.sheetFn(); } }, 'Own colour')); for (let n = 1; n <= G.mountTints(); n++) tr.append(h('button', { class: 'chip' + (P.mountTint === n ? ' gold' : ''), onclick: () => { G.setMountTint(n); ui.sheetFn(); } }, `Tint ${n}`)); b.append(h('div', { class: 'sec-h' }, 'Mount tint', h('small', null, `from Renown: ${G.mountTints()}`)), tr); } // #504
+          if (G.mountTints() || G.isFounder()) { const tr = h('div', { class: 'chips' }, h('button', { class: 'chip' + (!P.mountTint ? ' gold' : ''), onclick: () => { G.setMountTint(0); ui.sheetFn(); } }, 'Own colour')); if (G.isFounder()) tr.append(h('button', { class: 'chip' + (P.mountTint === 'founder' ? ' gold' : ''), onclick: () => { G.setMountTint('founder'); ui.sheetFn(); } }, 'Founder gold')); for (let n = 1; n <= G.mountTints(); n++) tr.append(h('button', { class: 'chip' + (P.mountTint === n ? ' gold' : ''), onclick: () => { G.setMountTint(n); ui.sheetFn(); } }, `Tint ${n}`)); b.append(h('div', { class: 'sec-h' }, 'Mount tint', h('small', null, G.mountTints() ? `from Renown: ${G.mountTints()}` : 'Founder')), tr); } // #504
         }
         b.append(h('div', { class: 'sec-h' }, 'Equipment', h('small', null, 'tap to inspect')));
         const gear = h('div', { class: 'gear' });
@@ -3994,6 +3994,12 @@
                 if (G.S) G.save(); location.href = UPD.WEB_BETA;
               } }, on ? 'Back to the normal version' : 'Open the beta version'))];
           b.append(...foldSec('set.beta', 'Beta updates', on ? 'On' : 'Off', kids));
+        }
+        if (G.S) { // #507: codes (Founder) unlock on the whole account
+          const inp = h('input', { type: 'text', placeholder: 'XXXX-XXXX-XXXX', autocomplete: 'off', autocapitalize: 'characters', spellcheck: 'false', style: { flex: '1', minWidth: '0' } });
+          b.append(...foldSec('set.code', 'Codes', G.isFounder() ? 'Founder' : 'None', [
+            h('p', { class: 'ai-note', style: { margin: 0 } }, G.isFounder() ? 'Founder is on this account: the title and the Founder gold mount tint.' : 'Have a code from the Discord? Type it here.'),
+            h('div', { class: 'btn-row' }, inp, h('button', { class: 'btn alt', onclick: () => { if (G.claimCode(inp.value)) ui.sheetFn(); } }, 'Use code'))]));
         }
         b.append(...foldSec('set.about', 'About', 'Realm of Loner', [h('p', { class: 'ai-note', style: { margin: 0 } }, ABOUT_NOTE), privacyLink('Privacy: what the game does with data')]));
         if (window.CLOUD) b.append(...foldSec('set.cloud', 'Cloud save', cloudSummary(), cloudKids()));

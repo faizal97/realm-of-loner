@@ -565,6 +565,9 @@
     const R = ['', ' II', ' III', ' IV', ' V', ' VI', ' VII', ' VIII', ' IX', ' X'];
     return { n, name: (S[0] ? S[0] + ' ' : '') + H[0] + (round ? (R[round] || ' ' + (round + 1)) : ''), hue: H[1], sat: S[1], lit: S[2], rot: 0 };
   };
+  // #507 Founders: a code from the Discord's Founders channel unlocks the title and the gold mount tint on the whole account.
+  // Only the code's SHA-256 is here (the repo is public): the game hashes what the player types ('ROL:' + letters and digits, upper case).
+  D.FOUNDER = { hash: '886dfd00ec5620efd2d0e471ea12d9eb0cb9e5b76fadd9df27d91aad25a01242', tint: 'sepia(1) saturate(2.6) hue-rotate(-12deg) brightness(1.08)' };
   D.TITLES = [
     { id: 'tried', name: '%s the Tried', need: { trial: 10 }, how: 'Beat par in a Trial 10' },
     { id: 'unbroken', name: '%s the Unbroken', need: { trial: 15 }, how: 'Beat par in a Trial 15' },
@@ -573,6 +576,7 @@
     { id: 'realm_first', name: 'Champion %s', need: { trialRank: 1 }, how: 'Finish a month of Trials first on your realm' },
     { id: 'mentor', name: '%s the Mentor', need: { mentor: 5 }, how: 'Help 5 groups through Help Wanted' },
     { id: 'renowned', name: '%s the Renowned', need: { renown: 5 }, how: 'Reach Renown 5 (a tier for every 5 ranks)' }, // #504: the tier shows after the name
+    { id: 'founder', name: '%s the Founder', need: { founder: 1 }, how: 'A thank-you to the players on the Discord before the game reached the Play Store' }, // #507
     { id: 'guide', name: '%s the Guide', need: { mentor: 25 }, how: 'Help 25 groups through Help Wanted' },
     { id: 'flawless', name: '%s the Flawless', need: { flawless: 10 }, how: 'Clear dungeons without a wipe 10 times' },
     { id: 'swift', name: '%s the Swift', need: { speed: 10 }, how: 'Beat par time 10 times' },

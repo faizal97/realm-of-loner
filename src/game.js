@@ -2732,7 +2732,43 @@
     const P = G.S.player; if (n && (n < 1 || n > G.renown())) return false;
     P.dyes = Object.assign({}, P.dyes); if (n) P.dyes[place] = n; else delete P.dyes[place]; G.save(); emit('change'); return true;
   };
-  G.setMountTint = function (n) { const P = G.S.player; if (n && (n < 1 || n > G.mountTints())) return false; P.mountTint = n || 0; G.save(); emit('change'); return true; };
+  G.setMountTint = function (n) {
+    const P = G.S.player;
+    if (n === 'founder') { if (!G.isFounder()) return false; } else if (n && (n < 1 || n > G.mountTints())) return false;
+    P.mountTint = n || 0; G.save(); emit('change'); return true;
+  };
+  // the CSS filter for the mount you ride: a Renown tint shifts the hue (#504), Founder gold has its own (#507)
+  G.mountFilter = function (P) { const t = P && P.mountTint; if (!t) return ''; if (t === 'founder') return G.isFounder() ? D.FOUNDER.tint : ''; return `hue-rotate(${t * 36}deg)`; };
+  // #507 Founders: a code typed in Settings. Only its SHA-256 is in the data, so the public repo never shows the code.
+  const sha256 = (str) => {
+    const K = [], H = [], isP = (n) => { for (let f = 2; f * f <= n; f++) if (n % f === 0) return false; return true; }, frac = (x) => ((x - Math.floor(x)) * 4294967296) >>> 0;
+    for (let n = 2, i = 0; i < 64; n++) if (isP(n)) { if (i < 8) H[i] = frac(Math.pow(n, 1 / 2)); K[i++] = frac(Math.pow(n, 1 / 3)); }
+    const b = unescape(encodeURIComponent(str)), w = [], L = b.length * 8;
+    for (let i = 0; i < b.length; i++) w[i >> 2] |= b.charCodeAt(i) << ((3 - i % 4) * 8);
+    w[L >> 5] |= 0x80 << (24 - L % 32); w[(((L + 64) >> 9) << 4) + 15] = L;
+    const r = (x, n) => (x >>> n) | (x << (32 - n));
+    for (let j = 0; j < w.length; j += 16) {
+      const W = [], h = H.slice();
+      for (let i = 0; i < 64; i++) {
+        W[i] = i < 16 ? (w[j + i] | 0) : (((r(W[i - 2], 17) ^ r(W[i - 2], 19) ^ (W[i - 2] >>> 10)) + W[i - 7] + (r(W[i - 15], 7) ^ r(W[i - 15], 18) ^ (W[i - 15] >>> 3)) + W[i - 16]) | 0);
+        const t1 = (h[7] + (r(h[4], 6) ^ r(h[4], 11) ^ r(h[4], 25)) + ((h[4] & h[5]) ^ (~h[4] & h[6])) + K[i] + W[i]) | 0;
+        const t2 = ((r(h[0], 2) ^ r(h[0], 13) ^ r(h[0], 22)) + ((h[0] & h[1]) ^ (h[0] & h[2]) ^ (h[1] & h[2]))) | 0;
+        h.unshift((t1 + t2) | 0); h[4] = (h[4] + t1) | 0; h.pop();
+      }
+      for (let i = 0; i < 8; i++) H[i] = (H[i] + h[i]) | 0;
+    }
+    return H.map((x) => (x >>> 0).toString(16).padStart(8, '0')).join('');
+  };
+  G.sha256 = sha256;
+  G.isFounder = () => !!G.account().founder;
+  G.claimCode = function (code) {
+    const k = String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!k) return false;
+    if (sha256('ROL:' + k) !== D.FOUNDER.hash) { toast('That code doesn\'t work.'); return false; }
+    if (G.isFounder()) { toast('Founder is already on this account.'); return true; }
+    const a = G.account(); a.founder = 1; G.saveAccount(a);
+    loot('Founder unlocked: the title "the Founder" and the Founder gold mount tint, on every character.'); emit('change'); G.save(); return true;
+  };
   G.buyHeirloom = function (id) {
     const a = G.account(), H = D.HEIRLOOMS[id]; if (!H) return;
     const owned = a.heirlooms.includes(id);
@@ -2978,6 +3014,7 @@
     if (n.trial) return ((G.S.player.trials || {}).bestEver || 0) >= n.trial; // Trials (v10.4): best level beaten in time
     if (n.trialRank) { const r = (G.S.player.trials || {}).bestRank; return !!r && r <= n.trialRank; } // a month's final realm rank
     if (n.renown) return G.renown() >= n.renown; // #504
+    if (n.founder) return G.isFounder(); // #507
     return Object.keys(n).every((k) => (r[k] || 0) >= n[k]);
   };
   const ROMAN = (n) => { let o = '', x = n; for (const [v, r] of [[1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']]) while (x >= v) { o += r; x -= v; } return o; };
