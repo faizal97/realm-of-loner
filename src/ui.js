@@ -1304,8 +1304,8 @@
   // the places an objective is done in: a visit's place, where its mob lives or its item drops, where it is gathered
   function objPlaces(o) {
     if (o.type === 'visit') return [o.place];
-    const col = (k) => (D.MOBS[k] || {}).collector, L = G.S.player.level; // collectors are spawned, not listed: every place that has them, not grey to you
-    if (col(o.mob) || (o.item && Object.keys(D.MOBS).some((k) => col(k) && (D.MOBS[k].qdrops || []).some((d) => d[0] === o.item)))) return Object.keys(D.PLACES).filter((p) => { const pl = D.PLACES[p]; return G.collectorsHere(pl) && pl.lvl[0] >= 30 && L - pl.lvl[1] < 5; });
+    const col = (k) => (D.MOBS[k] || {}).collector, L = G.S.player.level, tt = G.travelTimes(G.S.player.place); // collectors are spawned, not listed: every place that has them, not grey to you
+    if (col(o.mob) || (o.item && Object.keys(D.MOBS).some((k) => col(k) && (D.MOBS[k].qdrops || []).some((d) => d[0] === o.item)))) return Object.keys(D.PLACES).filter((p) => { const pl = D.PLACES[p]; return G.collectorsHere(pl) && pl.lvl[0] >= 30 && L - pl.lvl[0] < 6 && tt[p] != null; }); /* only where every collector pays a note, and only where you can go now (not behind the storm) */
     const drops = (k) => (D.MOBS[k].qdrops || []).some((d) => d[0] === o.item);
     return Object.keys(D.PLACES).filter((p) => { const pl = D.PLACES[p]; return (pl.mobs || []).some((m) => m[0] === o.mob || drops(m[0])) || (pl.named && Object.keys(pl.named).some((k) => k === o.mob || drops(k))) || (pl.gather && pl.gather.item === o.item); });
   }

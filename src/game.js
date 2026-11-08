@@ -1007,7 +1007,7 @@
   };
   // a torn debt note for a collector that isn't grey to you
   G.collectorKill = function (key, level) {
-    const P = G.S.player; if (!D.PREPATCH || !D.PREPATCH.live || !(D.MOBS[key] || {}).collector || P.level - level >= 5) return 0; // no notes once the event is over
+    const P = G.S.player; if (!D.PREPATCH || !D.PREPATCH.live || !(D.MOBS[key] || {}).collector || P.level - level >= (P.level < 6 ? 5 : 6)) return 0; /* grey exactly as the level colour shows it (ui.js conColor) */ // no notes once the event is over
     P.debtNotes = (P.debtNotes || 0) + 1; sys('Torn debt note: ' + P.debtNotes); return 1;
   };
   // ---- rare hunts (v10.10.0-beta.5, #43; design docs/plans/2026-10-03-rare-hunts-design.md): a level-60 rare appears once
