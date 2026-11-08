@@ -69,6 +69,8 @@ whelps guarding the Ledger's strongboxes are hints; that the Ledger's master is 
 - **Chapter 6 (60), "The Creditor".** Hale walks free with Lyveus and reads his notes to the court. Thorne denies nothing and hands over the deed: the kingdom is already sold. Veshmira comes for her collateral, is beaten back, and flies south to her lair in Saltmarsh with Thorne. A storm closes over the sea behind her; land appears where none has been for ten thousand years, but no ship can reach it while she lives.
 - **The endgame raids (60).** *Veshmira's Lair*: the Accord from Harborwatch and the Krugar from Mudwall Village hunt the creditor in the Dragonmire. Her death breaks the storm and opens the expansion. Behind her nests the players find Thorne, still writing; she gives herself up without a fight, is taken to Kingsmere Gaol among the debtors she put there, and names Lord Kethran Vale as Kethriax, Veshmira's eldest, who keeps the Spire and waits to inherit ("The Mistress of Coin", played before "The Drowned Crown"). The Spire stays shut: Kethriax is set up for later content. *The Magma Throne*: with Emperor Grimmark dead in Cinderpeak Depths, nothing keeps Vulcarn asleep; players go down beneath the mountain to face the King Below and his Steward.
 - **Expansion (60), "The Drowned Crown".** Opens when Veshmira dies and her storm breaks. The Stormveil Isle: Sael'anor and its prince, the drowned Wavebreakers, and beneath them Nal'veshra. The Accord lands at the Tidewatch Coast (from Gullhaven, on Brineholt ships with Admiral Vane); the Krugar at the Skullreef Isles (from Camp Skarn with Mazu).
+- **Pre-patch (60), "The Notes Come Due".** Opens after The Drowned Crown or any level-60 raid. With Veshmira dead, Ledger debt notes keep turning up, the ink still warm, every one signed by no one and every one falling due on Coronation Day. *Accord:* Brant Ashby finds them on collectors along the Saltmarsh coast; nobody in Kingsmere can read the Ledger's hand, so the players go down to Kingsmere Gaol and ask Thorne. She reads them for a price (her own book, left in the Dragonmire), and says only that the notes are drawn on the Spire's vault and that "the book has a new keeper". The Regent announces Tamlin's coronation anyway, and on the King's desk a note is waiting, addressed to the King. *Krugar:* Durnak takes notes off goblin couriers; Gorvo Saltpenny admits Rumhook Bay carries them north for warm coin; High Chief Grask says the Krugar borrowed too after the war and will not be sold along with the Accord, and the couriers' road runs toward Cinderpeak. The pre-patch never says who the new keeper is (beyond what Thorne gave away at 60), what the oldest debt is, that the Ledger served Ossarak, or anything of the Unmoored Reach: those are Chapter 1's (see Reveals, held at 61 until v11 lowers them to 60).
+- **Debt collectors (event, every level).** In the pre-patch, groups of debt collectors work every levelling zone at its own level. They carry torn debt notes. Below level 30 they are only debt collectors, with nothing to say about who sent them.
 
 ### Dungeon intros (first entry)
 
@@ -141,6 +143,9 @@ A term here may not appear in any text a player can read below its level. "Allow
 | `Sael'anor\|Aeldran\|Nal'veshra\|Deepmother\|Stormveil\|Tidecrown\|Wavebreaker\|Shal'zua\|Vessaria` | 60 | the Drowned Crown expansion | |
 | `Marrow` | 45 | Cassius Marrow is behind the cabal | |
 | `Lyveus\|\bLyv\b\|Cloveus` | 37 | the Hooded Stranger is Lyveus | `cutscene legend_lyveus`, `legend lyveus`, `npc lyveus`, `lore lyveus_1` |
+| `Unmoored` | 61 | the new region of Chapter 2 (lowered to 60 in v11) | |
+| `oldest debt\|blood debt\|debt of blood` | 61 | the debt the black dragons owe Ossarak (lowered to 60 in v11) | |
+| `(Ledger\|Veshmira\|Brood).{0,60}Ossarak\|Ossarak.{0,60}(Ledger\|Veshmira\|Brood)` | 61 | the Ledger served Ossarak (lowered to 60 in v11) | |
 
 ## Names
 
@@ -220,3 +225,5 @@ several sharing a line separated by " / ".
 - **High Chief** — Grask's title, as leader of the Krugar (never "Warchief")
 - **Emberfall** — the King Below's hammer, a Magma Throne drop
 - **Grand** — as in the Grand Crusader
+- **Coronation Day / Coronation** — the day Tamlin is crowned, when every Ledger note falls due
+- **Ruinfall Saga / Ruinfall** — the saga of v11 to v13, named in release text and its emblem

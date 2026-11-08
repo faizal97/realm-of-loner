@@ -12,5 +12,8 @@
     ["Sael'anor|Aeldran|Nal'veshra|Deepmother|Stormveil|Tidecrown|Wavebreaker|Shal'zua|Vessaria", 60],
     ["Marrow", 45],
     ["Lyveus|\\bLyv\\b|Cloveus", 37],
+    ["Unmoored", 61],
+    ["oldest debt|blood debt|debt of blood", 61],
+    ["(Ledger|Veshmira|Brood).{0,60}Ossarak|Ossarak.{0,60}(Ledger|Veshmira|Brood)", 61],
   ];
 })(typeof window !== 'undefined' ? window : globalThis);
