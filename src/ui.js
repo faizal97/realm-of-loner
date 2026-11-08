@@ -1041,7 +1041,7 @@
     const P = G.S.player, B = G.BRAWL, w = G.brawlWindow(), why = G.brawlBlock(), rec = P.brawl || {};
     if (G.S.brawl) return; // the bracket panel takes over
     const mm = modeMark('brawl', 'The Bloodsand Brawl'); if (mm) p.append(mm);
-    p.append(h('div', { class: 'sec-h' }, 'The Bloodsand Brawl', h('small', null, w.open ? `open until ${brawlClock(w.closesAt)}` : `opens at ${brawlClock(w.opensAt)}`)));
+    p.append(h('div', { class: 'sec-h' }, mm ? 'Next brawl' : 'The Bloodsand Brawl', h('small', null, w.open ? `open until ${brawlClock(w.closesAt)}` : `opens at ${brawlClock(w.opensAt)}`)));
     const row = (k, v, html) => h('div', { class: 'ai-row' }, h('span', null, k), html ? h('b', { html: v }) : h('b', null, v));
     p.append(h('div', { class: 'ai-box' },
       row('Fighters', `${B.size} at your level · ${B.rounds} rounds, one on one`),
@@ -1366,6 +1366,8 @@
     roads.append(h('button', { class: 'chip ' + (hs > 0 || home ? 'why' : 'gold'), onclick: () => G.hearth(), disabled: hs > 0 || home }, 'Waystone', h('small', null, hs > 0 ? Math.ceil(hs / 60000) + 'm' : home ? "You're home" : D.PLACES[P.bind].name)));
     b.append(roads, h('button', { class: 'btn alt wide', onclick: () => openMap() }, 'Open map'));
   }
+  // the titles this character can have: its own faction's, and an event's only while it runs or once earned (#526)
+  const titlesForMe = () => D.TITLES.filter((t) => (!t.faction || t.faction === G.myFaction()) && (!t.prepatch || D.PREPATCH.live || G.titleUnlocked(t)));
   function rankMob(m) {
     const r = { alive: 0, fight: 1, tapped: 2, dead: 3 }[m.state] || 4;
     return r * 10 + (questMobKeys().has(m.key) ? 0 : (D.MOBS[m.key] || {}).collector ? 1 : 2); // a collector before the normal creatures, so the 12 cards always show it (pre-patch)
@@ -2808,7 +2810,7 @@
   function turninLine(Q, done) {
     const N = D.NPCS[Q.turnin], P = G.S.player;
     const at = npcPlace(Q.turnin);
-    const where = !at ? '' : at === P.place && !P.travel ? ` here in ${D.PLACES[at].name}` : ` in ${D.PLACES[at].name}, ${D.PLACES[at].zone}`;
+    const where = !at ? '' : at === P.place && !P.travel ? ` here in ${D.PLACES[at].name}` : ` in ${D.PLACES[at].name}${D.PLACES[at].zone && D.PLACES[at].zone !== D.PLACES[at].name ? ', ' + D.PLACES[at].zone : ''}`;
     // turned in somewhere else (#144: Thunderhowl Rise's quests go back to Rumhook Bay): the way there, one tap away
     const away = at && (at !== P.place || P.travel);
     return h('div', { class: 'obj turnin-to' }, qmark(done ? 'ready' : 'active', null, Q.main), done ? ' Return to ' : ' Turn in to ', h('b', null, N.name), where + '.',
@@ -2840,7 +2842,9 @@
       Q.group ? h('div', { class: 'obj', style: { color: '#8a1a10' } }, `Group quest (${Q.group} players). Use the group finder.`) : null,
       Q.dungeon ? h('div', { class: 'obj', style: { color: '#8a1a10' } }, `${questDungeon(Q).raid ? 'Raid' : 'Dungeon'} quest. Queue for ${questDungeon(Q).name} in Social.`) : null,
       h('h4', null, 'Rewards'),
-      questXpLine(Q, money));
+      questXpLine(Q, money),
+      ...(() => { const ti = D.TITLES.find((t) => t.need && t.need.quest === qid), ta = Object.keys(D.ABILITIES).find((k) => D.ABILITIES[k].learn === qid); // a title or an ability is a reward too (#526)
+        return [ti ? h('div', { class: 'obj' }, 'Title: ' + G.titleName(ti, G.S.player.name)) : null, ta ? h('div', { class: 'obj' }, 'Ability: ' + D.ABILITIES[ta].name) : null]; })());
     const rewardRow = (reward, i) => h('button', { class: 'row', style: { background: 'rgba(60,40,15,.15)', borderColor: '#b08a4a' }, onclick: () => showDialog(itemTip(reward), true) },
       itemIcon(reward), h('div', { class: 't' }, h('b', { class: 'q' + reward.q, style: { textShadow: '0 1px 0 #000' } }, reward.name), h('small', { style: { color: blockReason(reward) ? '#a01010' : '#5a3a0c' } }, blockReason(reward) ? blockReason(reward).text : 'Tap to inspect')),
       rewards.length > 1 ? h('span', { class: 'chip rw-pick' + (i === chosen ? ' gold' : ''), 'data-rw': i, onclick: (e) => { e.stopPropagation(); chosen = i; box.querySelectorAll('[data-rw]').forEach((c) => { const on = +c.dataset.rw === chosen; c.classList.toggle('gold', on); c.textContent = on ? 'Chosen ✓' : 'Choose'; }); } }, i === chosen ? 'Chosen ✓' : 'Choose') : h('div'));
@@ -3332,7 +3336,7 @@
     const tOwn = D.TITLES.filter(G.titleUnlocked).length, tNow = P.title && D.TITLES.find((t) => t.id === P.title);
     if (D.EVENTS) { const on = G.liveEvents(); list.append(nav('Events', on.length ? `${on.map((k) => D.EVENTS[k].name).join(', ')} is on: ${lwEndsText(on[0]).toLowerCase()}` : (() => { const k = Object.keys(D.EVENTS).sort((a, b) => G.eventNext(a) - G.eventNext(b))[0]; return `${D.EVENTS[k].name} returns ${dayName(G.eventNext(k))}`; })(), on.length ? 'On now' : '', () => openEvents(), on.length > 0)); }
     if (D.COMPANIONS) list.append(nav('Companions', G.S.player.companion ? 'With you: ' + D.COMPANIONS[G.S.player.companion].name : 'Small friends that follow you', `${G.companions().length}/${Object.keys(D.COMPANIONS).length}`, () => openCompanions()));
-    list.append(nav('Titles', tNow ? 'Wearing: ' + G.titleName(tNow, P.name) : 'No title worn', `${tOwn}/${D.TITLES.length}`, () => openTitles()));
+    list.append(nav('Titles', tNow ? 'Wearing: ' + G.titleName(tNow, P.name) : 'No title worn', `${tOwn}/${titlesForMe().length}`, () => openTitles()));
     list.append(nav('Trophies', 'Level-60 rares and world bosses, shared by all your characters', `${G.trophyCount()}/${G.trophyList().length}`, () => openTrophies()));
     { const own = effectsOwned(); list.append(nav('Effects', 'Every item effect: which you own, and where the rest drop', `${Object.keys(D.EFFECTS).filter((k) => own.has(k)).length}/${Object.keys(D.EFFECTS).length}`, () => openEffects())); }
     if (G.WARDROBE_PLACES) { let got = 0, all = 0; for (const pl of G.WARDROBE_PLACES) { const w = G.wardrobeAll(pl); all += w.length; got += w.filter((o) => o.have).length; } list.append(nav('Looks', 'The wardrobe, shared by all your characters', `${got}/${all}`, () => openWardrobe())); }
@@ -3764,8 +3768,8 @@
   }
   function openTitles() {
     openSheet('titles', 'Titles', 'Tap an earned title to wear it', (b, title) => {
-      const P = G.S.player, own = D.TITLES.filter(G.titleUnlocked), rest = D.TITLES.filter((t) => !G.titleUnlocked(t) && !(t.prepatch && !D.PREPATCH.live) && (!t.faction || t.faction === G.myFaction())); // a pre-patch title can't be earned once v11 ships
-      title.querySelector('small').textContent = `Earned: ${own.length}/${D.TITLES.length} · tap one to wear it`;
+      const P = G.S.player, own = D.TITLES.filter(G.titleUnlocked), rest = titlesForMe().filter((t) => !G.titleUnlocked(t)); // a pre-patch title can't be earned once v11 ships
+      title.querySelector('small').textContent = `Earned: ${own.length}/${titlesForMe().length} · tap one to wear it`;
       const row = (name, sub, worn, fn) => h('button', { class: 'row nav' + (fn ? '' : ' off') + (worn ? ' sel-char' : ''), onclick: fn }, h('div', { class: 't' }, h('b', null, name), sub ? h('small', { style: { whiteSpace: 'normal' } }, sub) : null), h('div', { class: 'r' }, worn ? 'Wearing' : ''));
       const list = h('div', { class: 'list' }, row('No title', null, !P.title, () => { G.setTitle(null); ui.sheetFn(); }));
       for (const t of own) list.append(row(G.titleName(t, P.name), t.how, P.title === t.id, () => { G.setTitle(t.id); ui.sheetFn(); }));
@@ -3862,7 +3866,7 @@
       return h('div', { class: 'row' + (got ? '' : ' off') }, h('div', { class: 'ic' }, rankIcon(n, f)),
         h('div', { class: 't' }, h('b', null, `${n}. ${G.rankName(n, f)}`), h('small', { style: { whiteSpace: 'normal' } }, `${fmt(x.at)} Honor · the title "${T ? G.titleName(T, G.S.player.name) : ''}"${look ? ` and the ${look.name} (a look for your back)` : ''}`)),
         h('div', { class: 'r' }, got ? h('span', { style: { color: '#5fd46a' } }, '✓') : '')); });
-    showDialog([modeMark('honor', 'Honor') || '', h('h3', null, 'Honor ranks'), h('p', null, `Honor: ${fmt(hon)}. From battlegrounds and War Mode kills. Never spent; ranks never drop.`),
+    showDialog([modeMark('honor', 'Honor') || h('h3', null, 'Honor ranks'), h('p', null, `Honor: ${fmt(hon)}. From battlegrounds and War Mode kills. Never spent; ranks never drop.`),
       h('div', { class: 'list' }, ...rows), h('p', { class: 'ai-note' }, 'Ranks give titles, an insignia by your name and looks. No power.'),
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: closeDialog }, 'Got it'))], true);
   }
@@ -3899,6 +3903,7 @@
           h('div', null, h('span', null, 'Experience'), h('b', { class: 'tnum' }, P.level >= D.LEVEL_CAP ? 'Max level' : `${P.xp}/${need}`)),
           h('div', null, h('span', null, 'Rested'), h('b', { class: 'tnum' }, P.level >= D.LEVEL_CAP ? '-' : Math.round(P.rested))),
           h('div', null, h('span', null, 'Money'), h('b', { html: moneyHtml(P.money) })),
+          D.PREPATCH && D.PREPATCH.live ? h('div', null, h('span', null, 'Torn debt notes'), h('b', { class: 'tnum' }, String(P.debtNotes || 0))) : null,
           h('div', null, h('span', null, 'Played'), h('b', { class: 'tnum' }, fmtTime(P.played * 1000))),
           h('div', null, h('span', null, 'Kills'), h('b', { class: 'tnum' }, P.kills)),
           h('div', null, h('span', null, 'Deaths'), h('b', { class: 'tnum' }, P.deaths)), G.renown() ? h('div', null, h('span', null, 'Renown'), h('b', { class: 'tnum' }, G.renown())) : null)); // #504
@@ -4806,6 +4811,7 @@
     const S = G.S, P = S.player, T = window.TRIALS, k = T.season(new Date());
     const note = (t) => h('p', { class: 'ai-note', style: { margin: '4px 0' } }, t);
     if (!T.open(k)) { b.append(note(`Trials begin on 1 ${T.name(0)}. Every dungeon comes back at level ${D.LEVEL_CAP}, harder at each Trial level, with a new mix every month.`)); return; }
+    { const mm = modeMark('trials', 'Trials'); if (mm) b.append(mm); } // the Trials logo on its own tab too (#528)
     const pre = k === -1 ? note(`The Preseason: a trial run until ${T.name(0)} begins at midnight. It counts in your history, but gives no rank title.`) : null;
     const picks = G.trialPicks();
     if (P.level < D.LEVEL_CAP) {
