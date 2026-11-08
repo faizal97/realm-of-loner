@@ -285,3 +285,12 @@ test('a second Intervene, Seed or Set Up on the same target is refused, not a si
   const b = e.auras.find((x) => x.setup).setup, E0 = D.ABILITIES.eviscerate.dmg, raw = 5 * (E0.perCp[0] + E0.perCp[1]) / 2 + E0.perLvl * 60 + r1.st.apTotal * E0.apCoef * 5;
   assert.ok(b >= raw * (1 + r1.st.crit / 100) - 1, `${b} includes the crit share over ${raw}`);
 });
+
+test('Lantern of Faith out of reach lands the heal whole; Kinship with only an immune ally near is refused (#516, #520)', () => {
+  const pal = unit('paladin'), t = unit('warrior', 'T'), l = unit('mage', 'L'), C = fight([pal, t, l]);
+  use(C, pal, 'lantern_of_faith', l); l.pos = { x: (pal.pos ? pal.pos.x : 0) + 500, y: 0 }; pal.pos = pal.pos || { x: 0, y: 0 };
+  t.hp = 100; const lh = l.hp; E.heal(C, pal, t, 200, {});
+  assert.strictEqual(l.hp, lh, 'nothing to the far lantern'); assert.ok(t.hp - 100 >= 190, 'all on the target');
+  const s = unit('shaman'), a = unit('mage', 'Ice'), F = fight([s, a]); a.auras.push({ id: 'ice_block', until: 99, immune: true });
+  assert.strictEqual(E.canUse(F, s, 'kinship_totem', s), 'No party member nearby');
+});

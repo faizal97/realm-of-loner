@@ -513,7 +513,7 @@
     if (src && o && o.ab && !o.effect && !o.tick && !o.split) { const tm = fxOf(src, 'tethered_mend'), TM = D.EFFECTS.tethered_mend;
       if (tm) { if (src.tetherTgt === tgt.uid) { src.tetherN = Math.min(TM.max, (src.tetherN || 0) + 1); tmExtra = TM.step * tm.f * src.tetherN; amount *= 1 + tmExtra; } else { if (src.tetherTgt != null) amount *= 1 - TM.swap; src.tetherTgt = tgt.uid; src.tetherN = 0; } } }
     if (tgt.dead) return 0;
-    if (src && src.auras && !(o && o.split) && amount > 0) { const ln = src.auras.find((a) => a.lantern != null), L2 = ln && C.units[ln.lantern]; if (L2 && !L2.dead && L2 !== tgt) { heal(C, src, L2, amount / 2, Object.assign({}, o, { split: true })); amount /= 2; } } // Lantern of Faith (#516)
+    if (src && src.auras && !(o && o.split) && amount > 0) { const ln = src.auras.find((a) => a.lantern != null), L2 = ln && C.units[ln.lantern]; if (L2 && !L2.dead && L2 !== tgt && (!L2.pos || !src.pos || E.dist(src, L2) <= DIST.ally)) { /* out of reach, the heal lands whole on its target */ heal(C, src, L2, amount / 2, Object.assign({}, o, { split: true })); amount /= 2; } } // Lantern of Faith (#516)
     if (src && o && o.ab && !o.split && amount > 0) proc(C, src, 'heal', o.ab); // talent reactions (v10.4), once a heal (Lantern's half is the same heal)
     if (src && src.char) { const hm = tmOf(src); amount *= 1 + (hm.heal + (o && o.ab ? hm.abilHeal[o.ab] || 0 : 0)) / 100; }
     const before = tgt.hp;
@@ -690,7 +690,7 @@
     if (tgt && ((ab.special === 'intervene' && tgt.auras.some((a) => a.intervene != null)) || (ab.special === 'seed' && tgt.auras.some((a) => a.seed != null && a.by !== u.uid)))) return ab.special === 'seed' ? 'Already has a seed' : 'Already guarded'; // a second one would replace the first (#527)
     if (ab.special === 'setup' && tgt && tgt.auras.some((a) => a.setup)) return 'Already set up';
     if (ab.target === 'ally' && tgt === u && (ab.special === 'intervene' || ab.special === 'lantern' || ab.special === 'duet')) return 'Choose another party member'; // pre-patch abilities that work on someone else only
-    if (ab.special === 'kinship' && alive(friends(C, u)).filter((w) => w !== u && w.kind !== 'pet' && (!w.pos || !u.pos || E.dist(u, w) <= ab.range)).length < 1) return 'No party member nearby';
+    if (ab.special === 'kinship' && alive(friends(C, u)).filter((w) => w !== u && w.kind !== 'pet' && !w.auras.some((x) => x.immune) && (!w.pos || !u.pos || E.dist(u, w) <= ab.range)).length < 1) return 'No party member nearby';
     if (abId === 'pw_shield' && tgt && auraOf(tgt, 'weakened_soul')) return 'Weakened Soul';
     // distance (v10.9): the target must be within the ability's range (a targeted area attack: its centre)
     if (E.outOfRange(C, u, abId, tgt)) return 'Out of range';

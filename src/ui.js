@@ -3940,7 +3940,7 @@
         b.append(h('button', { class: 'btn wide' + (tp.free ? '' : ' alt'), onclick: () => openTalents() }, P.level < D.TALENT_START ? `Talents (from level ${D.TALENT_START})` : tp.free ? `Talents · ${tp.free} point${tp.free > 1 ? 's' : ''} to spend` : `Talents · ${tp.spent} spent`));
         b.append(h('button', { class: 'btn wide alt', onclick: () => openProfessions() }, G.knownProfIds().length ? 'Professions · ' + G.knownProfIds().map((k) => `${D.PROFESSIONS[k].name} ${G.profs()[k].skill}`).join(', ') : 'Professions (learn from a trainer in a city)'));
         b.append(h('button', { class: 'btn wide alt', onclick: () => openBarEditor() }, 'Arrange action bar'));
-        b.append(h('div', { class: 'sec-h' }, 'Abilities', h('small', null, 'learned automatically')));
+        b.append(h('div', { class: 'sec-h' }, 'Abilities', h('small', null, 'learned by level, a few by quest')));
         const abl = h('div', { class: 'list' });
         // what you know in full; what's still to learn as one line
         const later = [];
