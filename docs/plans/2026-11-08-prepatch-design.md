@@ -40,6 +40,23 @@ These belong to v11. The pre-patch may name the coronation and the Saltpenny hou
 - **Each ability is decided with Faizal one class at a time**, then proven by sim (`sim/` per class, the difficulty
   targets in `2026-10-10-difficulty-targets.md` unchanged). Bots learn to use it.
 
+### The ten abilities (decided 2026-11-08; details on #512–#521)
+
+Each moves power around or asks for a decision; none adds power.
+
+| Class | Ability | The decision |
+|---|---|---|
+| Warrior | **Intervene**: take the next big hit meant for a party member, on your own armour (20 s) | who to save, at your own health's cost |
+| Mage | **Chronomark**: snap health and mana back to a mark set up to 8 s before (90 s) | when to set the mark |
+| Priest | **Vow of Atonement**: for 10 s, half your spell damage heals the lowest-health ally (1 min) | damage or healing |
+| Rogue | **Set Up**: a finisher whose damage and threat go to the next ally's hit (30 s) | your finisher or a teammate's |
+| Paladin | **Lantern of Faith**: for 20 s, each heal lands half on its target, half on the lantern (1 min) | two-target triage |
+| Warlock | **Blood Bargain**: for 10 s, you and the target take 20% more damage (2 min) | a race |
+| Hunter | **Lure**: the next enemy to join is held at the lure for 6 s (45 s) | timing and placement |
+| Druid | **Seed of Renewal**: a heal that grows for up to 10 s, killed if hit; works in any form (1 min) | now or wait |
+| Shaman | **Kinship Totem**: evens out nearby allies' health every 2 s for 8 s, total unchanged (2 min) | when and where |
+| Bard | **Duet**: for 15 s, songs doubled on one ally and off for the rest (1 min) | spread or focus |
+
 ## 3. The event: debt collectors (every level)
 
 - Groups of debt collectors appear in the levelling zones, matched to each zone's level.
