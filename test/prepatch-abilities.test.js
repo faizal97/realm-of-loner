@@ -237,7 +237,7 @@ test('Vow of Atonement makes no power: a handed-on Set Up is halved too, the hea
   r.cp = 5; r.cpTarget = e.uid; use(C, r, 'set_up', e); const bonus = e.auras.find((x) => x.setup).setup;
   use(C, p, 'vow_of_atonement');
   const before = a.hp, dealt = E.dealDamage(C, p, e, 1000, { school: 'holy' }), healed = a.hp - before;
-  const ref = (() => { const p2 = unit('priest'), r2 = unit('rogue'), F = fight([p2, r2]), e2 = F.enemies[0]; r2.cp = 5; r2.cpTarget = e2.uid; use(F, r2, 'set_up', e2); return E.dealDamage(F, p2, e2, 1000, { school: 'holy' }); })();
+  const ref = (() => { const p2 = unit('priest'), r2 = unit('rogue'), F = fight([p2, r2]), e2 = F.enemies[0]; e2.auras.push({ id: 'set_up', until: 99, setup: bonus, by: r2.uid, side: r2.side }); return E.dealDamage(F, p2, e2, 1000, { school: 'holy' }); })();
   assert.ok(bonus > 0 && Math.abs(dealt - ref / 2) <= 6, `the Set Up is halved with the rest (${dealt} vs ${ref} without the Vow)`);
   assert.ok(healed <= dealt * 1.35, `the heal is the other half (${healed} for ${dealt}, the priest's healing talents on top)`);
   const small = E.mobUnit(e.key, 60, { hp: 1, dmg: 0 }); small.hp = 10; C.enemies.push(small); C.units[small.uid] = small;
@@ -273,4 +273,15 @@ test('Kinship leaves an immune ally alone; Lure holds no boss; Echo after a Duet
   const heals = Object.keys(D.ABILITIES).find((k) => D.ABILITIES[k].cls === 'bard' && D.ABILITIES[k].song && D.ABILITIES[k].song.pulse === 'heal');
   E.songHitsForTest(F, bard, { ab: heals, every: 3 }, 100, { finale: true });
   assert.strictEqual(bard.lastFinale.amount, 100, 'Echo keeps the party amount, not the doubled one');
+});
+
+test('a second Intervene, Seed or Set Up on the same target is refused, not a silent overwrite; Set Up carries the rogue\'s crits (#527)', () => {
+  const w1 = unit('warrior', 'W1'), w2 = unit('warrior', 'W2'), a = unit('mage', 'A'), r1 = unit('rogue', 'R1'), r2 = unit('rogue', 'R2'), C = fight([w1, w2, a, r1, r2]), e = C.enemies[0];
+  use(C, w1, 'intervene', a);
+  assert.strictEqual(E.canUse(C, w2, 'intervene', a), 'Already guarded');
+  r1.cp = 5; r1.cpTarget = e.uid; use(C, r1, 'set_up', e);
+  r2.cp = 5; r2.cpTarget = e.uid; r2.gcdUntil = 0;
+  assert.strictEqual(E.canUse(C, r2, 'set_up', e), 'Already set up');
+  const b = e.auras.find((x) => x.setup).setup, E0 = D.ABILITIES.eviscerate.dmg, raw = 5 * (E0.perCp[0] + E0.perCp[1]) / 2 + E0.perLvl * 60 + r1.st.apTotal * E0.apCoef * 5;
+  assert.ok(b >= raw * (1 + r1.st.crit / 100) - 1, `${b} includes the crit share over ${raw}`);
 });

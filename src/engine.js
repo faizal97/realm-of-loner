@@ -443,7 +443,7 @@
       if (om.includes('enraging') && OM.enraging && src.boss) amount *= 1 + OM.enraging.dmg * Math.floor(C.t / OM.enraging.every);
     }
     { const bg = tgt.auras.find((a) => a.bargain); if (bg) amount *= 1 + bg.bargain / 100; } // Blood Bargain (#517)
-    if (src.side !== tgt.side && src.uid != null) { const su = tgt.auras.find((a) => a.setup && a.by !== src.uid && a.side === src.side); if (su) { tgt.auras = tgt.auras.filter((a) => a !== su); amount += su.setup; } } // Set Up (#515)
+    if (src.side !== tgt.side && src.uid != null && !o.tick) { const su = tgt.auras.find((a) => a.setup && a.by !== src.uid && a.side === src.side); if (su) { tgt.auras = tgt.auras.filter((a) => a !== su); amount += su.setup; } } // Set Up (#515)
     let vowPct = 0; if (src.auras && src.side !== tgt.side && !o.effect) { const vw = src.auras.find((a) => a.vow); if (vw) { vowPct = vw.vow; amount *= 1 - vowPct; } } // Vow of Atonement (#514): half moves to a heal
     if (auraOf(tgt, 'hunters_mark') && (src.cls === 'hunter' || (src.kind === 'pet' && C.units[src.owner] && C.units[src.owner].cls === 'hunter'))) amount *= 1.1;
     { const mv = tgt.auras.find((a) => a.takenPct && a.bySide === src.side); if (mv) amount *= 1 + mv.takenPct / 100; } // Mocking Verse: the whole party's damage (#251)
@@ -687,6 +687,8 @@
     if (ab.opener && (C.t - (u.closedAt != null ? u.closedAt : C.t) > 3 || C.t > 3 && u.closedAt == null && !C.opts.apart || (tgt && tgt.hitBy && tgt.hitBy[u.uid]))) return 'Already in combat'; // an opener: within 3 sec of first reaching melee (a fight that starts apart gives you the run in)
     if (ab.target === 'enemy' && (!tgt || tgt.dead || (tgt.side === u.side && !ab.either))) return 'No target'; // either (Holy Shock, #245): an ally too
     if (ab.target === 'ally' && (!tgt || tgt.dead || tgt.side !== u.side)) return 'Invalid target';
+    if (tgt && ((ab.special === 'intervene' && tgt.auras.some((a) => a.intervene != null)) || (ab.special === 'seed' && tgt.auras.some((a) => a.seed != null && a.by !== u.uid)))) return ab.special === 'seed' ? 'Already has a seed' : 'Already guarded'; // a second one would replace the first (#527)
+    if (ab.special === 'setup' && tgt && tgt.auras.some((a) => a.setup)) return 'Already set up';
     if (ab.target === 'ally' && tgt === u && (ab.special === 'intervene' || ab.special === 'lantern' || ab.special === 'duet')) return 'Choose another party member'; // pre-patch abilities that work on someone else only
     if (ab.special === 'kinship' && alive(friends(C, u)).filter((w) => w !== u && w.kind !== 'pet' && (!w.pos || !u.pos || E.dist(u, w) <= ab.range)).length < 1) return 'No party member nearby';
     if (abId === 'pw_shield' && tgt && auraOf(tgt, 'weakened_soul')) return 'Weakened Soul';
@@ -910,7 +912,8 @@
     vow(C, u, t, ab) { addAura(C, u, { id: 'vow_of_atonement', until: C.t + ab.dur, vow: ab.pct }); },
     setup(C, u, t, ab) {
       if (!t) return;
-      const E0 = D.ABILITIES.eviscerate.dmg, cps = u.cp || 0, amt = cps * (E0.perCp[0] + E0.perCp[1]) / 2 + E0.perLvl * u.level + ((u.st && u.st.apTotal) || 0) * E0.apCoef * cps; // what an Eviscerate would deal (the finisher formula, below)
+      const E0 = D.ABILITIES.eviscerate.dmg, cps = u.cp || 0, tm = u.char ? tmOf(u) : null, amt = (cps * (E0.perCp[0] + E0.perCp[1]) / 2 + E0.perLvl * u.level + ((u.st && u.st.apTotal) || 0) * E0.apCoef * cps)
+        * (1 + (tm ? (tm.school.physical || 0) + (tm.abilDmg.eviscerate || 0) : 0) / 100) * (1 + ((u.st && u.st.crit) || 0) / 100); // what this rogue's Eviscerate would deal on average: its talents and its crits (a crit doubles) (#527)
       addAura(C, t, { id: 'set_up', until: C.t + ab.dur, setup: Math.round(amt), by: u.uid, side: u.side });
       u.cp = 0; u.cpTarget = null;
     },
