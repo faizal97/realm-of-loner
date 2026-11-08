@@ -7,10 +7,11 @@
 
   // ---- people
   Object.assign(D.NPCS, {
-    regent_carrow: { name: 'Lord Regent Edmund Carrow', title: 'Regent of Kingsmere' },
-    meriel_thorne: { name: 'Lady Meriel Thorne', title: 'Prisoner of Kingsmere Gaol' },
-    high_chief_grask: { name: 'High Chief Grask', title: 'Krugar' },
-    class_tutor: { name: 'Tutor Ione Calder', title: 'Teacher of Every Class' },
+    // only once the campaign is open (#508): Thorne is a prisoner only after Veshmira's Lair, so she can't stand there before
+    regent_carrow: { name: 'Lord Regent Edmund Carrow', title: 'Regent of Kingsmere', prepatchGate: true },
+    meriel_thorne: { name: 'Lady Meriel Thorne', title: 'Prisoner of Kingsmere Gaol', prepatchGate: true },
+    high_chief_grask: { name: 'High Chief Grask', title: 'Krugar', prepatchGate: true },
+    class_tutor: { name: 'Tutor Ione Calder', title: 'Teacher of Every Class', prepatchGate: true },
   });
   const put = (place, npc) => { const p = D.PLACES[place]; if (p && !p.npcs.includes(npc)) p.npcs.push(npc); };
   put('stormwind_gate', 'regent_carrow'); put('stormwind_gate', 'meriel_thorne');
@@ -57,7 +58,7 @@
     text: 'My ships carry them north. I am paid in warm coin, and I do not read what I carry. Their collectors keep the satchels. Bring me one and we will both read it.',
     objs: [{ type: 'collect', item: 'courier_satchel', n: 1 }], reward: { money: 6000 } }, 'horde');
   Q('pp_h_grask', { name: 'The High Chief', giver: 'rh_gorvo', turnin: 'high_chief_grask', pre: ['pp_h_courier'],
-    text: 'The satchel was going to Vazhrak. It has the Krugar\'s name in it. Take it to your High Chief before somebody else does.',
+    text: 'The satchel was going to Vazhrak. It has the Krugar\'s name in it. I\'ll keep the satchel. Go and tell your High Chief before somebody else does.',
     objs: [{ type: 'visit', place: 'orgrimmar' }], reward: { money: 4000 } }, 'horde');
   Q('pp_h_debt', { name: 'What the Krugar Owe', giver: 'high_chief_grask', turnin: 'high_chief_grask', pre: ['pp_h_grask'],
     text: 'After the war we borrowed too. Every wall in Vazhrak stands on it. These notes fall due the day the humans crown their boy, ours with theirs. We will not be sold with them. Stop 8 of their collectors.',
@@ -66,13 +67,13 @@
     text: 'The Accord will crown its king. Their couriers\' road runs toward Cinderpeak, and the notes will come down it. Go back to Mudwall and tell Durnak to watch it.',
     objs: [{ type: 'visit', place: 'brackenwall_village' }], reward: { money: 8000 } }, 'horde');
 
-  D.TITLES.push({ id: 'notes_due_a', name: '%s, Reader of Notes', need: { quest: 'pp_a_crown' }, how: 'The Notes Come Due (Accord)' });
-  D.TITLES.push({ id: 'notes_due_h', name: '%s, Reader of Notes', need: { quest: 'pp_h_crown' }, how: 'The Notes Come Due (Krugar)' });
+  D.TITLES.push({ id: 'notes_due_a', name: '%s, Reader of Notes', need: { quest: 'pp_a_crown' }, how: 'The Notes Come Due (Accord)', faction: 'alliance' });
+  D.TITLES.push({ id: 'notes_due_h', name: '%s, Reader of Notes', need: { quest: 'pp_h_crown' }, how: 'The Notes Come Due (Krugar)', faction: 'horde' });
 
   // the journal's longer telling, for the first and last of each chain (lore_quests.js)
   Object.assign(D.QUEST_STORY, {
     pp_a_notes: 'We thought the debt died with her. It did not. Every note we take is new, written after she fell, and every one is drawn on the same day. Somebody is still keeping the Ledger\'s books.',
-    pp_a_crown: 'The proclamation is nailed up in the Market Ward: Prince Tamlin Aldane will be crowned in Kingsmere. When you come back, the Regent is not at his desk. On it is a note, warm, unsigned, addressed to the King.',
+    pp_a_crown: 'The proclamation is nailed up in the Market Ward: Prince Tamlin Aldane will be crowned in Kingsmere. When you come back, the Regent is holding a note he found on his desk. It is warm, unsigned, and addressed to the King.',
     pp_h_notes: 'The marsh is quiet without her, and the Krugar like quiet. But these collectors do not act like servants of a dead master. They act like men who were paid in advance.',
     pp_h_crown: 'Grask does not raise his voice. He has seen this before: the humans borrow, the humans fall, and the Krugar are standing next to them when they do. This time he wants to see who is holding the pen.',
   });

@@ -7,7 +7,7 @@
     { id: 'debt_breaker', kind: 'title', cost: 40 },
     { id: 'marks', kind: 'marks', cost: 5, marks: 10 },
   ];
-  D.TITLES.push({ id: 'debt_breaker', name: '%s the Debt-Breaker', need: { debtBreaker: 1 }, how: 'Trade 40 torn debt notes to a debt clerk' });
+  D.TITLES.push({ id: 'debt_breaker', name: '%s the Debt-Breaker', need: { debtBreaker: 1 }, how: 'Trade 40 torn debt notes to a debt clerk', prepatch: true });
   D.NPCS.note_clerk = { name: 'Clerk Odell Pask', title: 'Torn Debt Notes', prepatch: true };
   const towns = new Set([].concat(...Object.values(D.PROF_TRAINERS || {})));
   for (const p of towns) if (D.PLACES[p] && !D.PLACES[p].npcs.includes('note_clerk')) D.PLACES[p].npcs.push('note_clerk');

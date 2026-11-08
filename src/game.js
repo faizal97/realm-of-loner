@@ -943,7 +943,7 @@
     if (G.fight && G.pUnit) { G.pUnit.level = P.level; E.recalc(G.pUnit); G.pUnit.hp = G.pUnit.maxHp; if (G.pUnit.resType === 'mana') G.pUnit.res = G.pUnit.maxRes; }
     G.refreshHeirlooms();
     sys(`Congratulations, you have reached level ${P.level}!`);
-    const learned = D.CLASSES[P.cls].abilities.filter((a) => D.ABILITIES[a].lvl === P.level);
+    const learned = D.CLASSES[P.cls].abilities.filter((a) => D.ABILITIES[a].lvl === P.level && G.learned(a)); // a quest-taught one is announced when its quest is done
     for (const a of learned) sys(`You have learned a new ability: ${D.ABILITIES[a].name}.`);
     if (P.level >= D.TALENT_START) { const m = B.post(G.S, 'system', null, `You have a new talent point. Open Hero → Talents to spend it.`); if (m) m.go = 'talents'; emit('chat'); } // a tap on the line opens Talents (#273)
     if (P.level === G.REHEARSAL_LVL) G.rehearsalLetter(); // the Bard's Rehearsal (#256)
@@ -986,7 +986,7 @@
     return W;
   }
   // ---- the pre-patch's debt collectors (#522): a few per levelling place at its own level, only while D.PREPATCH.live
-  G.collectorsHere = (P) => !!(D.PREPATCH && (D.PREPATCH.live || G.S && G.S.player && G.questMobs().has('ledger_collector')) && P && P.pool && P.lvl && !P.safe && !P.gate && (P.mobs || []).length);
+  G.collectorsHere = (P) => !!(D.PREPATCH && (D.PREPATCH.live || G.S && G.S.player && G.questMobs().has('ledger_collector') && P && P.lvl && P.lvl[0] >= 30) && P && P.pool && P.lvl && !P.safe && !P.gate && (P.mobs || []).length);
   const collectorKey = (P) => P.lvl[0] >= 30 ? 'ledger_collector' : 'debt_collector'; // no Ledger name below 30
   function spawnCollector(P) { return { id: 'c' + (MOBID++) + '_' + Math.floor(Math.random() * 1e6), key: collectorKey(P), level: rint(P.lvl[0], P.lvl[1]), state: 'alive', until: 0, by: null }; }
   function syncCollectors(W, P) {
@@ -1007,7 +1007,7 @@
   };
   // a torn debt note for a collector that isn't grey to you
   G.collectorKill = function (key, level) {
-    const P = G.S.player; if (!(D.MOBS[key] || {}).collector || P.level - level >= 5) return 0;
+    const P = G.S.player; if (!D.PREPATCH || !D.PREPATCH.live || !(D.MOBS[key] || {}).collector || P.level - level >= 5) return 0; // no notes once the event is over
     P.debtNotes = (P.debtNotes || 0) + 1; sys('Torn debt note: ' + P.debtNotes); return 1;
   };
   // ---- rare hunts (v10.10.0-beta.5, #43; design docs/plans/2026-10-03-rare-hunts-design.md): a level-60 rare appears once
@@ -1592,6 +1592,7 @@
     const m = Math.round(((Q.reward.money || 0) + G.questMoney(Q.lvl)) * (1 + (racialPassive('questMoneyPct') + ((root.SOC && SOC.perk('gold')) || 0)) / 100) * G.warBonus());
     P.money += m;
     sys(`Received ${G.moneyText(m)}.`);
+    { const ta = Object.keys(D.ABILITIES).find((k) => D.ABILITIES[k].learn === qid && D.ABILITIES[k].cls === P.cls); if (ta) { loot(`You have learned a new ability: ${D.ABILITIES[ta].name}.`); } } // a class quest teaches its ability
     if (it) { G.addItem(JSON.parse(JSON.stringify(it)), 1); loot(`You receive item: ${B.link(it.name, it.q)}.`); }
     G.gainXp(G.questXpFor(Q), false);
     G.lwEarn(D.EVENTS.lanternwake.earn.quest, 'a quest');
@@ -1917,7 +1918,7 @@
   // to by tapping a party row; the pick is kept by who the member is (S.healPick, their bot id), so it holds between
   // pulls, and it goes back to you with one message when they die or leave. The top frame shows the pick (#155: it used
   // a hand-written class list that left out Shaman). Forms are ignored, so a Druid in bear form keeps the header.
-  G.healsAllies = () => { const P = G.S.player; return D.CLASSES[P.cls].abilities.some((a) => D.ABILITIES[a] && D.ABILITIES[a].lvl <= P.level && D.ABILITIES[a].target === 'ally'); };
+  G.healsAllies = () => { const P = G.S.player; return D.CLASSES[P.cls].abilities.some((a) => D.ABILITIES[a] && D.ABILITIES[a].lvl <= P.level && D.ABILITIES[a].target === 'ally' && G.learned(a)); }; // an ability aimed at an ally, once learned (Intervene and Duet only after their class quest)
   const pickKey = (m) => (m && m.bot && m.bot.id) || (m && m.name) || null;
   const partyNow = () => { const S = G.S; return S.run && S.group ? S.group.members.filter((m) => !m.gone) : S.wparty ? S.wparty.members : []; };
   G.healPick = () => { const k = G.S.healPick; return k ? partyNow().find((m) => pickKey(m) === k) || null : null; };

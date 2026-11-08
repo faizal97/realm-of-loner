@@ -360,7 +360,7 @@
 
   E.addEnemy = function (C, e) {
     C.enemies.push(e); C.units[e.uid] = e; place(C, e);
-    if (C.lure && C.lure.until > C.t && C.lure.side !== e.side) { e.stunUntil = C.t + C.lure.hold; ev(C, { type: 'stun', tgt: e.uid, dur: C.lure.hold }); ev(C, { type: 'emote', uid: e.uid, text: `${e.name} goes for the lure.` }); C.lure = null; } // Lure (#518)
+    if (C.lure && C.lure.until > C.t && C.lure.side !== e.side && !e.boss) { e.stunUntil = C.t + C.lure.hold; ev(C, { type: 'stun', tgt: e.uid, dur: C.lure.hold }); ev(C, { type: 'emote', uid: e.uid, text: `${e.name} goes for the lure.` }); C.lure = null; } // Lure (#518)
     for (const a of C.allies) e.threat[a.uid] = 0;
     const aa = alive(C.allies);
     const pick = aa[rint(0, aa.length - 1)];
@@ -421,15 +421,15 @@
     if (tgt.dead) return 0;
     o = o || {};
     if (tgt.auras.some((a) => a.immune)) { ev(C, { type: 'avoid', src: src.uid, tgt: tgt.uid, what: 'immune', ab: o.ab || null }); return 0; }
-    if (src.side !== tgt.side && !o.redirected) { // pre-patch: a big hit (an ability, or 12%+ of health) is taken by an Intervene, and crushes a Seed
+    if (src.side !== tgt.side && !o.redirected) { // pre-patch: a big hit (an ability, not its ticks, or 12%+ of health) is taken by an Intervene, and crushes a Seed
       const iv = tgt.auras.find((a) => a.intervene != null);
-      if (iv && (o.ab || amount >= tgt.maxHp * iv.big)) {
+      if (iv && ((o.ab && !o.tick) || amount >= tgt.maxHp * iv.big)) {
         tgt.auras = tgt.auras.filter((a) => a !== iv);
         const w = C.units[iv.intervene];
         if (w && !w.dead) { ev(C, { type: 'emote', uid: w.uid, text: `${w.name} takes the hit for ${tgt.name}!` }); return dealDamage(C, src, w, amount, Object.assign({}, o, { redirected: true })); }
       }
       const sd = tgt.auras.find((a) => a.seed != null);
-      if (sd && (o.ab || amount >= tgt.maxHp * sd.big)) { tgt.auras = tgt.auras.filter((a) => a !== sd); ev(C, { type: 'emote', uid: tgt.uid, text: 'The seed is crushed.' }); }
+      if (sd && ((o.ab && !o.tick) || amount >= tgt.maxHp * sd.big)) { tgt.auras = tgt.auras.filter((a) => a !== sd); ev(C, { type: 'emote', uid: tgt.uid, text: 'The seed is crushed.' }); }
     }
     const om = C.opts.omens; // Trials Omens (v10.4)
     if (om && tgt.boss && om.includes('guarded') && root.TRIALS && C.enemies.some((x) => !x.dead && x !== tgt)) amount *= root.TRIALS.OMENS.guarded.taken;
@@ -443,8 +443,8 @@
       if (om.includes('enraging') && OM.enraging && src.boss) amount *= 1 + OM.enraging.dmg * Math.floor(C.t / OM.enraging.every);
     }
     { const bg = tgt.auras.find((a) => a.bargain); if (bg) amount *= 1 + bg.bargain / 100; } // Blood Bargain (#517)
-    let vowPct = 0; if (src.auras && src.side !== tgt.side && !o.effect) { const vw = src.auras.find((a) => a.vow); if (vw) { vowPct = vw.vow; amount *= 1 - vowPct; } } // Vow of Atonement (#514): half moves to a heal
     if (src.side !== tgt.side && src.uid != null) { const su = tgt.auras.find((a) => a.setup && a.by !== src.uid && a.side === src.side); if (su) { tgt.auras = tgt.auras.filter((a) => a !== su); amount += su.setup; } } // Set Up (#515)
+    let vowPct = 0; if (src.auras && src.side !== tgt.side && !o.effect) { const vw = src.auras.find((a) => a.vow); if (vw) { vowPct = vw.vow; amount *= 1 - vowPct; } } // Vow of Atonement (#514): half moves to a heal
     if (auraOf(tgt, 'hunters_mark') && (src.cls === 'hunter' || (src.kind === 'pet' && C.units[src.owner] && C.units[src.owner].cls === 'hunter'))) amount *= 1.1;
     { const mv = tgt.auras.find((a) => a.takenPct && a.bySide === src.side); if (mv) amount *= 1 + mv.takenPct / 100; } // Mocking Verse: the whole party's damage (#251)
     const tRP = tgt.race && D.RACIALS[tgt.race] && D.RACIALS[tgt.race].passives;
@@ -458,7 +458,6 @@
     if (ghS) { ghExtra = D.EFFECTS.glass_heart.dmg * ghS.f; amount *= 1 + ghExtra; } /* the bonus grows with upgrades, the extra damage taken doesn't (#37) */ if (ghT) amount *= 1 + D.EFFECTS.glass_heart.taken;
     if (tgt.char) { const tt = tmOf(tgt); if (tt.taken) amount *= 1 - tt.taken / 100; }
     let dmg = Math.max(1, Math.round(amount));
-    if (vowPct > 0) { const lw = alive(friends(C, src)).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0]; if (lw) heal(C, src, lw, dmg * vowPct / (1 - vowPct), { effect: true }); }
     if (o.school === 'physical' || !o.school) {
       const armor = flat(tgt) ? tgt.armor : tgt.st.armor;
       const dr = clamp(armor / (armor + 400 + 85 * (src.level || 1)), 0, 0.75);
@@ -470,7 +469,7 @@
       if (sh.effect) fxDone(C, (sh.src != null && C.units[sh.src]) || tgt, sh.effect, take, 'shield'); // credited to whoever's effect raised it
     }
     if (absorbed) tgt.auras = tgt.auras.filter((a) => !(a.absorb != null && a.absorb <= 0));
-    tgt.hp -= dmg; tally(C, src, 'dmg', dmg); tally(C, tgt, 'taken', dmg + absorbed); if (o.effect) fxDone(C, src, o.effect, dmg, 'damage'); else if (ghExtra) fxDone(C, src, 'glass_heart', dmg * ghExtra / (1 + ghExtra), 'damage');
+    const hp0 = tgt.hp; tgt.hp -= dmg; tally(C, src, 'dmg', dmg); tally(C, tgt, 'taken', dmg + absorbed); if (o.effect) fxDone(C, src, o.effect, dmg, 'damage'); else if (ghExtra) fxDone(C, src, 'glass_heart', dmg * ghExtra / (1 + ghExtra), 'damage');
     if (C.opts.omens && tgt.side === 'enemy' && !tgt.frenzy && tgt.hp > 0 && tgt.hp < tgt.maxHp * ((root.TRIALS && root.TRIALS.OMENS.frenzied) || { below: 0.3 }).below && C.opts.omens.includes('frenzied')) { tgt.frenzy = true; ev(C, { type: 'emote', uid: tgt.uid, text: `${tgt.name} goes into a frenzy!` }); }
     // threat
     if (tgt.side === 'enemy') {
@@ -491,6 +490,7 @@
     if (tgt.cast && !tgt.cast.channel && dmg > 0 && tgt.cast.pushed < 2) { tgt.cast.end += 0.35; tgt.cast.pushed++; }
     E.rateAdd(C, tgt, 'in', dmg + absorbed); // damage taken a second, for the bots' looking ahead (#149)
     ev(C, { type: 'dmg', src: src.uid, tgt: tgt.uid, amount: dmg, absorbed, crit: !!o.crit, school: o.school || 'physical', ab: o.ab || null, melee: !!o.melee, tick: !!o.tick, fx: o.fx || null, effect: o.effect || null, tele: o.tele || null, teleMiss: o.teleMiss || null }); // melee/tick/fx: hints for the combat effects (ui.js); tele: the telegraph it came from, teleMiss: the answer the target had and missed (#179)
+    if (vowPct > 0) { const took = Math.min(dmg, Math.max(0, hp0)) + absorbed, lw = alive(friends(C, src)).filter((w) => w !== src && w.kind !== 'pet').sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0]; if (lw && took > 0) heal(C, src, lw, took * vowPct / (1 - vowPct), { effect: true }); } // Vow of Atonement (#514): what the hit took, to your most hurt ally
     if (tgt.hp <= 0) kill(C, tgt, src);
     // item effects on this hit (v10.10)
     if (!o.effect) {
@@ -508,13 +508,13 @@
   }
 
   function heal(C, src, tgt, amount, o) {
-    if (src && o && o.ab && !o.effect) { const lm = fxOf(src, 'lavish_mend'); if (lm) amount *= 1 + D.EFFECTS.lavish_mend.heal * lm.f; } // Lavish Mend: a healing ability heals more (#40)
+    if (src && o && o.ab && !o.effect && !o.split) { const lm = fxOf(src, 'lavish_mend'); if (lm) amount *= 1 + D.EFFECTS.lavish_mend.heal * lm.f; } // Lavish Mend: a healing ability heals more (#40)
     let tmExtra = 0; // Tethered Mend (#40): a direct heal on the same ally in a row heals more; one on a different ally less, and starts over
-    if (src && o && o.ab && !o.effect && !o.tick) { const tm = fxOf(src, 'tethered_mend'), TM = D.EFFECTS.tethered_mend;
+    if (src && o && o.ab && !o.effect && !o.tick && !o.split) { const tm = fxOf(src, 'tethered_mend'), TM = D.EFFECTS.tethered_mend;
       if (tm) { if (src.tetherTgt === tgt.uid) { src.tetherN = Math.min(TM.max, (src.tetherN || 0) + 1); tmExtra = TM.step * tm.f * src.tetherN; amount *= 1 + tmExtra; } else { if (src.tetherTgt != null) amount *= 1 - TM.swap; src.tetherTgt = tgt.uid; src.tetherN = 0; } } }
     if (tgt.dead) return 0;
     if (src && src.auras && !(o && o.split) && amount > 0) { const ln = src.auras.find((a) => a.lantern != null), L2 = ln && C.units[ln.lantern]; if (L2 && !L2.dead && L2 !== tgt) { heal(C, src, L2, amount / 2, Object.assign({}, o, { split: true })); amount /= 2; } } // Lantern of Faith (#516)
-    if (src && o && o.ab && amount > 0) proc(C, src, 'heal', o.ab); // talent reactions (v10.4)
+    if (src && o && o.ab && !o.split && amount > 0) proc(C, src, 'heal', o.ab); // talent reactions (v10.4), once a heal (Lantern's half is the same heal)
     if (src && src.char) { const hm = tmOf(src); amount *= 1 + (hm.heal + (o && o.ab ? hm.abilHeal[o.ab] || 0 : 0)) / 100; }
     const before = tgt.hp;
     tgt.hp = Math.min(tgt.maxHp, tgt.hp + Math.round(amount));
@@ -687,6 +687,8 @@
     if (ab.opener && (C.t - (u.closedAt != null ? u.closedAt : C.t) > 3 || C.t > 3 && u.closedAt == null && !C.opts.apart || (tgt && tgt.hitBy && tgt.hitBy[u.uid]))) return 'Already in combat'; // an opener: within 3 sec of first reaching melee (a fight that starts apart gives you the run in)
     if (ab.target === 'enemy' && (!tgt || tgt.dead || (tgt.side === u.side && !ab.either))) return 'No target'; // either (Holy Shock, #245): an ally too
     if (ab.target === 'ally' && (!tgt || tgt.dead || tgt.side !== u.side)) return 'Invalid target';
+    if (ab.target === 'ally' && tgt === u && (ab.special === 'intervene' || ab.special === 'lantern' || ab.special === 'duet')) return 'Choose another party member'; // pre-patch abilities that work on someone else only
+    if (ab.special === 'kinship' && alive(friends(C, u)).filter((w) => w !== u && w.kind !== 'pet' && (!w.pos || !u.pos || E.dist(u, w) <= ab.range)).length < 1) return 'No party member nearby';
     if (abId === 'pw_shield' && tgt && auraOf(tgt, 'weakened_soul')) return 'Weakened Soul';
     // distance (v10.9): the target must be within the ability's range (a targeted area attack: its centre)
     if (E.outOfRange(C, u, abId, tgt)) return 'Out of range';
@@ -809,8 +811,8 @@
   function songHits(C, u, s, amount, o) {
     const ab = D.ABILITIES[s.ab], S = ab.song;
     const dt = auraOf(u, 'duet'), dw = dt && C.units[dt.duet]; // Duet (#521): a party song reaches only that ally, twice as strong
-    const songParty = dw && !dw.dead && (S.pulse === 'heal' || S.pulse === 'haste') ? (() => { amount *= 2; return () => [dw]; })() : songPartyAll;
-    if (o && o.finale) u.lastFinale = { ab: s.ab, amount, tgt: s.tgt }; // what Echo replays (#251)
+    if (o && o.finale) u.lastFinale = { ab: s.ab, amount, tgt: s.tgt }; // what Echo replays (#251): the party's song, not a Duet's doubled one
+    const songParty = dw && !dw.dead && (!dw.pos || !u.pos || E.dist(u, dw) <= DIST.ally) && (S.pulse === 'heal' || S.pulse === 'haste') ? (() => { amount *= 2; return () => [dw]; })() : songPartyAll;
     if (S.pulse === 'heal') { for (const w of songParty(C, u)) heal(C, u, w, amount, Object.assign({ ab: s.ab }, o)); return; }
     if (S.pulse === 'haste') { // the party's haste while the song plays; a Finale is a short surge on top
       const id = o && o.finale ? s.ab + '_finale' : s.ab, dur = o && o.finale ? S.surge : s.every + 0.5;
@@ -936,7 +938,7 @@
     for (const k of C.kin) {
       if (C.t + 1e-6 < k.next || C.t > k.until + 1e-6) continue;
       k.next += k.every;
-      const pt = alive(k.side === 'ally' ? C.allies : C.enemies).filter((a) => a.kind !== 'pet' && (!k.pos || !a.pos || Math.hypot(a.pos.x - k.pos.x, a.pos.y - k.pos.y) <= k.range));
+      const pt = alive(k.side === 'ally' ? C.allies : C.enemies).filter((a) => a.kind !== 'pet' && !a.auras.some((x) => x.immune) && (!k.pos || !a.pos || Math.hypot(a.pos.x - k.pos.x, a.pos.y - k.pos.y) <= k.range));
       if (pt.length < 2) continue;
       const f = pt.reduce((a, w) => a + w.hp, 0) / pt.reduce((a, w) => a + w.maxHp, 0); // the shared share of health; the total never changes
       for (const w of pt) w.hp = Math.min(w.maxHp, Math.max(1, w.hp + (w.maxHp * f - w.hp) * k.share));

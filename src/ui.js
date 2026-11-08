@@ -465,7 +465,7 @@
     return { cls, race: races[(x >> 3) % races.length], skin: (x >> 7) % 4, hair: (x >> 11) % 5, gender };
   }
   const P0 = (place) => Object.keys(D.PLACES).find((k) => D.PLACES[k] === place);
-  const npcOn = (n) => !D.NPCS[n] || (!D.NPCS[n].event || G.eventLive(D.NPCS[n].event)) && (!D.NPCS[n].prepatch || D.PREPATCH.live); // festival people only while it is on; the pre-patch's until v11
+  const npcOn = (n) => !D.NPCS[n] || (!D.NPCS[n].event || G.eventLive(D.NPCS[n].event)) && (!D.NPCS[n].prepatch || D.PREPATCH.live) && (!D.NPCS[n].prepatchGate || G.prepatchOpen()); // festival people only while it is on; the pre-patch's until v11
   function npcSprites(sc, place) {
     if (!place || !(place.npcs || []).length) return;
     const rank = (n) => { const mk = G.npcMarker(n); if (D.NPCS[n].legend || n === 'hooded_stranger') return -1; return mk === '?' ? 0 : mk === '!' ? 1 : /^(mentor|banker|auctioneer|crafts|stable)_/.test(n) ? 3 : 2; };
@@ -1304,6 +1304,8 @@
   // the places an objective is done in: a visit's place, where its mob lives or its item drops, where it is gathered
   function objPlaces(o) {
     if (o.type === 'visit') return [o.place];
+    const col = (k) => (D.MOBS[k] || {}).collector, L = G.S.player.level; // collectors are spawned, not listed: every place that has them, not grey to you
+    if (col(o.mob) || (o.item && Object.keys(D.MOBS).some((k) => col(k) && (D.MOBS[k].qdrops || []).some((d) => d[0] === o.item)))) return Object.keys(D.PLACES).filter((p) => { const pl = D.PLACES[p]; return G.collectorsHere(pl) && pl.lvl[0] >= 30 && L - pl.lvl[1] < 5; });
     const drops = (k) => (D.MOBS[k].qdrops || []).some((d) => d[0] === o.item);
     return Object.keys(D.PLACES).filter((p) => { const pl = D.PLACES[p]; return (pl.mobs || []).some((m) => m[0] === o.mob || drops(m[0])) || (pl.named && Object.keys(pl.named).some((k) => k === o.mob || drops(k))) || (pl.gather && pl.gather.item === o.item); });
   }
@@ -1366,7 +1368,7 @@
   }
   function rankMob(m) {
     const r = { alive: 0, fight: 1, tapped: 2, dead: 3 }[m.state] || 4;
-    return r * 10 + (questMobKeys().has(m.key) ? 0 : 1);
+    return r * 10 + (questMobKeys().has(m.key) ? 0 : (D.MOBS[m.key] || {}).collector ? 1 : 2); // a collector before the normal creatures, so the 12 cards always show it (pre-patch)
   }
   // the monsters your quests still need (an objective you have finished no longer marks its monster) and your accepted tasks
   function questMobKeys() { const out = G.questMobs(); for (const k of (window.SOC ? SOC.taskMobs() : [])) out.add(k); return out; }
@@ -2970,7 +2972,7 @@
       }
       if (place.vendor === npc || place.gearVendor === npc) b.append(h('button', { class: 'btn wide', onclick: () => openVendor(npc) }, 'Browse goods'));
       if (npc === 'farley') b.append(h('button', { class: 'btn alt wide', disabled: P.bind === P.place, onclick: () => { G.bindHere(); ui.sheetFn(); } }, P.bind === P.place ? 'This inn is your home' : 'Make this inn your home'));
-      if (!qs.length && place.vendor !== npc && npc !== 'farley' && place.gearVendor !== npc && !/^(mentor|banker|auctioneer|crafts|stable|lw|ln|note)_/.test(npc)) b.append(h('p', { style: { color: 'var(--muted)' } }, 'Nothing for you right now. Come back when you have grown stronger.'));
+      if (!qs.length && place.vendor !== npc && npc !== 'farley' && place.gearVendor !== npc && !/^(mentor|banker|auctioneer|crafts|stable|lw|ln|note)_/.test(npc)) b.append(h('p', { style: { color: 'var(--muted)' } }, G.S.player.level >= D.LEVEL_CAP ? (Object.values(D.QUESTS).some((q) => q.prepatch && q.giver === npc && (!q.faction || q.faction === G.myFaction()) && !q.pre) && !G.prepatchOpen() ? 'Nothing for you yet. Finish The Drowned Crown or clear a raid first.' : 'Nothing for you right now.') : 'Nothing for you right now. Come back when you have grown stronger.'));
     });
   }
   window.UI_GREETING = (npc) => greeting(npc);
@@ -3441,12 +3443,12 @@
     const P = G.S.player, have = P.debtNotes || 0, list = h('div', { class: 'list' });
     for (const t of D.PREPATCH.trade) {
       const own = t.kind === 'title' && !!G.account().debtBreaker, short = have < t.cost;
-      const right = own ? h('span', { class: 'ok' }, 'Owned') : h('button', { class: 'chip gold', disabled: short, onclick: (e) => { e.stopPropagation(); G.noteTrade(t.id); ui.sheetFn && ui.sheetFn(); } }, short ? `Need ${t.cost}` : `Trade · ${t.cost}`);
+      const right = own ? h('span', { class: 'ok' }, 'Owned') : h('button', { class: 'chip gold', disabled: short, onclick: (e) => { e.stopPropagation(); if (G.noteTrade(t.id)) toast(t.kind === 'title' ? 'Title earned: the Debt-Breaker' : `+${t.marks} Mentor Marks`); ui.sheetFn && ui.sheetFn(); } }, short ? `Need ${t.cost}` : `Trade · ${t.cost}`);
       list.append(h('div', { class: 'row' }, h('div', { class: 'ic' }, img(art('icon', t.kind === 'title' ? 'journal' : 'coin'))),
         h('div', { class: 't' }, h('b', null, t.kind === 'title' ? 'the Debt-Breaker' : `${t.marks} Mentor Marks`), h('small', null, t.kind === 'title' ? 'Title · account-wide' : 'Shared by all your characters')), h('div', { class: 'r' }, right)));
     }
     b.append(h('div', { class: 'sec-h' }, 'Trade', h('small', null, `Torn debt notes: ${have}`)), list,
-      h('p', { class: 'ai-note' }, 'Debt collectors carry them in every zone, at its level. Grey ones carry none. Until The Ruinfall Saga begins.'));
+      h('p', { class: 'ai-note' }, 'Every levelling zone has debt collectors at the zone\'s own level. Grey ones carry no notes. The trade lasts until The Ruinfall Saga begins.'));
   }
   function lwKeeperBlock(b) {
     const st = G.lw();
@@ -3762,7 +3764,7 @@
   }
   function openTitles() {
     openSheet('titles', 'Titles', 'Tap an earned title to wear it', (b, title) => {
-      const P = G.S.player, own = D.TITLES.filter(G.titleUnlocked), rest = D.TITLES.filter((t) => !G.titleUnlocked(t));
+      const P = G.S.player, own = D.TITLES.filter(G.titleUnlocked), rest = D.TITLES.filter((t) => !G.titleUnlocked(t) && !(t.prepatch && !D.PREPATCH.live) && (!t.faction || t.faction === G.myFaction())); // a pre-patch title can't be earned once v11 ships
       title.querySelector('small').textContent = `Earned: ${own.length}/${D.TITLES.length} · tap one to wear it`;
       const row = (name, sub, worn, fn) => h('button', { class: 'row nav' + (fn ? '' : ' off') + (worn ? ' sel-char' : ''), onclick: fn }, h('div', { class: 't' }, h('b', null, name), sub ? h('small', { style: { whiteSpace: 'normal' } }, sub) : null), h('div', { class: 'r' }, worn ? 'Wearing' : ''));
       const list = h('div', { class: 'list' }, row('No title', null, !P.title, () => { G.setTitle(null); ui.sheetFn(); }));
@@ -3940,6 +3942,7 @@
         for (const id of D.CLASSES[P.cls].abilities) {
           const ab = D.ABILITIES[id]; const t = abilityText(id);
           if (ab.lvl > P.level) { later.push(ab); continue; }
+          if (!G.learned(id)) { const lq = D.QUESTS[ab.learn], gv = lq && D.NPCS[lq.giver]; abl.append(h('div', { class: 'row dim' }, h('div', { class: 'ic' }, img(abIcon(id))), h('div', { class: 't' }, h('b', null, ab.name), h('small', { style: { whiteSpace: 'normal' } }, gv ? `Learn from ${gv.name}` : 'Learn from a quest')), h('div', { class: 'r' }, 'Not learned'))); continue; }
           abl.append(h('div', { class: 'row' }, h('div', { class: 'ic' }, img(abIcon(id))), h('div', { class: 't' }, h('b', null, ab.name), h('small', { style: { whiteSpace: 'normal' } }, t.d)), h('div', { class: 'r' }, t.cost)));
         }
         b.append(abl);

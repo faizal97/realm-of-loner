@@ -221,3 +221,56 @@ test('a player unit keeps its quest-taught ability unlearned until the class que
   assert.deepStrictEqual(u.unlearned, []);
   assert.strictEqual(E.charUnit(G.botChar({ name: 'B', cls: 'warrior', race: 'human', level: 60, skill: 0.6 }), 'ally', 'bot', 1).unlearned, undefined, 'bots at 60 know it');
 });
+
+// QA pass on the pre-patch (edge cases each of these once got wrong)
+test('a damage-over-time tick is not a big hit: it neither crushes a Seed nor spends an Intervene (#519, #512)', () => {
+  const d = unit('druid'), w = unit('warrior'), a = unit('mage', 'A'), C = fight([d, w, a]), e = C.enemies[0];
+  use(C, d, 'seed_of_renewal', a); use(C, w, 'intervene', a);
+  E.dealDamage(C, e, a, 5, { ab: 'corruption', tick: true });
+  assert.ok(a.auras.some((x) => x.seed != null), 'the seed still grows');
+  assert.ok(a.auras.some((x) => x.intervene != null), 'the guard still waits');
+});
+
+test('Vow of Atonement makes no power: a handed-on Set Up is halved too, the heal is what the hit took, never yourself (#514)', () => {
+  const p = unit('priest'), r = unit('rogue'), a = unit('warrior', 'Hurt'), C = fight([p, r, a]), e = C.enemies[0];
+  a.hp = 100;
+  r.cp = 5; r.cpTarget = e.uid; use(C, r, 'set_up', e); const bonus = e.auras.find((x) => x.setup).setup;
+  use(C, p, 'vow_of_atonement');
+  const before = a.hp, dealt = E.dealDamage(C, p, e, 1000, { school: 'holy' }), healed = a.hp - before;
+  const ref = (() => { const p2 = unit('priest'), r2 = unit('rogue'), F = fight([p2, r2]), e2 = F.enemies[0]; r2.cp = 5; r2.cpTarget = e2.uid; use(F, r2, 'set_up', e2); return E.dealDamage(F, p2, e2, 1000, { school: 'holy' }); })();
+  assert.ok(bonus > 0 && Math.abs(dealt - ref / 2) <= 6, `the Set Up is halved with the rest (${dealt} vs ${ref} without the Vow)`);
+  assert.ok(healed <= dealt * 1.35, `the heal is the other half (${healed} for ${dealt}, the priest's healing talents on top)`);
+  const small = E.mobUnit(e.key, 60, { hp: 1, dmg: 0 }); small.hp = 10; C.enemies.push(small); C.units[small.uid] = small;
+  const b2 = a.hp; E.dealDamage(C, p, small, 4000, { school: 'holy' });
+  assert.ok(a.hp - b2 <= 12, `overkill heals only the 10 health the hit took (${a.hp - b2})`);
+  const solo = unit('priest', 'Solo'), F = fight([solo]); solo.hp = 100; use(F, solo, 'vow_of_atonement');
+  E.dealDamage(F, solo, F.enemies[0], 1000, { school: 'holy' });
+  assert.strictEqual(solo.hp, 100, 'no ally, no heal (not a self-heal)');
+});
+
+test('Lantern of Faith runs a heal\'s item effects and talent reactions once (#516)', () => {
+  const pal = unit('paladin'), t = unit('warrior', 'T'), l = unit('mage', 'L'), C = fight([pal, t, l]);
+  pal.effects = Object.assign({}, pal.effects, { tethered_mend: { f: 1, lvl: 60 } });
+  use(C, pal, 'lantern_of_faith', l); pal.tetherTgt = t.uid;
+  t.hp = 100; l.hp = 100; E.heal(C, pal, t, 200, { ab: 'holy_light' });
+  assert.strictEqual(pal.tetherTgt, t.uid, 'the tether stays on the healed target, not the lantern');
+});
+
+test('ally-only abilities refuse yourself and Kinship refuses with nobody near, instead of spending the cooldown', () => {
+  const w = unit('warrior'), C = fight([w]);
+  assert.strictEqual(E.canUse(C, w, 'intervene', w), 'Choose another party member');
+  const s = unit('shaman'), F = fight([s]);
+  assert.strictEqual(E.canUse(F, s, 'kinship_totem', s), 'No party member nearby');
+});
+
+test('Kinship leaves an immune ally alone; Lure holds no boss; Echo after a Duet Finale replays the party song (#520, #518, #521)', () => {
+  const s = unit('shaman'), a = unit('mage', 'Ice'), b = unit('warrior', 'B'), C = fight([s, a, b]);
+  a.hp = a.maxHp; a.auras.push({ id: 'ice_block', until: 99, immune: true }); b.hp = b.maxHp * 0.2;
+  use(C, s, 'kinship_totem'); run(C, 2.1);
+  assert.strictEqual(a.hp, a.maxHp, 'Ice Block gives nothing');
+  const bard = unit('bard'), x = unit('warrior', 'X'), F = fight([bard, x]);
+  use(F, bard, 'duet', x);
+  const heals = Object.keys(D.ABILITIES).find((k) => D.ABILITIES[k].cls === 'bard' && D.ABILITIES[k].song && D.ABILITIES[k].song.pulse === 'heal');
+  E.songHitsForTest(F, bard, { ab: heals, every: 3 }, 100, { finale: true });
+  assert.strictEqual(bard.lastFinale.amount, 100, 'Echo keeps the party amount, not the doubled one');
+});
