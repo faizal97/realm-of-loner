@@ -212,3 +212,12 @@ test('the campaign names its own arc in the quest screen, not the level-60 story
   for (const q of chain) assert.strictEqual(D.QUESTS[q].arc, 'The Notes Come Due', q);
   assert.ok(!Object.keys(D.QUESTS).some((q) => D.QUESTS[q].arc && !D.QUESTS[q].prepatch), 'only the campaign has an arc so far');
 });
+
+test('a player unit keeps its quest-taught ability unlearned until the class quest is done, also under the AI (sims)', () => {
+  const ch = G.botChar({ name: 'P', cls: 'warrior', race: 'human', level: 60, skill: 0.6 }); ch.done = {};
+  let u = E.charUnit(ch, 'ally', 'player', 1);
+  assert.deepStrictEqual(u.unlearned, ['intervene']);
+  ch.done[D.ABILITIES.intervene.learn] = 1; u = E.charUnit(ch, 'ally', 'player', 1);
+  assert.deepStrictEqual(u.unlearned, []);
+  assert.strictEqual(E.charUnit(G.botChar({ name: 'B', cls: 'warrior', race: 'human', level: 60, skill: 0.6 }), 'ally', 'bot', 1).unlearned, undefined, 'bots at 60 know it');
+});

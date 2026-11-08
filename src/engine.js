@@ -235,6 +235,7 @@
     const C = D.CLASSES[char.cls];
     const u = baseUnit({ side, kind, char, name: char.name, cls: char.cls, level: E.levelOf(char), resType: C.resource, role: char.role || C.role, race: char.race || (char.bot && char.bot.race) || 'human' });
     if (char.instrument) u.instrument = char.instrument; // a bard's chosen rhythm (#251); a Lute when none
+    if (kind === 'player' && char.done) u.unlearned = C.abilities.filter((a) => D.ABILITIES[a] && D.ABILITIES[a].learn && !char.done[D.ABILITIES[a].learn]); // a quest-taught ability waits for its quest, also when the AI plays this unit (sims, #142)
     for (const a of (char.auras || [])) {
       const left = (a.until - nowMs) / 1000;
       if (left > 0) u.auras.push({ id: a.id, until: left, stats: a.stats, src: null, persistent: true, seal: a.seal, sealSchool: a.sealSchool, thorns: a.thorns, name: a.name, icon: a.icon, keep: a.keep });
@@ -1779,16 +1780,22 @@
   // when a bot uses its pre-patch ability (#512–#521): each issue's rule, read from the fight as a player would
   function prepatchThink(C, u, en, has, try_) {
     const id = D.PREPATCH_ABILITIES && D.PREPATCH_ABILITIES[u.cls];
-    if (!id || !has(id) || (D.ABILITIES[id].learn && u.kind === 'player' && u.unlearned && u.unlearned.includes(id))) return false;
+    if (!id || !has(id)) return false;
     const pc = (w) => w.hp / w.maxHp, party = alive(friends(C, u)).filter((w) => w.kind !== 'pet'), others = party.filter((w) => w !== u);
     const tank = party.find((w) => w.role === 'tank'), aimedAt = (w) => en.some((e) => e.target === w.uid) || E.healAhead(C, u, w).hit > 0;
     const ready = () => E.canUse(C, u, id, u) === null || D.ABILITIES[id].target !== 'self';
     switch (id) {
-      case 'intervene': { if (pc(u) < 0.5) return false; const w = others.filter((x) => x.role !== 'tank' && (E.healAhead(C, u, x).hit > 0 || (pc(x) < 0.35 && aimedAt(x)))).sort((a, b) => pc(a) - pc(b))[0]; return !!w && try_(id, w); }
-      case 'chronomark': { const m = auraOf(u, 'chronomark'); if (m) return (pc(u) < 0.5 || m.mark.hp - u.hp > u.maxHp * 0.3) && try_(id); return ready() && E.healAhead(C, u, u).hit > 0 && try_(id); }
+      // a warrior guards whoever a hit is coming for, or a hurt ally an enemy is on, while it can take the hit itself
+      case 'intervene': { if (pc(u) < 0.5) return false; const w = others.filter((x) => x.role !== 'tank' && (E.healAhead(C, u, x).hit > 0 || (pc(x) < 0.7 && en.some((e) => e.target === x.uid)))).sort((a, b) => pc(a) - pc(b))[0]; return !!w && try_(id, w); }
+      // a mage marks when it is in danger or a boss fight is on, and snaps back once the mark is worth a quarter of its health or mana
+      case 'chronomark': { const m = auraOf(u, 'chronomark'); if (m) return (pc(u) < 0.5 || m.mark.hp - u.hp > u.maxHp * 0.25 || (u.maxRes && (m.mark.res || 0) - u.res > u.maxRes * 0.3)) && try_(id); return ready() && (aimedAt(u) || en.some((e) => e.boss)) && try_(id); }
       case 'vow_of_atonement': return !auraOf(u, 'vow_of_atonement') && u.maxRes && u.res / u.maxRes < 0.4 && party.some((w) => pc(w) < 0.7) && try_(id);
-      case 'set_up': { const t = C.units[u.cpTarget]; return (u.cp || 0) >= 4 && !!t && !t.dead && !!tank && t.target != null && t.target !== tank.uid && try_(id, t); }
-      case 'lantern_of_faith': { if (u.role !== 'healer' || auraOf(u, 'lantern_of_faith')) return false; const hurt = party.filter((w) => pc(w) < 0.8); const l = tank && tank !== u ? tank : hurt.sort((a, b) => pc(a) - pc(b))[0]; return hurt.length >= 2 && !!l && l !== u && try_(id, l); }
+      // a rogue hands its finisher on when an enemy is loose, on a boss (the tank's threat), or when its own threat closes on the tank's
+      case 'set_up': { const t = C.units[u.cpTarget]; if ((u.cp || 0) < 4 || !t || t.dead || !tank || tank === u || t.target == null) return false;
+        const th = t.threat || {}; return (t.target !== tank.uid || t.boss || (th[u.uid] || 0) >= 0.8 * (th[tank.uid] || 1)) && try_(id, t); }
+      // a healer lights the tank while it is being hit and someone else needs healing too (or, with no tank, the most hurt ally)
+      case 'lantern_of_faith': { if (u.role !== 'healer' || auraOf(u, 'lantern_of_faith')) return false; const hurt = party.filter((w) => pc(w) < 0.9);
+        const l = tank && tank !== u ? tank : hurt.filter((w) => w !== u).sort((a, b) => pc(a) - pc(b))[0]; return !!l && l !== u && aimedAt(l) && hurt.some((w) => w !== l) && try_(id, l); }
       case 'blood_bargain': { const t = focusTarget(C, u); return !!t && pc(t) < 0.35 && pc(u) > 0.7 && try_(id, t); }
       case 'lure': return !C.lure && en.some((e) => e.boss) && try_(id);
       case 'seed_of_renewal': { const out = party.find((w) => w.auras.some((a) => a.seed != null && a.by === u.uid)); if (out) return pc(out) < 0.4 && try_(id, out); const w = tank && pc(tank) < 0.9 ? tank : party.filter((x) => pc(x) < 0.7).sort((a, b) => pc(a) - pc(b))[0]; return !!w && try_(id, w); }
@@ -1815,7 +1822,7 @@
       const hurt = u.hp / u.maxHp < 0.4; // a tank never fades out of a fight: the enemies would turn on the healer
       if ((rA.bloodFury || rA.berserk) || (rA.stompAll && en.length >= 2) || (hurt && (rA.cleanse || (rA.dropThreat && u.role !== 'tank'))) || (u.stunUntil > C.t && rA.freeOf)) { if (try_(rac)) return; }
     }
-    const has = (id) => D.CLASSES[u.cls].abilities.includes(id) && D.ABILITIES[id].lvl <= u.level;
+    const has = (id) => D.CLASSES[u.cls].abilities.includes(id) && D.ABILITIES[id].lvl <= u.level && !(u.unlearned && u.unlearned.includes(id));
     // a bard keeps its songs on the beat before anything else, kiting included: a song tap is instant (#250)
     if (u.cls === 'bard') for (const s of u.auras.filter((a) => a.song)) if (botSong(C, u, b, s.ab, C.units[s.tgt], try_, false)) return;
     // a lit ability (a reaction, v10.4) first: it is free, instant or ready only for a few seconds; better players see it more
