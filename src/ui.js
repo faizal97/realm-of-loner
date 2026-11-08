@@ -1033,11 +1033,14 @@
   }
   // ---------- the Bloodsand Brawl (v10.9): the arena card where you join, the bracket between rounds, then the result and
   // the chest. Facts only: when it opens, who you fight next, what each round pays.
+  // a mode's mark at the top of its screen (#525); nothing when the art pack is missing
+  const modeMark = (key, label) => ART.marks && ART.marks['mode_' + key] ? h('div', { class: 'mode-mark', role: 'img', 'aria-label': label, html: ART.marks['mode_' + key] }) : null;
   const brawlClock = (d) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const payText = (r) => { const y = G.brawlRoundPay(r); return moneyHtml(y.money) + (y.xp ? ` + ${y.xp.toLocaleString()} XP` : '') + (y.marks ? ` + ${y.marks} Marks` : ''); };
   function brawlCard(p) {
     const P = G.S.player, B = G.BRAWL, w = G.brawlWindow(), why = G.brawlBlock(), rec = P.brawl || {};
     if (G.S.brawl) return; // the bracket panel takes over
+    const mm = modeMark('brawl', 'The Bloodsand Brawl'); if (mm) p.append(mm);
     p.append(h('div', { class: 'sec-h' }, 'The Bloodsand Brawl', h('small', null, w.open ? `open until ${brawlClock(w.closesAt)}` : `opens at ${brawlClock(w.opensAt)}`)));
     const row = (k, v, html) => h('div', { class: 'ai-row' }, h('span', null, k), html ? h('b', { html: v }) : h('b', null, v));
     p.append(h('div', { class: 'ai-box' },
@@ -3857,7 +3860,7 @@
       return h('div', { class: 'row' + (got ? '' : ' off') }, h('div', { class: 'ic' }, rankIcon(n, f)),
         h('div', { class: 't' }, h('b', null, `${n}. ${G.rankName(n, f)}`), h('small', { style: { whiteSpace: 'normal' } }, `${fmt(x.at)} Honor · the title "${T ? G.titleName(T, G.S.player.name) : ''}"${look ? ` and the ${look.name} (a look for your back)` : ''}`)),
         h('div', { class: 'r' }, got ? h('span', { style: { color: '#5fd46a' } }, '✓') : '')); });
-    showDialog([h('h3', null, 'Honor ranks'), h('p', null, `Honor: ${fmt(hon)}. From battlegrounds and War Mode kills. Never spent; ranks never drop.`),
+    showDialog([modeMark('honor', 'Honor') || '', h('h3', null, 'Honor ranks'), h('p', null, `Honor: ${fmt(hon)}. From battlegrounds and War Mode kills. Never spent; ranks never drop.`),
       h('div', { class: 'list' }, ...rows), h('p', { class: 'ai-note' }, 'Ranks give titles, an insignia by your name and looks. No power.'),
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: closeDialog }, 'Got it'))], true);
   }
@@ -4993,7 +4996,7 @@
   function openTrialBoard() {
     const T = window.TRIALS, k = T.season(new Date());
     openSheet('trialboard', 'Realm leaderboard', `${T.name(k)} Trials · simulated players climb all month`, (b) => {
-      const bd = G.trialBoard(), list = h('div', { class: 'list' });
+      const bd = G.trialBoard(), list = h('div', { class: 'list' }), mm = modeMark('trials', 'Trials'); if (mm) b.append(mm);
       let prev = 0;
       for (const r of bd.rows) {
         if (prev && r.rank > prev + 1) list.append(h('div', { class: 'ai-note', style: { textAlign: 'center' } }, '…'));
@@ -5213,7 +5216,8 @@
       b.append(h('div', { class: 'sec-h' }, 'Guilds', h('small', null, (D.RACES[P.race] || {}).faction === 'horde' ? 'Krugar' : 'Accord')));
       for (const gi of SOC.myGuilds()) {
         const ok = P.level >= gi.min;
-        b.append(h('div', { class: 'row', style: { gridTemplateColumns: '1fr auto' } },
+        b.append(h('div', { class: 'row', style: { gridTemplateColumns: 'auto 1fr auto' } },
+          h('div', { class: 'ic crest', html: ART.crest ? ART.crest(gi.name, gi.faction) : '' }),
           h('div', { class: 't' }, h('b', null, '<' + gi.name + '>'), h('small', { style: { whiteSpace: 'normal' } }, `${gi.style[0].toUpperCase() + gi.style.slice(1)} · ${gi.online}/${gi.members} online · level ${gi.min}+. ${gi.blurb}`)),
           h('button', { class: 'chip gold', disabled: !!ap || !ok, onclick: () => { SOC.apply(gi.g); ui.sheetFn(); } }, ok ? 'Apply' : `Level ${gi.min}+`)));
       }
@@ -5222,6 +5226,7 @@
     const gi = SOC.guildInfo(P.guild), st = SOC.standing(), r = SOC.rank(), R = SOC.RANKS, nx = R[r + 1];
     const mates = S.bots.filter((x) => x.guild === P.guild);
     const on = mates.filter((x) => B.isOnline(x, new Date()));
+    if (ART.crest) b.append(h('div', { class: 'guild-crest', role: 'img', 'aria-label': `<${gi.name}> crest`, html: ART.crest(gi.name, gi.faction) })); // #525
     b.append(h('div', { class: 'sec-h' }, '<' + gi.name + '>', h('small', null, `${gi.style} · ${on.length}/${mates.length} online`)));
     b.append(h('div', { class: 'ai-box' },
       h('div', { class: 'ai-row' }, h('span', null, 'Your rank'), h('b', null, R[r].name)),

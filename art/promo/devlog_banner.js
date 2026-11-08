@@ -4,6 +4,7 @@
 // The page is the live game (or --src <url>, e.g. a dist/ served on :8777), so ART and the fonts are the real ones.
 // Usage: node art/promo/devlog_banner.js <spec.json> <out.png> [--src <url>]
 // title may be an array of lines; kicker: small text after the game's name (e.g. the version)
+// logo: the mark above the title: by default ART.gameLogo; an ART key ("longnightLogo", "ruinfallWord"), "marks.<key>" (ART.marks), or false for the plain name
 // shot: a phone screenshot (390x844 or @3x), relative to the spec file, shown in a phone frame on the right; tilt in degrees (default 4)
 // figures: [{ "hero": { "cls", "race", "gender" } or "mob": "<key>", "x": centre in %, "h": height in %, "bottom": %, "flip", "name", "color" }] (bots with nameplates)
 // spec: { "title": "v10.10", "line": "Rare hunts · Trophies · …", "scene": "<ART.scene key>", "hero": "<ART.mob key>",
@@ -52,7 +53,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
         \${(S.figures || []).map((f) => \`<div style="position:absolute;left:\${f.x}%;bottom:\${f.bottom || 8}%;height:\${f.h || 40}%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center">\${f.name ? \`<div style="font-weight:700;font-size:30px;color:\${f.color || '#7fd0ff'};text-shadow:0 2px 4px #000,0 0 2px #000;white-space:nowrap;margin-bottom:-4px">\${f.name}</div>\` : ''}<img src="\${url(f.hero ? ART.hero(f.hero) : f.mount ? ART.mount(f.mount) : ART.mob(f.mob))}" style="height:100%;\${f.flip ? 'transform:scaleX(-1);' : ''}filter:\${f.filter ? f.filter + ' ' : ''}drop-shadow(0 10px 16px rgba(0,0,0,.55))"></div>\`).join('')}
         \${S.hero ? \`<img src="\${url(ART.mob(S.hero))}" style="position:absolute;right:7%;bottom:7%;height:78%;\${S.flip ? 'transform:scaleX(-1);' : ''}filter:drop-shadow(0 14px 22px rgba(0,0,0,.6))">\` : ''}
         <div style="position:absolute;left:7%;top:12%;width:52%">
-          <div style="font-family:'Marcellus SC',serif;font-size:58px;letter-spacing:6px;color:#d9b45a;text-shadow:0 3px 8px #000">Realm of Loner\${S.kicker ? ' · ' + S.kicker : ''}</div>
+          \${(() => { const lg = S.logo === false ? null : S.logo ? (S.logo.startsWith('marks.') ? (ART.marks || {})[S.logo.slice(6)] : ART[S.logo]) : ART.gameLogo; // the game's logo (#525), or a named one
+            return lg ? \`<div style="display:flex;align-items:center;gap:28px;height:200px"><img src="\${url(lg)}" style="height:100%;filter:drop-shadow(0 8px 18px #000)">\${S.kicker ? \`<div style="font-family:'Marcellus SC',serif;font-size:58px;letter-spacing:6px;color:#d9b45a;text-shadow:0 3px 8px #000">\${S.kicker}</div>\` : ''}</div>\`
+              : \`<div style="font-family:'Marcellus SC',serif;font-size:58px;letter-spacing:6px;color:#d9b45a;text-shadow:0 3px 8px #000">Realm of Loner\${S.kicker ? ' · ' + S.kicker : ''}</div>\`; })()}
           <div style="font-family:'Marcellus SC',serif;font-size:\${S.titleSize || 300}px;line-height:.95;color:#ffd77a;text-shadow:0 6px 0 #5a3a12,0 10px 26px #000;margin-top:6px">\${[].concat(S.title).map((t) => \`<div style="white-space:nowrap">\${t}</div>\`).join('')}</div>
           <div style="font-size:60px;font-weight:700;line-height:1.15;margin-top:26px;color:#f6ead0;text-shadow:0 3px 10px #000">\${lines.map((l) => \`<div style="white-space:nowrap">\${l}</div>\`).join('')}</div>
           <div style="display:flex;gap:26px;margin-top:44px">\${(S.icons || []).map((k) => \`<div style="width:120px;height:120px;border:4px solid #b8913e;border-radius:14px;background:#1d140c;box-shadow:0 6px 16px rgba(0,0,0,.6);overflow:hidden"><img src="\${url(ART.icon(k))}" style="width:100%;height:100%"></div>\`).join('')}</div>

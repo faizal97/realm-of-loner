@@ -612,6 +612,13 @@ img { max-width: 100%; display: block; }
 .cs-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
 .cs-title { position: absolute; left: 0; right: 0; top: 38%; text-align: center; font: 26px/1.1 var(--display); color: var(--gold); text-shadow: 0 2px 6px #000, 0 0 24px rgba(240, 199, 94, .6); opacity: 0; transition: opacity 1s; pointer-events: none; padding-inline: 16px; text-wrap: balance; }
 .cs-title.show { opacity: 1; }
+.cs-title.mark { top: 22%; text-shadow: none; filter: drop-shadow(0 6px 18px #000); }
+.cs-title.mark svg, .mode-mark svg { display: block; width: 100%; height: auto; }
+.cs-title.mark svg { width: min(88vw, 460px); margin: 0 auto; }
+.mode-mark { width: min(76%, 300px); margin: 4px auto 6px; }
+.row .ic.crest { background: none; border: 0; border-radius: 0; overflow: visible; }
+.ic.crest svg, .guild-crest svg { display: block; width: 100%; height: 100%; }
+.guild-crest { width: 72px; height: 84px; margin: 4px auto 2px; filter: drop-shadow(0 4px 8px rgba(0,0,0,.6)); }
 .cs-cap { grid-row: 3; min-height: 118px; padding: 14px 18px 6px; color: #f1e6cc; font: 500 16px/1.45 var(--body); display: grid; align-content: start; gap: 4px; }
 .cs-who { font: 15px var(--display); color: var(--gold); letter-spacing: .03em; }
 .cs-tap { font: 600 12px var(--body); color: #6f6553; font-style: normal; margin-top: 6px; }

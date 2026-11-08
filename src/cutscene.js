@@ -617,6 +617,15 @@
     ] },
   ];
   // a chapter with `needs` waits until that zone ships (the expansion prologue)
+  // the mark for a cutscene (#525), from data so new content needs no code: a raid's intro (raid_<instance>), the scene
+  // that ends a Legend's questline (legend_<key>, never earlier: the name is the questline's reveal), a story chapter
+  CS.mark = (ch) => {
+    const M = root.ART && root.ART.marks, D = root.D; if (!M) return null;
+    const L = ch.legend && D && D.LEGENDS[ch.legend], qs = [].concat(ch.quest || []);
+    const key = ch.instance ? 'raid_' + ch.instance
+      : L && (ch.id === 'legend_' + ch.legend || qs.includes(L.unlock)) ? 'legend_' + ch.legend : 'chapter_' + ch.id;
+    return M[key] || null;
+  };
   CS.CHAPTERS = CS.CHAPTERS.filter((c) => !c.needs || !root.D || (root.D.REGIONS || {})[c.needs]);
   CS.byId = (id) => CS.CHAPTERS.find((c) => c.id === id);
   CS.forInstance = (key) => CS.CHAPTERS.find((c) => c.instance === key || (c.also || []).includes(key));
@@ -664,8 +673,11 @@
         if (armed) disarm();
         if (skipShot) skipShot();
       });
-      const titleEl = $('.cs-title'); titleEl.textContent = ch.title; titleEl.classList.add('show');
-      setTimeout(() => titleEl.classList.remove('show'), 2600);
+      // a raid, a Legend's last scene or a story chapter shows its mark (#525) instead of the plain title, a little longer
+      const titleEl = $('.cs-title'), mk = CS.mark(ch);
+      if (mk) { titleEl.innerHTML = mk; titleEl.classList.add('mark'); titleEl.setAttribute('role', 'img'); titleEl.setAttribute('aria-label', ch.title); } else titleEl.textContent = ch.title;
+      titleEl.classList.add('show');
+      setTimeout(() => titleEl.classList.remove('show'), mk ? 3400 : 2600);
 
       function src(a) {
         const [kind, key] = a.split(':');
