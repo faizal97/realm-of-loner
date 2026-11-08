@@ -67,10 +67,10 @@ a **level-60 music variant** and its own art pack. Pre-v11 Cinderpeak stays as i
 
 ### The two dungeons (5 players, level 60, about 4 bosses each, one per faction as in the Drowned Crown)
 
-- **Accord: "The Ashen Court"** (working name). Kingsmere Keep on Coronation Day: the Brood's agents and the last of
+- **Accord: "The Ashen Court"** (final, 2026-11-08). Kingsmere Keep on Coronation Day: the Brood's agents and the last of
   Marrow's cabal strike during the oath. The cabal's names come out of the books here (saga thread 5); its last
   member is the final boss.
-- **Krugar: "The Saltpenny Vault"** (working name). Under the Saltpenny house in Rumhook Bay, where the Ledger's
+- **Krugar: "The Saltpenny Vault"** (final, 2026-11-08). Under the Saltpenny house in Rumhook Bay, where the Ledger's
   southern notes are kept: the house's bruisers, its strongroom's guardian, and the Ledger's southern factor (one of
   the Brood) at the bottom.
 - Each has a first-entry lore intro (the rule for every dungeon), joins the Trials rotation later, and drops one
@@ -101,7 +101,7 @@ The gap between v11.0 and v11.1 is for playing the story and gearing up, not lev
 
 ## v11.1: the Spire raid and the teaser
 
-### "The Spire of Kethriax" (working name; 10 players, Normal and Hard, about 5 bosses)
+### "Cinderpeak Spire" (final, 2026-11-08; 10 players, Normal and Hard, about 5 bosses)
 
 Both factions stage separately (the Accord from its Cinderpeak camp, the Krugar from theirs), as for Veshmira's Lair.
 A sketch of the order:
@@ -156,7 +156,7 @@ music.
 
 ## Still open (for Faizal)
 
-1. **Final names** for the two dungeons and the raid (when he resumes Chapter 1). Each option below passes the Warcraft name map
+1. **Final names: decided 2026-11-08:** The Ashen Court (Accord dungeon), The Saltpenny Vault (Krugar dungeon), Cinderpeak Spire (raid). The options weighed were: Each option below passes the Warcraft name map
    (`tools/rename_v10.json`, every full name checked) and the Reveals:
    - **The Accord's dungeon:** **"The Ashen Court"** (recommended: the royal court on coronation day, and the one place
      the chapter's "Ashen" repeats); "The Crowning Hall"; "Hall of the Oath".

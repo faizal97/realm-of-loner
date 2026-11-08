@@ -143,7 +143,7 @@ in `2026-10-03-v11-story-options.md`.
 
 ## Still open (for Faizal), in the order v11 needs them
 
-1. **Chapter 1's final names** (when he resumes Chapter 1; the design is approved and parked, decision 19). Was: **Chapter 1's design** (`2026-10-03-ch1-ashen-coronation-design.md`; the game designer wrote it for his approval): the zone around the Spire, the two faction
+1. ~~**Chapter 1's final names**~~ **Decided 2026-11-08:** The Ashen Court, The Saltpenny Vault, Cinderpeak Spire (see the Chapter 1 design). Was: **Chapter 1's design** (`2026-10-03-ch1-ashen-coronation-design.md`; the game designer wrote it for his approval): the zone around the Spire, the two faction
    dungeons, the Spire raid's bosses, the story beat by beat, the end cinematic teasing the Reach, the logo, and
    canon's new Timeline, Names and Reveals.
 2. **The pre-patch (decision 20), when he asks:**
