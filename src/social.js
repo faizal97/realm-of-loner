@@ -618,6 +618,7 @@
       const full = have >= a.n && G.bagsFull() && !G.freesSlot(a.item, a.n); // the payment's emptied slot takes it (#486)
       return [{ label: have < a.n ? `You have ${have}/${a.n}` : full ? 'Bags full' : `Swap ${a.n} ${D.ITEMS[a.item].name}`, primary: true, disabled: have < a.n || full, why: have < a.n || full, fn: () => {
         if (G.countItem(a.item) < a.n) return `You need ${a.n}.`;
+        if (G.bagsFull() && !G.freesSlot(a.item, a.n)) return 'Your bags are full.'; /* checked again at the tap: the bags may have filled since the button was drawn */
         G.removeItem(a.item, a.n); G.addItem(JSON.parse(JSON.stringify(a.itemData)), 1);
         G.sys(`You traded ${a.n} ${D.ITEMS[a.item].name} for ${a.itemData.name}.`);
         reply(pick(['ty, fair trade', 'perfect', 'deal!'])); befriend(b, P.place); close();

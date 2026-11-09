@@ -750,7 +750,7 @@
       const take = Math.min(20 - st.n, b.n); st.n += take; if (b.n > take) merged.push({ item: b.item, n: b.n - take });
     }
     merged.sort((a, b) => kind(a.item) - kind(b.item) || (b.item.q || 0) - (a.item.q || 0) || (b.item.lvl || 0) - (a.item.lvl || 0) || a.item.name.localeCompare(b.item.name) || b.n - a.n);
-    P.bags = merged;
+    P.bags = merged; restack(P); // an old stack over 20 is split while there is room
     emit('change');
     return P.bags.map((b) => b.item.id + ':' + b.n).join() !== was;
   };
@@ -2115,12 +2115,17 @@
   G.bankDeposit = function (idx) {
     const P = G.S.player, b = P.bags[idx]; if (!b) return;
     P.bank = P.bank || [];
-    if (G.stackable(b.item) && stackSlots(P.bank, b.item, b.n) <= Math.max(0, BANK_SLOTS - P.bank.length)) { P.bags.splice(idx, 1); putStack(P.bank, b.item, b.n); emit('change'); return; } // stacks of 20 (#440)
-    if (P.bank.length >= BANK_SLOTS) return toast(P.bank.length > BANK_SLOTS ? `Your bank holds ${P.bank.length - BANK_SLOTS} over from rewards. Take something out first.` : 'Your bank is full.');
+    const full = () => toast(P.bank.length > BANK_SLOTS ? `Your bank holds ${P.bank.length - BANK_SLOTS} over from rewards. Take something out first.` : 'Your bank is full.');
+    if (G.stackable(b.item)) { // stacks of 20 (#440); an old save's stack over 20 goes in as 20s, or not at all
+      if (stackSlots(P.bank, b.item, b.n) > Math.max(0, BANK_SLOTS - P.bank.length)) return full();
+      P.bags.splice(idx, 1); putStack(P.bank, b.item, b.n); emit('change'); return true;
+    }
+    if (P.bank.length >= BANK_SLOTS) return full();
     P.bank.push(b); P.bags.splice(idx, 1); emit('change');
   };
   G.bankWithdraw = function (idx) {
     const P = G.S.player, b = (P.bank || [])[idx]; if (!b) return;
+    if (G.isQuestItem(b.item.id)) { G.addItem(b.item, b.n); P.bank.splice(idx, 1); return emit('change'); } // kept with the quests, no slot needed (an old save's)
     // a full stack (20) is no room, and the bank lets go only of what reached the bags (#163: a stack was deleted)
     if (G.stackable(b.item)) { // as many as fit, in stacks of 20 (#440); the rest stays in the bank
       const fit = P.bags.reduce((a, x) => a + (x.item.id === b.item.id && x.n < STACK ? STACK - x.n : 0), 0) + Math.max(0, G.bagCap() - P.bags.length) * STACK;
