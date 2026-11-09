@@ -3239,6 +3239,7 @@
     if (P.level >= G.BRAWL.minLvl) { const w = G.brawlWindow(), fought = (P.brawl || {}).last === w.id;
       add('sword', w.open && !fought ? `The Bloodsand Brawl: open until ${brawlClock(w.closesAt)}` : `The Bloodsand Brawl: opens at ${brawlClock(w.open ? new Date(w.opensAt.getTime() + G.BRAWL.every * 3600000) : w.opensAt)}`,
         `${D.PLACES[G.BRAWL.place].name}, ${D.PLACES[G.BRAWL.place].zone} · ${G.brawlChestOpen() ? 'chest open today' : 'chest taken today'}`, () => { closeSheet(); if (P.place !== G.BRAWL.place) routeDialog(G.BRAWL.place); }); }
+    { const fd = G.featuredDungeonFor(P.level); if (fd) add('hearthstone', `Featured dungeon: ${D.ACTIVITIES[fd].name}`, G.featuredDungeonClaimed() ? 'Bonus taken this week' : `×${G.FD_MULT} speed and no-wipe rewards · first clear: a bonus`, () => openBriefing(fd, false)); } // #541
     { const fr = P.level >= cap && G.featuredRaid(); if (fr) add('hearthstone', `Featured raid: ${D.ACTIVITIES[fr].name}`, G.featuredClaimed() ? `Bonus taken · a new raid ${clockAt('week')}` : `First clear: +${G.FEATURED_MARKS} Mentor Marks · until ${untilAt('week')}`, () => { ui.gfTab = 'raid'; closeSheet(); openSocial('groups'); }); }
     if (P.level >= cap && window.TRIALS && TRIALS.open(TRIALS.season(new Date()))) { add('journal', `${TRIALS.name(TRIALS.season(new Date()))} Trials: rating ${G.trialRating()}`, `Realm rank: #${G.trialBoard().rank}/${G.trialBoard().of}`, () => { ui.gfTab = 'trials'; closeSheet(); openSocial('groups'); }); }
     // the next thing that opens with a level
@@ -3499,6 +3500,8 @@
     events: () => openEvents(),
     talents: () => openTalents(),
     bags: () => openBags(),
+    'lfg:dungeon': () => { ui.gfTab = 'dungeon'; openSocial('group'); },
+    'lfg:raid': () => { ui.gfTab = 'raid'; openSocial('group'); },
   };
   const WEEK_KEY = 'azsolo.weekSeen'; // this device: the banner ids already shown (the button's dot, the once-a-week opening)
   const weekSeen = () => { try { return new Set(JSON.parse(localStorage.getItem(WEEK_KEY) || '[]')); } catch (e) { return new Set(); } };
@@ -3535,6 +3538,12 @@
       const a = weekArt(x);
       if (a) b.append(h('img', { class: 'wk-hero' + (a.logo ? ' wide' : '') + (x.kind === 'soon' ? ' soon' : ''), src: a.src, alt: '', draggable: 'false', style: { objectPosition: a.pos } }));
       b.append(h('div', { class: 'ev-story' }, ...x.text.map((t) => h('p', null, t))));
+      if (x.bonus === 'featured_dungeons') { // this week's, worked out from the date; tap one for its briefing
+        const mine = G.featuredDungeonFor(G.S.player.level), list = h('div', { class: 'list' });
+        for (const k of G.featuredDungeons()) { const A = D.ACTIVITIES[k];
+          list.append(h('button', { class: 'row nav', onclick: () => openBriefing(k, false) }, actPic(A), h('div', { class: 't' }, h('b', null, A.name), h('small', null, `Level ${A.minLvl}–${A.maxLvl}${k === mine ? ' · for your level' : ''}`)), h('div', { class: 'r' }, h('span', { class: 'nav-arr' }, '›')))); }
+        b.append(h('div', { class: 'sec-h' }, 'This week', h('small', null, G.featuredDungeonClaimed() ? 'bonus taken' : 'first clear: bonus')), list);
+      }
       if ((x.steps || []).length) {
         const p = G.weekProgress([x]), rows = h('div', { class: 'list' });
         for (const st of x.steps) {
@@ -4882,6 +4891,7 @@
         if (Dg) row('Flawless', 'a clear without a wipe gives a bonus');
         if (cx && cx.clears) row('Your record', `${cx.clears} clear${cx.clears > 1 ? 's' : ''}${cx.hard ? ` (${cx.hard} on Hard)` : ''}${cx.best ? ', best ' + clockText(cx.best) : ''}`);
         if (A.worldBoss) row('This week', G.worldBossLooted(act) ? `looted · a new world boss ${clockAt('week')}` : `its first kill drops its loot and ${G.WB_MARKS} Mentor Marks; after that, nothing · a new world boss ${clockAt('week')}`);
+        if (G.isFeaturedDungeon(act)) row('Featured this week', `speed and no-wipe rewards ×${G.FD_MULT}; ${G.featuredDungeonClaimed() ? 'first-clear bonus taken' : `first clear: ${G.S.player.level >= D.LEVEL_CAP ? G.FD_MARKS + ' Mentor Marks' : 'gold and a green item'}`}`);
         if (Dg && Dg.raid && act === G.featuredRaid()) {
           const looks = G.raidLooksLeft(act).length;
           row('Featured this week', G.featuredClaimed() ? `bonus taken · a new raid is featured ${clockAt('week')}` : `the first clear (Normal or Hard) gives +${G.FEATURED_MARKS} Mentor Marks${looks ? ' and a look from its set' : ''} · until ${untilAt('week')}`);
@@ -5050,7 +5060,7 @@
       return h('div', { class: 'row gf-row tap' + (!doable(x) ? ' gf-locked' : '') + (queued ? ' gf-queued' : ''), onclick: (e) => { if (e.target.closest('button')) return; openBriefing(x.k, false); } }, // tap the row for its briefing (v10.4)
         actPic(A),
         h('div', { class: 't' }, h('b', null, A.name, h('span', { class: 'gf-lvl tnum' }, A.minLvl === A.maxLvl ? String(A.minLvl) : `${A.minLvl}–${A.maxLvl}`)),
-          h('small', null, showKind ? h('span', { class: 'gf-kind k-' + kind }, KIND_LABEL[kind]) : null, x.k === G.featuredRaid() ? h('span', { class: 'gf-kind k-featured' }, `Featured until ${untilAt('week')}`) : null, qa[x.k] ? h('span', { class: 'gf-kind k-featured' }, 'Your quest') : null, A.worldBoss ? h('span', { class: 'gf-kind k-featured' }, G.worldBossLooted(x.k) ? `World boss · looted until ${untilAt('week')}` : `World boss until ${untilAt('week')}`) : null, A.event ? h('span', { class: 'gf-kind k-featured' }, `${D.EVENTS[A.event].name} · ${(A.event === 'longnight' ? G.lnLoot()[x.k === D.EVENTS.longnight.guest ? 'guest' : 'knocker'] : G.lwDaily().normal) ? 'daily loot ready' : 'loot taken'}`) : null, note)),
+          h('small', null, showKind ? h('span', { class: 'gf-kind k-' + kind }, KIND_LABEL[kind]) : null, x.k === G.featuredRaid() ? h('span', { class: 'gf-kind k-featured' }, `Featured until ${untilAt('week')}`) : null, G.isFeaturedDungeon(x.k) ? h('span', { class: 'gf-kind k-featured' }, `Featured: ×${G.FD_MULT} rewards`) : null, qa[x.k] ? h('span', { class: 'gf-kind k-featured' }, 'Your quest') : null, A.worldBoss ? h('span', { class: 'gf-kind k-featured' }, G.worldBossLooted(x.k) ? `World boss · looted until ${untilAt('week')}` : `World boss until ${untilAt('week')}`) : null, A.event ? h('span', { class: 'gf-kind k-featured' }, `${D.EVENTS[A.event].name} · ${(A.event === 'longnight' ? G.lnLoot()[x.k === D.EVENTS.longnight.guest ? 'guest' : 'knocker'] : G.lwDaily().normal) ? 'daily loot ready' : 'loot taken'}`) : null, note)),
         btn);
     };
     const byLevel = (a, c) => a.A.minLvl - c.A.minLvl || kinds.indexOf(actKind(a.A)) - kinds.indexOf(actKind(c.A));

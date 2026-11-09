@@ -1136,6 +1136,7 @@
     for (const s of out) { s.state = P.done[s.q] ? 'done' : P.quests[s.q] ? 'current' : open ? 'ahead' : 'next'; if (s.state !== 'done') open = true; }
     return out;
   };
+  G.stormIsle = (id) => { const p = D.PLACES[id]; return !!(p && STORM_REGIONS.has(p.region)); };
   G.stormBlocks = (id) => { const p = D.PLACES[id]; return !!(p && STORM_REGIONS.has(p.region) && !G.stormBroken() && !STORM_REGIONS.has((D.PLACES[G.S.player.place] || {}).region)); };
   G.STORM_TEXT = "Veshmira's storm still rages around the isle. No ship can land while she lives.";
   G.placeFaction = function (id) {
@@ -3822,6 +3823,35 @@
     return open[Math.floor((ws - sinceDay(G.RAID_START)) / 7) % open.length];
   };
   G.featuredClaimed = () => !!G.raidWeek().featured;
+  // ---- weekly bonuses (#541): a This week banner may carry `bonus`; the bonus is on while that banner is. Its week runs
+  // Saturday to Friday (the release day), apart from the Monday resets above.
+  G.weekBonus = (name, date) => G.weekBanners(date).some((b) => b.bonus === name);
+  const saturdayOf = (d) => { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - (x.getDay() + 1) % 7); return x; };
+  G.bonusWeekId = (date) => 'b' + dayNum(saturdayOf(date || new Date(now())));
+  // Featured dungeons: one old dungeon per level band, picked from the date like the featured raid (every device agrees, nothing
+  // moves mid-week, a dungeon added later joins its band from the week after its `since`). Its speed and flawless
+  // rewards pay FD_MULT, and the first clear of one in the bonus week pays FD_MARKS (at 60) or gold and a green.
+  G.FD_BANDS = [22, 33, 51]; G.FD_MULT = 1.5; G.FD_MARKS = 15; G.FD_START = '2026-11-07';
+  G.dungeonActs = () => Object.keys(D.ACTIVITIES).filter((k) => { const A = D.ACTIVITIES[k], Dg = A.dungeon && D.DUNGEONS[A.dungeon]; return Dg && !Dg.raid && !A.event && !A.worldBoss && !A.needQuest; });
+  const fdBand = (lvl) => G.FD_BANDS.filter((b) => lvl >= b).length;
+  G.featuredDungeons = function (date) {
+    const d = date || new Date(now()), ws = dayNum(saturdayOf(d)), n = Math.floor((ws - sinceDay(G.FD_START)) / 7);
+    const since = (k) => sinceDay(D.DUNGEONS[D.ACTIVITIES[k].dungeon].since || G.FD_START);
+    // only what your faction can walk to from its capital, never the storm isle (locked until Veshmira falls): each
+    // faction has its own set, the same for every character of it all week
+    const home = D.RACES[Object.keys(D.RACES).find((r) => D.RACES[r].faction === G.myFaction())].start;
+    const open = (k) => { const w = D.ACTIVITIES[k].where; return !!w && !G.stormIsle(w) && G.canReach(home, w); };
+    const out = [];
+    for (let b = 0; b <= G.FD_BANDS.length; b++) {
+      const pool = G.dungeonActs().filter((k) => fdBand(D.ACTIVITIES[k].minLvl) === b && since(k) <= ws && open(k)).sort((x, y) => D.ACTIVITIES[x].minLvl - D.ACTIVITIES[y].minLvl || (x < y ? -1 : 1));
+      if (pool.length) out.push(pool[((n % pool.length) + pool.length) % pool.length]);
+    }
+    return out;
+  };
+  G.featuredDungeonsOn = (date) => G.weekBonus('featured_dungeons', date);
+  G.isFeaturedDungeon = (act, date) => G.featuredDungeonsOn(date) && G.featuredDungeons(date).includes(act);
+  G.featuredDungeonFor = (lvl, date) => (G.featuredDungeonsOn(date) ? G.featuredDungeons(date)[Math.min(fdBand(lvl), G.featuredDungeons(date).length - 1)] : null); // the one for your level
+  G.featuredDungeonClaimed = () => (G.S.player.featuredDg || null) === G.bonusWeekId();
   // world bosses (v10.7): one a week, the same rule as the featured raid (from the date and each one's `since`)
   G.WB_START = '2026-10-05'; G.WB_MARKS = 20;
   G.worldBossActs = () => Object.keys(D.ACTIVITIES).filter((k) => D.ACTIVITIES[k].worldBoss);
@@ -4526,21 +4556,28 @@
     if (R.trial) G.trialDone(R, secs, TR().par(Dg, R.omens)); // Trials pay their own Marks, against their own par
     else if (P.level >= D.LEVEL_CAP && G.clearMarks(R.act)) G.addMarks(G.clearMarks(R.act), 'a level-60 clear');
     R.bonus = { secs: Math.round(secs), par: G.par(Dg), speed, flawless };
+    const pd = !R.trial && G.isFeaturedDungeon(R.act), xm = pd ? G.FD_MULT : 1, tag = pd ? ` (×${G.FD_MULT} featured dungeon)` : ''; // the featured dungeon bonus (#541)
     if (speed) {
       // the speed chest: half the time a blue from this dungeon's bosses, otherwise a green
       const it = Math.random() < 0.5 ? G.fittedBossBlue(Dg, L, P.cls) : G.fittedGear(L, 2, P.cls); // fits your class (issue #13)
-      G.giveReward(it, 'Speed bonus'); P.money += L * 150;
-      loot(`Speed bonus (under ${fmtClock(G.par(Dg))}): ${B.link(it.name, it.q)} and ${G.moneyText(L * 150)}.`);
+      const g = Math.round(L * 150 * xm); G.giveReward(it, 'Speed bonus'); P.money += g;
+      loot(`Speed bonus (under ${fmtClock(G.par(Dg))}): ${B.link(it.name, it.q)} and ${G.moneyText(g)}${tag}.`);
     }
     if (flawless) {
       const it = G.fittedGear(L, 2, P.cls);
-      G.giveReward(it, 'Flawless clear'); P.money += L * 200;
-      loot(`Flawless clear (no wipes): ${B.link(it.name, it.q)} and ${G.moneyText(L * 200)}.`);
+      const g = Math.round(L * 200 * xm); G.giveReward(it, 'Flawless clear'); P.money += g;
+      loot(`Flawless clear (no wipes): ${B.link(it.name, it.q)} and ${G.moneyText(g)}${tag}.`);
+    }
+    if (pd && !G.featuredDungeonClaimed()) { // once per bonus week, on any featured dungeon's first clear
+      P.featuredDg = G.bonusWeekId();
+      if (P.level >= D.LEVEL_CAP) { G.addMarks(G.FD_MARKS, 'featured dungeon, first clear this week'); }
+      else { const it = G.fittedGear(L, 2, P.cls), g = L * 250; G.giveReward(it, 'Featured dungeon'); P.money += g; loot(`Featured dungeon, first clear this week: ${B.link(it.name, it.q)} and ${G.moneyText(g)}.`); }
     }
     if (!speed && !flawless) sys(`Cleared in ${fmtClock(secs)} (par ${fmtClock(G.par(Dg))}). No bonus this time.`);
     helpRewards(R);
     emit('lootGain', { items: 1 });
   }
+  G._runBonuses = runBonuses; // for tests: a run's end-of-run rewards on their own
   const fmtClock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
   G.fmtClock = fmtClock;
   G.runReady = function () { const R = G.S.run; if (R && R.phase === 'rest') { if (G.role() === 'tank') G.runPull(); else R.restUntil = Math.min(R.restUntil, now()); } };
@@ -4772,12 +4809,19 @@
     friends: (n) => Object.keys((G.S.soc && G.S.soc.friends) || {}).length >= n,
     guild: () => G.S.player.guild >= 0,
     quest: (id) => !!G.S.player.done[id],
+    featured_dungeon: () => G.featuredDungeonClaimed(),
+    featured_raid: () => G.featuredClaimed(),
   };
   const wkDay = (t, end) => { const [y, m, d] = t.split('-').map(Number); return end ? new Date(y, m - 1, d, 23, 59, 59, 999) : new Date(y, m - 1, d); };
   G.weekDay = wkDay;
   G.weekBanners = function (date) {
     const d = date || new Date(now()), out = [];
     for (const k of G.liveEvents(d)) out.push({ id: 'ev_' + k + '_' + G.eventSeason(k), kind: 'now', event: k, title: D.EVENTS[k].name, text: [D.EVENTS[k].story[0]], steps: [], to: G.eventEnds(k) });
+    { const fr = G.S && G.S.player.level >= D.LEVEL_CAP && G.featuredRaid(d); // the featured raid (#541): its own banner, every week, by itself
+      if (fr) { const A = D.ACTIVITIES[fr], end = new Date(d.getFullYear(), d.getMonth(), d.getDate()); end.setDate(end.getDate() + (7 - end.getDay()) % 7); // its Sunday
+        out.push({ id: 'raid_' + fr + '_' + dayNum(end), kind: 'now', title: `Featured raid: ${A.name}`, art: ['banner', 'raid_' + fr], artHorde: ['banner', 'raid_' + fr + '_h'], to: end,
+          text: [`Its first clear this week, on Normal or Hard, gives ${G.FEATURED_MARKS} Mentor Marks${G.raidLooksLeft(fr).length ? ' and a look from its set you don\u2019t have yet' : ''}. A new raid is featured each Monday.`],
+          steps: [{ text: `Clear ${A.name} this week`, check: ['featured_raid', 1], go: 'lfg:raid' }] }); } }
     const order = { now: 0, new: 1, soon: 2 };
     const own = (D.WEEK || []).filter((b) => wkDay(b.from) <= d && d <= wkDay(b.to, true)).sort((a, b) => order[a.kind] - order[b.kind]);
     out.push(...own);

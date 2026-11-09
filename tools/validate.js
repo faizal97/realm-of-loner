@@ -220,6 +220,10 @@ for (const q of [2, 3, 4]) for (let L = 1; L < D.LEVEL_CAP; L++)
       if (st.go && !screens.has(st.go)) err(`${w}: unknown screen '${st.go}' (WEEK_GO in ui.js)`);
     }
   }
+  // the featured raid shows its banner by itself: every raid that can be featured needs one, for both factions
+  for (const k of Object.keys(D.ACTIVITIES).filter((k) => { const A = D.ACTIVITIES[k], Dg = A.dungeon && D.DUNGEONS[A.dungeon]; return Dg && Dg.raid && !A.needQuest; }))
+    for (const x of ['raid_' + k, 'raid_' + k + '_h']) { if (!banners.has(x)) err(`raid ${k}: no banner '${x}' (art/banners/banners.py RAIDS)`); used.add(x); }
+  if ((D.WEEK || []).some((b) => b.bonus && !['featured_dungeons'].includes(b.bonus))) err('this week: unknown bonus (known: featured_dungeons)');
   for (const k of banners) if (!used.has(k)) err(`banner art '${k}' is used by no banner in src/data/thisweek.js: delete it from art/banners/banners.py`);
 }
 

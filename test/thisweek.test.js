@@ -48,3 +48,35 @@ test("this week's real banners are valid and on for the patch week", () => {
   for (const id of ['prepatch_teaser', 'living_realm', 'faire_soon']) assert.ok(on.includes(id), id);
   for (const b of D.WEEK) for (const st of b.steps) if (st.check) assert.ok(G.WEEK_CHECKS[st.check[0]], st.check[0]);
 });
+
+test('featured dungeons: one per level band, the same all week, a new set on Saturday, only while its banner is on', () => {
+  character(30);
+  const wk = (d) => G.featuredDungeons(at(d));
+  assert.deepStrictEqual(wk('2026-11-09'), wk('2026-11-13'), 'Monday to Friday: the same');
+  assert.notDeepStrictEqual(wk('2026-11-13'), wk('2026-11-14'), 'Saturday: a new set');
+  assert.strictEqual(wk('2026-11-09').length, G.FD_BANDS.length + 1);
+  for (const k of wk('2026-11-09')) assert.ok(!D.DUNGEONS[D.ACTIVITIES[k].dungeon].raid);
+  assert.ok(G.featuredDungeonsOn(at('2026-11-10'))); assert.ok(!G.featuredDungeonsOn(at('2026-11-20')), 'no banner, no bonus');
+  const mine = G.featuredDungeonFor(30, at('2026-11-10')), A = D.ACTIVITIES[mine];
+  assert.ok(A.minLvl >= 22 && A.minLvl < 33, 'level 30 gets the 22–32 band');
+});
+
+test('a featured dungeon pays ×1.5 for speed and no wipes, and a bonus on the first clear of the week only', () => {
+  const realNow = Date.now; Date.now = () => at('2026-11-10').getTime();
+  try {
+    const { S, P } = character(30); const act = G.featuredDungeonFor(30);
+    assert.ok(act && G.isFeaturedDungeon(act));
+    const run = () => { const m0 = P.money; S.run = { act, wipes: 0, noSpeed: true, help: null, started: Date.now() - 600000 }; G._runBonuses(S.run); return P.money - m0; };
+    const first = run(), second = run(), L = G.syncLevel(act);
+    assert.strictEqual(second, Math.round(L * 200 * G.FD_MULT), 'no-wipe gold ×1.5');
+    assert.strictEqual(first - second, L * 250, 'the first clear adds the bonus gold');
+    assert.ok(G.featuredDungeonClaimed());
+  } finally { Date.now = realNow; }
+});
+
+test('the featured raid shows its own banner at level 60, not below', () => {
+  character(59); assert.ok(!G.weekBanners(at('2026-11-10')).some((b) => /^raid_/.test(b.id)));
+  character(60); const b = G.weekBanners(at('2026-11-10')).find((x) => /^raid_/.test(x.id));
+  assert.ok(b && b.title.startsWith('Featured raid: '));
+  assert.deepStrictEqual(b.art, ['banner', 'raid_' + G.featuredRaid(at('2026-11-10'))]);
+});

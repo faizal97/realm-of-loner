@@ -21,6 +21,11 @@ PARTS = {
     'h3': ['hero', {'race': 'tauren', 'cls': 'druid', 'gender': 'm', 'skin': 1, 'hair': 1}],
     'f1': ['hero', {'race': 'gnome', 'cls': 'rogue', 'gender': 'f', 'skin': 1, 'hair': 2}],
     'f2': ['hero', {'race': 'human', 'cls': 'mage', 'gender': 'm', 'skin': 2, 'hair': 4}],
+    'a4': ['hero', {'race': 'gnome', 'cls': 'warlock', 'gender': 'm', 'skin': 0, 'hair': 1}],
+    'h4': ['hero', {'race': 'undead', 'cls': 'priest', 'gender': 'f', 'skin': 1, 'hair': 2}],
+    'coinworks_gate': ['scene', 'coinworks_gate'],
+    'lair_cavern': ['scene', 'lair_cavern'], 'mc_domain': ['scene', 'mc_domain'], 'citadel_throne': ['scene', 'citadel_throne'],
+    'onyxia': ['mob', 'onyxia'], 'ragnaros': ['mob', 'ragnaros'], 'nalveshra': ['mob', 'nalveshra'],
 }
 
 def draw_parts():
@@ -29,6 +34,7 @@ def draw_parts():
     subprocess.run(['node', os.path.join(H, 'dump.js'), tmp, spec], check=True, stdout=subprocess.DEVNULL)
     out = {k: open(os.path.join(tmp, k + '.svg')).read() for k in PARTS}
     out['notes_logo'] = open(os.path.join(H, 'notes_logo.svg')).read()  # the pre-patch logo (art/ruinfall/prepatch_logo.py on main)
+    for r in RAIDS: out['logo_' + r] = open(os.path.join(H, f'mark_raid_{r}.svg')).read()  # the raids' own marks (art/brand/marks.py on main)
     return out
 
 _n = [0]
@@ -188,7 +194,64 @@ def faire(P):
     body += faire_logo(480, 236)
     return frame(defs, body)
 
-BANNERS = {'notes_come_due': notes, 'living_realm': lambda P: realm(P, 'a'), 'living_realm_h': lambda P: realm(P, 'h'), 'faire': faire}
+# ---------------------------------------------------------------- Featured dungeons: a carved archway, its key hanging
+def dungeon_logo(cx, top):
+    """FEATURED over DUNGEONS, cut into a stone lintel on an archway; a torch burns on each pier and an iron key hangs
+    from the keystone: this week's doors are open"""
+    out = ''
+    a, b, y = cx - 260, cx + 260, top
+    # piers and the arch's dark mouth
+    out += f'<path d="M{a + 24},{y + 70} V{y + 250} H{a + 70} V{y + 132} Q{cx},{y + 40} {b - 70},{y + 132} V{y + 250} H{b - 24} V{y + 70} Z" fill="url(#dStone)" stroke="#120c08" stroke-width="5" stroke-linejoin="round"/>'
+    out += f'<path d="M{a + 70},{y + 250} V{y + 132} Q{cx},{y + 40} {b - 70},{y + 132} V{y + 250} Z" fill="#0b0705" opacity=".55"/>'
+    for i in range(1, 6): out += f'<path d="M{a + 24},{y + 70 + i * 30} H{a + 70} M{b - 70},{y + 70 + i * 30} H{b - 24}" stroke="#2a2018" stroke-width="2"/>'
+    # torches
+    for x in (a + 47, b - 47):
+        out += (f'<circle cx="{x}" cy="{y + 112}" r="34" fill="#ffb04a" opacity=".22"/><path d="M{x - 7},{y + 120} L{x + 7},{y + 120} L{x + 4},{y + 150} L{x - 4},{y + 150} Z" fill="#4a2a14" stroke="#140a04" stroke-width="2.5"/>'
+                f'<path d="M{x},{y + 82} C{x + 14},{y + 98} {x + 10},{y + 116} {x},{y + 120} C{x - 10},{y + 116} {x - 14},{y + 98} {x},{y + 82} Z" fill="#ff9a2a" stroke="#7a2a08" stroke-width="2"/>'
+                f'<path d="M{x},{y + 96} C{x + 6},{y + 106} {x + 4},{y + 114} {x},{y + 117} C{x - 4},{y + 114} {x - 6},{y + 106} {x},{y + 96} Z" fill="#ffe08a"/>')
+    # the lintel with its keystone
+    lin = f'M{a},{y + 8} L{b},{y + 8} L{b + 14},{y + 40} L{b},{y + 74} L{a},{y + 74} L{a - 14},{y + 40} Z'
+    out += f'<path d="{lin}" fill="url(#dStone)" stroke="#120c08" stroke-width="6" stroke-linejoin="round"/><path d="{lin}" fill="none" stroke="#d9a744" stroke-width="2" stroke-linejoin="round" opacity=".85"/>'
+    out += f'<path d="M{cx - 26},{y - 8} L{cx + 26},{y - 8} L{cx + 18},{y + 30} L{cx - 18},{y + 30} Z" fill="url(#dStone)" stroke="#120c08" stroke-width="5" stroke-linejoin="round"/>'
+    out += f'<circle cx="{cx}" cy="{y + 10}" r="7" fill="url(#dGold)" stroke="#120c08" stroke-width="2.5"/>'
+    f1, w1 = word('FEATURED', 20, 0, 0, .3); f1, _ = word('FEATURED', 20, cx - w1 / 2, y + 48, .3)
+    out += letters(f1, 4, 'url(#dGold)', '#120c08')
+    f2, w2 = word('DUNGEONS', 50, 0, 0, .08); f2, _ = word('DUNGEONS', 50, cx - w2 / 2, y + 120, .08)
+    out += f'<rect x="{cx - w2 / 2 - 20}" y="{y + 74}" width="{w2 + 40}" height="60" fill="#0b0705" opacity=".55" rx="6"/>'
+    out += letters(f2, 7, 'url(#dGold)', '#120c08')
+    # the key, on a chain from the lintel
+    ky = y + 150
+    out += f'<path d="M{cx},{y + 134} V{ky}" stroke="#6a6a6a" stroke-width="3" stroke-dasharray="5 3"/>'
+    out += (f'<g transform="translate({cx},{ky}) rotate(-8)"><circle r="16" fill="none" stroke="#120c08" stroke-width="10"/><circle r="16" fill="none" stroke="url(#dGold)" stroke-width="6"/>'
+            f'<path d="M0,16 V70 M0,52 H14 M0,64 H11" stroke="#120c08" stroke-width="10" stroke-linecap="round"/><path d="M0,16 V70 M0,52 H14 M0,64 H11" stroke="url(#dGold)" stroke-width="5" stroke-linecap="round"/></g>')
+    return out
+
+def dungeons(P, side):
+    defs = (GOLD.format(id='dGold') + shade('dStone', [(0, '#8a8478', 1), (.5, '#6a6458', 1), (1, '#454036', 1)])
+            + shade('dDark', [(0, '#0b0705', .5), (.5, '#0b0705', .15), (1, '#0b0705', .9)]))
+    body = embed(P['coinworks_gate'], 0, 0, W, HH, 'xMidYMid slice', vb='0 30 400 167')
+    body += f'<rect width="{W}" height="{HH}" fill="url(#dDark)"/>'
+    body += dungeon_logo(480, 26)
+    p = [P[side + k] for k in '1234']
+    body += figure(p[3], 96, 404, 210) + figure(p[0], 196, 412, 262) + figure(p[2], 772, 410, 246, flip=True) + figure(p[1], 870, 404, 226, flip=True)
+    return frame(defs, body)
+
+# ---------------------------------------------------------------- Featured raid: one per raid, its boss and its own mark
+RAIDS = {'onyxias_lair': ('lair_cavern', 'onyxia'), 'molten_core': ('mc_domain', 'ragnaros'), 'tidecrown_citadel': ('citadel_throne', 'nalveshra')}
+def raid(P, key, side='a'):
+    sc, boss = RAIDS[key]
+    defs = (shade('xSide', [(0, '#050302', .9), (.45, '#050302', .55), (.7, '#050302', 0), (1, '#050302', .3)], 1, 0)
+            + shade('xDark', [(0, '#050302', 0), (.6, '#050302', .1), (1, '#050302', .85)]))
+    body = embed(P[sc], 0, 0, W, HH, 'xMidYMid slice', vb='0 40 400 167')
+    body += f'<rect width="{W}" height="{HH}" fill="url(#xSide)"/><rect width="{W}" height="{HH}" fill="url(#xDark)"/>'
+    body += f'<g transform="translate(700,430)">{embed(P[boss], -260, -470, 520, 470, "xMidYMax meet")}</g>'  # the boss, huge, on the right
+    body += figure(P[side + '1'], 418, 372, 150, flip=True) + figure(P[side + '3'], 344, 366, 136, flip=True)  # two raiders, small before it
+    body += embed(P['logo_' + key], 10, 6, 470, 235, 'xMidYMid meet')
+    return frame(defs, body)
+
+BANNERS = {'notes_come_due': notes, 'living_realm': lambda P: realm(P, 'a'), 'living_realm_h': lambda P: realm(P, 'h'), 'faire': faire,
+           'featured_dungeons': lambda P: dungeons(P, 'a'), 'featured_dungeons_h': lambda P: dungeons(P, 'h'),
+           **{'raid_' + r + x: (lambda r, sd: lambda P: raid(P, r, sd))(r, sd) for r in RAIDS for x, sd in (('', 'a'), ('_h', 'h'))}}
 
 if __name__ == '__main__':
     P = draw_parts(); out = {}

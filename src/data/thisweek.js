@@ -11,6 +11,7 @@
 //          The build stops while a banner's art is unused, or a banner ended more than 7 days ago: delete both.
 //   'soon' with no `at` says "Coming soon": no date, so a feature that moves a week breaks no promise.
 //   title, text   the banner's name and up to two short lines (the detail page shows all of text)
+//   bonus  optional: this week's bonus while the banner is on ('featured_dungeons': G.featuredDungeons, ×1.5 run rewards)
 //   steps  up to 5: { text, check, go }. check: [name, value] from G.WEEK_CHECKS (it ticks itself); go: a screen
 //          from the ui's WEEK_GO (opens it). A step with neither is a tip. tools/validate.js checks both names.
 // With no banner on, the sheet shows the festival that's on or what comes next, from D.EVENTS.
@@ -27,6 +28,18 @@
       ],
       steps: [
         { text: 'Reach level 60 to start the campaign on day one', check: ['level', 60] },
+      ],
+    },
+    {
+      id: 'featured_dungeons_2026_11_09', kind: 'now', from: '2026-11-09', to: '2026-11-13', bonus: 'featured_dungeons',
+      art: ['banner', 'featured_dungeons'], artHorde: ['banner', 'featured_dungeons_h'],
+      title: 'Featured Dungeons',
+      text: [
+        'One old dungeon for every level range. Speed and no-wipe rewards pay ×1.5 there, and your first clear of one this week pays a bonus.',
+        "The debt collectors' scouts are working these halls before Saturday. Get there first.",
+      ],
+      steps: [
+        { text: 'Clear a featured dungeon this week', check: ['featured_dungeon', 1], go: 'lfg:dungeon' },
       ],
     },
     {
