@@ -2,6 +2,9 @@
 // in West Rotmoor. Reachable by both factions.
 (function (root) {
   const D = root.D;
+  // filling the gear gaps (#535; Feral tank pieces #533): blues and purples where a class and role had none
+  D.item('cloister_leggings', { name: 'Blackcloister Leggings', slot: 'legs', q: 3, atype: 'cloth', lvl: 58, armor: 104, stats: { int: 16, spi: 12 }, sp: 18, icon: 'legs', sell: 12100 });
+  D.item('cloister_belt', { name: "Bonewarden's Girdle", slot: 'waist', q: 3, atype: 'leather', lvl: 58, armor: 130, stats: { agi: 17, sta: 13 }, icon: 'belt', sell: 12100 });
   D.item('kirtonos_blood', { name: "Skreel's Blood", slot: 'quest', q: 1, icon: 'venom' });
   D.item('gandling_head', { name: "Headmaster Sallow's Head", slot: 'quest', q: 1, icon: 'head' });
   D.item('barov_deed', { name: 'Varga Family Deed', slot: 'quest', q: 1, icon: 'journal' });
@@ -24,11 +27,11 @@
     risen_construct: { name: 'Risen Construct', lvl: [58, 59], family: 'undead', hpMult: 1.3, drops: [['rotting_flesh', 0.5]] },
     kirtonos_the_herald: { name: 'Skreel the Herald', lvl: [58, 58], family: 'demon', boss: true, special: 'kelris', summon: 'scholomance_acolyte', specialText: 'Skreel shrieks, and acolytes answer!', loot: ['kirtonos_cloak', 'jandice_gloves'], qdrops: [['kirtonos_blood', 1]] },
     jandice_barov: { name: 'Mirela Varga', lvl: [58, 58], family: 'undead', boss: true, special: 'whirl', specialText: 'Mirela splits into a dozen illusions!', loot: ['jandice_gloves', 'kirtonos_cloak'] },
-    rattlegore: { name: 'Bonecrunch', lvl: [58, 58], family: 'undead', boss: true, special: 'slam', specialText: 'Bonecrunch smashes the ground!', loot: ['rattlegore_legs', 'rattlegore_axe'] },
+    rattlegore: { name: 'Bonecrunch', lvl: [58, 58], family: 'undead', boss: true, special: 'slam', specialText: 'Bonecrunch smashes the ground!', loot: ['rattlegore_legs', 'rattlegore_axe', 'cloister_belt'] },
     ras_frostwhisper: { name: 'Morvish the Frozen', lvl: [59, 59], family: 'undead', boss: true, special: 'molten', specialText: 'Morvish the Frozen hurls a frost volley!', loot: ['ras_boots', 'ras_wand'], aggro: 'Your life is mine, mortal.' },
     instructor_malicia: { name: 'Instructor Grimsby', lvl: [59, 59], family: 'humanoid', boss: true, special: 'molten', specialText: 'Malicia hurls a shadow bolt!', loot: ['malicia_dagger', 'ras_boots'] },
     lord_alexei_barov: { name: 'Lord Anton Varga', lvl: [59, 59], family: 'undead', boss: true, special: 'cook', healName: 'Life Drain', specialText: 'Anton Varga begins to drain your life!', loot: ['malicia_dagger', 'rattlegore_legs'], qdrops: [['barov_deed', 1]] },
-    darkmaster_gandling: { name: 'Headmaster Sallow', lvl: [60, 60], family: 'undead', boss: true, special: 'kelris', summon: 'risen_construct', specialText: 'Headmaster Sallow shadow-shifts you into a room of the risen!', loot: ['gandling_staff', 'gandling_robe', 'gandling_leather', 'gandling_plate'], qdrops: [['gandling_head', 1]], aggro: 'School is in session!' },
+    darkmaster_gandling: { name: 'Headmaster Sallow', lvl: [60, 60], family: 'undead', boss: true, special: 'kelris', summon: 'risen_construct', specialText: 'Headmaster Sallow shadow-shifts you into a room of the risen!', loot: ['gandling_staff', 'gandling_robe', 'gandling_leather', 'gandling_plate', 'cloister_leggings'], qdrops: [['gandling_head', 1]], aggro: 'School is in session!' },
   });
 
   const A = (id, q) => { q.faction = 'alliance'; D.QUESTS[id] = q; };

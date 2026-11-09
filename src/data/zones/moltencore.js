@@ -4,6 +4,8 @@
 // Loot sits at about 90% of the Tidecrown Citadel's, which stays the strongest raid.
 (function (root) {
   const D = root.D;
+  // filling the gear gaps (#535; Feral tank pieces #533): blues and purples where a class and role had none
+  D.item('magma_bow', { name: 'Cinderstring Bow', slot: 'ranged', q: 4, wtype: 'bow', lvl: 60, dmg: [78, 146], speed: 2.9, stats: { agi: 40 }, icon: 'bow', sell: 15300 });
   D.item('firelord_essence', { name: 'Essence of the King Below', slot: 'quest', q: 1, icon: 'firebolt' });
   D.item('executus_rune', { name: 'Binding Rune of the Steward', slot: 'quest', q: 1, icon: 'dust' });
   const epic = (id, name, slot, o) => D.item(id, Object.assign({ name, slot, q: 4 }, o));
@@ -61,7 +63,7 @@
     magmadar: { name: 'Cinderhound', lvl: [60, 60], family: 'beast', boss: true, special: 'slam', buster: { style: 'quick', name: 'Molten Jaws', text: 'Cinderhound bares its glowing jaws!', size: 2.5, floor: 2, brace: 1.5 }, specialText: 'Cinderhound sinks both jaws into you!', loot: ['magmadar_legs', 'magmadar_cloak', 'garr_bracers'] },
     garr: { name: 'Stonecore', lvl: [60, 60], family: 'elemental', boss: true, dmgMult: 0.9, special: 'whirl', specialText: 'Stonecore sends a pulse of fire through the cavern!', loot: ['garr_bracers', 'garr_ring', 'magmadar_cloak'] },
     baron_geddon: { name: 'Baron Ashfall', lvl: [60, 60], family: 'elemental', boss: true, special: 'molten', specialText: 'Baron Ashfall makes you a living bomb!', loot: ['geddon_boots', 'geddon_gloves', 'garr_ring'] },
-    golemagg: { name: 'Magmahulk the Incinerator', lvl: [60, 60], family: 'giant', boss: true, special: 'slam', buster: { style: 'heavy', name: 'Magma Fists', text: 'Magmahulk raises both burning fists!', size: 3.5, floor: 2, brace: 1.5 }, specialText: 'Magmahulk brings his fists down on you!', loot: ['golemagg_belt', 'golemagg_sword', 'magmadar_legs'] },
+    golemagg: { name: 'Magmahulk the Incinerator', lvl: [60, 60], family: 'giant', boss: true, special: 'slam', buster: { style: 'heavy', name: 'Magma Fists', text: 'Magmahulk raises both burning fists!', size: 3.5, floor: 2, brace: 1.5 }, specialText: 'Magmahulk brings his fists down on you!', loot: ['golemagg_belt', 'golemagg_sword', 'magmadar_legs', 'magma_bow'] },
     sulfuron_harbinger: { name: 'Brimstone Harbinger', lvl: [60, 60], family: 'elemental', boss: true, hpMult: 0.85, special: 'kelris', summon: 'flamewaker_priest', specialText: 'Brimstone calls another priest to the fire!', loot: ['sulfuron_dagger', 'sulfuron_cord', 'geddon_gloves'], aggro: 'The King Below\'s herald does not kneel to thieves.' },
     majordomo_executus: { name: 'Steward Cindral', lvl: [60, 60], family: 'elemental', boss: true, hpMult: 0.8, dmgMult: 0.85, special: 'whirl', specialText: 'Steward Cindral looses a wave of flame!', loot: ['executus_staff', 'executus_mace', 'sulfuron_cord'], qdrops: [['executus_rune', 1]], aggro: 'You walk uninvited in the King Below\'s house. You will leave it as ash.' },
     ragnaros: { name: 'Vulcarn', lvl: [60, 60], family: 'elemental', boss: true, hpMult: 1.25, dmgMult: 1.75, special: 'kelris', summon: 'son_of_flame', specialText: 'Vulcarn calls a Son of Flame out of the lava!', loot: ['ragnaros_hammer', 'ragnaros_robe', 'ragnaros_leather', 'ragnaros_mail'], qdrops: [['firelord_essence', 1]], aggro: 'You dug me out of my sleep for this? Then take the fire you came for.' },

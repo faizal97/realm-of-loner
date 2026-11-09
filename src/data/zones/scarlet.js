@@ -2,6 +2,16 @@
 // The gate is a place in Pallmoor. The Krugar walks there from Mossgate; the Accord comes over the Vaskar pass.
 (function (root) {
   const D = root.D;
+  // filling the gear gaps (#535; Feral tank pieces #533): blues and purples where a class and role had none
+  D.item('library_gloves', { name: "Inkstained Scholar's Gloves", slot: 'hands', q: 3, atype: 'cloth', lvl: 34, armor: 36, stats: { int: 14, spi: 10 }, sp: 10, icon: 'gloves', sell: 4200 });
+  D.item('library_grips', { name: "Houndmaster's Grips", slot: 'hands', q: 3, atype: 'leather', lvl: 34, armor: 78, stats: { agi: 14, sta: 10 }, icon: 'gloves', sell: 4200 });
+  D.item('library_band', { name: "Interrogator's Signet", slot: 'finger', q: 3, lvl: 34, stats: { str: 14, sta: 10 }, icon: 'ring', sell: 4200 });
+  D.item('cathedral_leggings', { name: "Acolyte's Ember Leggings", slot: 'legs', q: 3, atype: 'cloth', lvl: 38, armor: 69, stats: { int: 15, spi: 11 }, sp: 11, icon: 'legs', sell: 5200 });
+  D.item('cathedral_cord', { name: 'Vestry Cord', slot: 'waist', q: 3, atype: 'cloth', lvl: 37, armor: 39, stats: { int: 15, spi: 11 }, sp: 11, icon: 'belt', sell: 4900 });
+  D.item('cathedral_slippers', { name: 'Cloister Slippers', slot: 'feet', q: 3, atype: 'cloth', lvl: 37, armor: 48, stats: { int: 15, spi: 11 }, sp: 11, icon: 'boots', sell: 4900 });
+  D.item('cathedral_bindings', { name: "Penitent's Bindings", slot: 'wrist', q: 3, atype: 'cloth', lvl: 36, armor: 28, stats: { int: 15, spi: 10 }, sp: 11, icon: 'bracers', sell: 4700 });
+  D.item('cathedral_belt', { name: 'Pyrewatch Belt', slot: 'waist', q: 3, atype: 'leather', lvl: 37, armor: 85, stats: { agi: 15, sta: 11 }, icon: 'belt', sell: 4900 });
+  D.item('cathedral_mace', { name: 'Mace of the Kindly Flame', slot: 'weapon', q: 3, wtype: 'mace', lvl: 38, dmg: [45, 83], speed: 2.8, stats: { int: 15, spi: 11 }, sp: 24, icon: 'mace', sell: 5200 });
   D.item('doan_tome', { name: "Veyne's Arcane Tome", slot: 'quest', q: 1, icon: 'journal' });
   D.item('scarlet_insignia', { name: 'Order of the Pyre Insignia', slot: 'quest', q: 1, icon: 'coin' });
   D.item('whitemane_amulet', { name: "Ashe's Amulet", slot: 'quest', q: 1, icon: 'ring' });
@@ -33,13 +43,13 @@
     scarlet_myrmidon: { name: 'Pyre Myrmidon', lvl: [36, 37], family: 'humanoid', hpMult: 1.1, drops: [['linen_cloth', 0.35], ['thieves_coin', 0.5]], qdrops: [['scarlet_insignia', 0.35]] },
     scarlet_abbot: { name: 'Pyre Abbot', lvl: [36, 37], family: 'humanoid', drops: [['linen_cloth', 0.4], ['thieves_coin', 0.5]] },
     scarlet_champion: { name: 'Pyre Champion', lvl: [37, 38], family: 'humanoid', hpMult: 1.15, drops: [['linen_cloth', 0.35], ['thieves_coin', 0.5]], qdrops: [['scarlet_insignia', 0.35]] },
-    interrogator_vishas: { name: 'Interrogator Crell', lvl: [34, 34], family: 'humanoid', boss: true, special: 'molten', specialText: 'Interrogator Crell lashes out with his whip!', loot: ['vishas_whip', 'vishas_boots'], aggro: 'Tell me... tell me everything!' },
-    houndmaster_loksey: { name: 'Houndmaster Tobbs', lvl: [35, 35], family: 'humanoid', boss: true, special: 'kelris', summon: 'scarlet_monk', specialText: 'Houndmaster Tobbs calls for help!', loot: ['loksey_crossbow', 'loksey_belt'], aggro: 'Release the hounds!' },
-    arcanist_doan: { name: 'Arcanist Veyne', lvl: [36, 36], family: 'humanoid', boss: true, special: 'whirl', specialText: 'Arcanist Veyne releases an arcane explosion!', loot: ['doan_robe', 'doan_mantle', 'doan_staff'], qdrops: [['doan_tome', 1]], aggro: 'You will not defile these mysteries!' },
-    herod: { name: 'Sir Barrow', lvl: [38, 38], family: 'humanoid', boss: true, special: 'whirl', specialText: 'Sir Barrow spins in a whirlwind of steel!', loot: ['herod_axe', 'herod_plate'], qdrops: [['herod_seal', 1]], aggro: 'Ah, I have been waiting for a real challenge!' },
-    high_inquisitor_fairbanks: { name: 'High Inquisitor Albright', lvl: [38, 38], family: 'undead', boss: true, special: 'cook', healName: 'Dark Light', specialText: 'High Inquisitor Albright gathers dark light!', loot: ['fairbanks_bracers', 'fairbanks_ring'] },
-    scarlet_commander_mograine: { name: 'Pyre Commander Aldric Vance', lvl: [39, 39], family: 'humanoid', boss: true, special: 'slam', specialText: 'Vance hammers down with holy fury!', loot: ['mograine_hammer', 'mograine_legs'], aggro: 'Infidels! They must be purified!' },
-    high_inquisitor_whitemane: { name: 'High Inquisitor Seraphine Ashe', lvl: [39, 39], family: 'humanoid', boss: true, special: 'cook', healName: 'Light\'s Mercy', specialText: 'Ashe calls down the Light to heal herself!', loot: ['whitemane_staff', 'whitemane_robe', 'whitemane_leather', 'whitemane_blade'], qdrops: [['whitemane_amulet', 1]], aggro: 'Vance has fallen? You shall pay for this!' },
+    interrogator_vishas: { name: 'Interrogator Crell', lvl: [34, 34], family: 'humanoid', boss: true, special: 'molten', specialText: 'Interrogator Crell lashes out with his whip!', loot: ['vishas_whip', 'vishas_boots', 'library_band'], aggro: 'Tell me... tell me everything!' },
+    houndmaster_loksey: { name: 'Houndmaster Tobbs', lvl: [35, 35], family: 'humanoid', boss: true, special: 'kelris', summon: 'scarlet_monk', specialText: 'Houndmaster Tobbs calls for help!', loot: ['loksey_crossbow', 'loksey_belt', 'library_grips'], aggro: 'Release the hounds!' },
+    arcanist_doan: { name: 'Arcanist Veyne', lvl: [36, 36], family: 'humanoid', boss: true, special: 'whirl', specialText: 'Arcanist Veyne releases an arcane explosion!', loot: ['doan_robe', 'doan_mantle', 'doan_staff', 'library_gloves'], qdrops: [['doan_tome', 1]], aggro: 'You will not defile these mysteries!' },
+    herod: { name: 'Sir Barrow', lvl: [38, 38], family: 'humanoid', boss: true, special: 'whirl', specialText: 'Sir Barrow spins in a whirlwind of steel!', loot: ['herod_axe', 'herod_plate', 'cathedral_slippers'], qdrops: [['herod_seal', 1]], aggro: 'Ah, I have been waiting for a real challenge!' },
+    high_inquisitor_fairbanks: { name: 'High Inquisitor Albright', lvl: [38, 38], family: 'undead', boss: true, special: 'cook', healName: 'Dark Light', specialText: 'High Inquisitor Albright gathers dark light!', loot: ['fairbanks_bracers', 'fairbanks_ring', 'cathedral_cord'] },
+    scarlet_commander_mograine: { name: 'Pyre Commander Aldric Vance', lvl: [39, 39], family: 'humanoid', boss: true, special: 'slam', specialText: 'Vance hammers down with holy fury!', loot: ['mograine_hammer', 'mograine_legs', 'cathedral_bindings', 'cathedral_belt'], aggro: 'Infidels! They must be purified!' },
+    high_inquisitor_whitemane: { name: 'High Inquisitor Seraphine Ashe', lvl: [39, 39], family: 'humanoid', boss: true, special: 'cook', healName: 'Light\'s Mercy', specialText: 'Ashe calls down the Light to heal herself!', loot: ['whitemane_staff', 'whitemane_robe', 'whitemane_leather', 'whitemane_blade', 'cathedral_leggings', 'cathedral_mace'], qdrops: [['whitemane_amulet', 1]], aggro: 'Vance has fallen? You shall pay for this!' },
   });
 
   Object.assign(D.PLACES, {

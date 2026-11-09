@@ -5,6 +5,8 @@
   const D = root.D;
   D.zone('hillsbrad', { name: 'Greymead Foothills', faction: 'horde', music: 'greymead', town: 'greymead_town' });
   // quest items
+  // filling the gear gaps (#535; Feral tank pieces #533): blues and purples where a class and role had none
+  D.item('greyhowl_cuffs', { name: 'Moonlit Study Cuffs', slot: 'wrist', q: 3, atype: 'cloth', lvl: 27, armor: 21, stats: { int: 11, spi: 8 }, sp: 8, icon: 'bracers', sell: 2600 });
   D.item('farm_deed', { name: 'Greymead Farm Deed', slot: 'quest', q: 1, icon: 'journal' });
   D.item('peasant_scythe', { name: "Farmhand's Scythe", slot: 'quest', q: 1, icon: 'axe' });
   D.item('azurelode_ore', { name: 'Kestrel Ore', slot: 'quest', q: 1, icon: 'dust' });
@@ -63,7 +65,7 @@
     baron_silverlaine: { name: 'Baron Ashcroft', lvl: [28, 28], family: 'undead', boss: true, loot: ['silverlaine_rapier', 'silverlaine_gloves'], aggro: 'Leave my halls at once!' },
     commander_springvale: { name: 'Commander Ashdown', lvl: [28, 28], family: 'undead', boss: true, special: 'cook', healName: 'Unholy Light', specialText: 'Commander Ashdown calls on unholy light!', loot: ['springvale_hammer', 'springvale_boots'], qdrops: [['springvale_seal', 1]], aggro: 'Countless more will fall before my eyes!' },
     fenrus: { name: 'Grimwolf the Dream-Eater', lvl: [28, 28], family: 'beast', boss: true, loot: ['fenrus_pelt', 'fenrus_fang'] },
-    arugal: { name: 'Archmage Cairn', lvl: [28, 28], family: 'humanoid', boss: true, special: 'arugal', loot: ['arugal_staff', 'arugal_robe', 'arugal_leggings', 'arugal_plate'], qdrops: [['arugal_head', 1]], aggro: 'You, too, shall serve!' },
+    arugal: { name: 'Archmage Cairn', lvl: [28, 28], family: 'humanoid', boss: true, special: 'arugal', loot: ['arugal_staff', 'arugal_robe', 'arugal_leggings', 'arugal_plate', 'greyhowl_cuffs'], qdrops: [['arugal_head', 1]], aggro: 'You, too, shall serve!' },
   });
 
   // places

@@ -2,6 +2,9 @@
 // contested Sirocco, reached through Coppergulch).
 (function (root) {
   const D = root.D;
+  // filling the gear gaps (#535; Feral tank pieces #533): blues and purples where a class and role had none
+  D.item('dune_sash', { name: 'Sandscribe Sash', slot: 'waist', q: 3, atype: 'cloth', lvl: 45, armor: 46, stats: { int: 18, spi: 13 }, sp: 14, icon: 'belt', sell: 7300 });
+  D.item('dune_bracers', { name: 'Dunehide Bracers', slot: 'wrist', q: 3, atype: 'leather', lvl: 45, armor: 77, stats: { agi: 18, sta: 13 }, icon: 'bracers', sell: 7300 });
   D.item('ukorz_head', { name: "Chief Uzzak's Head", slot: 'quest', q: 1, icon: 'head' });
   D.item('gahz_rilla_scale', { name: "Grumblescale Scale", slot: 'quest', q: 1, icon: 'fin' });
   D.item('zumrah_totem', { name: "Zogo's Hex Totem", slot: 'quest', q: 1, icon: 'voodoo_doll' });
@@ -28,9 +31,9 @@
     antu_sul: { name: "Antuzz", lvl: [44, 44], family: 'humanoid', boss: true, special: 'kelris', summon: 'sandfury_blood_drinker', specialText: "Antuzz calls his servants!", loot: ['antusul_staff', 'antusul_boots'], aggro: "Lunch has arrived, my beautiful children!" },
     theka_the_martyr: { name: 'Vessa the Martyr', lvl: [45, 45], family: 'humanoid', boss: true, special: 'cook', healName: 'Scarab Shell', specialText: 'Vessa begins to shift into a scarab shell!', loot: ['theka_robe', 'theka_bracers'] },
     witch_doctor_zumrah: { name: "Witch Doctor Zogo", lvl: [45, 45], family: 'humanoid', boss: true, special: 'kelris', summon: 'zul_farrak_zombie', specialText: "Zogo raises the dead!", loot: ['zumrah_wand', 'zumrah_ring'], qdrops: [['zumrah_totem', 1]], aggro: 'Sands consume you!' },
-    gahz_rilla: { name: "Grumblescale", lvl: [46, 46], family: 'beast', boss: true, special: 'whirl', specialText: "Grumblescale breathes a freezing blast!", loot: ['gahzrilla_blade', 'gahzrilla_mail'], qdrops: [['gahz_rilla_scale', 1]] },
+    gahz_rilla: { name: "Grumblescale", lvl: [46, 46], family: 'beast', boss: true, special: 'whirl', specialText: "Grumblescale breathes a freezing blast!", loot: ['gahzrilla_blade', 'gahzrilla_mail', 'dune_bracers'], qdrops: [['gahz_rilla_scale', 1]] },
     sergeant_bly: { name: 'Sergeant Kipp', lvl: [46, 46], family: 'humanoid', boss: true, special: 'molten', specialText: 'Sergeant Kipp throws a bomb!', loot: ['bly_rifle', 'bly_cloak'], aggro: 'I have a feeling this is not going to end well.' },
-    chief_ukorz_sandscalp: { name: 'Chief Uzzak', lvl: [46, 46], family: 'humanoid', boss: true, special: 'whirl', specialText: 'Ukorz spins with his great axe!', loot: ['ukorz_axe', 'ukorz_legs', 'ukorz_robe', 'ukorz_plate'], qdrops: [['ukorz_head', 1]], aggro: 'Who dares enter the Chief\'s city?' },
+    chief_ukorz_sandscalp: { name: 'Chief Uzzak', lvl: [46, 46], family: 'humanoid', boss: true, special: 'whirl', specialText: 'Ukorz spins with his great axe!', loot: ['ukorz_axe', 'ukorz_legs', 'ukorz_robe', 'ukorz_plate', 'dune_sash'], qdrops: [['ukorz_head', 1]], aggro: 'Who dares enter the Chief\'s city?' },
   });
 
   Object.assign(D.QUESTS, {

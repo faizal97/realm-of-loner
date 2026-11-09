@@ -2,6 +2,8 @@
 // years and still kept by its dead. Entered from the Archive Steps on the Tidewatch Coast.
 (function (root) {
   const D = root.D;
+  // filling the gear gaps (#535; Feral tank pieces #533): blues and purples where a class and role had none
+  D.item('archive_gloves', { name: 'Gloves of Quiet Pages', slot: 'hands', q: 3, atype: 'cloth', lvl: 60, armor: 61, stats: { int: 16, spi: 12 }, sp: 18, icon: 'gloves', sell: 13000 });
   D.item('vessaria_quill', { name: "Vessaria's Tidequill", slot: 'quest', q: 1, icon: 'feather' });
   D.item('codex_of_tides', { name: 'Codex of Tides', slot: 'quest', q: 1, icon: 'journal' });
   const gear = (id, name, slot, o) => D.item(id, Object.assign({ name, slot, q: 3 }, o));
@@ -23,7 +25,7 @@
     curator_ellaris: { name: 'Curator Ellaris', lvl: [60, 60], family: 'undead', boss: true, special: 'kelris', summon: 'inkbound_wisp', specialText: 'Curator Ellaris calls ink from the pages!', loot: ['ellaris_cloak', 'ellaris_bracers'], aggro: 'Silence in the archive!' },
     the_inkbound_horror: { name: 'The Inkbound Horror', lvl: [60, 60], family: 'elemental', boss: true, special: 'whirl', specialText: 'The Inkbound Horror lashes out with tendrils of ink!', loot: ['inkbound_gloves', 'inkbound_boots'] },
     lorekeeper_nerathil: { name: 'Lorekeeper Nerathil', lvl: [60, 60], family: 'undead', boss: true, special: 'molten', specialText: 'Nerathil reads a word of drowning!', loot: ['nerathil_blade', 'nerathil_legs'], qdrops: [['codex_of_tides', 1]], aggro: 'Ten thousand years of study, and you come to steal it?' },
-    lady_vessaria: { name: 'Lady Vessaria the Tidescribe', lvl: [60, 60], family: 'humanoid', boss: true, special: 'kelris', summon: 'drowned_scholar', specialText: 'Vessaria writes the drowned back into the world!', loot: ['vessaria_staff', 'vessaria_mace', 'vessaria_robe', 'vessaria_plate'], qdrops: [['vessaria_quill', 1]], aggro: 'Every word I write, the sea obeys.' },
+    lady_vessaria: { name: 'Lady Vessaria the Tidescribe', lvl: [60, 60], family: 'humanoid', boss: true, special: 'kelris', summon: 'drowned_scholar', specialText: 'Vessaria writes the drowned back into the world!', loot: ['vessaria_staff', 'vessaria_mace', 'vessaria_robe', 'vessaria_plate', 'archive_gloves'], qdrops: [['vessaria_quill', 1]], aggro: 'Every word I write, the sea obeys.' },
   });
 
   const A = (id, q) => { q.faction = 'alliance'; D.QUESTS[id] = q; };

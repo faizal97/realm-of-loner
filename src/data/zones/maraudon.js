@@ -2,6 +2,9 @@
 // contested Ferndeep, so both factions can run it.
 (function (root) {
   const D = root.D;
+  // filling the gear gaps (#535; Feral tank pieces #533): blues and purples where a class and role had none
+  D.item('gemfall_leggings', { name: 'Crystal-Threaded Leggings', slot: 'legs', q: 3, atype: 'cloth', lvl: 48, armor: 86, stats: { int: 19, spi: 14 }, sp: 14, icon: 'legs', sell: 8300 });
+  D.item('gemfall_mace', { name: "Faolan's Mending Mace", slot: 'weapon', q: 3, wtype: 'mace', lvl: 48, dmg: [55, 103], speed: 2.8, stats: { int: 19, spi: 14 }, sp: 30, icon: 'mace', sell: 8300 });
   D.item('theradras_scepter', { name: 'Scepter of Faolan', slot: 'quest', q: 1, icon: 'staff' });
   D.item('theradras_gem', { name: 'Gem of Ghesra', slot: 'quest', q: 1, icon: 'seed' });
   D.item('vyletongue_blade', { name: "Venomlip's Blade", slot: 'quest', q: 1, icon: 'dagger' });
@@ -27,9 +30,9 @@
     noxxion: { name: 'Sludgewell', lvl: [47, 47], family: 'elemental', boss: true, special: 'kelris', summon: 'constrictor_vine', specialText: 'Sludgewell splits off a slime!', loot: ['noxxion_cloak', 'noxxion_boots'] },
     razorlash: { name: 'Thornlash', lvl: [47, 47], family: 'elemental', boss: true, special: 'whirl', specialText: 'Thornlash lashes out with thorns!', loot: ['razorlash_gloves', 'noxxion_cloak'] },
     lord_vyletongue: { name: 'Lord Venomlip', lvl: [48, 48], family: 'demon', boss: true, special: 'molten', specialText: 'Lord Venomlip throws a poisoned blade!', loot: ['vyletongue_dagger', 'vyletongue_boots'], qdrops: [['vyletongue_blade', 1]], aggro: 'The Gemfall Caves is ours!' },
-    celebras_the_cursed: { name: 'Faolan the Cursed', lvl: [48, 48], family: 'elemental', boss: true, special: 'cook', healName: 'Rootdraw', specialText: 'Faolan begins to draw strength from the roots!', loot: ['celebras_staff', 'celebras_robe'], qdrops: [['theradras_scepter', 1]] },
+    celebras_the_cursed: { name: 'Faolan the Cursed', lvl: [48, 48], family: 'elemental', boss: true, special: 'cook', healName: 'Rootdraw', specialText: 'Faolan begins to draw strength from the roots!', loot: ['celebras_staff', 'celebras_robe', 'gemfall_mace'], qdrops: [['theradras_scepter', 1]] },
     landslide: { name: 'Landslide', lvl: [49, 49], family: 'elemental', boss: true, special: 'slam', specialText: 'Landslide shakes the cavern!', loot: ['landslide_maul', 'landslide_legs'] },
-    princess_theradras: { name: 'Ghesra, the Stone Duchess', lvl: [49, 49], family: 'elemental', boss: true, special: 'slam', specialText: 'Ghesra, the Stone Duchess hurls a boulder!', loot: ['theradras_blade', 'theradras_robe', 'theradras_leather', 'theradras_plate'], qdrops: [['theradras_gem', 1]], aggro: 'You will be buried in my caverns!' },
+    princess_theradras: { name: 'Ghesra, the Stone Duchess', lvl: [49, 49], family: 'elemental', boss: true, special: 'slam', specialText: 'Ghesra, the Stone Duchess hurls a boulder!', loot: ['theradras_blade', 'theradras_robe', 'theradras_leather', 'theradras_plate', 'gemfall_leggings'], qdrops: [['theradras_gem', 1]], aggro: 'You will be buried in my caverns!' },
   });
 
   const A = (id, q) => { q.faction = 'alliance'; D.QUESTS[id] = q; };

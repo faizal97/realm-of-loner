@@ -2,6 +2,9 @@
 // holds the living side, the Hollow Host the dead side under Baron Mortvale. Reached through Morrowglen, open to both factions.
 (function (root) {
   const D = root.D;
+  // filling the gear gaps (#535; Feral tank pieces #533): blues and purples where a class and role had none
+  D.item('graymouth_bow', { name: 'Graymouth Longbow', slot: 'ranged', q: 3, wtype: 'bow', lvl: 58, dmg: [69, 127], speed: 2.9, stats: { agi: 35 }, icon: 'bow', sell: 12100 });
+  D.item('graymouth_mace', { name: 'Lightward Mace', slot: 'weapon', q: 3, wtype: 'mace', lvl: 59, dmg: [67, 125], speed: 2.8, stats: { int: 24, spi: 17 }, sp: 37, icon: 'mace', sell: 12500 });
   D.item('balnazzar_sigil', { name: "Xazzarak's Sigil", slot: 'quest', q: 1, icon: 'coin' });
   D.item('rivendare_seal', { name: "Mortvale's Seal", slot: 'quest', q: 1, icon: 'ring' });
   D.item('stratholme_ledger', { name: 'Graymouth Archive Ledger', slot: 'quest', q: 1, icon: 'journal' });
@@ -24,11 +27,11 @@
     skeletal_guardian: { name: 'Skeletal Guardian', lvl: [58, 59], family: 'undead', drops: [['thieves_coin', 0.4]] },
     bile_spewer: { name: 'Bile Spewer', lvl: [59, 60], family: 'undead', hpMult: 1.3, drops: [['rotting_flesh', 0.6]] },
     timmy_the_cruel: { name: 'Nibbles the Cruel', lvl: [58, 58], family: 'undead', boss: true, special: 'whirl', specialText: 'Nibbles the Cruel ravages everyone nearby!', loot: ['timmy_gloves', 'galford_boots'], aggro: 'TIMMY!' },
-    archivist_galford: { name: 'Archivist Penrose', lvl: [58, 58], family: 'humanoid', boss: true, special: 'molten', specialText: 'Penrose sets the archive ablaze!', loot: ['galford_boots', 'timmy_gloves'], qdrops: [['stratholme_ledger', 1]], aggro: 'Burn it! Burn it all!' },
+    archivist_galford: { name: 'Archivist Penrose', lvl: [58, 58], family: 'humanoid', boss: true, special: 'molten', specialText: 'Penrose sets the archive ablaze!', loot: ['galford_boots', 'timmy_gloves', 'graymouth_mace'], qdrops: [['stratholme_ledger', 1]], aggro: 'Burn it! Burn it all!' },
     balnazzar: { name: 'Xazzarak', lvl: [59, 59], family: 'demon', boss: true, special: 'kelris', summon: 'crimson_guardsman', specialText: 'Xazzarak raises the dead Crusaders!', loot: ['balnazzar_blade', 'balnazzar_mantle'], qdrops: [['balnazzar_sigil', 1]], aggro: 'Fools! The Order has served its purpose.' },
     baroness_anastari: { name: 'Baroness Vessaline', lvl: [59, 59], family: 'undead', boss: true, special: 'molten', specialText: 'Baroness Vessaline wails!', loot: ['anastari_bracers', 'balnazzar_mantle'] },
     ramstein_the_gorger: { name: 'Bloatgut the Gorger', lvl: [59, 59], family: 'undead', boss: true, special: 'slam', specialText: 'Ramstein tramples the ground!', loot: ['ramstein_belt', 'anastari_bracers'] },
-    baron_rivendare: { name: 'Baron Mortvale', lvl: [60, 60], family: 'undead', boss: true, special: 'kelris', summon: 'skeletal_guardian', specialText: 'Baron Mortvale raises a skeleton from the dead!', loot: ['rivendare_runeblade', 'rivendare_staff', 'rivendare_robe', 'rivendare_leather', 'rivendare_plate'], qdrops: [['rivendare_seal', 1]], aggro: 'Intruders! More pawns for my master.' },
+    baron_rivendare: { name: 'Baron Mortvale', lvl: [60, 60], family: 'undead', boss: true, special: 'kelris', summon: 'skeletal_guardian', specialText: 'Baron Mortvale raises a skeleton from the dead!', loot: ['rivendare_runeblade', 'rivendare_staff', 'rivendare_robe', 'rivendare_leather', 'rivendare_plate', 'graymouth_bow'], qdrops: [['rivendare_seal', 1]], aggro: 'Intruders! More pawns for my master.' },
   });
 
   const A = (id, q) => { q.faction = 'alliance'; D.QUESTS[id] = q; };

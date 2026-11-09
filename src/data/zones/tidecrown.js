@@ -2,6 +2,9 @@
 // Stormveil Reach, and beneath it the Deepmother, Nal'veshra. Both factions queue from the citadel gate.
 (function (root) {
   const D = root.D;
+  // filling the gear gaps (#535; Feral tank pieces #533): blues and purples where a class and role had none
+  D.item('tidecrown_girdle', { name: 'Coralhide Girdle', slot: 'waist', q: 4, atype: 'leather', lvl: 60, armor: 149, stats: { agi: 20, sta: 15 }, icon: 'belt', sell: 15300 });
+  D.item('tidecrown_boots', { name: 'Undertow Treads', slot: 'feet', q: 4, atype: 'leather', lvl: 60, armor: 186, stats: { agi: 20, sta: 15 }, icon: 'boots', sell: 15300 });
   D.item('drowned_crown', { name: 'The Drowned Crown', slot: 'quest', q: 1, icon: 'ring' });
   D.item('deepmother_heart', { name: "Heart of the Deepmother", slot: 'quest', q: 1, icon: 'seed' });
   const epic = (id, name, slot, o) => D.item(id, Object.assign({ name, slot, q: 4 }, o));
@@ -38,8 +41,8 @@
     commander_serathis: { name: 'Commander Serathis', lvl: [60, 60], family: 'humanoid', boss: true, special: 'slam', buster: { style: 'crush', name: 'Trident Thrust', text: 'Serathis levels his trident at the tank!', size: 3, mend: 1.5, kickCap: 0, floor: 1.5, brace: 1.5 }, specialText: 'Serathis drives his trident into the ground!', loot: ['serathis_legs', 'serathis_gloves', 'colossus_bracers'], aggro: 'The Prince\'s gate does not open for thieves.' },
     tide_twin_myrel: { name: 'Myrel of the Rising Tide', lvl: [60, 60], family: 'humanoid', boss: true, hpMult: 0.6, dmgMult: 0.6, special: 'molten', specialText: 'Myrel calls a rising tide!', loot: ['twins_ring', 'twins_boots'], aggro: 'Sister, they are here.' },
     tide_twin_sorin: { name: 'Sorin of the Falling Tide', lvl: [60, 60], family: 'humanoid', boss: true, hpMult: 0.6, dmgMult: 0.6, special: 'whirl', specialText: 'Sorin spins through the falling tide!', loot: ['twins_boots', 'twins_ring'], aggro: 'Then we drown them together.' },
-    coralheart_colossus: { name: 'Coralheart Colossus', lvl: [60, 60], family: 'elemental', boss: true, special: 'slam', buster: { style: 'heavy', name: 'Tidal Crush', text: 'The Coralheart Colossus lifts its coral arm high!', size: 4, floor: 2, cast: 4, brace: 1.5, hard: { floor: 1 } }, specialText: 'The Coralheart Colossus shakes the citadel!', loot: ['colossus_belt', 'colossus_bracers', 'serathis_gloves'] },
-    prince_aeldran: { name: 'Prince Aeldran Tidecrown', lvl: [60, 60], family: 'humanoid', boss: true, special: 'kelris', summon: 'tidecrown_guard', specialText: 'Aeldran calls his drowned court to his side!', loot: ['aeldran_blade', 'aeldran_dagger', 'aeldran_cloak'], qdrops: [['drowned_crown', 1]], aggro: 'Ten thousand years I waited. You will not take the surface from me.' },
+    coralheart_colossus: { name: 'Coralheart Colossus', lvl: [60, 60], family: 'elemental', boss: true, special: 'slam', buster: { style: 'heavy', name: 'Tidal Crush', text: 'The Coralheart Colossus lifts its coral arm high!', size: 4, floor: 2, cast: 4, brace: 1.5, hard: { floor: 1 } }, specialText: 'The Coralheart Colossus shakes the citadel!', loot: ['colossus_belt', 'colossus_bracers', 'serathis_gloves', 'tidecrown_girdle'] },
+    prince_aeldran: { name: 'Prince Aeldran Tidecrown', lvl: [60, 60], family: 'humanoid', boss: true, special: 'kelris', summon: 'tidecrown_guard', specialText: 'Aeldran calls his drowned court to his side!', loot: ['aeldran_blade', 'aeldran_dagger', 'aeldran_cloak', 'tidecrown_boots'], qdrops: [['drowned_crown', 1]], aggro: 'Ten thousand years I waited. You will not take the surface from me.' },
     nalveshra: { name: "Nal'veshra the Deepmother", lvl: [60, 60], family: 'elemental', boss: true, special: 'kelris', summon: 'abyssal_spawn', specialText: 'The Deepmother spawns her children from the dark!', loot: ['deepmother_staff', 'deepmother_maul', 'deepmother_robe', 'deepmother_leather', 'deepmother_plate'], qdrops: [['deepmother_heart', 1]], aggro: 'Little lights. I will swallow you as I swallowed the spirit.' },
   });
 

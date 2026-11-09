@@ -5,6 +5,8 @@
   const D = root.D;
   D.zone('redridge', { name: 'Stoneharrow Mountains', faction: 'alliance', music: 'stoneharrow', town: 'stoneharrow_town' });
   // quest items
+  // filling the gear gaps (#535; Feral tank pieces #533): blues and purples where a class and role had none
+  D.item('gaol_sandals', { name: "Turnkey's Felt Sandals", slot: 'feet', q: 3, atype: 'cloth', lvl: 23, armor: 31, stats: { int: 9, spi: 7 }, sp: 7, icon: 'boots', sell: 1900 });
   D.item('goretusk_flank', { name: 'Great Razorhog Flank', slot: 'quest', q: 1, icon: 'meat' });
   D.item('tarantula_silk', { name: 'Tarantula Silk', slot: 'quest', q: 1, icon: 'venom' });
   D.item('gnoll_paw', { name: 'Stoneharrow Gnoll Paw', slot: 'quest', q: 1, icon: 'claw' });
@@ -78,7 +80,7 @@
     hamhock: { name: 'Porkchop', lvl: [24, 24], family: 'giant', boss: true, special: 'slam', buster: { style: 'heavy', name: 'Belly Flop', text: 'Porkchop rears back for a belly flop!', size: 2 }, loot: ['hamhock_leggings', 'hamhock_club'], aggro: 'Porkchop hungry!' },
     dextren_ward: { name: 'Dexter Crowe', lvl: [24, 24], family: 'humanoid', boss: true, loot: ['dextren_cleaver', 'dextren_boots'], aggro: 'Another one for my collection.' },
     bruegal_ironknuckle: { name: 'Hugo Knuckles', lvl: [24, 24], family: 'humanoid', boss: true, loot: ['iron_knuckles', 'bruegal_belt'], aggro: 'Put up yer fists!' },
-    bazil_thredd: { name: 'Silas Crane', lvl: [25, 25], family: 'humanoid', boss: true, special: 'thredd', loot: ['thredd_mask', 'thredd_blade', 'thredd_robe', 'thredd_cape'], qdrops: [['head_bazil', 1]], aggro: 'Blackwell will have your head for this!' },
+    bazil_thredd: { name: 'Silas Crane', lvl: [25, 25], family: 'humanoid', boss: true, special: 'thredd', loot: ['thredd_mask', 'thredd_blade', 'thredd_robe', 'thredd_cape', 'gaol_sandals'], qdrops: [['head_bazil', 1]], aggro: 'Blackwell will have your head for this!' },
   });
 
   // places

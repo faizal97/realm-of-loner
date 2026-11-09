@@ -3,6 +3,8 @@
 // the way to the Stormveil Isle. Both factions queue from the lair's mouth. Loot sits a step below the Tidecrown Citadel.
 (function (root) {
   const D = root.D;
+  // filling the gear gaps (#535; Feral tank pieces #533): blues and purples where a class and role had none
+  D.item('veshmira_mace', { name: 'Scalebreaker Mace of Mercy', slot: 'weapon', q: 4, wtype: 'mace', lvl: 60, dmg: [76, 141], speed: 2.8, stats: { int: 27, spi: 20 }, sp: 45, icon: 'mace', sell: 15300 });
   D.item('onyxia_head', { name: 'Head of Veshmira', slot: 'quest', q: 1, icon: 'head' });
   const epic = (id, name, slot, o) => D.item(id, Object.assign({ name, slot, q: 4 }, o));
   epic('onyx_mantle', 'Mantle of the Brood Mother', 'back', { lvl: 60, armor: 86, stats: { sta: 15, agi: 13 }, icon: 'cloak', sell: 15800 });
@@ -30,7 +32,7 @@
     onyxian_warder: { name: 'Veshmiran Warder', lvl: [60, 60], family: 'dragonkin', hpMult: 1.2, drops: [['thieves_coin', 0.6]], aggro: 'The mother sleeps. You will not wake her.' },
     onyxian_whelp: { name: 'Veshmiran Whelp', fly: 7, lvl: [60, 60], family: 'dragonkin', hpMult: 0.6, dmgMult: 0.7, drops: [['ruined_pelt', 0.2]] },
     onyxia: { name: 'Veshmira', lvl: [60, 60], family: 'dragonkin', boss: true, special: 'kelris', summon: 'onyxian_whelp', specialText: 'Veshmira roars, and whelps pour out of the nests!',
-      loot: ['onyx_mantle', 'onyx_robe', 'onyx_tunic', 'onyx_legs', 'onyx_belt', 'onyx_gloves', 'onyx_boots', 'onyx_ring', 'onyx_sword', 'onyx_dagger', 'onyx_staff'], qdrops: [['onyxia_head', 1]],
+      loot: ['onyx_mantle', 'onyx_robe', 'onyx_tunic', 'onyx_legs', 'onyx_belt', 'onyx_gloves', 'onyx_boots', 'onyx_ring', 'onyx_sword', 'onyx_dagger', 'onyx_staff', 'veshmira_mace'], qdrops: [['onyxia_head', 1]],
       aggro: 'You chased me across the sea for this? Little kingdoms send little heroes.' },
   });
 

@@ -5,6 +5,8 @@
   const D = root.D;
   D.zone('ashenvale', { name: 'Elderglen', faction: 'contested', music: 'elderglen', town: 'elderglen_town' });
   // quest items
+  // filling the gear gaps (#535; Feral tank pieces #533): blues and purples where a class and role had none
+  D.item('tidehollow_sash', { name: 'Kelpweave Sash', slot: 'waist', q: 3, atype: 'cloth', lvl: 25, armor: 27, stats: { int: 11, spi: 7 }, sp: 8, icon: 'belt', sell: 2300 });
   D.item('naga_scale', { name: 'Scalelash Scale', slot: 'quest', q: 1, icon: 'fin' });
   D.item('sea_witch_pearl', { name: "Sea Witch's Pearl", slot: 'quest', q: 1, icon: 'ring' });
   D.item('bear_claw_av', { name: 'Elderglen Bear Claw', slot: 'quest', q: 1, icon: 'claw' });
@@ -61,7 +63,7 @@
     lady_sarevess: { name: 'Lady Szira', lvl: [26, 26], family: 'humanoid', boss: true, special: 'molten', loot: ['sarevess_bow', 'sarevess_gloves'], qdrops: [['sarevess_crown', 1]], aggro: 'You will be food for the deep!' },
     gelihast: { name: 'Glubb', lvl: [26, 26], family: 'murloc', boss: true, loot: ['gelihast_spear', 'gelihast_cloak'] },
     twilight_lord_kelris: { name: 'Eclipse Lord Oreth', lvl: [27, 27], family: 'humanoid', boss: true, special: 'kelris', loot: ['kelris_wand', 'kelris_blade'], qdrops: [['head_kelris', 1]], aggro: 'Who dares disturb my meditation?' },
-    aku_mai: { name: "Old Coilmaw", lvl: [27, 27], family: 'beast', boss: true, special: 'whirl', loot: ['akumai_greaves', 'akumai_leggings', 'akumai_staff', 'akumai_blade'], qdrops: [['akumai_scale', 1]] },
+    aku_mai: { name: "Old Coilmaw", lvl: [27, 27], family: 'beast', boss: true, special: 'whirl', loot: ['akumai_greaves', 'akumai_leggings', 'akumai_staff', 'akumai_blade', 'tidehollow_sash'], qdrops: [['akumai_scale', 1]] },
   });
 
   // places

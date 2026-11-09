@@ -4,6 +4,9 @@
 // strongboxes (the dragon is revealed at 60), a noble's seal (Marrow is named at 45, so never here).
 (function (root) {
   const D = root.D;
+  // filling the gear gaps (#535; Feral tank pieces #533): blues and purples where a class and role had none
+  D.item('coinworks_cuffs', { name: "Ledgerkeeper's Cuffs", slot: 'wrist', q: 3, atype: 'cloth', lvl: 42, armor: 33, stats: { int: 17, spi: 12 }, sp: 13, icon: 'bracers', sell: 6400 });
+  D.item('coinworks_band', { name: 'Pressed Iron Band', slot: 'finger', q: 3, lvl: 42, stats: { agi: 17, sta: 12 }, icon: 'ring', sell: 6400 });
   D.item('coinwhistle_ledger', { name: "Coinwhistle's Ledger", slot: 'quest', q: 1, icon: 'journal' });
   D.item('press_die_plate', { name: 'Claw-Stamped Die Plate', slot: 'quest', q: 1, icon: 'ring' });
   const gear = (id, name, slot, o) => D.item(id, Object.assign({ name, slot, q: 3 }, o));
@@ -24,9 +27,9 @@
     cw_whelp: { name: 'Vault Whelp', fly: 7, sprite: 'black_dragon_whelp', lvl: [41, 42], family: 'dragonkin', drops: [['thieves_coin', 0.4]] },
     cw_sentry: { name: 'Brass Sentry', sprite: 'mechano_tank', lvl: [42, 43], family: 'mechanical', hpMult: 1.15 },
     foreman_nettlecog: { name: 'Foreman Nettlecog', lvl: [41, 41], family: 'humanoid', boss: true, special: 'molten', specialText: 'Foreman Nettlecog flings a ladle of molten gold!', loot: ['nettlecog_ladle', 'nettlecog_apron'], aggro: 'Who let you onto my floor?' },
-    the_great_press: { name: 'The Great Press', lvl: [42, 42], family: 'mechanical', boss: true, special: 'slam', specialText: 'The Great Press stamps down!', loot: ['press_gauntlets', 'press_ring'], qdrops: [['press_die_plate', 1]] },
+    the_great_press: { name: 'The Great Press', lvl: [42, 42], family: 'mechanical', boss: true, special: 'slam', specialText: 'The Great Press stamps down!', loot: ['press_gauntlets', 'press_ring', 'coinworks_band'], qdrops: [['press_die_plate', 1]] },
     emberhide: { name: 'Emberhide', lvl: [43, 43], family: 'dragonkin', boss: true, special: 'whirl', specialText: 'Emberhide breathes fire across the strongroom!', loot: ['emberhide_cloak', 'emberhide_slippers'] },
-    mintmaster_coinwhistle: { name: 'Mintmaster Coinwhistle', lvl: [44, 44], family: 'humanoid', boss: true, special: 'kelris', summon: 'cw_coinguard', specialText: 'Mintmaster Coinwhistle whistles for the guards!', loot: ['coinwhistle_staff', 'coinwhistle_coat', 'coinwhistle_legs', 'coinwhistle_knife'], qdrops: [['coinwhistle_ledger', 1]], aggro: 'Every coin in this room is counted. So are you.' },
+    mintmaster_coinwhistle: { name: 'Mintmaster Coinwhistle', lvl: [44, 44], family: 'humanoid', boss: true, special: 'kelris', summon: 'cw_coinguard', specialText: 'Mintmaster Coinwhistle whistles for the guards!', loot: ['coinwhistle_staff', 'coinwhistle_coat', 'coinwhistle_legs', 'coinwhistle_knife', 'coinworks_cuffs'], qdrops: [['coinwhistle_ledger', 1]], aggro: 'Every coin in this room is counted. So are you.' },
   });
 
   Object.assign(D.QUESTS, {

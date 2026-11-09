@@ -2,6 +2,10 @@
 // Marshal Hale, lost since Chapter 3, is a prisoner in its detention block.
 (function (root) {
   const D = root.D;
+  // filling the gear gaps (#535; Feral tank pieces #533): blues and purples where a class and role had none
+  D.item('cinder_sash', { name: "Ashweaver's Sash", slot: 'waist', q: 3, atype: 'cloth', lvl: 53, armor: 54, stats: { int: 20, spi: 14 }, sp: 16, icon: 'belt', sell: 10100 });
+  D.item('cinder_ring', { name: 'Emberglass Loop', slot: 'finger', q: 3, lvl: 54, stats: { int: 20, spi: 15 }, icon: 'ring', sell: 10500 });
+  D.item('cinder_legs', { name: 'Hide of the Forge Bear', slot: 'legs', q: 3, atype: 'leather', lvl: 54, armor: 213, stats: { agi: 20, sta: 15 }, icon: 'legs', sell: 10500 });
   D.item('prison_cell_key', { name: 'Prison Cell Key', slot: 'quest', q: 1, icon: 'coin' });
   D.item('windsor_notes', { name: "Hale's Notes", slot: 'quest', q: 1, icon: 'journal' });
   D.item('thaurissan_crown', { name: "Grimmark's Crown", slot: 'quest', q: 1, icon: 'ring' });
@@ -27,10 +31,10 @@
     high_interrogator_gerstahn: { name: 'High Interrogator Brisa', lvl: [52, 52], family: 'humanoid', boss: true, special: 'molten', specialText: 'Brisa lashes you with shadow!', loot: ['gerstahn_whip', 'roccor_bracers'], qdrops: [['prison_cell_key', 1]], aggro: 'Another spy for the cells!' },
     lord_roccor: { name: 'Lord Stonebrand', lvl: [52, 52], family: 'elemental', boss: true, special: 'slam', specialText: 'Lord Stonebrand shakes the earth!', loot: ['roccor_bracers', 'baelgar_cloak'] },
     bael_gar: { name: "Magmagor", lvl: [53, 53], family: 'giant', boss: true, special: 'molten', specialText: "Magmagor spews magma!", loot: ['baelgar_cloak', 'magmus_boots'] },
-    general_angerforge: { name: 'General Ashhelm', lvl: [53, 53], family: 'humanoid', boss: true, special: 'kelris', summon: 'anvilrage_warden', specialText: 'General Ashhelm calls for reinforcements!', loot: ['angerforge_blade', 'angerforge_legs'], aggro: 'Slagborn! To arms!' },
+    general_angerforge: { name: 'General Ashhelm', lvl: [53, 53], family: 'humanoid', boss: true, special: 'kelris', summon: 'anvilrage_warden', specialText: 'General Ashhelm calls for reinforcements!', loot: ['angerforge_blade', 'angerforge_legs', 'cinder_legs'], aggro: 'Slagborn! To arms!' },
     golem_lord_argelmach: { name: 'Golemsmith Kragg', lvl: [54, 54], family: 'humanoid', boss: true, special: 'kelris', summon: 'ragereaver_golem', specialText: 'Golemsmith Kragg awakens a golem!', loot: ['argelmach_gloves', 'magmus_boots'], qdrops: [['argelmach_core', 1]] },
-    magmus: { name: 'Slagmaw', lvl: [54, 54], family: 'giant', boss: true, special: 'whirl', specialText: 'Slagmaw bursts with flame!', loot: ['magmus_boots', 'angerforge_legs'] },
-    emperor_dagran_thaurissan: { name: 'Emperor Haldor Grimmark', lvl: [54, 54], family: 'humanoid', boss: true, special: 'slam', specialText: 'The Emperor brings down Foebreaker!', loot: ['thaurissan_hammer', 'thaurissan_staff', 'thaurissan_robe', 'thaurissan_leather', 'thaurissan_plate'], qdrops: [['thaurissan_crown', 1], ['windsor_notes', 1]], aggro: 'Come to aid the Throne!' },
+    magmus: { name: 'Slagmaw', lvl: [54, 54], family: 'giant', boss: true, special: 'whirl', specialText: 'Slagmaw bursts with flame!', loot: ['magmus_boots', 'angerforge_legs', 'cinder_ring'] },
+    emperor_dagran_thaurissan: { name: 'Emperor Haldor Grimmark', lvl: [54, 54], family: 'humanoid', boss: true, special: 'slam', specialText: 'The Emperor brings down Foebreaker!', loot: ['thaurissan_hammer', 'thaurissan_staff', 'thaurissan_robe', 'thaurissan_leather', 'thaurissan_plate', 'cinder_sash'], qdrops: [['thaurissan_crown', 1], ['windsor_notes', 1]], aggro: 'Come to aid the Throne!' },
   });
 
   const A = (id, q) => { q.faction = 'alliance'; D.QUESTS[id] = q; };
