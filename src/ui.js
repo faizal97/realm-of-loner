@@ -3109,19 +3109,46 @@
   }
 
   // ---------- bags
+  // the filter tabs (#534) on Bags and the bank: gear, materials (grey junk too: it only sells) and what you use
+  const INV_TABS = [['all', 'All'], ['gear', 'Gear'], ['mat', 'Materials'], ['use', 'Use']];
+  const invKind = (it) => (D.GEAR_SLOTS.includes(it.slot) ? 'gear' : it.slot === 'mat' || it.slot === 'junk' ? 'mat' : 'use');
+  const invShows = (it) => { const f = ui.invTab || 'all'; return f === 'all' || invKind(it) === f; };
+  function invTabs(items) {
+    const n = (k) => (k === 'all' ? items.length : items.filter((it) => invKind(it) === k).length);
+    return h('div', { class: 'chips inv-tabs' }, ...INV_TABS.map(([k, l]) => h('button', { class: 'chip' + ((ui.invTab || 'all') === k ? ' gold' : ''), 'aria-pressed': String((ui.invTab || 'all') === k), onclick: () => { ui.invTab = k; ui.bagSel = null; ui.sheetFn(); } }, `${l} ${n(k)}`)));
+  }
+  // the small grid (#534): 10 to a row on a phone instead of 7, the whole bag on one screen; kept on this device
+  const invCompact = () => { try { return localStorage.getItem('azsolo.bagsCompact') === '1'; } catch (e) { return false; } };
+  const setCompact = (on) => { try { localStorage.setItem('azsolo.bagsCompact', on ? '1' : '0'); } catch (e) { } };
+  const invGridClass = () => 'bags' + (invCompact() ? ' compact' : '');
+  // one item in a grid: quality edge, count, upgrade or effect mark, why it can't be used, or dimmed with no marks
+  function itemCell(it, n, o) {
+    const why = o.why, plain = o.dim || o.keep;
+    return h('button', { class: 'slot qb' + (it.q || 0) + (o.sel ? ' sel' : '') + (why ? ' cant' : '') + (plain ? ' nosell' : ''), 'aria-label': it.name + (n > 1 ? ' x' + n : ''), onclick: o.onTap },
+      img(art('icon', it.icon)), o.pick ? h('span', { class: 'pick' }, '✓') : null, n > 1 ? h('span', { class: 'cnt tnum' }, n) : null,
+      plain ? null : !why && G.isUpgrade(it) ? h('span', { class: 'up' }, '▲') : !why && G.effectOf(it) ? h('span', { class: 'up eff' }, '◆') : null,
+      why ? h('span', { class: 'why' }, why.kind === 'level' ? String(why.lvl) : '✕') : null);
+  }
   // vendor: the grid at a vendor, where what it won't buy is dimmed and loses its marks before the tap (#167)
-  function bagGrid(onTap, vendor) {
-    const P = G.S.player;
-    const g = h('div', { class: 'bags' });
-    for (let i = 0; i < G.bagCap(); i++) {
+  // filtered: the Bags screen, where the tabs pick what shows; empty slots only on All, so a tab is just its items
+  function bagGrid(onTap, vendor, filtered) {
+    const P = G.S.player, all = !filtered || (ui.invTab || 'all') === 'all';
+    const g = h('div', { class: invGridClass() });
+    for (let i = 0; i < (all ? G.bagCap() : P.bags.length); i++) {
       const b = P.bags[i];
       if (!b) { g.append(h('div', { class: 'slot' })); continue; }
-      const it = b.item;
-      const why = blockReason(it), keep = vendor && !G.sellable(it);
-      g.append(h('button', { class: 'slot qb' + it.q + (ui.bagSel === i || (ui.sellPick && ui.sellPick.has(i)) ? ' sel' : '') + (why ? ' cant' : '') + (keep ? ' nosell' : ''), onclick: () => onTap(i) },
-        img(art('icon', it.icon)), ui.sellPick && ui.sellPick.has(i) ? h('span', { class: 'pick' }, '✓') : null, b.n > 1 ? h('span', { class: 'cnt tnum' }, b.n) : null, keep ? null : !why && G.isUpgrade(it) ? h('span', { class: 'up' }, '▲') : !why && G.effectOf(it) ? h('span', { class: 'up eff' }, '◆') : null,
-        why ? h('span', { class: 'why' }, why.kind === 'level' ? String(why.lvl) : '✕') : null));
+      if (filtered && !invShows(b.item)) continue;
+      g.append(itemCell(b.item, b.n, { sel: ui.bagSel === i || (ui.sellPick && ui.sellPick.has(i)), pick: ui.sellPick && ui.sellPick.has(i), why: blockReason(b.item), keep: vendor && !G.sellable(b.item), onTap: () => onTap(i) }));
     }
+    if (!g.children.length) return h('p', { class: 'ai-note', style: { margin: '4px 0' } }, `No ${INV_TABS.find(([k]) => k === ui.invTab)[1].toLowerCase()} in your bags.`);
+    return g;
+  }
+  // a bank's grid (#536): its items under the tab, then its free slots (on All); a tap moves the item
+  function invGrid(entries, cap, emptyText) {
+    const all = (ui.invTab || 'all') === 'all', g = h('div', { class: invGridClass() });
+    for (const e of entries) if (invShows(e.item)) g.append(itemCell(e.item, e.n, e));
+    if (all) for (let i = entries.length; i < cap; i++) g.append(h('div', { class: 'slot' }));
+    if (!g.children.length) return h('div', { class: 'people' }, entries.length ? `No ${INV_TABS.find(([k]) => k === ui.invTab)[1].toLowerCase()} here.` : emptyText);
     return g;
   }
   // Throw away: grey junk goes at once; anything better asks first, since it is gone for good
@@ -3183,6 +3210,8 @@
       // Sort (#133) in the header row before ×, styled as the header's Back; the header outlives a redraw, so the old one
       // goes first. Not while picking items to sell, where it would move the picks. The toast tells the order.
       const hd = t.parentNode, oldSort = hd && hd.querySelector('.bag-sort'); if (oldSort) oldSort.remove();
+      { const old = hd && hd.querySelector('.bag-size'); if (old) old.remove(); }
+      if (hd) hd.insertBefore(h('button', { class: 'sheet-backbtn bag-size' + (invCompact() ? ' on' : ''), 'aria-label': invCompact() ? 'Show big slots' : 'Show small slots, more to a row', 'aria-pressed': String(invCompact()), onclick: () => { setCompact(!invCompact()); toast(invCompact() ? 'Small slots: more to a row.' : 'Big slots.', true); ui.sheetFn(); } }, '▦'), hd.querySelector('.x'));
       if (hd && P.bags.length > 1 && !ui.sellPick) hd.insertBefore(h('button', { class: 'sheet-backbtn bag-sort', 'aria-label': 'Sort bags: gear first, junk last', onclick: () => { const moved = G.sortBags(); ui.bagSel = null; toast(moved ? 'Bags sorted: gear first, junk last.' : 'Already sorted.'); ui.sheetFn(); } }, 'Sort'), hd.querySelector('.x'));
       // the bag bar (v10.9): your bags in one short row, empty slots shown; tap one to take it off
       if ((P.bagsEq || []).length) {
@@ -3194,10 +3223,11 @@
       const vendorHereB = D.PLACES[P.place].vendor || D.PLACES[P.place].gearVendor;
       if (ui.sellPick && !vendorHereB) ui.sellPick = null;
       const sellable = (x) => x && !x.item.noSell && x.item.slot !== 'quest';
+      b.append(invTabs(P.bags.map((x) => x.item)));
       b.append(bagGrid((i) => {
         if (ui.sellPick) { if (!sellable(P.bags[i])) return toast('That cannot be sold.'); if (ui.sellPick.has(i)) ui.sellPick.delete(i); else ui.sellPick.add(i); ui.sheetFn(); return; }
         ui.bagSel = ui.bagSel === i ? null : i; ui.sheetFn();
-      }));
+      }, false, true));
       // selling several at once (v10.3): tap items to pick them, then sell them together
       if (ui.sellPick) {
         const picked = [...ui.sellPick].filter((i) => sellable(P.bags[i])), total = picked.reduce((v, i) => v + (P.bags[i].item.sell || 1) * P.bags[i].n, 0);
@@ -4052,12 +4082,11 @@
       title.querySelector('small').textContent = over > 0 ? `${P.bank.length} items in ${G.bankSlots()} slots · ${P.bags.length}/${G.bagCap()} in your bags · tap to move` : `${P.bank.length}/${G.bankSlots()} in the bank · ${P.bags.length}/${G.bagCap()} in your bags · tap to move`;
       if (over > 0) b.append(h('p', { class: 'ai-note', style: { margin: '0 0 6px' } }, `${P.bank.length} items in ${G.bankSlots()} slots: ${over} over from rewards. Take something out to deposit again.`));
       { const n = P.bankTabs || 0, c = G.BANK_TAB_COST[n]; if (c != null) b.append(h('button', { class: 'btn alt wide', disabled: P.money < c, onclick: () => { G.buyBankTab(); ui.sheetFn(); } }, h('span', { html: `Buy bank tab ${n + 1} (+${G.BANK_TAB} slots) · ` + moneyHtml(c, false, true) }))); } // #506
-      b.append(h('div', { class: 'sec-h' }, 'In the bank', h('small', null, 'tap to take')));
-      const bank = h('div', { class: 'list' }); P.bank.forEach((x, i) => bank.append(itemRow(x.item, x.n, '↑', () => { G.bankWithdraw(i); ui.sheetFn(); })));
-      if (!P.bank.length) bank.append(h('div', { class: 'people' }, 'Empty. Keep gear sets, quest leftovers and heirlooms here.'));
-      b.append(bank, h('div', { class: 'sec-h' }, 'Your bags', h('small', null, 'tap to store')));
-      const bags = h('div', { class: 'list' }); P.bags.forEach((x, i) => bags.append(itemRow(x.item, x.n, '↓', () => { G.bankDeposit(i); ui.sheetFn(); })));
-      b.append(bags);
+      // a grid like the bags (#536), so a whole tab shows at once; the tabs filter both grids
+      b.append(invTabs(P.bank.map((x) => x.item)), h('div', { class: 'sec-h' }, 'In the bank', h('small', null, 'tap to take')));
+      b.append(invGrid(P.bank.map((x, i) => ({ item: x.item, n: x.n, onTap: () => { G.bankWithdraw(i); ui.sheetFn(); } })), G.bankSlots(), 'Empty. Keep gear sets, quest leftovers and heirlooms here.'));
+      b.append(h('div', { class: 'sec-h' }, 'Your bags', h('small', null, 'tap to store')));
+      b.append(invGrid(P.bags.map((x, i) => ({ item: x.item, n: x.n, onTap: () => { G.bankDeposit(i); ui.sheetFn(); } })), G.bagCap(), 'Your bags are empty.'));
     });
   }
   // the Account tab: what every character on the account shares (#286); only what you could sell goes in
@@ -4067,17 +4096,16 @@
     { const n = bank.tabs, c = G.ABANK_TAB_COST[n], have = G.account().marks;
       if (c != null) b.append(h('button', { class: 'btn alt wide', disabled: have < c, onclick: () => { G.abankBuyTab(); ui.sheetFn(); } }, `Buy account tab ${n + 1} (+${G.ABANK_TAB} slots) · ${c} Mentor Marks`)); }
     const info = h('button', { class: 'sec-i', 'aria-label': 'About the account bank', onclick: () => toast('Every character on this account can take from it. With cloud save on, it follows you to your other devices.') }, 'ⓘ');
-    b.append(h('div', { class: 'sec-h' }, h('span', null, 'In the account bank', info), h('small', null, 'tap to take')));
-    const list = h('div', { class: 'list' });
-    for (const g of view) { // shown in stacks of 20, like the bags, so the rows add up to the slots used
+    const cells = [];
+    for (const g of view) { // shown in stacks of 20, like the bags, so the cells add up to the slots used
       let left = g.n;
-      do { const n = g.stack ? Math.min(ABANK.STACK, left) : g.n; list.append(itemRow(g.item, n, '↑', () => { G.abankWithdraw(g.key, n); ui.sheetFn(); })); left -= n; } while (g.stack && left > 0);
+      do { const n = g.stack ? Math.min(ABANK.STACK, left) : g.n; cells.push({ item: g.item, n, onTap: () => { G.abankWithdraw(g.key, n); ui.sheetFn(); } }); left -= n; } while (g.stack && left > 0);
     }
-    if (!view.length) list.append(h('div', { class: 'people' }, 'Empty. Anything you could sell can go here, for any of your characters to take.'));
-    b.append(list, h('div', { class: 'sec-h' }, 'Your bags', h('small', null, 'tap to store')));
-    const bags = h('div', { class: 'list' });
-    P.bags.forEach((x, i) => { const ok = G.abankTakes(x.item), r = itemRow(x.item, x.n, ok ? '↓' : '', () => { G.abankDeposit(i); ui.sheetFn(); }, ok ? null : 'Can\'t be shared'); if (!ok) r.classList.add('dim'); bags.append(r); });
-    b.append(bags);
+    b.append(invTabs(cells.map((c) => c.item)), h('div', { class: 'sec-h' }, h('span', null, 'In the account bank', info), h('small', null, 'tap to take')));
+    b.append(invGrid(cells, cap, 'Empty. Anything you could sell can go here, for any of your characters to take.'));
+    b.append(h('div', { class: 'sec-h' }, 'Your bags', h('small', null, 'tap to store')));
+    // what can't be shared is dimmed, and a tap says why instead of moving it
+    b.append(invGrid(P.bags.map((x, i) => { const ok = G.abankTakes(x.item); return { item: x.item, n: x.n, dim: !ok, onTap: () => { if (!ok) return toast(`${x.item.name} can't be shared. Only what you could sell on the auction house goes in.`); G.abankDeposit(i); ui.sheetFn(); } }; }), G.bagCap(), 'Your bags are empty.'));
   }
   function openAuction() {
     ui.ahTab = ui.ahTab || 'browse';

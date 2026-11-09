@@ -9,6 +9,7 @@
   const G = {
     '✓': [L('M4 10.6l4.2 4L16 5.4', 2.8)],
     'ⓘ': [L(ring(10, 10, 7.6), 1.8), F('M8.8 4.8h2.4v2.4H8.8Z'), L('M10 9.2v5.4', 2.4)], // more about this: help one tap away (docs/ui-text-style.md)
+    '▦': [F('M2.6 2.6h4.4v4.4H2.6ZM7.8 2.6h4.4v4.4H7.8ZM13 2.6h4.4v4.4H13ZM2.6 7.8h4.4v4.4H2.6ZM7.8 7.8h4.4v4.4H7.8ZM13 7.8h4.4v4.4H13ZM2.6 13h4.4v4.4H2.6ZM7.8 13h4.4v4.4H7.8ZM13 13h4.4v4.4H13Z')], // the small-slots grid on Bags and the bank (#534): nine small squares
     '✗': [L('M5.2 5.2l9.6 9.6M14.8 5.2l-9.6 9.6', 2.8)],
     '✕': [L('M5.5 5.5l9 9M14.5 5.5l-9 9', 2.6)],
     '✖': [L('M5 5l10 10M15 5L5 15', 3.4)],
