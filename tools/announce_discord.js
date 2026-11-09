@@ -13,6 +13,7 @@
 // Usage: node tools/announce_discord.js [tag]          the latest normal release, or that tag
 //        node tools/announce_discord.js <tag> --beta   allow a pre-release (posts to #beta-builds)
 //        node tools/announce_discord.js [tag] --quiet  post without the role ping
+//        node tools/announce_discord.js [tag] --ping   a patch release that pings the Patch Notes role anyway
 //        node tools/announce_discord.js [tag] --dry    print every part instead of posting (before the GitHub release
 //                                                       exists, it reads notes/<tag>.md)
 //        node tools/announce_discord.js <tag> --dry --notes FILE   a dry run of FILE's notes (tools/announce_discord.test.js)
@@ -122,7 +123,7 @@ const DAY = 86400000, NOW = Date.now();
 const lastBetaPing = posted.map((l) => l.match(/^ping beta (\S+)/)).filter(Boolean).map((m) => Date.parse(m[1])).filter((x) => x > 0).sort((a, b) => b - a)[0];
 const noPing = flag('--quiet') ? '--quiet'
   : rel.isPrerelease ? (lastBetaPing && NOW - lastBetaPing < DAY ? `testers were pinged in the last day (${new Date(lastBetaPing).toISOString().slice(0, 16).replace('T', ' ')} UTC)` : null)
-  : /^v\d+\.\d+\.[1-9]\d*$/.test(rel.tagName) ? 'patch release' : null;
+  : /^v\d+\.\d+\.[1-9]\d*$/.test(rel.tagName) && !flag('--ping') ? 'patch release' : null; /* --ping: a patch that pings like a feature update */
 const role = noPing ? null : rel.isPrerelease ? BETA_ROLE : PATCH_ROLE;
 const title = (rel.isPrerelease ? 'Beta: ' : '') + (rel.name || rel.tagName);
 const payloads = parts.map((text, i) => ({
