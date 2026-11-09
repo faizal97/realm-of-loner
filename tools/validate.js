@@ -224,6 +224,7 @@ for (const q of [2, 3, 4]) for (let L = 1; L < D.LEVEL_CAP; L++)
   for (const k of Object.keys(D.ACTIVITIES).filter((k) => { const A = D.ACTIVITIES[k], Dg = A.dungeon && D.DUNGEONS[A.dungeon]; return Dg && Dg.raid && !A.needQuest; }))
     for (const x of ['raid_' + k, 'raid_' + k + '_h']) { if (!banners.has(x)) err(`raid ${k}: no banner '${x}' (art/banners/banners.py RAIDS)`); used.add(x); }
   if ((D.WEEK || []).some((b) => b.bonus && !['featured_dungeons'].includes(b.bonus))) err('this week: unknown bonus (known: featured_dungeons)');
+  for (const x of ['weekly_board', 'weekly_board_h', 'daily_board', 'daily_board_h']) { if (!banners.has(x)) err(`the boards: no banner '${x}' (art/banners/banners.py)`); used.add(x); } /* G.weekBanners adds the boards every week (#541) */
   for (const k of banners) if (!used.has(k)) err(`banner art '${k}' is used by no banner in src/data/thisweek.js: delete it from art/banners/banners.py`);
 }
 

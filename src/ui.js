@@ -3502,6 +3502,11 @@
     bags: () => openBags(),
     'lfg:dungeon': () => { ui.gfTab = 'dungeon'; openSocial('group'); },
     'lfg:raid': () => { ui.gfTab = 'raid'; openSocial('group'); },
+    'lfg:trials': () => { ui.gfTab = 'trials'; openSocial('group'); },
+    'lfg:you': () => { ui.gfTab = 'you'; openSocial('group'); },
+    bounty: () => { if (G.isHub(G.S.player.place)) openBountyBoard(); else toast('Bounty Boards stand in towns with an inn.'); },
+    worldboss: () => { const wb = G.worldBoss(); if (wb) openBriefing(wb, false); },
+    brawl: () => { closeSheet(); if (G.S.player.place !== G.BRAWL.place) routeDialog(G.BRAWL.place); },
   };
   const WEEK_KEY = 'azsolo.weekSeen'; // this device: the banner ids already shown (the button's dot, the once-a-week opening)
   const weekSeen = () => { try { return new Set(JSON.parse(localStorage.getItem(WEEK_KEY) || '[]')); } catch (e) { return new Set(); } };
@@ -3561,7 +3566,7 @@
     if (!G.S || G.S.player.level < 2 || G.S.run) return;
     if (ui.dialog || ui.sheet || (window.CS && CS.playing)) { if ((tries || 0) < 15) setTimeout(() => weekOnEnter((tries || 0) + 1), 2000); return; }
     const seen = weekSeen();
-    if (G.weekBanners().some((b) => !seen.has(b.id))) openThisWeek();
+    if (G.weekBanners().some((b) => !b.quiet && !seen.has(b.id))) openThisWeek(); // the Daily Board alone never opens it
   }
   // the first time into a festival run on this device: its story, once (like a dungeon's first-entry intro)
   function lwIntro(act) {

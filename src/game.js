@@ -4811,7 +4811,39 @@
     quest: (id) => !!G.S.player.done[id],
     featured_dungeon: () => G.featuredDungeonClaimed(),
     featured_raid: () => G.featuredClaimed(),
+    // the boards (#541): each reads what the game already keeps
+    bounty_week: () => Object.values(G.S.player.bounty || {}).some((b) => b.weekly && b.done && bountyLive(b)),
+    bounty_day: () => Object.values(G.S.player.bounty || {}).some((b) => !b.weekly && b.done && bountyLive(b)),
+    guild_goal: () => { const w = root.SOC && SOC.week(); return !!(w && w.done); },
+    world_boss: () => { const wb = G.worldBoss(); return !!wb && G.worldBossLooted(wb); },
+    trials_week: () => { const R = G.trials(), T = root.TRIALS; return !!(R.week && R.week.paid && T && R.week.id === T.period(new Date(now())).id); },
+    roulette: () => !G.rouletteReady(),
+    brawl_chest: () => !G.brawlChestOpen(),
   };
+  // The Weekly Board and the Daily Board: banners of their own every week and every day, listing only the steps this
+  // character can do (a step's `need`: 'cap' level 60, 'guild' in a guild, 'brawl' the Brawl's level)
+  const canDo = (need) => { const P = G.S.player; return !need || (need === 'cap' ? P.level >= D.LEVEL_CAP : need === 'guild' ? P.guild >= 0 : need === 'brawl' ? P.level >= G.BRAWL.minLvl : true); };
+  function boards(d) {
+    const P = G.S.player, day = new Date(d.getFullYear(), d.getMonth(), d.getDate()), sun = new Date(day); sun.setDate(sun.getDate() + (7 - sun.getDay()) % 7);
+    const wb = G.worldBoss(d), wbName = wb && D.MOBS[D.ACTIVITIES[wb].boss] ? D.MOBS[D.ACTIVITIES[wb].boss].name : null;
+    const week = [
+      { text: 'Finish a weekly bounty at a town\u2019s Bounty Board', check: ['bounty_week', 1], go: 'bounty' },
+      { text: 'Help your guild reach its weekly goal', check: ['guild_goal', 1], go: 'social:guild', need: 'guild' },
+      wbName ? { text: `Defeat this week\u2019s world boss, ${wbName}`, check: ['world_boss', 1], go: 'worldboss', need: 'cap' } : null,
+      { text: 'Finish 4 Trials at your best this week', check: ['trials_week', 1], go: 'lfg:trials', need: 'cap' },
+    ].filter((x) => x && canDo(x.need));
+    const today = [
+      { text: 'Finish a daily bounty', check: ['bounty_day', 1], go: 'bounty' },
+      P.level >= 15 ? { text: 'Run today\u2019s Dungeon Roulette', check: ['roulette', 1], go: 'lfg:you' } : null,
+      { text: 'Win the Bloodsand Brawl\u2019s chest', check: ['brawl_chest', 1], go: 'brawl', need: 'brawl' },
+    ].filter((x) => x && canDo(x.need));
+    return [
+      { id: 'board_w' + dayNum(sun), kind: 'now', board: 'week', title: 'The Weekly Board', art: ['banner', 'weekly_board'], artHorde: ['banner', 'weekly_board_h'], to: sun,
+        text: ['What the realm asks of you this week. Each one pays once a week, and all of them start again on Monday.'], steps: week },
+      { id: 'board_d' + dayNum(day), kind: 'now', board: 'day', quiet: true, title: 'The Daily Board', art: ['banner', 'daily_board'], artHorde: ['banner', 'daily_board_h'], to: day,
+        text: ['Today\u2019s jobs. They start again at midnight.'], steps: today },
+    ];
+  }
   const wkDay = (t, end) => { const [y, m, d] = t.split('-').map(Number); return end ? new Date(y, m - 1, d, 23, 59, 59, 999) : new Date(y, m - 1, d); };
   G.weekDay = wkDay;
   G.weekBanners = function (date) {
@@ -4824,8 +4856,11 @@
           steps: [{ text: `Clear ${A.name} this week`, check: ['featured_raid', 1], go: 'lfg:raid' }] }); } }
     const order = { now: 0, new: 1, soon: 2 };
     const own = (D.WEEK || []).filter((b) => wkDay(b.from) <= d && d <= wkDay(b.to, true)).sort((a, b) => order[a.kind] - order[b.kind]);
-    out.push(...own);
-    if (!out.length && D.EVENTS) { const k = Object.keys(D.EVENTS).sort((a, b) => G.eventNext(a) - G.eventNext(b))[0]; if (k) out.push({ id: 'ev_next_' + k, kind: 'soon', event: k, title: D.EVENTS[k].name, text: [D.EVENTS[k].story[0]], steps: [], atDate: G.eventNext(k) }); }
+    const nowOwn = own.filter((b) => b.kind === 'now'), rest = own.filter((b) => b.kind !== 'now');
+    out.push(...nowOwn);
+    if (G.S && G.S.player.level >= 10) out.push(...boards(d)); // the boards, after what's on and before what's new
+    out.push(...rest);
+    if (!G.liveEvents(d).length && !own.length && D.EVENTS) { const k = Object.keys(D.EVENTS).sort((a, b) => G.eventNext(a) - G.eventNext(b))[0]; if (k) out.push({ id: 'ev_next_' + k, kind: 'soon', event: k, title: D.EVENTS[k].name, text: [D.EVENTS[k].story[0]], steps: [], atDate: G.eventNext(k) }); }
     return out;
   };
   G.weekStepDone = (st) => { const f = st.check && G.WEEK_CHECKS[st.check[0]]; return f ? !!f(st.check[1]) : null; }; // null: a tip, nothing to tick

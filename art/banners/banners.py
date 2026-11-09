@@ -25,6 +25,7 @@ PARTS = {
     'h4': ['hero', {'race': 'undead', 'cls': 'priest', 'gender': 'f', 'skin': 1, 'hair': 2}],
     'coinworks_gate': ['scene', 'coinworks_gate'],
     'lair_cavern': ['scene', 'lair_cavern'], 'mc_domain': ['scene', 'mc_domain'], 'citadel_throne': ['scene', 'citadel_throne'],
+    'razor_hill': ['scene', 'razor_hill'], 'vineyards': ['scene', 'vineyards'], 'valley_of_trials': ['scene', 'valley_of_trials'],
     'onyxia': ['mob', 'onyxia'], 'ragnaros': ['mob', 'ragnaros'], 'nalveshra': ['mob', 'nalveshra'],
 }
 
@@ -249,7 +250,90 @@ def raid(P, key, side='a'):
     body += embed(P['logo_' + key], 10, 6, 470, 235, 'xMidYMid meet')
     return frame(defs, body)
 
+# ---------------------------------------------------------------- The Weekly Board: a town notice board, its posters pinned
+def poster(x, y, w, h, rot, kind, rnd):
+    """one pinned paper: a wanted poster (skull), the guild's crest, a boss's horned head, or the Trials' hourglass"""
+    ink = '#3a2210'
+    pic = {
+        'wanted': f'<circle cx="0" cy="-4" r="{w * .22}" fill="{ink}"/><rect x="{-w * .14}" y="{w * .12 - 4}" width="{w * .28}" height="{w * .12}" fill="{ink}"/>'
+                  f'<circle cx="{-w * .08}" cy="-6" r="{w * .06}" fill="#f0e2bc"/><circle cx="{w * .08}" cy="-6" r="{w * .06}" fill="#f0e2bc"/>',
+        'guild': f'<path d="M{-w * .24},{-h * .22} H{w * .24} V{h * .02} Q{w * .24},{h * .2} 0,{h * .28} Q{-w * .24},{h * .2} {-w * .24},{h * .02} Z" fill="#2a4c9a" stroke="{ink}" stroke-width="3"/>'
+                 f'<path d="M0,{-h * .14} L{w * .1},{h * .06} L{-w * .1},{h * .06} Z" fill="#e0b450"/>',
+        'boss': f'<path d="M{-w * .26},{-h * .2} Q{-w * .16},{-h * .02} {-w * .14},0 Q{-w * .16},{h * .22} 0,{h * .26} Q{w * .16},{h * .22} {w * .14},0 Q{w * .16},{-h * .02} {w * .26},{-h * .2} Q{w * .08},{-h * .08} 0,{-h * .1} Q{-w * .08},{-h * .08} {-w * .26},{-h * .2} Z" fill="{ink}"/>'
+                f'<circle cx="{-w * .06}" cy="{h * .04}" r="3" fill="#ff5a2a"/><circle cx="{w * .06}" cy="{h * .04}" r="3" fill="#ff5a2a"/>',
+        'trials': f'<path d="M{-w * .18},{-h * .24} H{w * .18} L0,0 L{w * .18},{h * .24} H{-w * .18} L0,0 Z" fill="none" stroke="{ink}" stroke-width="4" stroke-linejoin="round"/>'
+                  f'<path d="M{-w * .1},{h * .2} H{w * .1} L0,{h * .08} Z" fill="#c8a040"/>',
+    }[kind]
+    lines = ''.join(f'<path d="M{-w * .3},{h * .3 + i * 7} H{w * (.3 - rnd.uniform(0, .2)):.1f}" stroke="{ink}" stroke-width="2" opacity=".55"/>' for i in range(2))
+    head = {'wanted': 'WANTED', 'guild': 'GUILD', 'boss': 'BOSS', 'trials': 'TRIALS'}[kind]
+    hd, hw = word(head, 13, 0, 0, .12); hd, _ = word(head, 13, -hw / 2, -h * .3, .12)
+    return (f'<g transform="translate({x},{y}) rotate({rot})"><rect x="{-w / 2 + 3}" y="{-h / 2 + 4}" width="{w}" height="{h}" fill="#000" opacity=".35"/>'
+            f'<path d="M{-w / 2},{-h / 2} H{w / 2} L{w / 2 + 2},{h / 2 - 6} L{w / 2 - 4},{h / 2} H{-w / 2} Z" fill="url(#wPaper)" stroke="#2a1608" stroke-width="2"/>'
+            f'<path d="{hd}" fill="{ink}"/>{pic}{lines}<circle cx="0" cy="{-h / 2 + 7}" r="5" fill="#b8241c" stroke="#3a0806" stroke-width="1.5"/></g>')
+
+def weekly_logo(cx, top):
+    rnd = random.Random(8); out = ''
+    bx, bw, by, bh = cx - 230, 460, top + 64, 200
+    # two posts, the cork-brown board, a little roof
+    for x in (bx + 18, bx + bw - 18): out += f'<rect x="{x - 9}" y="{top + 40}" width="18" height="300" fill="#5a3418" stroke="#1a0c04" stroke-width="3"/>'
+    out += f'<rect x="{bx}" y="{by}" width="{bw}" height="{bh}" rx="4" fill="url(#wCork)" stroke="#1a0c04" stroke-width="5"/>'
+    out += f'<rect x="{bx + 8}" y="{by + 8}" width="{bw - 16}" height="{bh - 16}" fill="none" stroke="#3a2210" stroke-width="2" opacity=".6"/>'
+    for x, y, w, h, r, k in [(bx + 78, by + 98, 92, 120, -6, 'wanted'), (bx + 186, by + 104, 86, 112, 4, 'guild'), (bx + 286, by + 100, 92, 118, -3, 'boss'), (bx + 386, by + 104, 84, 112, 7, 'trials')]:
+        out += poster(x, y, w, h, r, k, rnd)
+    # the header plank, carved
+    pl = f'M{bx - 24},{top + 10} L{bx + bw + 24},{top + 10} L{bx + bw + 38},{top + 40} L{bx + bw + 24},{top + 70} L{bx - 24},{top + 70} L{bx - 38},{top + 40} Z'
+    out += f'<path d="{pl}" fill="url(#wWood)" stroke="#1a0c04" stroke-width="6" stroke-linejoin="round"/><path d="{pl}" fill="none" stroke="#e0b450" stroke-width="2" stroke-linejoin="round" opacity=".8"/>'
+    for x in (bx - 10, bx + bw + 10): out += f'<circle cx="{x}" cy="{top + 40}" r="5" fill="#9a9a9a" stroke="#1a0c04" stroke-width="2"/>'
+    t1, w1 = word('THE', 18, 0, 0, .12); t2, w2 = word('WEEKLY BOARD', 40, 0, 0, .06); tot = w1 + 12 + w2; x0 = cx - tot / 2
+    t1, _ = word('THE', 18, x0, top + 54, .12); t2, _ = word('WEEKLY BOARD', 40, x0 + w1 + 12, top + 56, .06)
+    return out + letters(t1, 4, 'url(#wGold)', '#1a0c04') + letters(t2, 6, 'url(#wGold)', '#1a0c04')
+
+def weekly(P, side):
+    defs = (GOLD.format(id='wGold') + shade('wCork', [(0, '#a8784a', 1), (1, '#7a5030', 1)]) + shade('wWood', [(0, '#7a4a24', 1), (.5, '#5a3418', 1), (1, '#3a2210', 1)])
+            + shade('wPaper', [(0, '#f6e8c4', 1), (1, '#d8bc88', 1)]) + shade('wDark', [(0, '#0b0705', .25), (.6, '#0b0705', .15), (1, '#0b0705', .85)]))
+    body = embed(P['goldshire' if side == 'a' else 'razor_hill'], 0, 0, W, HH, 'xMidYMid slice', vb='0 40 400 167')
+    body += f'<rect width="{W}" height="{HH}" fill="url(#wDark)"/>' + weekly_logo(480, 22)
+    body += figure(P[side + '2'], 118, 404, 240) + figure(P[side + '3'], 846, 408, 250, flip=True)
+    return frame(defs, body)
+
+# ---------------------------------------------------------------- The Daily Board: a chalkboard at sunrise
+def daily_logo(cx, top):
+    rnd = random.Random(4); out = ''
+    # the sun coming up behind it
+    out += f'<circle cx="{cx}" cy="{top + 150}" r="150" fill="url(#dSun)"/>'
+    for i in range(16):
+        a = math.pi * (1 + i / 15); out += f'<path d="M{cx + 160 * math.cos(a):.0f},{top + 150 + 160 * math.sin(a):.0f} L{cx + 210 * math.cos(a):.0f},{top + 150 + 210 * math.sin(a):.0f}" stroke="#ffd36a" stroke-width="5" stroke-linecap="round" opacity=".55"/>'
+    # hanging chains and the slate in its frame
+    bx, bw, by, bh = cx - 190, 380, top + 30, 190
+    out += f'<path d="M{bx + 40},{top - 20} L{bx + 60},{by} M{bx + bw - 40},{top - 20} L{bx + bw - 60},{by}" stroke="#4a4a4a" stroke-width="4" stroke-dasharray="7 4"/>'
+    out += f'<rect x="{bx - 12}" y="{by - 12}" width="{bw + 24}" height="{bh + 24}" rx="8" fill="url(#cWood)" stroke="#1a0c04" stroke-width="5"/>'
+    out += f'<rect x="{bx}" y="{by}" width="{bw}" height="{bh}" rx="3" fill="url(#cSlate)" stroke="#0a0f0c" stroke-width="2"/>'
+    # chalk: TODAY, big and a little rough; three jobs with ticks under it
+    d, w = word('TODAY', 74, 0, 0, .08); d, _ = word('TODAY', 74, cx - w / 2, by + 92, .08)
+    out += f'<path d="{d}" fill="#f4f2ea" opacity=".92"/><path d="{d}" fill="none" stroke="#f4f2ea" stroke-width="1.6" opacity=".5" transform="translate(1.5,1)"/>'
+    for i in range(3):
+        y = by + 122 + i * 22; x0 = cx - 120
+        out += f'<path d="M{x0},{y} l6,7 l12,-14" fill="none" stroke="#b8e8a0" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" opacity="{.95 if i < 2 else .0}"/>'
+        out += f'<rect x="{x0 - 2}" y="{y - 10}" width="20" height="16" fill="none" stroke="#f4f2ea" stroke-width="2" opacity=".7"/>'
+        out += f'<path d="M{x0 + 30},{y} q{rnd.uniform(40, 60):.0f},-4 {rnd.uniform(150, 200):.0f},0" fill="none" stroke="#f4f2ea" stroke-width="2.5" stroke-linecap="round" opacity=".75"/>'
+    # its name on a brass plate along the bottom of the frame
+    t, tw = word('THE DAILY BOARD', 20, 0, 0, .14); t, _ = word('THE DAILY BOARD', 20, cx - tw / 2, by + bh + 8, .14)
+    out += f'<rect x="{cx - tw / 2 - 14}" y="{by + bh - 12}" width="{tw + 28}" height="28" rx="5" fill="#2a1608" stroke="url(#cGold)" stroke-width="3"/>' + letters(t, 3, 'url(#cGold)', '#140a04')
+    # a stub of chalk on the ledge
+    out += f'<rect x="{bx + bw - 70}" y="{by + bh + 6}" width="26" height="8" rx="3" fill="#f4f2ea" transform="rotate(-8 {bx + bw - 57} {by + bh + 10})"/>'
+    return out
+
+def daily(P, side):
+    defs = (GOLD.format(id='cGold') + shade('cWood', [(0, '#8a5a2c', 1), (1, '#4a2a14', 1)]) + shade('cSlate', [(0, '#2e3a34', 1), (1, '#1a2420', 1)])
+            + '<radialGradient id="dSun" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffe08a" stop-opacity=".9"/><stop offset=".55" stop-color="#ffb04a" stop-opacity=".45"/><stop offset="1" stop-color="#ff8a3a" stop-opacity="0"/></radialGradient>'
+            + shade('cDawn', [(0, '#ff9a5a', .35), (.5, '#ff9a5a', .05), (1, '#140a06', .85)]))
+    body = embed(P['vineyards' if side == 'a' else 'valley_of_trials'], 0, 0, W, HH, 'xMidYMid slice', vb='0 40 400 167')
+    body += f'<rect width="{W}" height="{HH}" fill="url(#cDawn)"/>' + daily_logo(480, 30)
+    body += figure(P[side + '4'], 150, 406, 240)
+    return frame(defs, body)
+
 BANNERS = {'notes_come_due': notes, 'living_realm': lambda P: realm(P, 'a'), 'living_realm_h': lambda P: realm(P, 'h'), 'faire': faire,
+           'weekly_board': lambda P: weekly(P, 'a'), 'weekly_board_h': lambda P: weekly(P, 'h'), 'daily_board': lambda P: daily(P, 'a'), 'daily_board_h': lambda P: daily(P, 'h'),
            'featured_dungeons': lambda P: dungeons(P, 'a'), 'featured_dungeons_h': lambda P: dungeons(P, 'h'),
            **{'raid_' + r + x: (lambda r, sd: lambda P: raid(P, r, sd))(r, sd) for r in RAIDS for x, sd in (('', 'a'), ('_h', 'h'))}}
 
