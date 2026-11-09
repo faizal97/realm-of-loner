@@ -3135,11 +3135,12 @@
   // ---------- bags
   // the filter tabs (#534) on Bags and the bank: gear, materials (grey junk too: it only sells) and what you use
   const INV_TABS = [['all', 'All'], ['gear', 'Gear'], ['mat', 'Materials'], ['use', 'Use']];
+  const INV_NONE = { gear: 'No gear', mat: 'No materials', use: 'Nothing to use' }; // an empty tab says what it holds
   const invKind = (it) => (D.GEAR_SLOTS.includes(it.slot) ? 'gear' : it.slot === 'mat' || it.slot === 'junk' ? 'mat' : 'use');
   const invShows = (it) => { const f = ui.invTab || 'all'; return f === 'all' || invKind(it) === f; };
   function invTabs(items) {
     const n = (k) => (k === 'all' ? items.length : items.filter((it) => invKind(it) === k).length);
-    return h('div', { class: 'chips inv-tabs' }, ...INV_TABS.map(([k, l]) => h('button', { class: 'chip' + ((ui.invTab || 'all') === k ? ' gold' : ''), 'aria-pressed': String((ui.invTab || 'all') === k), onclick: () => { ui.invTab = k; ui.bagSel = null; ui.sheetFn(); } }, `${l} ${n(k)}`)));
+    return h('div', { class: 'chips inv-tabs' }, ...INV_TABS.map(([k, l]) => h('button', { class: 'chip' + ((ui.invTab || 'all') === k ? ' gold' : ''), 'aria-pressed': String((ui.invTab || 'all') === k), onclick: () => { ui.invTab = k; ui.bagSel = null; if (ui.sellPick) ui.sellPick = new Set(); ui.sheetFn(); } }, `${l} ${n(k)}`)));
   }
   // the small grid (#534): 10 to a row on a phone instead of 7, the whole bag on one screen; kept on this device
   const invCompact = () => { try { return localStorage.getItem('azsolo.bagsCompact') === '1'; } catch (e) { return false; } };
@@ -3164,15 +3165,15 @@
       if (filtered && !invShows(b.item)) continue;
       g.append(itemCell(b.item, b.n, { sel: ui.bagSel === i || (ui.sellPick && ui.sellPick.has(i)), pick: ui.sellPick && ui.sellPick.has(i), why: blockReason(b.item), keep: vendor && !G.sellable(b.item), onTap: () => onTap(i) }));
     }
-    if (!g.children.length) return h('p', { class: 'ai-note', style: { margin: '4px 0' } }, `No ${INV_TABS.find(([k]) => k === ui.invTab)[1].toLowerCase()} in your bags.`);
+    if (!g.children.length) return h('p', { class: 'ai-note', style: { margin: '4px 0' } }, `${INV_NONE[ui.invTab]} in your bags.`);
     return g;
   }
   // a bank's grid (#536): its items under the tab, then its free slots (on All); a tap moves the item
   function invGrid(entries, cap, emptyText) {
     const all = (ui.invTab || 'all') === 'all', g = h('div', { class: invGridClass() });
-    for (const e of entries) if (invShows(e.item)) g.append(itemCell(e.item, e.n, e));
+    for (const e of entries) if (invShows(e.item)) g.append(itemCell(e.item, e.n, Object.assign({ why: e.dim ? null : blockReason(e.item) }, e)));
     if (all) for (let i = entries.length; i < cap; i++) g.append(h('div', { class: 'slot' }));
-    if (!g.children.length) return h('div', { class: 'people' }, entries.length ? `No ${INV_TABS.find(([k]) => k === ui.invTab)[1].toLowerCase()} here.` : emptyText);
+    if (!g.children.length) return h('div', { class: 'people' }, entries.length ? `${INV_NONE[ui.invTab]} here.` : emptyText);
     return g;
   }
   // Throw away: grey junk goes at once; anything better asks first, since it is gone for good
@@ -3226,7 +3227,7 @@
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { closeDialog(); go(); } }, 'Throw away'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Keep'))], true);
   }
   function openBags() {
-    ui.bagSel = null; ui.sellPick = null; G.seenBags(); renderNavDots(); // seen: the dot clears (issues #11, #23)
+    ui.bagSel = null; ui.sellPick = null; ui.invTab = 'all'; G.seenBags(); renderNavDots(); // seen: the dot clears (issues #11, #23)
     openSheet('bags', 'Backpack', null, (b, t) => {
       const P = G.S.player;
       const bd = G.bagBadge(); // "2 free" or "Full" beside the count, in the badge's colour, so the badge explains itself (#90)
@@ -3260,7 +3261,7 @@
         b.append(h('div', { class: 'bag-acts' }, h('div', { class: 'bag-acts-t' }, h('b', null, picked.length ? `${picked.length} picked` : 'Tap items to pick them'), picked.length ? h('small', { html: ' · sells for ' + moneyHtml(total) }) : null),
           h('div', { class: 'btn-row' },
             h('button', { class: 'btn', disabled: !picked.length, onclick: () => precious ? showDialog([h('h3', null, `Sell ${picked.length} items?`), h('p', null, `${precious} of them ${precious > 1 ? 'are' : 'is'} rare, upgraded or better than what you wear. Vendors do not sell things back.`), h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { closeDialog(); go(); } }, 'Sell'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Keep'))], true) : go() }, 'Sell'),
-            h('button', { class: 'btn alt', onclick: () => { ui.sellPick = new Set(P.bags.map((x, i) => i).filter((i) => sellable(P.bags[i]) && P.bags[i].item.q === 0)); ui.sheetFn(); } }, 'Pick grey'),
+            h('button', { class: 'btn alt', onclick: () => { ui.invTab = 'all'; ui.sellPick = new Set(P.bags.map((x, i) => i).filter((i) => sellable(P.bags[i]) && P.bags[i].item.q === 0)); ui.sheetFn(); } }, 'Pick grey'),
             h('button', { class: 'btn alt', onclick: () => { ui.sellPick = null; ui.sheetFn(); } }, 'Cancel'))));
         return;
       }
@@ -4098,6 +4099,7 @@
   const itemRow = (it, n, right, onclick, sub) => h('button', { class: 'row', onclick },
     h('div', { class: 'ic' }, itemIcon(it)), h('div', { class: 't' }, h('b', { style: { color: (D.QUALITY[it.q || 1] || D.QUALITY[1]).color } }, it.name + (n > 1 ? ` ×${n}` : '')), h('small', null, sub || (it.lvl ? `Level ${it.lvl} ${D.SLOT_LABEL[it.slot] || it.slot}` : ''))), h('div', { class: 'r tnum' }, right || ''));
   function openBank() {
+    ui.invTab = 'all';
     openSheet('bank', 'Bank', `${G.bankSlots()} slots · tap to move`, (b, title) => {
       const P = G.S.player; P.bank = P.bank || [];
       // two banks behind one counter (#286): this character's, and the account's that every character shares
@@ -4109,7 +4111,7 @@
       if (over > 0) b.append(h('p', { class: 'ai-note', style: { margin: '0 0 6px' } }, `${P.bank.length} items in ${G.bankSlots()} slots: ${over} over from rewards. Take something out to deposit again.`));
       { const n = P.bankTabs || 0, c = G.BANK_TAB_COST[n]; if (c != null) b.append(h('button', { class: 'btn alt wide', disabled: P.money < c, onclick: () => { G.buyBankTab(); ui.sheetFn(); } }, h('span', { html: `Buy bank tab ${n + 1} (+${G.BANK_TAB} slots) · ` + moneyHtml(c, false, true) }))); } // #506
       // a grid like the bags (#536), so a whole tab shows at once; the tabs filter both grids
-      b.append(invTabs(P.bank.map((x) => x.item)), h('div', { class: 'sec-h' }, 'In the bank', h('small', null, 'tap to take')));
+      b.append(invTabs(P.bank.concat(P.bags).map((x) => x.item)), h('div', { class: 'sec-h' }, 'In the bank', h('small', null, 'tap to take')));
       b.append(invGrid(P.bank.map((x, i) => ({ item: x.item, n: x.n, onTap: () => { G.bankWithdraw(i); ui.sheetFn(); } })), G.bankSlots(), 'Empty. Keep gear sets, quest leftovers and heirlooms here.'));
       b.append(h('div', { class: 'sec-h' }, 'Your bags', h('small', null, 'tap to store')));
       b.append(invGrid(P.bags.map((x, i) => ({ item: x.item, n: x.n, onTap: () => { G.bankDeposit(i); ui.sheetFn(); } })), G.bagCap(), 'Your bags are empty.'));
@@ -4127,7 +4129,7 @@
       let left = g.n;
       do { const n = g.stack ? Math.min(ABANK.STACK, left) : g.n; cells.push({ item: g.item, n, onTap: () => { G.abankWithdraw(g.key, n); ui.sheetFn(); } }); left -= n; } while (g.stack && left > 0);
     }
-    b.append(invTabs(cells.map((c) => c.item)), h('div', { class: 'sec-h' }, h('span', null, 'In the account bank', info), h('small', null, 'tap to take')));
+    b.append(invTabs(cells.map((c) => c.item).concat(P.bags.map((x) => x.item))), h('div', { class: 'sec-h' }, h('span', null, 'In the account bank', info), h('small', null, 'tap to take')));
     b.append(invGrid(cells, cap, 'Empty. Anything you could sell can go here, for any of your characters to take.'));
     b.append(h('div', { class: 'sec-h' }, 'Your bags', h('small', null, 'tap to store')));
     // what can't be shared is dimmed, and a tap says why instead of moving it

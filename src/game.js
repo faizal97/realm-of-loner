@@ -200,6 +200,7 @@
     saveRoster(G.S);
     // the list says only what the save holds (#329): a refused write leaves its last entry, and a character never written isn't listed
     if (ok) { const idx = readIndex().filter((c) => c.id !== G.S.id); idx.push(summary(G.S)); writeIndex(idx); }
+    return ok; // a refused write (storage full) is false: a two-sided move stops before its second side
   };
   G.hasSave = function () { return G.characters().length > 0; };
   G.logout = function () { G.save(); G.S = null; G.fight = null; G.pUnit = null; };
@@ -753,7 +754,7 @@
       const take = Math.min(20 - st.n, b.n); st.n += take; if (b.n > take) merged.push({ item: b.item, n: b.n - take });
     }
     merged.sort((a, b) => kind(a.item) - kind(b.item) || (b.item.q || 0) - (a.item.q || 0) || (b.item.lvl || 0) - (a.item.lvl || 0) || a.item.name.localeCompare(b.item.name) || b.n - a.n);
-    P.bags = merged;
+    P.bags = merged; restack(P); // an old stack over 20 is split while there is room
     emit('change');
     return P.bags.map((b) => b.item.id + ':' + b.n).join() !== was;
   };
@@ -2176,12 +2177,17 @@
   G.bankDeposit = function (idx) {
     const P = G.S.player, b = P.bags[idx]; if (!b) return;
     P.bank = P.bank || [];
-    if (G.stackable(b.item) && stackSlots(P.bank, b.item, b.n) <= Math.max(0, G.bankSlots() - P.bank.length)) { P.bags.splice(idx, 1); putStack(P.bank, b.item, b.n); emit('change'); return; } // stacks of 20 (#440)
+    const full = () => toast(P.bank.length > G.bankSlots() ? `Your bank holds ${P.bank.length - G.bankSlots()} over from rewards. Take something out first.` : 'Your bank is full.');
+    if (G.stackable(b.item)) { // stacks of 20 (#440); an old save's stack over 20 goes in as 20s, or not at all
+      if (stackSlots(P.bank, b.item, b.n) > Math.max(0, G.bankSlots() - P.bank.length)) return full();
+      P.bags.splice(idx, 1); putStack(P.bank, b.item, b.n); emit('change'); return true;
+    }
     if (P.bank.length >= G.bankSlots()) return toast(P.bank.length > G.bankSlots() ? `Your bank holds ${P.bank.length - G.bankSlots()} over from rewards. Take something out first.` : 'Your bank is full.');
-    P.bank.push(b); P.bags.splice(idx, 1); emit('change');
+    P.bank.push(b); P.bags.splice(idx, 1); emit('change'); return true;
   };
   G.bankWithdraw = function (idx) {
     const P = G.S.player, b = (P.bank || [])[idx]; if (!b) return;
+    if (G.isQuestItem(b.item.id)) { G.addItem(b.item, b.n); P.bank.splice(idx, 1); return emit('change'); } // kept with the quests, no slot needed (an old save's)
     // a full stack (20) is no room, and the bank lets go only of what reached the bags (#163: a stack was deleted)
     if (G.stackable(b.item)) { // as many as fit, in stacks of 20 (#440); the rest stays in the bank
       const fit = P.bags.reduce((a, x) => a + (x.item.id === b.item.id && x.n < STACK ? STACK - x.n : 0), 0) + Math.max(0, G.bagCap() - P.bags.length) * STACK;
@@ -2200,7 +2206,7 @@
   const AB = root.ABANK || require('./acctbank.js');
   G.ABANK_BASE = 12; G.ABANK_TAB = 12; G.ABANK_TAB_COST = [200, 400, 800];
   G.abank = () => AB.merge(G.account().bank, null);
-  const abankSave = (b) => { const a = G.account(); a.bank = b; G.saveAccount(a); };
+  const abankSave = (b) => { const a = G.account(); a.bank = b; return G.saveAccount(a) !== false; }; // false: the write was refused
   G.abankSlots = (b) => G.ABANK_BASE + G.ABANK_TAB * Math.min(G.ABANK_TAB_COST.length, (b || G.abank()).tabs);
   G.abankTakes = (it) => !!it && G.ahTrade(it) && !G.isQuestItem(it.id) && !(D.ITEMS[it.id] || {}).event;
   // Each move writes the receiving side first, so a crash between the two writes leaves a copy, never a loss.
@@ -2209,15 +2215,17 @@
     if (!G.abankTakes(x.item)) { toast('Only items you could sell can go in the account bank.'); return false; }
     const b = G.abank(); AB.deposit(b, JSON.parse(JSON.stringify(x.item)), x.n, G.stackable(x.item));
     if (AB.slots(b) > G.abankSlots(b)) { toast('The account bank is full.'); return false; }
-    abankSave(b); P.bags.splice(idx, 1); G.save(); emit('change'); return true; // the account bank, then the bags
+    if (!abankSave(b)) { toast("Couldn't save. Nothing moved."); return false; } // storage full: the bags keep it
+    P.bags.splice(idx, 1); G.save(); emit('change'); return true; // the account bank, then the bags
   };
   G.abankWithdraw = function (key, most) { // most: take at most this many (one shown stack of 20)
     const b = G.abank(), row = AB.view(b).find((g) => g.key === key); if (!row) return false;
     const k = row.stack ? Math.min(row.n, most || row.n, G.bagRoom(row.item)) : (G.bagsFull() ? 0 : 1);
     if (!k) { toast('Bags are full.'); return false; }
-    const got = AB.takeKey(b, key, k);
+    const got = AB.takeKey(b, key, k), P = G.S.player, before = JSON.stringify(P.bags);
     if (!got.n || !G.addItem(JSON.parse(JSON.stringify(got.item)), got.n)) return false;
-    G.save(); abankSave(b); emit('change'); return true; // the bags, then the account bank
+    if (!G.save()) { P.bags = JSON.parse(before); toast("Couldn't save. Nothing moved."); return false; } // storage full: it stays in the account bank
+    abankSave(b); emit('change'); return true; // the bags, then the account bank
   };
   G.abankBuyTab = function () {
     const a = G.account(), b = AB.merge(a.bank, null), c = G.ABANK_TAB_COST[b.tabs];
