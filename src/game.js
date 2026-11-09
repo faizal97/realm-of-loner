@@ -2245,7 +2245,7 @@
     const bagsOk = (D.BAG_AH || []).filter((k) => D.ITEMS[k] && D.BAG_TIER[k] <= L0);
     if (bagsOk.length && !S.ah.listings.some((l) => bagsOk.includes(l.item.id))) {
       const k = bagsOk.length > 1 && Math.random() < 0.3 ? bagsOk[bagsOk.length - 2] : bagsOk[bagsOk.length - 1], it = G.copyItem(k);
-      S.ah.listings.push({ id: 'ah' + t + '_b' + S.ah.listings.length + '_' + rint(0, 9999), item: it, n: 1, price: Math.round(G.ahValue(it) * (0.9 + Math.random() * 0.3)), seller: pick(sellers).name, expires: t + rnd(6, 24) * 3600000 });
+      S.ah.listings.push({ id: 'ah' + t + '_b' + S.ah.listings.length + '_' + rint(0, 9999), item: it, n: 1, price: Math.round(G.ahValue(it) * (1.05 + Math.random() * 0.25)) /* never under its value, so it can't be flipped (sim/auction.js) */, seller: pick(sellers).name, expires: t + rnd(6, 24) * 3600000 });
     }
     while (S.ah.listings.filter((l) => !D.GEAR_SLOTS.includes(l.item.slot)).length < 8) {
       const it = G.copyItem(pick(goods)), n = G.stackable(it) ? rint(1, 4) * 5 : 1;
