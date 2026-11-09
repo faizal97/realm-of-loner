@@ -705,13 +705,24 @@
   // a sale that asks first (#168): green or better, or an upgrade; greys, whites and trade goods sell on one tap
   G.sellNeedsConfirm = (it) => !!it && ((it.q || 0) >= 2 || !!it.pw || (D.GEAR_SLOTS.includes(it.slot) && G.isUpgrade(it))); // upgraded (#444)
   G.sellable = (it) => !!it && !it.noSell && it.slot !== 'quest';
+  // buyback (beta.3): the last 12 sales can be bought back at any vendor for what they sold for
+  G.BUYBACK = 12;
+  const soldKeep = (b) => { const P = G.S.player; P.buyback = [{ item: b.item, n: b.n, price: (b.item.sell || 1) * b.n }].concat(P.buyback || []).slice(0, G.BUYBACK); };
+  G.buyBack = function (i) {
+    const P = G.S.player, x = (P.buyback || [])[i]; if (!x) return false;
+    if (P.money < x.price) { toast('Not enough money.'); return false; }
+    if (G.stackable(x.item) ? G.bagRoom(x.item) < x.n : G.bagsFull()) { toast('Bags are full.'); return false; }
+    if (!G.addItem(x.item, x.n)) return false;
+    P.money -= x.price; P.buyback.splice(i, 1);
+    sys(`Bought back ${x.item.name}${x.n > 1 ? ' x' + x.n : ''} for ${G.moneyText(x.price)}.`); emit('change'); return true;
+  };
   G.sell = function (idx) {
     const P = G.S.player;
     const b = P.bags[idx];
     if (!b) return;
     if (!G.sellable(b.item)) return toast(`The vendor won't buy ${b.item.name}.`); // (#167) the Waystone, keepsakes, quest items
     const v = (b.item.sell || 1) * b.n;
-    P.money += v; P.bags.splice(idx, 1);
+    P.money += v; P.bags.splice(idx, 1); soldKeep(b);
     sys(`Sold ${b.item.name}${b.n > 1 ? ' x' + b.n : ''} for ${G.moneyText(v)}.`);
     emit('sold', { money: v, item: b.item, n: b.n }); emit('change');
   };
@@ -728,7 +739,7 @@
   G.sellJunk = function () {
     const P = G.S.player;
     let v = 0, k = 0;
-    P.bags = P.bags.filter((b) => { if (b.item.q === 0 && !b.item.noSell) { v += (b.item.sell || 1) * b.n; k++; return false; } return true; });
+    P.bags = P.bags.filter((b) => { if (b.item.q === 0 && !b.item.noSell) { v += (b.item.sell || 1) * b.n; k++; soldKeep(b); return false; } return true; });
     if (v) { P.money += v; sys(`Sold junk for ${G.moneyText(v)}.`); emit('sold', { money: v, many: k, grey: true }); }
     emit('change');
     return v;
@@ -736,7 +747,7 @@
   // selling several at once (v10.3): idxs are bag indices; quest items and unsellable ones are skipped
   G.sellMany = function (idxs) {
     const P = G.S.player, pick = [...new Set(idxs)].filter((i) => { const b = P.bags[i]; return b && !b.item.noSell && b.item.slot !== 'quest'; }).sort((a, b) => b - a);
-    let v = 0; for (const i of pick) { const b = P.bags[i]; v += (b.item.sell || 1) * b.n; P.bags.splice(i, 1); }
+    let v = 0; for (const i of pick) { const b = P.bags[i]; v += (b.item.sell || 1) * b.n; P.bags.splice(i, 1); soldKeep(b); }
     if (v) { P.money += v; sys(`Sold ${pick.length} item${pick.length > 1 ? 's' : ''} for ${G.moneyText(v)}.`); emit('sold', { money: v, many: pick.length }); }
     emit('change');
     return { n: pick.length, money: v };
@@ -744,19 +755,30 @@
   // Sort (#133): equipment, consumables, trade goods, quest items, then junk (any grey) last; inside each, highest quality,
   // then highest level, then name; stacks of one item merge up to 20. Returns whether the order changed.
   const SORT_KIND = { potion: 1, elixir: 1, food: 1, drink: 1, stone: 1, kit: 1, mat: 2, recipe: 2, quest: 3, event: 3, junk: 4 };
-  G.sortBags = function () {
-    const P = G.S.player, was = P.bags.map((b) => b.item.id + ':' + b.n).join();
-    const kind = (it) => (it.q === 0 ? 4 : SORT_KIND[it.slot] || 0);
+  // upgrades lead the gear (beta.3), so what to put on is first in the grid
+  function sortList(list) {
+    const kind = (it) => (it.q === 0 ? 4 : SORT_KIND[it.slot] || 0), ups = new Map();
+    const up = (it) => { if (!ups.has(it)) ups.set(it, D.GEAR_SLOTS.includes(it.slot) && G.isUpgrade(it) ? 0 : 1); return ups.get(it); };
     const merged = [];
-    for (const b of P.bags) {
+    for (const b of list) {
       const st = G.stackable(b.item) && merged.find((x) => x.item.id === b.item.id && x.n < 20);
       if (!st) { merged.push(b); continue; }
       const take = Math.min(20 - st.n, b.n); st.n += take; if (b.n > take) merged.push({ item: b.item, n: b.n - take });
     }
-    merged.sort((a, b) => kind(a.item) - kind(b.item) || (b.item.q || 0) - (a.item.q || 0) || (b.item.lvl || 0) - (a.item.lvl || 0) || a.item.name.localeCompare(b.item.name) || b.n - a.n);
-    P.bags = merged; restack(P); // an old stack over 20 is split while there is room
+    return merged.sort((a, b) => kind(a.item) - kind(b.item) || up(a.item) - up(b.item) || (b.item.q || 0) - (a.item.q || 0) || (b.item.lvl || 0) - (a.item.lvl || 0) || a.item.name.localeCompare(b.item.name) || b.n - a.n);
+  }
+  const listKey = (l) => l.map((b) => b.item.id + ':' + b.n).join();
+  G.sortBags = function () {
+    const P = G.S.player, was = listKey(P.bags);
+    P.bags = sortList(P.bags); restack(P); // an old stack over 20 is split while there is room
     emit('change');
-    return P.bags.map((b) => b.item.id + ':' + b.n).join() !== was;
+    return listKey(P.bags) !== was;
+  };
+  G.sortBank = function () { // the bank sorts and merges like the bags (beta.3)
+    const P = G.S.player, was = listKey(P.bank || []);
+    P.bank = sortList(P.bank || []); restack(P);
+    emit('change');
+    return listKey(P.bank) !== was;
   };
   G.vendorStock = function (npc) {
     const base = vendorBase(npc);
@@ -2185,6 +2207,17 @@
     if (P.bank.length >= G.bankSlots()) return toast(P.bank.length > G.bankSlots() ? `Your bank holds ${P.bank.length - G.bankSlots()} over from rewards. Take something out first.` : 'Your bank is full.');
     P.bank.push(b); P.bags.splice(idx, 1); emit('change'); return true;
   };
+  // Store materials (beta.3): every trade good in the bags goes onto its bank stacks; what doesn't fit stays in the bags
+  const storeable = (b) => b.item.slot === 'mat' && G.stackable(b.item) && !G.isQuestItem(b.item.id);
+  G.bankStoreMats = function () {
+    const P = G.S.player; P.bank = P.bank || []; let moved = 0, left = 0;
+    for (let i = P.bags.length - 1; i >= 0; i--) {
+      const b = P.bags[i]; if (!storeable(b)) continue;
+      if (stackSlots(P.bank, b.item, b.n) > Math.max(0, G.bankSlots() - P.bank.length)) { left++; continue; }
+      P.bags.splice(i, 1); putStack(P.bank, b.item, b.n); moved++;
+    }
+    emit('change'); return { moved, left };
+  };
   G.bankWithdraw = function (idx) {
     const P = G.S.player, b = (P.bank || [])[idx]; if (!b) return;
     if (G.isQuestItem(b.item.id)) { G.addItem(b.item, b.n); P.bank.splice(idx, 1); return emit('change'); } // kept with the quests, no slot needed (an old save's)
@@ -2226,6 +2259,19 @@
     if (!got.n || !G.addItem(JSON.parse(JSON.stringify(got.item)), got.n)) return false;
     if (!G.save()) { P.bags = JSON.parse(before); toast("Couldn't save. Nothing moved."); return false; } // storage full: it stays in the account bank
     abankSave(b); emit('change'); return true; // the bags, then the account bank
+  };
+  G.abankStoreMats = function () { // the same for the account bank: one write for all of it, the account bank first
+    const P = G.S.player, cap = G.abankSlots(), idx = []; let b = G.abank(), left = 0;
+    for (let i = P.bags.length - 1; i >= 0; i--) {
+      const x = P.bags[i]; if (!storeable(x) || !G.abankTakes(x.item)) continue;
+      const t = JSON.parse(JSON.stringify(b)); AB.deposit(t, JSON.parse(JSON.stringify(x.item)), x.n, true);
+      if (AB.slots(t) > cap) { left++; continue; }
+      b = t; idx.push(i);
+    }
+    if (idx.length && !abankSave(b)) { toast("Couldn't save. Nothing moved."); return { moved: 0, left: left + idx.length }; }
+    for (const i of idx) P.bags.splice(i, 1); // descending, so the indices hold
+    if (idx.length) G.save();
+    emit('change'); return { moved: idx.length, left };
   };
   G.abankBuyTab = function () {
     const a = G.account(), b = AB.merge(a.bank, null), c = G.ABANK_TAB_COST[b.tabs];
@@ -2526,7 +2572,16 @@
     const p = G.profs()[prof]; if (!p) return [];
     return Object.values(D.RECIPES).filter((r) => r.prof === prof && (!r.rare || (p.known || []).includes(r.id))).sort((a, b) => a.sk[0] - b.sk[0]);
   };
-  G.craftable = function (rid) { const r = D.RECIPES[rid]; let n = 99; for (const m in r.mats) n = Math.min(n, Math.floor(G.countItem(m) / r.mats[m])); return n; };
+  // crafting reaches into the bank (beta.3): materials stored there count, and the bags' go first
+  const bankHas = (id) => (G.S.player.bank || []).reduce((a, b) => a + (b.item.id === id ? b.n : 0), 0);
+  G.matCount = (id) => G.countItem(id) + bankHas(id);
+  function takeMat(id, n) { // returns how many came from the bank, so a refund puts them back there
+    const bags = Math.min(n, G.countItem(id)); G.removeItem(id, bags); let rest = n - bags; const fromBank = rest;
+    const bank = G.S.player.bank || [];
+    for (let i = bank.length - 1; i >= 0 && rest > 0; i--) { const b = bank[i]; if (b.item.id !== id) continue; const k = Math.min(b.n, rest); b.n -= k; rest -= k; if (!b.n) bank.splice(i, 1); }
+    return fromBank;
+  }
+  G.craftable = function (rid) { const r = D.RECIPES[rid]; let n = 99; for (const m in r.mats) n = Math.min(n, Math.floor(G.matCount(m) / r.mats[m])); return n; };
   G.craft = function (rid, count) {
     const S = G.S, P = S.player, r = D.RECIPES[rid], p = G.profs()[r.prof];
     if (!p) return;
@@ -2545,7 +2600,7 @@
   function finishCraft(c) {
     const P = G.S.player, r = D.RECIPES[c.rid], p = G.profs()[r.prof];
     if (!p || G.craftable(c.rid) < 1) return;
-    for (const m in r.mats) G.removeItem(m, r.mats[m]);
+    const fromBank = {}; for (const m in r.mats) fromBank[m] = takeMat(m, r.mats[m]);
     // cooking (v10.9): Burnt loses the first set of the batch; Perfect adds one serving per five (at least one)
     c.made = (c.made || 0) + 1;
     if (c.quality === 'burnt' && c.made === 1) {
@@ -2556,7 +2611,7 @@
     const extra = c.quality === 'perfect' && ((c.batch || 1) < 5 ? c.made === 1 : c.made % 5 === 0) ? 1 : 0;
     const it = G.copyItem(r.makes);
     if (D.GEAR_SLOTS.includes(it.slot)) { it.id = r.makes; it.crafter = P.name; }
-    if (!G.addItem(it, r.n + extra)) { for (const m in r.mats) G.addItem(G.copyItem(m), r.mats[m]); c.made--; craftStopped(c); return; }
+    if (!G.addItem(it, r.n + extra)) { for (const m in r.mats) { if (fromBank[m]) putStack(G.S.player.bank, G.copyItem(m), fromBank[m]); if (r.mats[m] > fromBank[m]) G.addItem(G.copyItem(m), r.mats[m] - fromBank[m]); } c.made--; craftStopped(c); return; }
     loot(`You create: ${B.link(it.name, it.q)}${r.n + extra > 1 ? ' x' + (r.n + extra) : ''}${extra ? ' (Perfect)' : ''}.`);
     skillUp(r.prof, G.skillColor(p.skill, r.sk));
     G.S.stats = G.S.stats || {}; G.S.stats.crafted = (G.S.stats.crafted || 0) + 1;

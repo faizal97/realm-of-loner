@@ -24,7 +24,8 @@ test('a mixed bag sorts by type, quality and level, junk last, with stacks merge
     { item: G.copyItem(bag), n: 1 },
   ];
   const before = {}; for (const b of P.bags) before[b.item.id] = (before[b.item.id] || 0) + b.n;
-  const moved = G.sortBags();
+  const isUp = G.isUpgrade; G.isUpgrade = () => false; // no upgrades here: upgrades lead the gear since beta.3 (test/bagimprove.test.js)
+  let moved; try { moved = G.sortBags(); } finally { G.isUpgrade = isUp; }
   assert.ok(moved, 'the order changed');
   const order = P.bags.map((b) => b.item.slot);
   assert.deepStrictEqual(order.slice(0, 4).map((s) => s === 'chest' || s === 'bag'), [true, true, true, true], 'equipment first');
@@ -35,7 +36,7 @@ test('a mixed bag sorts by type, quality and level, junk last, with stacks merge
   assert.deepStrictEqual(P.bags.filter((b) => b.item.id === mat).map((b) => b.n), [20, 5], 'stacks merge up to 20');
   const after = {}; for (const b of P.bags) after[b.item.id] = (after[b.item.id] || 0) + b.n;
   assert.deepStrictEqual(after, before, 'nothing gained or lost');
-  assert.strictEqual(G.sortBags(), false, 'sorting a sorted bag changes nothing');
+  G.isUpgrade = () => false; try { assert.strictEqual(G.sortBags(), false, 'sorting a sorted bag changes nothing'); } finally { G.isUpgrade = isUp; }
 });
 
 test('a grey item of any type sorts with the junk', () => {

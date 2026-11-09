@@ -3083,7 +3083,7 @@
       denalan: 'The rootlings have been acting so oddly...', saelienne: 'Welcome to Nyrwen, child of the stars.', mydrannul: 'Fine Sylari steel. Look, but do not touch.',
     })[npc] || 'Hello.';
   }
-  // selling (#168): a green or better, or an upgrade, asks first; Keep carries the weight, since there is no buyback
+  // selling (#168): a green or better, or an upgrade, asks first; Keep carries the weight; only the last 12 sales can be bought back
   function sellAsk(idx, done) {
     const P = G.S.player, b = P.bags[idx]; if (!b) return;
     if (!G.sellable(b.item)) return toast(h('span', null, "The vendor won't buy ", h('span', { class: 'q' + (b.item.q || 0) }, b.item.name), '.')); // (#167)
@@ -3091,13 +3091,14 @@
     if (!G.sellNeedsConfirm(b.item)) return sell();
     const it = b.item, up = D.GEAR_SLOTS.includes(it.slot) && G.isUpgrade(it), cur = up ? P.equip[it.slot] : null;
     showDialog([h('h3', null, 'Sell ', h('span', { class: 'q' + it.q }, it.name + (b.n > 1 ? ' ×' + b.n : '')), '?'),
-      h('p', { html: `Sells for ${moneyHtml((it.sell || 1) * b.n)}. Can't be bought back.` }),
+      h('p', { html: `Sells for ${moneyHtml((it.sell || 1) * b.n)}. Your last ${G.BUYBACK} sales can be bought back.` }),
       up ? h('p', null, cur ? ["It's an upgrade over your ", h('span', { class: 'q' + cur.q }, cur.name), '.'] : `It's an upgrade: nothing is in your ${D.SLOT_LABEL[it.slot]} slot.`) : null,
       it.pw ? h('p', null, 'Its upgrades are lost with it.') : null, // #444
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: closeDialog }, 'Keep'), h('button', { class: 'btn alt', onclick: () => { closeDialog(); sell(); } }, 'Sell'))], true);
   }
   function openVendor(npc) {
     ui.lastSale = null; ui.saleAt = 0;
+    if (G.S.flags.autoJunk) G.sellJunk(); // the setting (beta.3): greys sell as the vendor opens; they stay in Buy back
     openSheet('vendor', D.NPCS[npc].name, 'Money: ' + G.moneyText(G.S.player.money), (b, t) => {
       const sub = t.querySelector('small'); sub.textContent = 'Money: '; // the rows have Buy, the Sell heading says how to sell (#466)
       const cash = h('span', { class: 'vend-money' }, G.moneyText(G.S.player.money)); sub.append(cash);
@@ -3125,6 +3126,14 @@
       b.append(list);
       const rep = G.repairAllCost(); // #502
       b.append(h('button', { class: 'btn wide', disabled: !rep, onclick: () => { G.repairAll(false); ui.sheetFn(); } }, rep ? h('span', { html: 'Repair all · ' + moneyHtml(rep, false, true) }) : 'Nothing to repair'));
+      const bb = G.S.player.buyback || []; // buyback (beta.3): tap to buy it back for what it sold for
+      if (bb.length) {
+        b.append(h('div', { class: 'sec-h' }, 'Buy back', h('small', null, `last ${G.BUYBACK} sales · tap to buy`)));
+        const g = h('div', { class: invGridClass() });
+        bb.forEach((x, i) => g.append(itemCell(x.item, x.n, { dim: G.S.player.money < x.price, onTap: () => showDialog([h('h3', null, 'Buy back ', h('span', { class: 'q' + (x.item.q || 0) }, x.item.name + (x.n > 1 ? ' ×' + x.n : '')), '?'), h('p', { html: `For ${moneyHtml(x.price)}.` }),
+          h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { closeDialog(); G.buyBack(i); ui.sheetFn(); } }, 'Buy back'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Cancel'))], true) })));
+        b.append(g);
+      }
       b.append(h('div', { class: 'sec-h' }, 'Sell', h('small', null, 'tap an item to sell it')));
       const junk = G.S.player.bags.filter((x) => x.item.q === 0).length;
       b.append(h('button', { class: 'btn alt wide', disabled: !junk, onclick: () => { G.sellJunk(); ui.sheetFn(); } }, junk ? `Sell all grey items (${junk})` : 'No grey items to sell'));
@@ -3237,7 +3246,7 @@
       const hd = t.parentNode, oldSort = hd && hd.querySelector('.bag-sort'); if (oldSort) oldSort.remove();
       { const old = hd && hd.querySelector('.bag-size'); if (old) old.remove(); }
       if (hd) hd.insertBefore(h('button', { class: 'sheet-backbtn bag-size' + (invCompact() ? ' on' : ''), 'aria-label': invCompact() ? 'Show big slots' : 'Show small slots, more to a row', 'aria-pressed': String(invCompact()), onclick: () => { setCompact(!invCompact()); toast(invCompact() ? 'Small slots: more to a row.' : 'Big slots.', true); ui.sheetFn(); } }, '▦'), hd.querySelector('.x'));
-      if (hd && P.bags.length > 1 && !ui.sellPick) hd.insertBefore(h('button', { class: 'sheet-backbtn bag-sort', 'aria-label': 'Sort bags: gear first, junk last', onclick: () => { const moved = G.sortBags(); ui.bagSel = null; toast(moved ? 'Bags sorted: gear first, junk last.' : 'Already sorted.'); ui.sheetFn(); } }, 'Sort'), hd.querySelector('.x'));
+      if (hd && P.bags.length > 1 && !ui.sellPick) hd.insertBefore(h('button', { class: 'sheet-backbtn bag-sort', 'aria-label': 'Sort bags: upgrades and gear first, junk last', onclick: () => { const moved = G.sortBags(); ui.bagSel = null; toast(moved ? 'Bags sorted: gear first, junk last.' : 'Already sorted.'); ui.sheetFn(); } }, 'Sort'), hd.querySelector('.x'));
       // the bag bar (v10.9): your bags in one short row, empty slots shown; tap one to take it off
       if ((P.bagsEq || []).length) {
         const bar = h('div', { class: 'bagbar' });
@@ -4036,6 +4045,8 @@
           h('p', { class: 'ai-note', style: { margin: 0 } }, 'Realm of Loner is free, with nothing to buy. Tips help pay for the time it takes.')], false));
         b.append(...foldSec('set.invites', 'Party invites', G.S.flags.noInvites ? 'Off' : 'On', [h('div', { class: 'btn-row' },
           h('button', { class: 'btn alt', onclick: () => { G.setInvites(!!G.S.flags.noInvites); ui.sheetFn(); } }, 'Invites from nearby players: ' + (G.S.flags.noInvites ? 'Off' : 'On')))]));
+        b.append(...foldSec('set.junk', 'Auto-sell grey items', G.S.flags.autoJunk ? 'On' : 'Off', [h('div', { class: 'btn-row' },
+          h('button', { class: 'btn alt', onclick: () => { G.S.flags.autoJunk = !G.S.flags.autoJunk; G.save(); ui.sheetFn(); } }, 'Sell greys when a vendor opens: ' + (G.S.flags.autoJunk ? 'On' : 'Off'))), h('p', { class: 'ai-note', style: { margin: '4px 0 0' } }, 'Only grey items. You can buy them back at the vendor.')]));
         { const on = fxOn(); b.append(...foldSec('set.fx', 'Combat effects', on ? 'On' : 'Off', [h('div', { class: 'btn-row' },
           h('button', { class: 'btn alt', onclick: () => { try { localStorage.setItem('azsolo.fx', on ? 'off' : 'on'); } catch (e) { } ui.sheetFn(); } }, 'Combat effects: ' + (on ? 'On' : 'Off'))),
           h('p', { class: 'ai-note', style: { margin: 0 } }, 'Slashes, spells, heals and boss attacks drawn over the fight. Damage numbers always show.')])); }
@@ -4105,6 +4116,7 @@
       // two banks behind one counter (#286): this character's, and the account's that every character shares
       const tab = (id, label) => h('button', { class: 'chip' + ((ui.bankTab || 'char') === id ? ' gold' : ''), onclick: () => { ui.bankTab = id; ui.sheetFn(); } }, label);
       b.append(h('div', { class: 'chips' }, tab('char', 'Character'), tab('acct', 'Account')));
+      b.append(bankTools(ui.bankTab === 'acct'));
       if (ui.bankTab === 'acct') return accountBank(b, title);
       const over = P.bank.length - G.bankSlots(); // rewards and expired auctions are never lost: they may overfill the bank (issue #25)
       title.querySelector('small').textContent = over > 0 ? `${P.bank.length} items in ${G.bankSlots()} slots · ${P.bags.length}/${G.bagCap()} in your bags · tap to move` : `${P.bank.length}/${G.bankSlots()} in the bank · ${P.bags.length}/${G.bagCap()} in your bags · tap to move`;
@@ -4116,6 +4128,13 @@
       b.append(h('div', { class: 'sec-h' }, 'Your bags', h('small', null, 'tap to store')));
       b.append(invGrid(P.bags.map((x, i) => ({ item: x.item, n: x.n, onTap: () => { G.bankDeposit(i); ui.sheetFn(); } })), G.bagCap(), 'Your bags are empty.'));
     });
+  }
+  // Store materials and Sort (beta.3): trade goods go onto their bank stacks in one tap; Sort merges and orders the bank
+  function bankTools(acct) {
+    const P = G.S.player, mats = P.bags.filter((x) => x.item.slot === 'mat' && G.stackable(x.item) && !G.isQuestItem(x.item.id) && (!acct || G.abankTakes(x.item))).length;
+    const store = () => { const r = acct ? G.abankStoreMats() : G.bankStoreMats(); if (!r.moved) toast(acct ? 'The account bank is full.' : 'Your bank is full.'); else toast(r.left ? `Stored ${r.moved}. ${r.left} didn't fit.` : `Stored ${r.moved}.`, !r.left); ui.sheetFn(); };
+    return h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', disabled: !mats, onclick: store }, mats ? `Store materials (${mats})` : 'No materials to store'),
+      acct ? null : h('button', { class: 'btn alt', disabled: (P.bank || []).length < 2, onclick: () => { toast(G.sortBank() ? 'Bank sorted.' : 'Already sorted.', true); ui.sheetFn(); } }, 'Sort bank'));
   }
   // the Account tab: what every character on the account shares (#286); only what you could sell goes in
   function accountBank(b, title) {
@@ -4361,7 +4380,7 @@
       const list = h('div', { class: 'list' });
       const recipeRow = (r) => {
         const mk = D.ITEMS[r.makes], col = G.skillColor(p.skill, r.sk), can = G.craftable(r.id);
-        const mats = Object.entries(r.mats).map(([m, n]) => `${D.ITEMS[m].name} ${G.countItem(m)}/${n}`).join(' · ');
+        const mats = Object.entries(r.mats).map(([m, n]) => `${D.ITEMS[m].name} ${G.matCount(m)}/${n}`).join(' · ');
         list.append(h('button', { class: 'row', onclick: () => showDialog([itemTip(G.copyItem(r.makes)), h('p', { class: 'ai-note' }, `Needs: ${mats}`),
           col < 0 ? h('p', { class: 'red' }, `Requires ${Pd.name} ${r.sk[0]}.`) : k === 'cooking' ? h('div', { class: 'btn-row' }, h('button', { class: 'btn', disabled: can < 1, onclick: () => { closeDialog(); openCookBar(r.id, 1); } }, 'Cook'), h('button', { class: 'btn alt', disabled: can < 2, onclick: () => { closeDialog(); openCookBar(r.id, can); } }, `Cook all (${can})`), h('button', { class: 'btn alt', onclick: closeDialog }, 'Close')) : h('div', { class: 'btn-row' }, h('button', { class: 'btn', disabled: can < 1, onclick: () => { closeDialog(); G.craft(r.id, 1); closeSheet(); } }, 'Create'), h('button', { class: 'btn alt', disabled: can < 2, onclick: () => { closeDialog(); G.craft(r.id, can); closeSheet(); } }, `Create all (${can})`), h('button', { class: 'btn alt', onclick: closeDialog }, 'Close'))], true) },
           h('div', { class: 'ic' }, itemIcon(mk)),
