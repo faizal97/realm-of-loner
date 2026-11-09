@@ -51,6 +51,7 @@
  "professions.js",
  "events/lanternwake.js", "events/debtnotes.js",
   "events/longnight.js",
+  "thisweek.js",
  "lore.js",
  "lore_places.js",
  "lore_books.js",
