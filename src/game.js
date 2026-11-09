@@ -4839,7 +4839,7 @@
     ].filter((x) => x && canDo(x.need));
     return [
       { id: 'board_w' + dayNum(sun), kind: 'now', board: 'week', title: 'The Weekly Board', art: ['banner', 'weekly_board'], artHorde: ['banner', 'weekly_board_h'], to: sun,
-        text: ['What the realm asks of you this week. Each one pays once a week, and all of them start again on Monday.'], steps: week },
+        text: ['What the realm asks of you this week. Each one pays once a week. They start again on Monday, except Trials, which start again on the 1st, 8th, 15th and 22nd.'], steps: week },
       { id: 'board_d' + dayNum(day), kind: 'now', board: 'day', quiet: true, title: 'The Daily Board', art: ['banner', 'daily_board'], artHorde: ['banner', 'daily_board_h'], to: day,
         text: ['Today\u2019s jobs. They start again at midnight.'], steps: today },
     ];

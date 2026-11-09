@@ -1212,4 +1212,15 @@ button.ev-fact { width: 100%; background: none; border: 0; border-bottom: 1px so
 .wk-tick { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border: 1.5px solid #8a6a36; border-radius: 50%; color: #9be37a; font: 700 15px/1 var(--body); }
 .wk-step.done .wk-tick { border-color: #6fae55; background: rgba(111,174,85,.18); }
 .wk-step.done .t span { color: #b7ab92; }
+.wk-hub { margin-bottom: 14px; }
+.wk-tally { display: grid; grid-template-columns: 76px 1fr auto; align-items: center; gap: 10px; padding: 6px 2px; }
+.wk-tally b { font: 16px/1.1 var(--display); color: var(--gold); }
+.wk-tally small { font: 600 12.5px/1 var(--body); color: var(--text); }
+.wk-pips { display: flex; gap: 5px; flex-wrap: wrap; }
+.wk-pips i { width: 14px; height: 14px; transform: rotate(45deg); border: 1.5px solid #8a6a36; background: #1a1109; }
+.wk-pips i.on { border-color: #f0c75e; background: linear-gradient(135deg, #ffe08a, #c8902e); box-shadow: 0 0 6px rgba(240,199,94,.45); }
+.wk-open { flex: 1; min-width: 0; display: grid; gap: 2px; padding: 0; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; }
+.wk-open small { font-size: 12px; color: var(--muted); }
+.wk-done summary { padding: 10px 2px; font: 600 13px/1 var(--body); color: var(--muted); cursor: pointer; }
+.wk-done[open] summary { color: var(--text); }
 @media (prefers-reduced-motion: reduce) { .wk-banner:active { transform: none; } }
