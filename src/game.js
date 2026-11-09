@@ -2190,6 +2190,39 @@
     if (G.addItem(b.item, b.n)) P.bank.splice(idx, 1);
     emit('change');
   };
+  // The account bank (#286, docs/plans/2026-11-09-account-bank-design.md): every character on the account shares it. The
+  // record and its merge are ABANK (src/acctbank.js); it lives in the account record, so it syncs with Marks and heirlooms.
+  // 12 slots free, then 3 tabs of 12 for Mentor Marks at doubling prices: ~233 Marks a day at 1 h/day (#181), so the
+  // three tabs are ~6 days of play. Only what the auction house takes goes in.
+  const AB = root.ABANK || require('./acctbank.js');
+  G.ABANK_BASE = 12; G.ABANK_TAB = 12; G.ABANK_TAB_COST = [200, 400, 800];
+  G.abank = () => AB.merge(G.account().bank, null);
+  const abankSave = (b) => { const a = G.account(); a.bank = b; G.saveAccount(a); };
+  G.abankSlots = (b) => G.ABANK_BASE + G.ABANK_TAB * Math.min(G.ABANK_TAB_COST.length, (b || G.abank()).tabs);
+  G.abankTakes = (it) => !!it && G.ahTrade(it) && !G.isQuestItem(it.id) && !(D.ITEMS[it.id] || {}).event;
+  // Each move writes the receiving side first, so a crash between the two writes leaves a copy, never a loss.
+  G.abankDeposit = function (idx) {
+    const P = G.S.player, x = P.bags[idx]; if (!x) return false;
+    if (!G.abankTakes(x.item)) { toast('Only items you could sell can go in the account bank.'); return false; }
+    const b = G.abank(); AB.deposit(b, JSON.parse(JSON.stringify(x.item)), x.n, G.stackable(x.item));
+    if (AB.slots(b) > G.abankSlots(b)) { toast('The account bank is full.'); return false; }
+    abankSave(b); P.bags.splice(idx, 1); G.save(); emit('change'); return true; // the account bank, then the bags
+  };
+  G.abankWithdraw = function (key) {
+    const b = G.abank(), row = AB.view(b).find((g) => g.key === key); if (!row) return false;
+    const k = row.stack ? Math.min(row.n, G.bagRoom(row.item)) : (G.bagsFull() ? 0 : 1);
+    if (!k) { toast('Bags are full.'); return false; }
+    const got = AB.takeKey(b, key, k);
+    if (!got.n || !G.addItem(JSON.parse(JSON.stringify(got.item)), got.n)) return false;
+    G.save(); abankSave(b); emit('change'); return true; // the bags, then the account bank
+  };
+  G.abankBuyTab = function () {
+    const a = G.account(), b = AB.merge(a.bank, null), c = G.ABANK_TAB_COST[b.tabs];
+    if (c == null) { toast('The account bank has every tab.'); return false; }
+    if (a.marks < c) { toast(`You need ${c} Mentor Marks.`); return false; }
+    a.marks -= c; b.tabs += 1; a.bank = b; G.saveAccount(a); // one write: the Marks and the tab together
+    sys(`Account bank tab ${b.tabs} bought: ${G.abankSlots(b)} slots.`); emit('change'); return true;
+  };
   // What other players pay: the vendor price times a factor by quality.
   G.ahValue = (it) => (G.ahTrade(it) && !D.GEAR_SLOTS.includes(it.slot) ? Math.max(4, Math.round((it.sell || 2) * (it.slot === 'recipe' ? 8 : 5))) : Math.max(10, Math.round((it.sell || 5) * [2, 3, 6, 9, 14, 0][it.q || 1])));
   // what can go on the auction house: gear, trade goods and anything a profession makes

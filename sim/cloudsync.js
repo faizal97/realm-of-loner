@@ -241,6 +241,21 @@ const ok = (cond, what) => { if (cond) pass++; else { fail++; console.log('FAIL'
   await CLOUD.syncAccount(); use(web); await CLOUD.syncAccount();
   ok(!!(G.account().trophies || {}).old_brinescale && G.account().marks === 40, 'a trophy taken on the phone reaches the browser, and the browser keeps its marks');
 
+  // 15b. the account bank (#286) rides in the account file: every deposit and withdrawal is kept, so items put in or
+  // taken out on either device all count, and nothing is lost
+  { const AB = globalThis.ABANK, pot = { id: 'potion_heal', name: 'Healing Potion', slot: 'potion' }, gear = { id: 'gen_legs', name: 'Legs', slot: 'legs', roll: 7 };
+    const edit = (fn) => { const a = G.account(), b = AB.merge(a.bank, null); fn(b); a.bank = b; G.saveAccount(a); };
+    const total = (key) => AB.view(AB.merge(G.account().bank, null)).filter((g) => g.item.id === key).reduce((n, g) => n + g.n, 0);
+    use(phone); edit((b) => AB.deposit(b, pot, 10, true));
+    await CLOUD.syncAccount(); use(web); await CLOUD.syncAccount();
+    ok(total('potion_heal') === 10, 'potions put in on the phone reach the browser');
+    edit((b) => AB.takeKey(b, 'potion_heal', 4)); // the browser takes 4 ...
+    use(phone); edit((b) => AB.deposit(b, gear, 1, false)); // ... while the phone, not yet synced, puts in a piece of gear
+    await CLOUD.syncAccount(); use(web); await CLOUD.syncAccount(); use(phone); await CLOUD.syncAccount();
+    ok(total('potion_heal') === 6 && total('gen_legs') === 1, 'after both sync, the phone has 6 potions and the gear');
+    use(web); ok(total('potion_heal') === 6 && total('gen_legs') === 1 && G.account().marks === 40, 'and so does the browser, with its marks kept');
+    ok(!('bank' in CLOUD.mergeAccount({ marks: 1 }, { marks: 2 })), 'no bank stays no bank (an old account file loads as it was)'); }
+
   // 16. Friends and cloud save in one Google window (#46). The browser: one token request for both scopes; Drive
   // allowed turns cloud save on, Drive refused leaves it off with the usual message, a cancelled window turns on nothing.
   // The token goes on to Friends either way (openid).

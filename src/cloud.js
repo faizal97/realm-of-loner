@@ -149,6 +149,8 @@
   // And the Friends switch (v10.2, friends.js): { on, at }, where the newest change wins, so turning Friends on or off
   // on one device does the same on the others.
   const ACCOUNT_FILE = 'account.azs';
+  // the account bank (#286) merges its own way (src/acctbank.js): every deposit and withdrawal is kept, so nothing is lost
+  const AB = () => root.ABANK || require('./acctbank.js'); // looked up when a bank is merged (cloud.js also loads alone)
   const LISTS = ['heirlooms', 'story', 'lore', 'tips', 'looks'];
   const union = (x, y) => { const out = []; for (const id of (x || []).concat(y || [])) if (!out.includes(id)) out.push(id); return out; };
   CLOUD.mergeAccount = function (a, b) {
@@ -161,15 +163,16 @@
     const ta = a.trophies || {}, tb = b.trophies || {}, tr = {};
     for (const k of union(Object.keys(ta), Object.keys(tb))) tr[k] = !tb[k] || (ta[k] && (+ta[k].at || 0) <= (+tb[k].at || 0)) ? ta[k] : tb[k];
     if (Object.keys(tr).length) m.trophies = tr; else delete m.trophies;
+    if (a.bank || b.bank) m.bank = AB().merge(a.bank, b.bank); else delete m.bank;
     return m;
   };
-  const markOf = (x) => JSON.stringify([+x.marks || 0, x.friends || null].concat(LISTS.map((k) => (x[k] || []).slice().sort()), [Object.keys(x.trophies || {}).sort().map((k) => k + '@' + (+x.trophies[k].at || 0))]));
+  const markOf = (x) => JSON.stringify([+x.marks || 0, x.friends || null].concat(LISTS.map((k) => (x[k] || []).slice().sort()), [Object.keys(x.trophies || {}).sort().map((k) => k + '@' + (+x.trophies[k].at || 0))], [x.bank ? AB().merge(x.bank, null) : null]));
   const same = (x, y) => markOf(x) === markOf(y);
   const readList = (key, field) => { try { const v = JSON.parse(localStorage.getItem(key) || 'null'); return (field ? v && v[field] : v) || []; } catch (e) { return []; } };
   // everything the account file holds, as this device has it
   const localAccount = () => { const a = Object.assign({}, G.account(), { story: readList('azsolo.story'), lore: readList('azsolo.loreread'), tips: readList('azsolo.tips', 'seen') }); const f = root.FRIENDS && FRIENDS.switchInfo(); if (f) a.friends = f; return a; };
   function writeLocal(m) {
-    G.saveAccount(Object.assign(G.account(), { marks: m.marks, heirlooms: m.heirlooms, looks: m.looks }, m.trophies ? { trophies: m.trophies } : {})); // keeps the wardrobe's own flags
+    G.saveAccount(Object.assign(G.account(), { marks: m.marks, heirlooms: m.heirlooms, looks: m.looks }, m.trophies ? { trophies: m.trophies } : {}, m.bank ? { bank: m.bank } : {})); // keeps the wardrobe's own flags
     try {
       localStorage.setItem('azsolo.story', JSON.stringify(m.story));
       localStorage.setItem('azsolo.loreread', JSON.stringify(m.lore));
