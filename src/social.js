@@ -601,7 +601,7 @@
       const full = short <= 0 && !!G.slotsShort([[a.itemData, 1]]); // greyed before the tap, as Swap is (#419)
       return [{ label: short > 0 ? `Need ${coin(short)}` : full ? 'Bags full' : `Buy for ${coin(a.price)}`, primary: true, disabled: short > 0 || full, why: short > 0 || full, need: short > 0 ? short : 0, fn: () => {
         if (P.money < a.price) return 'Not enough money.';
-        if (G.bagsFull()) return 'Your bags are full.';
+        if (G.bagsFull(a.itemData)) return 'Your bags are full.';
         P.money -= a.price; G.addItem(JSON.parse(JSON.stringify(a.itemData)), 1);
         G.sys(`You bought ${a.itemData.name} from ${b ? b.name : 'them'} for ${coin(a.price)}.`);
         reply(pick(['ty!', 'enjoy', 'gl with it', 'nice doing business'])); befriend(b, P.place); close(); // a trade both ways makes a friend (#338)
@@ -615,10 +615,10 @@
     }
     if (a.kind === 'swap') {
       const have = G.countItem(a.item);
-      const full = have >= a.n && G.bagsFull() && !G.freesSlot(a.item, a.n); // the payment's emptied slot takes it (#486)
+      const full = have >= a.n && !G.wouldFit(a.itemData, 1, a.item, a.n); // the payment's emptied slot takes it (#486)
       return [{ label: have < a.n ? `You have ${have}/${a.n}` : full ? 'Bags full' : `Swap ${a.n} ${D.ITEMS[a.item].name}`, primary: true, disabled: have < a.n || full, why: have < a.n || full, fn: () => {
         if (G.countItem(a.item) < a.n) return `You need ${a.n}.`;
-        if (G.bagsFull() && !G.freesSlot(a.item, a.n)) return 'Your bags are full.'; // checked again at the tap: the bags may have filled since the button was drawn
+        if (!G.wouldFit(a.itemData, 1, a.item, a.n)) return 'Your bags are full.'; // checked again at the tap: the bags may have filled since the button was drawn
         G.removeItem(a.item, a.n); G.addItem(JSON.parse(JSON.stringify(a.itemData)), 1);
         G.sys(`You traded ${a.n} ${D.ITEMS[a.item].name} for ${a.itemData.name}.`);
         reply(pick(['ty, fair trade', 'perfect', 'deal!'])); befriend(b, P.place); close();
@@ -661,7 +661,7 @@
     if (a.kind === 'gift') {
       const full = !!(a.itemData && G.slotsShort([[a.itemData, 1]]));
       return [{ label: full ? 'Bags full' : 'Thank them', primary: true, disabled: full, why: full, fn: () => {
-        if (a.itemData) { if (G.bagsFull()) return 'Your bags are full.'; G.addItem(JSON.parse(JSON.stringify(a.itemData)), 1); G.sys(`${b ? b.name : 'They'} gave you ${a.itemData.name}.`); }
+        if (a.itemData) { if (G.bagsFull(a.itemData)) return 'Your bags are full.'; G.addItem(JSON.parse(JSON.stringify(a.itemData)), 1); G.sys(`${b ? b.name : 'They'} gave you ${a.itemData.name}.`); }
         if (a.gold) { P.money += a.gold; G.sys(`${b ? b.name : 'They'} sent you ${coin(a.gold)}.`); }
         G.say('whisper', pick(['aw thanks!', 'ty, u didnt have to!', 'thank u :)']), b && b.name); befriend(b); close();
       } }];

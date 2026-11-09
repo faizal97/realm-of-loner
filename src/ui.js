@@ -2371,7 +2371,7 @@
     if (it.buff) t.append(h('div', { class: 'gr' }, `Use: ${Object.entries(it.buff).map(([k, v]) => `+${v} ${statName[k] || k}`).join(', ')} for ${it.flask ? '2 hours. A flask stays when you die. It replaces an elixir (one at a time).' : '1 hour. One elixir or flask at a time.'}`));
     if (it.wdmg) t.append(h('div', { class: 'gr' }, `Use: Your weapon deals +${it.wdmg} damage for 30 min.`));
     if (it.slot === 'kit') t.append(h('div', { class: 'gr' }, `Use: Permanently adds ${it.kit} armor to your chest, legs, feet or hands gear (the first one without a kit this good).`));
-    if (it.bag) t.append(h('div', { class: 'gr' }, `${it.bag} Slot Bag. Use: equip it to carry ${it.bag} more items (up to ${D.BAG_SLOTS} bags).`));
+    if (it.bag) t.append(h('div', { class: 'gr' }, it.matBag ? `${it.bag} Slot Materials Bag. Use: equip it to carry ${it.bag} more trade goods (ore, herbs, cloth, leather, fish). Nothing else goes in it.` : `${it.bag} Slot Bag. Use: equip it to carry ${it.bag} more items (up to ${D.BAG_SLOTS} bags).`));
     if (it.teaches) { const r = D.RECIPES[it.teaches], mk = D.ITEMS[r.makes]; t.append(h('div', { class: 'gr' }, `Use: Teaches you how to make ${mk.name}. Requires ${D.PROFESSIONS[r.prof].name} (${r.sk[0]}).`)); }
     if (it.kit && D.GEAR_SLOTS.includes(it.slot)) t.append(h('div', { class: 'gr' }, `Armor kit: +${it.kit} armor`));
     if (it.crafter) t.append(h('div', { class: 'dim' }, `<Made by ${it.crafter}>`));
@@ -2410,7 +2410,7 @@
     if (it.heal || it.mana) return line('gr', `Restores ${it.heal ? it.heal[0] + '–' + it.heal[1] + ' health' : it.mana[0] + '–' + it.mana[1] + ' mana'}`);
     if (it.restore) return line('gr', `Restores ${it.restore} ${it.slot === 'food' ? 'health' : 'mana'} over ${it.slot === 'food' ? G.EAT_SECS : G.DRINK_SECS} sec`);
     if (it.buff) return line('gr', Object.entries(it.buff).map(([k, v]) => `+${v} ${statName[k] || k}`).join(', ') + (it.flask ? ' · 2 hours' : ' · 1 hour'));
-    if (it.bag) return line('gr', `${it.bag} Slot Bag`);
+    if (it.bag) return line('gr', `${it.bag} Slot ${it.matBag ? 'Materials ' : ''}Bag`);
     if (it.teaches && D.RECIPES[it.teaches]) return line('gr', `Teaches ${D.ITEMS[D.RECIPES[it.teaches].makes].name}`);
     if (it.slot === 'mat') return line('dim', 'Trade Goods');
     if (it.q === 0) return line('dim', 'Junk · sell it');
@@ -3168,9 +3168,11 @@
   function bagGrid(onTap, vendor, filtered) {
     const P = G.S.player, all = !filtered || (ui.invTab || 'all') === 'all';
     const g = h('div', { class: invGridClass() });
+    // a materials bag's free slots come last, marked, and a tap says what goes in them (beta.3)
+    const matCap = G.bagCap() - G.gearCap(), matFree = matCap - Math.min(matCap, P.bags.filter((x) => G.isMatItem(x.item)).length), plainEnd = G.bagCap() - matFree;
     for (let i = 0; i < (all ? G.bagCap() : P.bags.length); i++) {
       const b = P.bags[i];
-      if (!b) { g.append(h('div', { class: 'slot' })); continue; }
+      if (!b) { g.append(i >= plainEnd ? h('button', { class: 'slot matslot', 'aria-label': 'Materials bag slot', onclick: () => toast('Materials bag: only trade goods go here (ore, herbs, cloth, leather, fish).', true) }) : h('div', { class: 'slot' })); continue; }
       if (filtered && !invShows(b.item)) continue;
       g.append(itemCell(b.item, b.n, { sel: ui.bagSel === i || (ui.sellPick && ui.sellPick.has(i)), pick: ui.sellPick && ui.sellPick.has(i), why: blockReason(b.item), keep: vendor && !G.sellable(b.item), onTap: () => onTap(i) }));
     }
@@ -3251,7 +3253,7 @@
       if ((P.bagsEq || []).length) {
         const bar = h('div', { class: 'bagbar' });
         for (let i = 0; i < D.BAG_SLOTS; i++) { const bg = (P.bagsEq || [])[i];
-          bar.append(bg ? h('button', { class: 'slot bagslot', 'aria-label': `${bg.name}, +${bg.bag} slots, tap to take off`, onclick: () => { G.unequipBag(i); ui.sheetFn(); } }, img(art('icon', bg.icon)), h('span', { class: 'cnt tnum' }, '+' + bg.bag)) : h('div', { class: 'slot bagslot empty' })); }
+          bar.append(bg ? h('button', { class: 'slot bagslot', 'aria-label': `${bg.name}, +${bg.bag} ${bg.matBag ? "trade goods " : ""}slots, tap to take off`, onclick: () => { G.unequipBag(i); ui.sheetFn(); } }, img(art('icon', bg.icon)), h('span', { class: 'cnt tnum' }, '+' + bg.bag)) : h('div', { class: 'slot bagslot empty' })); }
         b.append(h('div', { class: 'bagbar-row' }, bar, h('small', null, 'Bags · tap one to take it off')));
       }
       const vendorHereB = D.PLACES[P.place].vendor || D.PLACES[P.place].gearVendor;
@@ -4233,7 +4235,7 @@
         put(h('div', { class: 'fish-msg big' }, it ? h('span', null, 'You catch ', h('b', { class: 'q' + it.q }, it.name), kind !== 'common' ? h('small', null, kind === 'rare' ? ' · rare' : ' · big') : null) : F.result === 'early' ? 'Too soon: it swam off' : 'It got away'),
           use ? h('div', { class: 'fish-sub' }, `Cooks into ${D.ITEMS[use.makes].name}`) : null);
         if (it) sfx('catch');
-        setTimeout(() => { const P = G.S.player; if (!P.fishing || P.fishing.phase !== 'done' || P.fishing.at !== F.at) return; if (ui.fishAuto && !G.fishWhy() && !G.bagsFull()) G.fishStart(true); }, 1400);
+        setTimeout(() => { const P = G.S.player; if (!P.fishing || P.fishing.phase !== 'done' || P.fishing.at !== F.at) return; if (ui.fishAuto && !G.fishWhy() && !G.bagsFull({ slot: 'mat', id: '' })) G.fishStart(true); }, 1400);
       }
       const bar = h('div', { class: 'fish-btns' },
         F.phase === 'done' && !ui.fishAuto ? h('button', { class: 'btn', onclick: (e) => { e.stopPropagation(); startFishing(false); } }, 'Cast again') : null,

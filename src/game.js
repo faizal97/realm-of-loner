@@ -600,12 +600,12 @@
     while (n > 0) { const k = Math.min(n, STACK); list.push({ item: first ? it : Object.assign({}, it), n: k }); n -= k; first = false; }
   }
   // how many of a stackable item still fit in the bags, and whether taking n out empties a slot (the last stacks go first)
-  G.bagRoom = (it) => { const P = G.S.player; return P.bags.reduce((a, b) => a + (b.item.id === it.id && b.n < STACK ? STACK - b.n : 0), 0) + Math.max(0, G.bagCap() - P.bags.length) * STACK; };
+  G.bagRoom = (it) => { const P = G.S.player; return P.bags.reduce((a, b) => a + (b.item.id === it.id && b.n < STACK ? STACK - b.n : 0), 0) + G.bagFree(it) * STACK; };
   G.freesSlot = (id, n) => { const P = G.S.player; for (let i = P.bags.length - 1; i >= 0 && n > 0; i--) { const b = P.bags[i]; if (b.item.id !== id) continue; if (b.n <= n) return true; n -= b.n; } return false; };
   // stacks over 20 from a save before #440 split into 20s where the room allows; nothing is ever dropped (#485)
   function restack(P) {
-    for (const [list, cap] of [[P.bags || [], G.bagCap()], [P.bank || [], G.bankSlots()]]) for (let i = 0; i < list.length; i++) {
-      const b = list[i]; if (b.n <= STACK || !G.stackable(b.item) || list.length + Math.ceil(b.n / STACK) - 1 > cap) continue;
+    for (const [list, cap] of [[P.bags || [], null], [P.bank || [], G.bankSlots()]]) for (let i = 0; i < list.length; i++) {
+      const b = list[i]; if (b.n <= STACK || !G.stackable(b.item) || Math.ceil(b.n / STACK) - 1 > (cap == null ? (P.bags === list ? G.bagFree(b.item) : 0) : cap - list.length)) continue;
       let rest = b.n - STACK; b.n = STACK;
       while (rest > 0) { list.splice(++i, 0, { item: Object.assign({}, b.item), n: Math.min(STACK, rest) }); rest -= STACK; }
     }
@@ -616,11 +616,11 @@
     if (G.isQuestItem(it.id)) { P.qitems = P.qitems || {}; P.qitems[it.id] = (P.qitems[it.id] || 0) + n; return true; } // kept with the quests, no slot (#144)
     if (G.stackable(it)) {
       // stacks hold 20 (#440): fill the open ones, then new slots; nothing goes in unless it all fits
-      if (stackSlots(P.bags, it, n) > G.bagCap() - P.bags.length) { toast('Bags are full.'); return false; }
+      if (stackSlots(P.bags, it, n) > G.bagFree(it)) { toast('Bags are full.'); return false; }
       const fresh = !P.bags.some((b) => b.item.id === it.id);
       putStack(P.bags, it, n);
       if (!fresh) return true;
-    } else if (G.bagsFull()) { toast('Bags are full.'); return false; }
+    } else if (G.bagsFull(it)) { toast('Bags are full.'); return false; }
     else P.bags.push({ item: it, n });
     if (G.collectLook) G.collectLook(it); // the wardrobe (v10.3)
     if (G.isUpgrade(it)) P.bagUpgrade = true; // the Bags button's dot until Bags is opened (v10.9, issue #11)
@@ -711,7 +711,7 @@
   G.buyBack = function (i) {
     const P = G.S.player, x = (P.buyback || [])[i]; if (!x) return false;
     if (P.money < x.price) { toast('Not enough money.'); return false; }
-    if (G.stackable(x.item) ? G.bagRoom(x.item) < x.n : G.bagsFull()) { toast('Bags are full.'); return false; }
+    if (G.stackable(x.item) ? G.bagRoom(x.item) < x.n : G.bagsFull(x.item)) { toast('Bags are full.'); return false; }
     if (!G.addItem(x.item, x.n)) return false;
     P.money -= x.price; P.buyback.splice(i, 1);
     sys(`Bought back ${x.item.name}${x.n > 1 ? ' x' + x.n : ''} for ${G.moneyText(x.price)}.`); emit('change'); return true;
@@ -1611,7 +1611,7 @@
     const P = G.S.player, Q = D.QUESTS[qid];
     if (!G.questComplete(qid)) return;
     const opts = G.rewardItems(qid), it = opts[Math.min(choice | 0, opts.length - 1)] || null; // the version picked (#141)
-    if (it && G.bagsFull()) return toast('Make room in your bags first: this quest gives an item.'); // nothing paid, it stays complete (#144, as #128)
+    if (it && G.bagsFull(it)) return toast('Make room in your bags first: this quest gives an item.'); // nothing paid, it stays complete (#144, as #128)
     for (const o of Q.objs) if (o.type === 'collect') G.removeItem(o.item, o.n);
     delete P.quests[qid]; P.done[qid] = true;
     sys(`${Q.name} completed.`);
@@ -2223,12 +2223,12 @@
     if (G.isQuestItem(b.item.id)) { G.addItem(b.item, b.n); P.bank.splice(idx, 1); return emit('change'); } // kept with the quests, no slot needed (an old save's)
     // a full stack (20) is no room, and the bank lets go only of what reached the bags (#163: a stack was deleted)
     if (G.stackable(b.item)) { // as many as fit, in stacks of 20 (#440); the rest stays in the bank
-      const fit = P.bags.reduce((a, x) => a + (x.item.id === b.item.id && x.n < STACK ? STACK - x.n : 0), 0) + Math.max(0, G.bagCap() - P.bags.length) * STACK;
+      const fit = P.bags.reduce((a, x) => a + (x.item.id === b.item.id && x.n < STACK ? STACK - x.n : 0), 0) + G.bagFree(b.item) * STACK;
       const k = Math.min(b.n, fit); if (!k) return toast('Bags are full.');
       G.addItem(k === b.n ? b.item : Object.assign({}, b.item), k); b.n -= k; if (!b.n) P.bank.splice(idx, 1);
       return emit('change');
     }
-    if (G.bagsFull()) return toast('Bags are full.');
+    if (G.bagsFull(b.item)) return toast('Bags are full.');
     if (G.addItem(b.item, b.n)) P.bank.splice(idx, 1);
     emit('change');
   };
@@ -2253,7 +2253,7 @@
   };
   G.abankWithdraw = function (key, most) { // most: take at most this many (one shown stack of 20)
     const b = G.abank(), row = AB.view(b).find((g) => g.key === key); if (!row) return false;
-    const k = row.stack ? Math.min(row.n, most || row.n, G.bagRoom(row.item)) : (G.bagsFull() ? 0 : 1);
+    const k = row.stack ? Math.min(row.n, most || row.n, G.bagRoom(row.item)) : (G.bagsFull(row.item) ? 0 : 1);
     if (!k) { toast('Bags are full.'); return false; }
     const got = AB.takeKey(b, key, k), P = G.S.player, before = JSON.stringify(P.bags);
     if (!got.n || !G.addItem(JSON.parse(JSON.stringify(got.item)), got.n)) return false;
@@ -2281,7 +2281,7 @@
     sys(`Account bank tab ${b.tabs} bought: ${G.abankSlots(b)} slots.`); emit('change'); return true;
   };
   // What other players pay: the vendor price times a factor by quality.
-  G.ahValue = (it) => it.slot === 'bag' && D.BAG_TIER && D.BAG_TIER[it.id] ? Math.round(0.75 * it.bag * G.questMoney(D.BAG_TIER[it.id]) / 100) * 100 : (G.ahTrade(it) && !D.GEAR_SLOTS.includes(it.slot) ? Math.max(4, Math.round((it.sell || 2) * (it.slot === 'recipe' ? 8 : 5))) : Math.max(10, Math.round((it.sell || 5) * [2, 3, 6, 9, 14, 0][it.q || 1])));
+  G.ahValue = (it) => it.slot === 'bag' && D.BAG_TIER && D.BAG_TIER[it.id] ? Math.round(0.75 * it.bag * (it.matBag ? 0.6 : 1) * G.questMoney(D.BAG_TIER[it.id]) / 100) * 100 /* a materials-only slot is worth less */ : (G.ahTrade(it) && !D.GEAR_SLOTS.includes(it.slot) ? Math.max(4, Math.round((it.sell || 2) * (it.slot === 'recipe' ? 8 : 5))) : Math.max(10, Math.round((it.sell || 5) * [2, 3, 6, 9, 14, 0][it.q || 1])));
   // what can go on the auction house: gear, trade goods and anything a profession makes
   G.ahTrade = (it) => !it.heirloom && !it.noSell && (D.GEAR_SLOTS.includes(it.slot) ? it.q >= 1 : ['mat', 'potion', 'elixir', 'stone', 'kit', 'bag', 'recipe'].includes(it.slot));
   // Listings from other players, refreshed now and then, around your level.
@@ -2300,6 +2300,10 @@
     if (bagsOk.length && !S.ah.listings.some((l) => bagsOk.includes(l.item.id))) {
       const k = bagsOk.length > 1 && Math.random() < 0.3 ? bagsOk[bagsOk.length - 2] : bagsOk[bagsOk.length - 1], it = G.copyItem(k);
       S.ah.listings.push({ id: 'ah' + t + '_b' + S.ah.listings.length + '_' + rint(0, 9999), item: it, n: 1, price: Math.round(G.ahValue(it) * (1.05 + Math.random() * 0.25)) /* never under its value, so it can't be flipped (sim/auction.js) */, seller: pick(sellers).name, expires: t + rnd(6, 24) * 3600000 });
+    }
+    { // now and then a materials bag for your level (beta.3), priced like the other bags
+      const mk = (D.BAG_MATS_AH || []).filter((k) => D.ITEMS[k] && D.BAG_TIER[k] <= L0).pop();
+      if (mk && Math.random() < 0.35 && !S.ah.listings.some((l) => l.item.id === mk)) { const it = G.copyItem(mk); S.ah.listings.push({ id: 'ah' + t + '_m' + S.ah.listings.length + '_' + rint(0, 9999), item: it, n: 1, price: Math.round(G.ahValue(it) * (1.05 + Math.random() * 0.25)), seller: pick(sellers).name, expires: t + rnd(6, 24) * 3600000 }); }
     }
     while (S.ah.listings.filter((l) => !D.GEAR_SLOTS.includes(l.item.slot)).length < 8) {
       const it = G.copyItem(pick(goods)), n = G.stackable(it) ? rint(1, 4) * 5 : 1;
@@ -2414,24 +2418,48 @@
   // ============================================================ professions (v3): gathering, crafting, bags, consumables
   // P.prof = { mining: { skill, max, known: [rare recipe ids] } }. Two primary professions. Data in data/professions.js.
   G.bagCap = function () { const P = G.S.player; return 16 + (P.bagsEq || []).reduce((a, b) => a + (b.bag || 0), 0); };
-  G.bagsFull = () => G.S.player.bags.length >= G.bagCap();
+  // A materials bag (beta.3) holds only trade goods: one list, two limits. Trade goods may sit in any slot; everything else
+  // only in the backpack and normal bags (gearCap). Trade goods fill the materials slots first, so the rest of the
+  // normal slots are gearCap minus other items minus the trade goods that overflow. G.bagFree(it) is the room for that
+  // item; with no item, the room for anything (the stricter number).
+  G.isMatItem = (it) => !!it && it.slot === 'mat' && !G.isQuestItem(it.id);
+  G.gearCap = function () { const P = G.S.player; return 16 + (P.bagsEq || []).reduce((a, b) => a + (b.matBag ? 0 : b.bag || 0), 0); };
+  function bagFreeOf(bags, cap, gcap, it) {
+    const all = Math.max(0, cap - bags.length); if (G.isMatItem(it)) return all;
+    const mats = bags.filter((b) => G.isMatItem(b.item)).length;
+    return Math.max(0, Math.min(all, gcap - (bags.length - mats) - Math.max(0, mats - (cap - gcap))));
+  }
+  // whether these items have a legal place with these bags equipped (unequipping or swapping a bag)
+  function bagsHold(bags, eq) {
+    const cap = 16 + eq.reduce((a, b) => a + (b.bag || 0), 0), gcap = 16 + eq.reduce((a, b) => a + (b.matBag ? 0 : b.bag || 0), 0);
+    const mats = bags.filter((b) => G.isMatItem(b.item)).length;
+    return bags.length <= cap && bags.length - mats + Math.max(0, mats - (cap - gcap)) <= gcap;
+  }
+  G.bagFree = (it) => bagFreeOf(G.S.player.bags, G.bagCap(), G.gearCap(), it);
+  G.bagsFull = (it) => G.bagFree(it) <= 0;
+  // would n of it fit once takeN of takeId has left the bags? tried on a copy, so it counts exactly as addItem places it
+  G.wouldFit = function (it, n, takeId, takeN) {
+    const P = G.S.player, bags = P.bags, q = P.qitems;
+    P.bags = bags.map((b) => ({ item: b.item, n: b.n })); P.qitems = Object.assign({}, q);
+    try { if (takeId) G.removeItem(takeId, takeN); return G.isQuestItem(it.id) || (G.stackable(it) ? stackSlots(P.bags, it, n || 1) <= G.bagFree(it) : G.bagFree(it) > 0); }
+    finally { P.bags = bags; if (q) P.qitems = q; else delete P.qitems; }
+  };
   // how many more bag slots a set of items ([item, n] pairs) needs than are free, counted the way G.addItem places them:
   // a stackable item joins a stack with room, a quest item takes no slot, anything else takes a slot. 0: they all fit (#162)
   G.slotsShort = function (list) {
-    const P = G.S.player, room = {}; let need = 0;
+    const P = G.S.player, room = {}; let need = 0, other = 0;
     for (const [it, n] of list) {
       if (G.isQuestItem(it.id)) continue;
-      if (!G.stackable(it)) { need++; continue; }
+      if (!G.stackable(it)) { need++; other++; continue; }
       if (!(it.id in room)) room[it.id] = P.bags.reduce((a, b) => a + (b.item.id === it.id && b.n < STACK ? STACK - b.n : 0), 0);
       const rest = Math.max(0, (n || 1) - room[it.id]), s = Math.ceil(rest / STACK); // stacks of 20 (#440)
-      need += s; room[it.id] = room[it.id] + s * STACK - (n || 1);
+      need += s; if (!G.isMatItem(it)) other += s; room[it.id] = room[it.id] + s * STACK - (n || 1);
     }
-    return Math.max(0, need - (G.bagCap() - P.bags.length));
+    return Math.max(0, need - G.bagFree({ slot: 'mat', id: '' }), other - G.bagFree());
   };
   // the Bags tab warns before your bags are full (#90): free slots from the real capacity, so bigger bags need nothing here.
   // A badge only at BAG_WARN free or fewer (amber, the count), and "Full" at none; with more room, nothing
   G.BAG_WARN = 3;
-  G.bagFree = () => Math.max(0, G.bagCap() - G.S.player.bags.length);
   G.bagBadge = () => { const n = G.bagFree(); return n > G.BAG_WARN ? null : n === 0 ? { full: true, text: 'Full', n } : { full: false, text: String(n), n }; };
   G.profs = () => G.S.player.prof || (G.S.player.prof = {});
   G.hasProf = (id) => !!G.profs()[id];
@@ -2525,7 +2553,7 @@
     const N = D.NODES[key], p = G.profs()[N.prof];
     if (!p) return toast(`Requires ${D.PROFESSIONS[N.prof].name}: learn it from a profession trainer.`);
     if (p.skill < N.skill) return toast(`Requires ${D.PROFESSIONS[N.prof].name} ${N.skill}.`);
-    if (G.bagsFull() && !P.bags.some((b) => b.item.id === N.item && b.n < 20)) return toast('Bags are full.');
+    if (G.bagsFull(D.ITEMS[N.item]) && !P.bags.some((b) => b.item.id === N.item && b.n < 20)) return toast('Bags are full.');
     stopActions();
     P.casting = { what: 'pgather', key, label: `${D.PROFESSIONS[N.prof].verb === 'Mine' ? 'Mining' : 'Picking'} ${N.name}`, start: now(), end: now() + 2500 };
     emit('castBegin', { what: 'pgather' }); emit('change');
@@ -2588,7 +2616,7 @@
     if (G.fight) return toast('You are in combat.');
     if (p.skill < r.sk[0]) return toast(`Requires ${D.PROFESSIONS[r.prof].name} ${r.sk[0]}.`);
     if (G.craftable(rid) < 1) return toast('You are missing materials.');
-    if (G.bagsFull() && !(G.stackable(D.ITEMS[r.makes]) && P.bags.some((b) => b.item.id === r.makes && b.n < 20)) && !Object.keys(r.mats).some((m) => G.freesSlot(m, r.mats[m]))) return toast('Bags are full.'); // materials that empty a slot make room (#486)
+    if (!Object.keys(r.mats).some((m) => G.wouldFit(D.ITEMS[r.makes], r.n, m, Math.min(r.mats[m], G.countItem(m))))) return toast('Bags are full.'); // materials that empty a slot make room (#486)
     stopActions();
     const left = Math.max(1, Math.min(count || 1, G.craftable(rid)));
     P.casting = { what: 'craft', rid, left, total: left, label: `${D.ITEMS[r.makes].name}`, start: now(), end: now() + 1500 };
@@ -2615,7 +2643,7 @@
     loot(`You create: ${B.link(it.name, it.q)}${r.n + extra > 1 ? ' x' + (r.n + extra) : ''}${extra ? ' (Perfect)' : ''}.`);
     skillUp(r.prof, G.skillColor(p.skill, r.sk));
     G.S.stats = G.S.stats || {}; G.S.stats.crafted = (G.S.stats.crafted || 0) + 1;
-    if (c.left > 1 && G.craftable(c.rid) > 0) { if (G.bagsFull()) craftStopped(c); else P.casting = Object.assign({}, c, { left: c.left - 1, start: now(), end: now() + 1500 }); }
+    if (c.left > 1 && G.craftable(c.rid) > 0) { if (G.bagsFull(D.ITEMS[r.makes]) && !P.bags.some((b) => b.item.id === r.makes && b.n < STACK)) craftStopped(c); else P.casting = Object.assign({}, c, { left: c.left - 1, start: now(), end: now() + 1500 }); }
   }
   // --- cooking (v10.9): the heat bar. A needle sweeps from cold (0) to burnt (1); where you stop it decides the batch:
   // the gold zone is Perfect, the rest Normal, the burnt end (and never stopping) Burnt. The gold zone is wider the
@@ -2666,8 +2694,9 @@
   }
   G.fishStart = function (auto) {
     const why = G.fishWhy(); if (why) { toast(why); return false; }
-    if (G.bagsFull()) { // a stack of this water's fish with room still takes one (#486)
+    { // a stack of this water's fish with room still takes one (#486); fish are trade goods, so a materials bag takes them
       const T = D.FISH[D.waterTier(G.S.player.place)], ids = T.common.map((c) => c[0]).concat(T.big[0], T.rare[0]);
+      if (ids.some((id) => G.bagsFull(D.ITEMS[id])))
       if (!G.S.player.bags.some((b) => ids.includes(b.item.id) && b.n < 20)) { toast('Bags are full.'); return false; }
     }
     stopActions();
@@ -2773,8 +2802,10 @@
       P.bagsEq = P.bagsEq || [];
       if (P.bagsEq.length < D.BAG_SLOTS) { P.bagsEq.push(it); P.bags.splice(idx, 1); sys(`You equip the ${it.name} (+${it.bag} slots).`); }
       else {
-        const small = P.bagsEq.slice().sort((a, c) => a.bag - c.bag)[0];
-        if (small.bag >= it.bag) return toast('Your bag slots are full of bags this big or bigger.');
+        const same = P.bagsEq.filter((b) => !b.matBag === !it.matBag), small = (same.length ? same : P.bagsEq).slice().sort((a, c) => a.bag - c.bag)[0]; // a materials bag swaps for a materials bag first
+        if (!!small.matBag === !!it.matBag && small.bag >= it.bag) return toast('Your bag slots are full of bags this big or bigger.');
+        const eq2 = P.bagsEq.map((b) => (b === small ? it : b)), bags2 = P.bags.map((b, j) => (j === idx ? { item: small, n: 1 } : b));
+        if (!bagsHold(bags2, eq2)) return toast('Empty some space first: your items would not fit.');
         P.bagsEq[P.bagsEq.indexOf(small)] = it; P.bags[idx] = { item: small, n: 1 }; sys(`You swap your ${small.name} for the ${it.name}.`);
       }
     } else if (it.slot === 'recipe') {
@@ -2788,7 +2819,7 @@
   };
   G.unequipBag = function (i) {
     const P = G.S.player, bag = (P.bagsEq || [])[i]; if (!bag) return;
-    if (P.bags.length + 1 > G.bagCap() - bag.bag) return toast('Empty some space first: your items would not fit.');
+    if (!bagsHold(P.bags.concat([{ item: bag, n: 1 }]), P.bagsEq.filter((b, j) => j !== i))) return toast('Empty some space first: your items would not fit.');
     P.bagsEq.splice(i, 1); P.bags.push({ item: bag, n: 1 }); emit('change');
   };
   // ============================================================ Help Wanted, Mentor Marks, heirlooms, titles, Roulette (v2.3)

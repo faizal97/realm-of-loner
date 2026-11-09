@@ -32,9 +32,7 @@ test('a swap with full bags says "Bags full"', () => {
   G.addItem(G.copyItem('linen_cloth'), 6); // one stays, so the payment frees no slot (#486)
   const m = req({ kind: 'swap', item: 'linen_cloth', n: 5, itemData: it });
   assert.ok(!SOC.actions(m)[0].disabled, 'room: it can be done');
-  const real = G.bagsFull; G.bagsFull = () => true;
-  try {
-    const [sw] = SOC.actions(m);
-    assert.strictEqual(sw.label, 'Bags full'); assert.ok(sw.disabled && sw.why);
-  } finally { G.bagsFull = real; }
+  while (P.bags.length < G.bagCap()) P.bags.push({ item: G.genGear('legs', 20, 2), n: 1 }); // really full: the swap checks the room it would have
+  const [sw] = SOC.actions(m);
+  assert.strictEqual(sw.label, 'Bags full'); assert.ok(sw.disabled && sw.why);
 });

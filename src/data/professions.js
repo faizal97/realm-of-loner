@@ -229,7 +229,11 @@
   D.BAG_SLOTS = 4;
   // the level a bag belongs to (#534): bots list the Woolen, Silk and Duskweave Bags on the auction house from it, and a
   // bag's auction price is about 6 to 8 quests' gold at it (0.75 x slots x quest gold), so a bigger bag is worth saving for
-  D.BAG_TIER = { small_pouch: 1, linen_bag: 10, woolen_bag: 15, silk_bag: 30, duskweave_bag: 45, starweave_bag: 55 };
+  // materials bags (beta.3): only trade goods go in them, so they hold half as many again as a bag of their cloth
+  D.item('gatherers_satchel', { name: "Gatherer's Satchel", slot: 'bag', q: 1, lvl: 1, icon: 'bag_gatherer', bag: 12, matBag: true, sell: 200 });
+  D.item('foragers_haversack', { name: "Forager's Haversack", slot: 'bag', q: 2, lvl: 1, icon: 'bag_forager', bag: 20, matBag: true, sell: 1200 });
+  D.BAG_TIER = { small_pouch: 1, linen_bag: 10, woolen_bag: 15, silk_bag: 30, duskweave_bag: 45, starweave_bag: 55, gatherers_satchel: 20, foragers_haversack: 48 };
+  D.BAG_MATS_AH = ['gatherers_satchel', 'foragers_haversack'];
   D.BAG_AH = ['woolen_bag', 'silk_bag', 'duskweave_bag'];
   // ---- Cooking (v10.9): food restores 10% more than shop food of its level; a Well Fed meal also gives a small buff for
   // 30 min (one at a time, beside an elixir)
@@ -424,6 +428,7 @@
   rec('tl_wool_bolt', 'tailoring', 75, 'wool_bolt', { wool_cloth: 3 }, { sk: [75, 100, 112, 125] });
   rec('tl_woolen_cape', 'tailoring', 75, 'woolen_cape', { wool_bolt: 1, coarse_thread: 1 });
   rec('tl_woolen_bag', 'tailoring', 85, 'woolen_bag', { wool_bolt: 3, coarse_thread: 1 }, { sk: [85, 110, 122, 135] });
+  rec('tl_gatherers_satchel', 'tailoring', 110, 'gatherers_satchel', { wool_bolt: 4, coarse_thread: 2 });
   rec('tl_heavy_woolen_gloves', 'tailoring', 95, 'heavy_woolen_gloves', { wool_bolt: 2, coarse_thread: 1 });
   rec('tl_gray_robe', 'tailoring', 105, 'gray_woolen_robe', { wool_bolt: 3, coarse_thread: 2 });
   rec('tl_heavy_woolen_pants', 'tailoring', 115, 'heavy_woolen_pants', { wool_bolt: 3, coarse_thread: 2 });
@@ -492,6 +497,7 @@
   rec('tl_duskweave_bolt', 'tailoring', 200, 'duskweave_bolt', { duskweave_cloth: 2 }, { sk: [200, 225, 250, 275] }); // from 200, the trainer's requirement (issue #6)
   rec('tl_duskweave_gloves', 'tailoring', 235, 'duskweave_gloves', { duskweave_bolt: 2, fine_thread: 1 });
   rec('tl_duskweave_bag', 'tailoring', 240, 'duskweave_bag', { duskweave_bolt: 4, fine_thread: 2 });
+  rec('tl_foragers_haversack', 'tailoring', 255, 'foragers_haversack', { duskweave_bolt: 6, fine_thread: 3 });
   rec('tl_duskweave_robe', 'tailoring', 250, 'duskweave_robe', { duskweave_bolt: 3, fine_thread: 2 });
   rec('tl_duskweave_leggings', 'tailoring', 260, 'duskweave_leggings', { duskweave_bolt: 2, fine_thread: 2 });
   rec('tl_starweave_robe', 'tailoring', 280, 'starweave_robe', { duskweave_bolt: 4, fine_thread: 3 });

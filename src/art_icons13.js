@@ -902,6 +902,20 @@
         S('M16,19.4 C22,17.6 42,17.6 48,19.4 M17,25.4 C24,28 40,28 47,25.4', '#e8b840', 1.4) + st(32, 22.6, 1.8)) +
         sparkle(52, 14, 3.2, '#fff4c0') + sparkle(10, 30, 2.2, '#fff4c0'));
     },
+    /* a materials bag (beta.3): a sturdy olive satchel stuffed so full that a leaf, a lump of ore and a fish tail poke out of the top */
+    bag_gatherer: function (c) {
+      var ore = P('M34,13 L37,4.4 L44,3.4 L48,8.6 L45,14 Z', c.cel('#8a8a96'), 1.8) + F('M37,7 L39.4,5 L43,5 L40,8.6 Z', '#e8e8f0', 0.8) + C(43.4, 10, 1.4, '#e09040', 0) + C(39, 11, 1, '#e09040', 0);
+      var tail = P('M19,15 L13.4,3 L19.4,6.4 L24.4,2.4 L24,15 Z', c.cel('#5a9ac0'), 1.8);
+      return item(c, blade(c, 30, 16, -14, 1.05, '#5aa040') + tail + ore + bag2(c, '#7a7a3a', '#5e5e2a', '#d8c08a',
+        SD('M12,52 C22,57.6 42,57.6 52,52', '#e0d0a0', 1.2, '2.2 1.8', 0.9) + P('M26,38 L32,34 L38,38 L38,46 L26,46 Z', c.cel('#a08a50'), 1.2) + S('M29,41 L35,41 M29,43.6 L35,43.6', '#5e4a26', 0.9)));
+    },
+    /* the bigger one: a deep moss-green haversack with gold cords, overflowing with a herb sprig, a violet crystal and a fish */
+    bag_forager: function (c) {
+      var gem = P('M37,14 L40.6,2.6 L46.6,6.6 L47,14 Z', c.lg(['#e8d0ff', '#9a60e0', '#4a2a8a'], 0, 0, 1, 1), 1.8) + F('M39.4,11 L40.8,5 L43,6.6 Z', '#ffffff', 0.65);
+      var tail = P('M19,15 L13.4,3 L19.4,6.4 L24.4,2.4 L24,15 Z', c.cel('#4a9ab8'), 1.8);
+      return item(c, blade(c, 31, 16, -8, 1.05, '#6ab43a') + blade(c, 28, 16, -34, 0.8, '#4a9038') + tail + gem + bag2(c, '#2e5a3a', '#24482e', '#e8b840',
+        SD('M12,52 C22,57.6 42,57.6 52,52', '#e8c060', 1.2, '2.2 1.8', 0.9) + blade(c, 32, 46, 0, 0.5, '#e8c060')) + sparkle(52, 12, 2.8, '#fff4c0'));
+    },
     /* ---------- profession keepsakes (skill 300) ---------- */
     /* a master miner's pickaxe: dark steel head edged in gold, a blue gem in a gold socket, banded haft */
     deepdelvers_pick: function (c) {

@@ -23,11 +23,12 @@ const NEW = ['duskiron_ore', 'duskiron_bar', 'moonsilver_ore', 'moonsilver_bar',
   'cinderbloom', 'gloomcap', 'sunveil', 'frostpetal', 'hardhide_leather', 'duskweave_cloth', 'duskweave_bolt',
   'ashgill_bass', 'frostscale_herring', 'thunderhead_marlin', 'starlit_koi', 'marbled_haunch',
   'ashgill_fillet', 'roast_haunch', 'herring_pie', 'smokehouse_stew', 'spiced_haunch', 'trail_skewer', 'marlin_steak', 'koi_banquet', 'long_table_feast',
-  'flask_iron_wall', 'flask_warpath', 'flask_stillmind', 'deepstone_whetstone', 'hardhide_armor_kit', 'bag_duskweave', 'bag_starweave',
+  'flask_iron_wall', 'flask_warpath', 'flask_stillmind', 'deepstone_whetstone', 'hardhide_armor_kit', 'bag_duskweave', 'bag_starweave', 'bag_gatherer', 'bag_forager',
   'deepdelvers_pick', 'herbwise_satchel', 'hide_hunters_pelt', 'master_smiths_hammer', 'tanners_rolled_hides', 'weavers_spindle',
   'alchemists_bandolier', 'chefs_stewpot', 'anglers_rod', 'battleground'];
 // each new icon next to the 3 existing icons it is most likely to be confused with
 const COMPARE = [
+  ['bag_gatherer', 'bag_wool', 'bag_linen', 'copper_ore'], ['bag_forager', 'bag_wool', 'peacebloom', 'bag_linen'],
   ['battleground', 'sword', 'hearthstone', 'journal'],
   ['duskiron_ore', 'iron_ore', 'embersilver_ore', 'silver_ore'], ['duskiron_bar', 'iron_bar', 'steel_bar', 'silver_bar'],
   ['moonsilver_ore', 'silver_ore', 'tin_ore', 'embersilver_ore'], ['moonsilver_bar', 'silver_bar', 'steel_bar', 'embersilver_bar'],
