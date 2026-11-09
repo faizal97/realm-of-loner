@@ -3466,7 +3466,7 @@
       });
       btn.addEventListener('pointerup', (e) => {
         if (!drag) return; const moved = drag.moved; drag = null;
-        if (!moved) { const sn = weekSeen(); return openThisWeek(G.weekBanners().some((x) => !sn.has(x.id)) ? 'on' : 'todo'); }
+        if (!moved) return openThisWeek();
         const r = app.getBoundingClientRect(), p = lwPrefs(); p.side = e.clientX - r.left < r.width / 2 ? 'l' : 'r'; p.y = (e.clientY - r.top) / r.height; lwSavePrefs(p); placeEvLantern();
       });
       ui.evBtn = btn; app.append(btn);
@@ -3529,45 +3529,37 @@
       a ? h('img', { class: 'wk-art', src: a.src, alt: '', draggable: 'false', style: { objectPosition: a.pos } }) : h('div', { class: 'wk-emb' }, img(art('icon', 'event_' + b.event))),
       h('div', { class: 'wk-cap' + (a && a.logo ? ' logo' : '') }, a && a.logo ? null : h('b', null, b.title), h('small', null, weekSub(b)))); // a banner's logo is its name
   }
-  // two tabs: To do (the hub: done and left) and What's on (the banners); a new banner opens it on What's on
-  function openThisWeek(tab) {
-    if (tab) ui.weekTab = tab;
+  // one page: the hub on top (Today and This week, a pip per step; tap a row for its list), then the banners
+  function openThisWeek() {
     openSheet('week', 'This week', 'What’s on in the realm', (b) => {
-      const list = G.weekBanners(), seen = weekSeen(), hub = weekHub(list);
-      if (!hub) ui.weekTab = 'on';
-      const k = ui.weekTab || 'todo', left = hub ? hub.left : 0, unseen = list.some((x) => !seen.has(x.id));
-      if (hub) {
-        const tabs = h('div', { class: 'tabs' });
-        for (const [t, label, dot] of [['todo', left ? `To do (${left})` : 'To do'], ['on', 'What’s on', unseen && k !== 'on']])
-          tabs.append(h('button', { class: k === t ? 'on' : '', onclick: () => { ui.weekTab = t; ui.sheetFn(); ui.sheetBody.scrollTop = 0; } }, label, dot ? h('span', { class: 'tab-dot' }) : null));
-        b.append(h('div', { class: 'sheet-stick' }, tabs));
-      }
-      if (k === 'todo' && hub) { b.append(hub.el); return; }
+      const list = G.weekBanners(), hub = weekHub(list);
       weekMarkSeen(list); evLantern();
+      if (hub) b.append(hub);
       const col = h('div', { class: 'wk-list' });
       for (const x of list) col.append(weekBanner(x, () => (x.event && x.kind === 'now' ? (x.event === 'longnight' ? lnTracker() : lwTracker()) : x.event ? (x.event === 'longnight' ? openLongnight() : openLanternwake()) : openWeekBanner(x))));
       b.append(col);
     });
   }
-  // the hub at the top of This week: every step that ticks itself, Today (the Daily Board) and This week (the rest), a pip
-  // per step; what's left with its Go, what's done folded away. A row opens its banner's page
+  // the hub: every step that ticks itself, Today (the Daily Board) and This week (the rest). Each is one row with a pip per
+  // step; tapping it opens its list in place (what's left with Go, then what's done). A row in the list opens its banner
   function weekHub(list) {
     const rows = [];
     for (const b of list) for (const st of b.steps || []) { const done = G.weekStepDone(st); if (done !== null) rows.push({ b, st, done }); }
     if (!rows.length) return null;
-    const grp = (day) => rows.filter((r) => (r.b.board === 'day') === day);
-    const tally = (name, rs) => rs.length ? h('div', { class: 'wk-tally' }, h('b', null, name), h('span', { class: 'wk-pips', 'aria-hidden': 'true' }, ...rs.map((r) => h('i', { class: r.done ? 'on' : '' }))),
-      h('small', null, `${rs.filter((r) => r.done).length}/${rs.length} done`)) : null;
     const row = (r) => { const go = !r.done && r.st.go && WEEK_GO[r.st.go];
       return h('div', { class: 'row wk-step' + (r.done ? ' done' : '') }, h('span', { class: 'wk-tick', 'aria-label': r.done ? 'Done' : 'Not done' }, r.done ? '✓' : ''),
         h('button', { class: 't wk-open', onclick: () => openWeekBanner(r.b) }, h('span', null, r.st.text), h('small', null, r.b.title)),
         go ? h('div', { class: 'r' }, h('button', { class: 'chip gold', onclick: () => go() }, 'Go')) : null); };
-    const left = [...grp(true), ...grp(false)].filter((r) => !r.done), done = rows.filter((r) => r.done); // today's first: they end sooner
-    const out = h('div', { class: 'wk-hub' }, tally('Today', grp(true)), tally('This week', grp(false)));
-    out.append(h('div', { class: 'sec-h' }, 'Left', left.length ? null : h('small', null, 'all done')));
-    if (left.length) out.append(h('div', { class: 'list' }, ...left.map(row)));
-    if (done.length) out.append(h('details', { class: 'wk-done' }, h('summary', null, `Done (${done.length})`), h('div', { class: 'list' }, ...done.map(row))));
-    return { el: out, left: left.length };
+    const out = h('div', { class: 'wk-hub' });
+    for (const [key, name, rs] of [['day', 'Today', rows.filter((r) => r.b.board === 'day')], ['week', 'This week', rows.filter((r) => r.b.board !== 'day')]]) {
+      if (!rs.length) continue;
+      const n = rs.filter((r) => r.done).length, sorted = [...rs.filter((r) => !r.done), ...rs.filter((r) => r.done)];
+      out.append(h('details', { class: 'wk-tally', open: ui.weekOpen === key ? '' : null, ontoggle: (e) => { if (e.target.open) ui.weekOpen = key; else if (ui.weekOpen === key) ui.weekOpen = null; } },
+        h('summary', null, h('b', null, name), h('span', { class: 'wk-pips', 'aria-hidden': 'true' }, ...sorted.map((r) => h('i', { class: r.done ? 'on' : '' }))),
+          h('small', null, n === rs.length ? 'all done' : `${n}/${rs.length} done`), h('span', { class: 'nav-arr' }, '›')),
+        h('div', { class: 'list' }, ...sorted.map(row))));
+    }
+    return out;
   }
   function openWeekBanner(x) {
     openSheet('week_' + x.id, x.title, weekSub(x), (b) => {
@@ -3597,7 +3589,7 @@
     if (!G.S || G.S.player.level < 2 || G.S.run) return;
     if (ui.dialog || ui.sheet || (window.CS && CS.playing)) { if ((tries || 0) < 15) setTimeout(() => weekOnEnter((tries || 0) + 1), 2000); return; }
     const seen = weekSeen();
-    if (G.weekBanners().some((b) => !b.quiet && !seen.has(b.id))) openThisWeek('on'); // the Daily Board alone never opens it
+    if (G.weekBanners().some((b) => !b.quiet && !seen.has(b.id))) openThisWeek(); // the Daily Board alone never opens it
   }
   // the first time into a festival run on this device: its story, once (like a dungeon's first-entry intro)
   function lwIntro(act) {

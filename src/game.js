@@ -4849,17 +4849,15 @@
   G.weekBanners = function (date) {
     const d = date || new Date(now()), out = [];
     for (const k of G.liveEvents(d)) out.push({ id: 'ev_' + k + '_' + G.eventSeason(k), kind: 'now', event: k, title: D.EVENTS[k].name, text: [D.EVENTS[k].story[0]], steps: [], to: G.eventEnds(k) });
+    const order = { now: 0, new: 1, soon: 2 };
+    const own = (D.WEEK || []).filter((b) => wkDay(b.from) <= d && d <= wkDay(b.to, true)).sort((a, b) => order[a.kind] - order[b.kind]);
+    out.push(...own); // what we wrote for this week first: it's what the sheet is for (new content on the first screen)
     { const fr = G.S && G.S.player.level >= D.LEVEL_CAP && G.featuredRaid(d); // the featured raid (#541): its own banner, every week, by itself
       if (fr) { const A = D.ACTIVITIES[fr], end = new Date(d.getFullYear(), d.getMonth(), d.getDate()); end.setDate(end.getDate() + (7 - end.getDay()) % 7); // its Sunday
         out.push({ id: 'raid_' + fr + '_' + dayNum(end), kind: 'now', title: `Featured raid: ${A.name}`, art: ['banner', 'raid_' + fr], artHorde: ['banner', 'raid_' + fr + '_h'], to: end,
           text: [`Its first clear this week, on Normal or Hard, gives ${G.FEATURED_MARKS} Mentor Marks${G.raidLooksLeft(fr).length ? ' and a look from its set you don\u2019t have yet' : ''}. A new raid is featured each Monday.`],
           steps: [{ text: `Clear ${A.name} this week`, check: ['featured_raid', 1], go: 'lfg:raid' }] }); } }
-    const order = { now: 0, new: 1, soon: 2 };
-    const own = (D.WEEK || []).filter((b) => wkDay(b.from) <= d && d <= wkDay(b.to, true)).sort((a, b) => order[a.kind] - order[b.kind]);
-    const nowOwn = own.filter((b) => b.kind === 'now'), rest = own.filter((b) => b.kind !== 'now');
-    out.push(...nowOwn);
-    if (G.S && G.S.player.level >= 10) out.push(...boards(d)); // the boards, after what's on and before what's new
-    out.push(...rest);
+    if (G.S && G.S.player.level >= 10) out.push(...boards(d)); // the boards last: they're every week's
     if (!G.liveEvents(d).length && !own.length && D.EVENTS) { const k = Object.keys(D.EVENTS).sort((a, b) => G.eventNext(a) - G.eventNext(b))[0]; if (k) out.push({ id: 'ev_next_' + k, kind: 'soon', event: k, title: D.EVENTS[k].name, text: [D.EVENTS[k].story[0]], steps: [], atDate: G.eventNext(k) }); }
     return out;
   };
