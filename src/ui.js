@@ -2392,6 +2392,30 @@
     if (extra) t.append(extra);
     return t;
   }
+  // the one fact line under an item's name in Bags (#537): for gear, Upgrade or not and the biggest changes against what you
+  // wear; for anything else, what it does. The whole tooltip is one tap away (Inspect).
+  const SHORT = { str: 'Str', agi: 'Agi', sta: 'Sta', int: 'Int', spi: 'Spi', sp: 'SP', armor: 'Armor', dps: 'DPS' };
+  function itemBrief(it) {
+    const P = G.S.player, line = (cls, ...k) => h('div', { class: 'bag-fact ' + cls }, ...k);
+    const why = blockReason(it);
+    if (why) return line('red', why.text);
+    if (D.GEAR_SLOTS.includes(it.slot)) {
+      const F = G.effectOf(it); if (F) return line('eff', `◆ Effect: ${F.name}`);
+      const cur = P.equip[it.slot]; if (cur === it) return line('dim', 'Equipped');
+      const val = (x, k) => (!x ? 0 : k === 'dps' ? (x.dmg ? (x.dmg[0] + x.dmg[1]) / 2 / x.speed : 0) : k === 'armor' ? x.armor || 0 : k === 'sp' ? x.sp || 0 : (x.stats && x.stats[k]) || 0);
+      const diffs = ['dps', 'str', 'agi', 'sta', 'int', 'spi', 'sp', 'armor'].map((k) => [k, val(it, k) - val(cur, k)]).filter(([, d]) => Math.abs(d) >= 0.5).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 3);
+      const up = G.isUpgrade(it);
+      return line('', h('b', { class: up ? 'gr' : 'dim' }, up ? '▲ Upgrade' : cur ? 'No upgrade' : 'Slot empty'), ...diffs.map(([k, d]) => h('span', { class: d > 0 ? 'gr' : 'red' }, ` · ${d > 0 ? '+' : '−'}${Math.round(Math.abs(d))} ${SHORT[k]}`)));
+    }
+    if (it.heal || it.mana) return line('gr', `Restores ${it.heal ? it.heal[0] + '–' + it.heal[1] + ' health' : it.mana[0] + '–' + it.mana[1] + ' mana'}`);
+    if (it.restore) return line('gr', `Restores ${it.restore} ${it.slot === 'food' ? 'health' : 'mana'} over ${it.slot === 'food' ? G.EAT_SECS : G.DRINK_SECS} sec`);
+    if (it.buff) return line('gr', Object.entries(it.buff).map(([k, v]) => `+${v} ${statName[k] || k}`).join(', ') + (it.flask ? ' · 2 hours' : ' · 1 hour'));
+    if (it.bag) return line('gr', `${it.bag} Slot Bag`);
+    if (it.teaches && D.RECIPES[it.teaches]) return line('gr', `Teaches ${D.ITEMS[D.RECIPES[it.teaches].makes].name}`);
+    if (it.slot === 'mat') return line('dim', 'Trade Goods');
+    if (it.q === 0) return line('dim', 'Junk · sell it');
+    return null;
+  }
   // Stat-by-stat difference against what's in that slot now.
   function compareBlock(it) {
     const P = G.S.player;
@@ -3258,8 +3282,10 @@
         // the buttons stay pinned to the bottom of the sheet, so selling never needs a scroll (v9.4)
         const price = !it.noSell && it.slot !== 'quest' ? h('small', { html: ' · sells for ' + moneyHtml((it.sell || 1) * sel.n) }) : null;
         // v10.1.1: the description is pinned too, above the buttons, in its own capped scroll so the grid stays in view
-        const tipBox = h('div', { class: 'bag-tip' }, itemTip(it), cur && D.GEAR_SLOTS.includes(it.slot) ? h('div', { class: 'sec-h' }, 'Currently equipped') : null, cur && D.GEAR_SLOTS.includes(it.slot) ? itemTip(cur) : null);
-        b.append(h('div', { class: 'bag-acts' }, tipBox, h('div', { class: 'bag-acts-t' }, h('b', { class: 'q' + (it.q || 0) }, it.name + (sel.n > 1 ? ' x' + sel.n : '')), price), acts));
+        // #537: the panel is short (name, one fact line, the buttons) so the grid stays in view; Inspect opens the full
+        // tooltip and what you wear in that slot
+        const inspect = () => showDialog([itemTip(it), cur && D.GEAR_SLOTS.includes(it.slot) && cur !== it ? h('div', { class: 'sec-h' }, 'Currently equipped') : null, cur && D.GEAR_SLOTS.includes(it.slot) && cur !== it ? itemTip(cur) : null, h('button', { class: 'btn alt wide', onclick: closeDialog }, 'Close')], true);
+        b.append(h('div', { class: 'bag-acts' }, h('div', { class: 'bag-acts-t bag-brief' }, h('div', null, h('b', { class: 'q' + (it.q || 0) }, it.name + (sel.n > 1 ? ' x' + sel.n : '')), price), h('button', { class: 'btn alt bag-insp', onclick: inspect }, 'Inspect')), itemBrief(it), acts));
       } else b.append(h('p', { style: { color: 'var(--muted)', margin: 0 } }, 'Tap an item to inspect it. A green arrow means an upgrade.'));
       const vendorNow = D.PLACES[P.place].vendor || D.PLACES[P.place].gearVendor;
       const junk = P.bags.filter((x) => x.item.q === 0 && !x.item.noSell).length;
