@@ -2406,7 +2406,7 @@
       box.append(h('div', { class: d > 0 ? 'gr' : 'red' }, `${d > 0 ? '+' : ''}${d.toFixed(dp)} ${label}`));
     }
     if (!any && cur) box.append(h('div', { class: 'dim' }, 'Same stats.'));
-    const up = G.itemScore(it, P.cls) - G.itemScore(cur, P.cls);
+    const up = G.itemScore(it, P.cls, G.role()) - G.itemScore(cur, P.cls, G.role()); // by role: a bear weighs tank stats (#533)
     if (G.effectOf(it) || G.effectOf(cur)) box.append(h('div', { class: 'eff', style: { fontWeight: 800 } }, '◆ Effect: whether it is better depends on the fight. Its Effect line says what it does, and what it did in your last run.')); // the game doesn't judge an effect by stats (v10.10)
     else box.append(h('div', { style: { fontWeight: 800, color: up > 0.01 ? '#2dff2d' : up < -0.01 ? '#ff5b4b' : '#b0b0b0' } }, up > 0.01 ? '▲ Upgrade for you' : up < -0.01 ? '▼ Downgrade for you' : 'About the same for you'));
     if ((it.lvl || 1) > P.level) box.append(h('div', { class: 'red' }, `You can equip it at level ${it.lvl}.`));

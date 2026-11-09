@@ -478,9 +478,12 @@
     shaman: { str: 1.4, agi: 0.8, sta: 1.3, int: 1.2, spi: 0.8, armor: 0.05, sp: 1, dps: 2.5 },
     bard: { str: 0, agi: 0.2, sta: 1.2, int: 1.7, spi: 1.5, armor: 0.03, sp: 1.5, dps: 0.2 },
   };
-  G.itemScore = function (it, cls) {
+  // A role that plays differently from its class's weights (#533): a druid tank lives in Bear Form, where Strength is attack
+  // power (2 each, engine.js), Stamina counts 1.25x and armor 2.8x, and the form replaces the weapon's damage.
+  const ROLE_W = { druid: { tank: { str: 2, agi: 1, sta: 1.9, int: 0.1, spi: 0.1, armor: 0.15, sp: 0, dps: 0 } } };
+  G.itemScore = function (it, cls, role) {
     if (!it) return 0;
-    const w = W[cls];
+    const w = (ROLE_W[cls] && ROLE_W[cls][role]) || W[cls];
     let s = 0;
     for (const k in (it.stats || {})) s += (w[k] || 0) * it.stats[k];
     s += (it.armor || 0) * w.armor + (it.sp || 0) * w.sp;
@@ -538,7 +541,7 @@
     const P = G.S.player;
     if (G.effectOf(it)) return false; // an effect item shows ◆ Effect instead (v10.10)
     if (!D.GEAR_SLOTS.includes(it.slot) || !G.canUseItem(it)) return false;
-    return G.itemScore(it, P.cls) > G.itemScore(P.equip[it.slot], P.cls) + 0.01;
+    const r = G.role(); return G.itemScore(it, P.cls, r) > G.itemScore(P.equip[it.slot], P.cls, r) + 0.01;
   };
 
   G.genGear = function (slot, lvl, q, opts) {
