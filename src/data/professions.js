@@ -227,6 +227,10 @@
   D.item('duskweave_bag', { name: 'Duskweave Bag', slot: 'bag', q: 1, lvl: 1, icon: 'bag_duskweave', bag: 12, sell: 900 });
   D.item('starweave_bag', { name: 'Starweave Bag', slot: 'bag', q: 2, lvl: 1, icon: 'bag_starweave', bag: 14, sell: 2000 });
   D.BAG_SLOTS = 4;
+  // the level a bag belongs to (#534): bots list the Woolen, Silk and Duskweave Bags on the auction house from it, and a
+  // bag's auction price is about 6 to 8 quests' gold at it (0.75 x slots x quest gold), so a bigger bag is worth saving for
+  D.BAG_TIER = { small_pouch: 1, linen_bag: 10, woolen_bag: 15, silk_bag: 30, duskweave_bag: 45, starweave_bag: 55 };
+  D.BAG_AH = ['woolen_bag', 'silk_bag', 'duskweave_bag'];
   // ---- Cooking (v10.9): food restores 10% more than shop food of its level; a Well Fed meal also gives a small buff for
   // 30 min (one at a time, beside an elixir)
   const shopFood = Object.values(D.ITEMS).filter((i) => i.slot === 'food' && i.cost && i.restore).map((i) => [i.lvl || 1, i.restore]).sort((a, b) => a[0] - b[0]);

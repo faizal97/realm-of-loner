@@ -2227,7 +2227,7 @@
     sys(`Account bank tab ${b.tabs} bought: ${G.abankSlots(b)} slots.`); emit('change'); return true;
   };
   // What other players pay: the vendor price times a factor by quality.
-  G.ahValue = (it) => (G.ahTrade(it) && !D.GEAR_SLOTS.includes(it.slot) ? Math.max(4, Math.round((it.sell || 2) * (it.slot === 'recipe' ? 8 : 5))) : Math.max(10, Math.round((it.sell || 5) * [2, 3, 6, 9, 14, 0][it.q || 1])));
+  G.ahValue = (it) => it.slot === 'bag' && D.BAG_TIER && D.BAG_TIER[it.id] ? Math.round(0.75 * it.bag * G.questMoney(D.BAG_TIER[it.id]) / 100) * 100 : (G.ahTrade(it) && !D.GEAR_SLOTS.includes(it.slot) ? Math.max(4, Math.round((it.sell || 2) * (it.slot === 'recipe' ? 8 : 5))) : Math.max(10, Math.round((it.sell || 5) * [2, 3, 6, 9, 14, 0][it.q || 1])));
   // what can go on the auction house: gear, trade goods and anything a profession makes
   G.ahTrade = (it) => !it.heirloom && !it.noSell && (D.GEAR_SLOTS.includes(it.slot) ? it.q >= 1 : ['mat', 'potion', 'elixir', 'stone', 'kit', 'bag', 'recipe'].includes(it.slot));
   // Listings from other players, refreshed now and then, around your level.
@@ -2241,6 +2241,12 @@
     const sellers = S.bots.filter((b) => B.factionOf(b) === myF);
     // trade goods from gatherers around your level
     const L0 = P.level, goods = ['copper_ore', 'copper_bar', 'rough_stone', 'peacebloom', 'silverleaf', 'light_leather', 'linen_cloth', 'linen_bolt'].concat(L0 >= 8 ? ['earthroot', 'mageroyal', 'minor_healing_potion'] : [], L0 >= 12 ? ['tin_ore', 'bronze_bar', 'briarthorn', 'wool_cloth', 'coarse_stone', 'lesser_healing_potion'] : [], L0 >= 16 ? ['silver_ore', 'bruiseweed', 'medium_leather', 'wool_bolt', 'healing_potion', 'linen_bag'] : [], L0 >= 26 ? ['iron_ore', 'iron_bar', 'ironthistle', 'redmantle', 'heavy_leather', 'silk_cloth', 'greater_healing_potion'] : [], L0 >= 36 ? ['embersilver_ore', 'stoutroot', 'dimleaf', 'goldspur', 'thick_leather', 'silk_bolt', 'mana_potion'] : [], L0 >= 46 ? ['duskiron_ore', 'duskiron_bar', 'cinderbloom', 'gloomcap', 'hardhide_leather', 'duskweave_cloth', 'grand_healing_potion'] : [], L0 >= 55 ? ['sunveil', 'frostpetal', 'duskweave_bolt', 'moonsilver_bar', 'grand_mana_potion', 'elixir_might'] : []); // Expert goods from 26, Artisan from 46 (v10.9)
+    // a bag for your level is always on sale (#534): the best one you've reached, or now and then the one before it
+    const bagsOk = (D.BAG_AH || []).filter((k) => D.ITEMS[k] && D.BAG_TIER[k] <= L0);
+    if (bagsOk.length && !S.ah.listings.some((l) => bagsOk.includes(l.item.id))) {
+      const k = bagsOk.length > 1 && Math.random() < 0.3 ? bagsOk[bagsOk.length - 2] : bagsOk[bagsOk.length - 1], it = G.copyItem(k);
+      S.ah.listings.push({ id: 'ah' + t + '_b' + S.ah.listings.length + '_' + rint(0, 9999), item: it, n: 1, price: Math.round(G.ahValue(it) * (0.9 + Math.random() * 0.3)), seller: pick(sellers).name, expires: t + rnd(6, 24) * 3600000 });
+    }
     while (S.ah.listings.filter((l) => !D.GEAR_SLOTS.includes(l.item.slot)).length < 8) {
       const it = G.copyItem(pick(goods)), n = G.stackable(it) ? rint(1, 4) * 5 : 1;
       const price = Math.round(G.ahValue(it) * n * (0.8 + Math.random() * 0.6));
