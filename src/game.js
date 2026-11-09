@@ -4764,6 +4764,33 @@
   // the season's id: the year, or 'test-<year>' for a test build outside the dates, so test candles never carry over
   G.eventSeason = function (key) { const d = new Date(now()), y = winYear(D.EVENTS[key], d); return y != null ? String(y) : 'test-' + d.getFullYear(); };
   G.eventStart = function (key) { const Ev = D.EVENTS[key], d = new Date(now()), y = winYear(Ev, d); return y != null ? evDays(Ev, y)[0] : null; };
+
+  // ---- This week (#541): the banners from D.WEEK that are on today, picked by date, plus a live festival (first) and,
+  // with nothing else on, the next festival. A step's check is one of these by name, so the data has no code in it.
+  G.WEEK_CHECKS = {
+    level: (n) => G.S.player.level >= n,
+    friends: (n) => Object.keys((G.S.soc && G.S.soc.friends) || {}).length >= n,
+    guild: () => G.S.player.guild >= 0,
+    quest: (id) => !!G.S.player.done[id],
+  };
+  const wkDay = (t, end) => { const [y, m, d] = t.split('-').map(Number); return end ? new Date(y, m - 1, d, 23, 59, 59, 999) : new Date(y, m - 1, d); };
+  G.weekDay = wkDay;
+  G.weekBanners = function (date) {
+    const d = date || new Date(now()), out = [];
+    for (const k of G.liveEvents(d)) out.push({ id: 'ev_' + k + '_' + G.eventSeason(k), kind: 'now', event: k, title: D.EVENTS[k].name, text: [D.EVENTS[k].story[0]], steps: [], to: G.eventEnds(k) });
+    const order = { now: 0, new: 1, soon: 2 };
+    const own = (D.WEEK || []).filter((b) => wkDay(b.from) <= d && d <= wkDay(b.to, true)).sort((a, b) => order[a.kind] - order[b.kind]);
+    out.push(...own);
+    if (!out.length && D.EVENTS) { const k = Object.keys(D.EVENTS).sort((a, b) => G.eventNext(a) - G.eventNext(b))[0]; if (k) out.push({ id: 'ev_next_' + k, kind: 'soon', event: k, title: D.EVENTS[k].name, text: [D.EVENTS[k].story[0]], steps: [], atDate: G.eventNext(k) }); }
+    return out;
+  };
+  G.weekStepDone = (st) => { const f = st.check && G.WEEK_CHECKS[st.check[0]]; return f ? !!f(st.check[1]) : null; }; // null: a tip, nothing to tick
+  // done / of over every checked step this week ('soon' banners' steps count too: they're how to get ready)
+  G.weekProgress = function (list) {
+    let n = 0, of = 0;
+    for (const b of list || G.weekBanners()) for (const st of b.steps || []) { const v = G.weekStepDone(st); if (v === null) continue; of++; if (v) n++; }
+    return { n, of };
+  };
   const LW = () => D.EVENTS.lanternwake;
   G.lwAccount = function () { const a = G.account(); a.lw = Object.assign({ owned: [], steed: false, steedKills: 0, keepsakes: [], town: {} }, a.lw); return a; };
   // a test build's season (a beta or dev build outside the dates) keeps what it gives apart, in account.lwTest, so a beta

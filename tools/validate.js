@@ -192,5 +192,33 @@ for (const [id, it] of Object.entries(D.ITEMS)) {
 // least the budget at L, for every level to the cap
 for (const q of [2, 3, 4]) for (let L = 1; L < D.LEVEL_CAP; L++)
   if (D.gearBudget(L + 1, q) < D.gearBudget(L, q) - 1e-9) err(`gear budget falls from level ${L} to ${L + 1} for quality ${q}: ${D.gearBudget(L, q).toFixed(2)} -> ${D.gearBudget(L + 1, q).toFixed(2)}`);
+// This week (#541): each banner's dates, art, checks and Go screens point at something real
+{
+  const src = (f) => fs.readFileSync(path.join(ROOT, 'src', f), 'utf8');
+  const keysOf = (text, name) => { const m = text.match(new RegExp(name + ' = \\{([\\s\\S]*?)\\n  \\};')); return new Set(m ? [...m[1].matchAll(/^\s+'?([a-z][a-z_:]*)'?:/gm)].map((x) => x[1]) : []); };
+  const checks = keysOf(src('game.js'), 'G.WEEK_CHECKS'), screens = keysOf(src('ui.js'), 'const WEEK_GO');
+  const story = fs.readdirSync(path.join(ROOT, 'src')).filter((f) => /^art_story.*\.js$/.test(f)).map(src).join('\n');
+  const day = /^\d{4}-\d{2}-\d{2}$/, ids = new Set();
+  for (const b of D.WEEK || []) {
+    const w = `this week ${b.id}`;
+    if (ids.has(b.id)) err(`${w}: id used twice`); ids.add(b.id);
+    if (!['now', 'new', 'soon'].includes(b.kind)) err(`${w}: unknown kind '${b.kind}'`);
+    if (!day.test(b.from) || !day.test(b.to) || b.from > b.to) err(`${w}: from/to must be YYYY-MM-DD, from first`);
+    if (b.at && (!day.test(b.at) || b.kind !== 'soon')) err(`${w}: at is a YYYY-MM-DD date, only for a 'soon' banner`);
+    if (!b.title || !Array.isArray(b.text) || !b.text.length) err(`${w}: needs a title and text`);
+    for (const a of [b.art, b.artHorde].filter(Boolean)) {
+      if (a[0] === 'scene' ? !scenes.has(a[1]) : a[0] === 'story' ? !new RegExp('\\b' + a[1] + '\\s*:').test(story) : true) err(`${w}: no ${a[0]} art '${a[1]}'`);
+    }
+    if (!b.art) err(`${w}: needs art`);
+    if ((b.steps || []).length > 5) err(`${w}: at most 5 steps`);
+    for (const st of b.steps || []) {
+      if (!st.text) err(`${w}: a step needs text`);
+      if (st.check && !checks.has(st.check[0])) err(`${w}: unknown check '${st.check[0]}' (G.WEEK_CHECKS)`);
+      if (st.check && st.check[0] === 'quest' && !D.QUESTS[st.check[1]]) err(`${w}: unknown quest '${st.check[1]}'`);
+      if (st.go && !screens.has(st.go)) err(`${w}: unknown screen '${st.go}' (WEEK_GO in ui.js)`);
+    }
+  }
+}
+
 if (errors.length) { errors.forEach((e) => console.error('  ERROR:', e)); console.error(`${errors.length} data error(s); build stopped.`); process.exit(1); }
 console.log('data OK');

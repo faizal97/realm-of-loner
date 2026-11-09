@@ -3266,6 +3266,7 @@
     const LK = Object.keys(D.LEGENDS || {});
     if (LK.length) { const done = LK.filter((k) => G.legendUnlocked(k)).length, going = LK.filter((k) => !G.legendUnlocked(k) && legendStarted(k)).length; list.append(nav('Legends', going ? `${going} stor${going === 1 ? 'y' : 'ies'} in progress` : 'Characters with their own story, who then join your groups', `${done}/${LK.length}`, () => openLegends())); }
     const tOwn = D.TITLES.filter(G.titleUnlocked).length, tNow = P.title && D.TITLES.find((t) => t.id === P.title);
+    { const wk = G.weekBanners(), seen = weekSeen(); list.append(nav('This week', wk.map((x) => x.title).join(', '), '', () => openThisWeek(), wk.some((x) => !seen.has(x.id)))); } // #541
     if (D.EVENTS) { const on = G.liveEvents(); list.append(nav('Events', on.length ? `${on.map((k) => D.EVENTS[k].name).join(', ')} is on: ${lwEndsText(on[0]).toLowerCase()}` : (() => { const k = Object.keys(D.EVENTS).sort((a, b) => G.eventNext(a) - G.eventNext(b))[0]; return `${D.EVENTS[k].name} returns ${dayName(G.eventNext(k))}`; })(), on.length ? 'On now' : '', () => openEvents(), on.length > 0)); }
     if (D.COMPANIONS) list.append(nav('Companions', G.S.player.companion ? 'With you: ' + D.COMPANIONS[G.S.player.companion].name : 'Small friends that follow you', `${G.companions().length}/${Object.keys(D.COMPANIONS).length}`, () => openCompanions()));
     list.append(nav('Titles', tNow ? 'Wearing: ' + G.titleName(tNow, P.name) : 'No title worn', `${tOwn}/${D.TITLES.length}`, () => openTitles()));
@@ -3444,15 +3445,18 @@
   // today's candles, a dot shows while today's daily loot or Light the Way is still open. Drag it; it snaps to an edge
   function evLantern() {
     // not during a run or a battleground (#368): its text fills the screen at 375 px, and the lantern's buttons can't be used there
-    const live = G.S && G.liveEvents().length && !lwPrefs().off && !app.querySelector('.create') && !G.S.run && !G.bgBusy();
+    // since #541 it is the This week button: on whenever This week has a banner; a festival keeps its icon and ring
+    const wk = G.S ? G.weekBanners() : [];
+    const live = G.S && wk.length && !lwPrefs().off && !app.querySelector('.create') && !G.S.run && !G.bgBusy();
     if (!live) { if (ui.evBtn) { ui.evBtn.remove(); ui.evBtn = null; } return; }
     const fk = festNow(), isLn = fk === 'longnight';
     let frac, open;
-    if (isLn) { const st = G.ln(), p = st && G.lnProgress(); frac = !st ? 0 : st.done ? 1 : Math.min(1, p.n / p.of); open = !!st && (!st.done || st.ready > 0); }
+    if (!fk) { const p = G.weekProgress(wk), seen = weekSeen(); frac = p.of ? p.n / p.of : 0; open = wk.some((b) => !seen.has(b.id)); }
+    else if (isLn) { const st = G.ln(), p = st && G.lnProgress(); frac = !st ? 0 : st.done ? 1 : Math.min(1, p.n / p.of); open = !!st && (!st.done || st.ready > 0); }
     else { const Ev = D.EVENTS.lanternwake, st = G.lw(), daily = G.lwDaily(); frac = st ? Math.min(1, st.today / Ev.cap) : 0; open = st && (daily.normal || st.lit.length < Ev.light); }
     const R = 25, L = 2 * Math.PI * R;
     if (!ui.evBtn) {
-      const btn = h('button', { class: 'ev-lantern', 'aria-label': 'Lanternwake: today\'s progress' });
+      const btn = h('button', { class: 'ev-lantern', 'aria-label': 'This week' });
       let drag = null;
       btn.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, moved: false }; btn.setPointerCapture(e.pointerId); });
       btn.addEventListener('pointermove', (e) => {
@@ -3461,13 +3465,13 @@
       });
       btn.addEventListener('pointerup', (e) => {
         if (!drag) return; const moved = drag.moved; drag = null;
-        if (!moved) return festNow() === 'longnight' ? lnTracker() : lwTracker();
+        if (!moved) return openThisWeek();
         const r = app.getBoundingClientRect(), p = lwPrefs(); p.side = e.clientX - r.left < r.width / 2 ? 'l' : 'r'; p.y = (e.clientY - r.top) / r.height; lwSavePrefs(p); placeEvLantern();
       });
       ui.evBtn = btn; app.append(btn);
     }
     ui.evBtn.innerHTML = '';
-    ui.evBtn.append(img(art('icon', 'event_' + (fk || 'lanternwake')))); ui.evBtn.setAttribute('aria-label', `${D.EVENTS[fk || 'lanternwake'].name}: today's progress`);
+    ui.evBtn.append(img(fk ? art('icon', 'event_' + fk) : WEEK_ICON)); ui.evBtn.setAttribute('aria-label', fk ? `This week: ${D.EVENTS[fk].name}, today's progress` : 'This week');
     ui.evBtn.insertAdjacentHTML('beforeend', `<svg class="ring" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="${R}" class="bg"/><circle cx="28" cy="28" r="${R}" class="fg" stroke-dasharray="${(L * frac).toFixed(1)} ${L.toFixed(1)}" transform="rotate(-90 28 28)"/></svg>`);
     if (open) ui.evBtn.append(h('i', { class: 'dot' }));
     placeEvLantern();
@@ -3483,6 +3487,72 @@
     if (hr && hr.height) { const hT = hr.top - r.top, hB = hr.bottom - r.top; if (y < hB + 4 && y + 56 > hT - 4) y = hT - 60 >= lo ? hT - 60 : hB + 8; }
     btn.style.top = Math.round(y) + 'px';
     if (p.side === 'l') { btn.style.left = '6px'; btn.style.right = 'auto'; } else { btn.style.right = '6px'; btn.style.left = 'auto'; }
+  }
+  // ---- This week (#541): a column of banners, one per thing that's on (D.WEEK, a live festival, else the next one);
+  // a banner opens its page: what it is and the steps, which tick themselves, each with Go to its screen
+  const WEEK_GO = {
+    'social:chat': () => openSocial('chat'),
+    'social:guild': () => openSocial('guild'),
+    'social:friends': () => openSocial('friends'),
+    quests: () => openQuests(),
+    map: () => openMap(),
+    events: () => openEvents(),
+    talents: () => openTalents(),
+    bags: () => openBags(),
+  };
+  const WEEK_KEY = 'azsolo.weekSeen'; // this device: the banner ids already shown (the button's dot, the once-a-week opening)
+  const weekSeen = () => { try { return new Set(JSON.parse(localStorage.getItem(WEEK_KEY) || '[]')); } catch (e) { return new Set(); } };
+  const weekMarkSeen = (list) => { try { const s = weekSeen(); for (const b of list) s.add(b.id); localStorage.setItem(WEEK_KEY, JSON.stringify([...s].slice(-60))); } catch (e) { } };
+  // the button's own mark: a gold pennant on a pole
+  const WEEK_ICON = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#2a1a0c"/><rect x="17" y="10" width="4" height="46" rx="2" fill="#c9a25a"/><circle cx="19" cy="9" r="4" fill="#ffd36a"/><path d="M21 14h27l-7 9 7 9H21z" fill="#c8312a" stroke="#ffd36a" stroke-width="2.5" stroke-linejoin="round"/><path d="M27 19l2.2 4.4 4.8.7-3.5 3.4.8 4.8-4.3-2.3-4.3 2.3.8-4.8-3.5-3.4 4.8-.7z" fill="#ffd36a" transform="translate(4 -1) scale(.82)"/></svg>');
+  const weekArt = (b) => { const a = (G.myFaction() === 'horde' && b.artHorde) || b.art; return a ? { src: art(a[0], a[1]), pos: a[2] || 'center' } : null; };
+  const weekDays = (to) => { const d0 = new Date(); d0.setHours(0, 0, 0, 0); const t = new Date(to); t.setHours(0, 0, 0, 0); return Math.round((t - d0) / 86400000); };
+  const inDays = (n) => (n <= 0 ? 'today' : n === 1 ? 'tomorrow' : `in ${n} days`);
+  function weekSub(b) {
+    const at = b.atDate || (b.at && G.weekDay(b.at));
+    if (b.kind === 'soon') return at ? `Arrives ${dayName(at)}, ${inDays(weekDays(at))}` : 'Coming soon';
+    const p = G.weekProgress([b]), ends = b.to ? (b.to instanceof Date ? b.to : G.weekDay(b.to)) : null;
+    const left = ends ? `ends ${dayName(ends)}` : '';
+    return [b.kind === 'new' ? 'New' : 'On now', p.of ? `${p.n}/${p.of} done` : left].filter(Boolean).join(' · ');
+  }
+  function weekBanner(b, onclick) {
+    const a = weekArt(b), p = G.weekProgress([b]);
+    return h('button', { class: 'wk-banner' + (b.kind === 'soon' ? ' soon' : '') + (p.of && p.n === p.of ? ' done' : ''), onclick, 'aria-label': `${b.title}: ${weekSub(b)}` },
+      a ? h('img', { class: 'wk-art', src: a.src, alt: '', draggable: 'false', style: { objectPosition: a.pos } }) : h('div', { class: 'wk-emb' }, img(art('icon', 'event_' + b.event))),
+      h('div', { class: 'wk-cap' }, h('b', null, b.title), h('small', null, weekSub(b))));
+  }
+  function openThisWeek() {
+    openSheet('week', 'This week', 'What’s on in the realm', (b) => {
+      const list = G.weekBanners();
+      weekMarkSeen(list); evLantern();
+      const col = h('div', { class: 'wk-list' });
+      for (const x of list) col.append(weekBanner(x, () => (x.event && x.kind === 'now' ? (x.event === 'longnight' ? lnTracker() : lwTracker()) : x.event ? (x.event === 'longnight' ? openLongnight() : openLanternwake()) : openWeekBanner(x))));
+      b.append(col);
+    });
+  }
+  function openWeekBanner(x) {
+    openSheet('week_' + x.id, x.title, weekSub(x), (b) => {
+      const a = weekArt(x);
+      if (a) b.append(h('img', { class: 'wk-hero' + (x.kind === 'soon' ? ' soon' : ''), src: a.src, alt: '', draggable: 'false', style: { objectPosition: a.pos } }));
+      b.append(h('div', { class: 'ev-story' }, ...x.text.map((t) => h('p', null, t))));
+      if ((x.steps || []).length) {
+        const p = G.weekProgress([x]), rows = h('div', { class: 'list' });
+        for (const st of x.steps) {
+          const done = G.weekStepDone(st), go = st.go && done !== true && WEEK_GO[st.go];
+          rows.append(h('div', { class: 'row wk-step' + (done ? ' done' : '') }, h('span', { class: 'wk-tick', 'aria-label': done === null ? 'Tip' : done ? 'Done' : 'Not done' }, done === null ? '•' : done ? '✓' : ''),
+            h('div', { class: 't' }, h('span', null, st.text)), go ? h('div', { class: 'r' }, h('button', { class: 'chip gold', onclick: () => go() }, 'Go')) : null));
+        }
+        b.append(h('div', { class: 'sec-h' }, x.kind === 'soon' ? 'Get ready' : 'To do', p.of ? h('small', null, `${p.n}/${p.of} done`) : null), rows);
+      }
+    });
+  }
+  // once a week: the first time a character comes in with a banner this device hasn't shown, This week opens by itself
+  // (never over a dialog, a cutscene or another sheet; never for a brand-new character, who gets the intro)
+  function weekOnEnter(tries) {
+    if (!G.S || G.S.player.level < 2 || G.S.run) return;
+    if (ui.dialog || ui.sheet || (window.CS && CS.playing)) { if ((tries || 0) < 15) setTimeout(() => weekOnEnter((tries || 0) + 1), 2000); return; }
+    const seen = weekSeen();
+    if (G.weekBanners().some((b) => !seen.has(b.id))) openThisWeek();
   }
   // the first time into a festival run on this device: its story, once (like a dungeon's first-entry intro)
   function lwIntro(act) {
@@ -3897,9 +3967,9 @@
         { const on = fxOn(); b.append(...foldSec('set.fx', 'Combat effects', on ? 'On' : 'Off', [h('div', { class: 'btn-row' },
           h('button', { class: 'btn alt', onclick: () => { try { localStorage.setItem('azsolo.fx', on ? 'off' : 'on'); } catch (e) { } ui.sheetFn(); } }, 'Combat effects: ' + (on ? 'On' : 'Off'))),
           h('p', { class: 'ai-note', style: { margin: 0 } }, 'Slashes, spells, heals and boss attacks drawn over the fight. Damage numbers always show.')])); }
-        if (D.EVENTS) { const off = !!lwPrefs().off; b.append(...foldSec('set.evl', 'Event lantern', off ? 'Hidden' : 'Shown', [h('div', { class: 'btn-row' },
-          h('button', { class: 'btn alt', onclick: () => { const p = lwPrefs(); p.off = !off; lwSavePrefs(p); evLantern(); ui.sheetFn(); } }, 'Event lantern: ' + (off ? 'Hidden' : 'Shown'))),
-          h('p', { class: 'ai-note', style: { margin: 0 } }, 'While a festival is on, a lantern floats over every screen and opens today\'s progress. Drag it to move it. The festival page stays in Hero → Journey → Events either way.')])); }
+        { const off = !!lwPrefs().off; b.append(...foldSec('set.evl', 'This week button', off ? 'Hidden' : 'Shown', [h('div', { class: 'btn-row' },
+          h('button', { class: 'btn alt', onclick: () => { const p = lwPrefs(); p.off = !off; lwSavePrefs(p); evLantern(); ui.sheetFn(); } }, 'This week button: ' + (off ? 'Hidden' : 'Shown'))),
+          h('p', { class: 'ai-note', style: { margin: 0 } }, 'A button floats over every screen and opens This week: what\'s on and what to do. During a festival it\'s the festival\'s lantern. Drag it to move it. This week stays in Hero → Journey either way.')])); }
         if (window.SND) {
           // #120: a volume slider per channel (0-100%, steps of 5) under the On/Off buttons, which mute and keep the value.
           // Dragging changes the sound at once and updates the labels in place (a sheet redraw would end the drag).
@@ -5848,6 +5918,7 @@
     if (!rep) return toast('That character could not be loaded.');
     start(); if (rep.away > 120000) showAway(rep);
     friendsEnter();
+    setTimeout(weekOnEnter, 1800); // This week, once a week (#541)
     // a chapter added in an update after you passed its level plays the next time you come in
     if (window.CS) { const seen = CS.unlocked(); const ch = CS.CHAPTERS.find((c) => c.shots && !c.scene && c.level > 1 && c.level <= G.S.player.level && !seen.has(c.id) && chapterReady(c)); if (ch) ui.pendingChapter = ch.id; }
   }
