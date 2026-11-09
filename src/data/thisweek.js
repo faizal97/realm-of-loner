@@ -6,9 +6,9 @@
 //   id     unique, never reused (the "seen" mark is kept per id)
 //   kind   'now' (on now), 'new' (added by an update), 'soon' (greyed, with a countdown to `at`)
 //   from, to   'YYYY-MM-DD'; at: 'YYYY-MM-DD' for 'soon' (the day it arrives)
-//   art    [kind, key, crop]: existing art, cropped wide. kind 'story' (ART.story scenes) or 'scene' (place scenes);
-//          crop is the CSS object-position (default 'center'). artHorde: the art the second faction sees, when the place is one faction's.
-//          A big feature may get its own art in an art pack.
+//   art    ['banner', key]: a finished banner from art/banners/banners.py (src/art_banners.js): a game scene behind,
+//          figures in front and the feature's own logo. Never a bare scene. artHorde: the one the second faction sees.
+//          The build stops while a banner's art is unused, or a banner ended more than 7 days ago: delete both.
 //   'soon' with no `at` says "Coming soon": no date, so a feature that moves a week breaks no promise.
 //   title, text   the banner's name and up to two short lines (the detail page shows all of text)
 //   steps  up to 5: { text, check, go }. check: [name, value] from G.WEEK_CHECKS (it ticks itself); go: a screen
@@ -19,7 +19,7 @@
   D.WEEK = [
     {
       id: 'prepatch_teaser', kind: 'soon', from: '2026-11-09', to: '2026-11-13', at: '2026-11-14',
-      art: ['story', 'shadow_court', 'center 35%'],
+      art: ['banner', 'notes_come_due'],
       title: 'The Notes Come Due',
       text: [
         'The Ruinfall Saga begins. Debt collectors come to every zone, and every class learns a new ability.',
@@ -31,7 +31,7 @@
     },
     {
       id: 'living_realm', kind: 'new', from: '2026-11-01', to: '2026-11-13',
-      art: ['scene', 'stormwind', 'center 60%'], artHorde: ['scene', 'orgrimmar', 'center 60%'],
+      art: ['banner', 'living_realm'], artHorde: ['banner', 'living_realm_h'],
       title: 'The Living Realm',
       text: [
         'The same players on every character, with friends who remember you and guilds that grow.',
@@ -44,7 +44,7 @@
     },
     {
       id: 'faire_soon', kind: 'soon', from: '2026-11-09', to: '2026-11-13',
-      art: ['scene', 'goldshire', 'center 55%'],
+      art: ['banner', 'faire'],
       title: 'The Faire',
       text: [
         "A week of games at every inn: Liar's dice against the realm's players, with tickets, prizes and new looks.",

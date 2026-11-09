@@ -3505,7 +3505,7 @@
   const weekMarkSeen = (list) => { try { const s = weekSeen(); for (const b of list) s.add(b.id); localStorage.setItem(WEEK_KEY, JSON.stringify([...s].slice(-60))); } catch (e) { } };
   // the button's own mark: a gold pennant on a pole
   const WEEK_ICON = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#2a1a0c"/><rect x="17" y="10" width="4" height="46" rx="2" fill="#c9a25a"/><circle cx="19" cy="9" r="4" fill="#ffd36a"/><path d="M21 14h27l-7 9 7 9H21z" fill="#c8312a" stroke="#ffd36a" stroke-width="2.5" stroke-linejoin="round"/><path d="M27 19l2.2 4.4 4.8.7-3.5 3.4.8 4.8-4.3-2.3-4.3 2.3.8-4.8-3.5-3.4 4.8-.7z" fill="#ffd36a" transform="translate(4 -1) scale(.82)"/></svg>');
-  const weekArt = (b) => { const a = (G.myFaction() === 'horde' && b.artHorde) || b.art; return a ? { src: art(a[0], a[1]), pos: a[2] || 'center' } : null; };
+  const weekArt = (b) => { const a = (G.myFaction() === 'horde' && b.artHorde) || b.art; return a ? { src: art(a[0], a[1]), pos: a[2] || 'center', logo: a[0] === 'banner' } : null; };
   const weekDays = (to) => { const d0 = new Date(); d0.setHours(0, 0, 0, 0); const t = new Date(to); t.setHours(0, 0, 0, 0); return Math.round((t - d0) / 86400000); };
   const inDays = (n) => (n <= 0 ? 'today' : n === 1 ? 'tomorrow' : `in ${n} days`);
   function weekSub(b) {
@@ -3519,7 +3519,7 @@
     const a = weekArt(b), p = G.weekProgress([b]);
     return h('button', { class: 'wk-banner' + (b.kind === 'soon' ? ' soon' : '') + (p.of && p.n === p.of ? ' done' : ''), onclick, 'aria-label': `${b.title}: ${weekSub(b)}` },
       a ? h('img', { class: 'wk-art', src: a.src, alt: '', draggable: 'false', style: { objectPosition: a.pos } }) : h('div', { class: 'wk-emb' }, img(art('icon', 'event_' + b.event))),
-      h('div', { class: 'wk-cap' }, h('b', null, b.title), h('small', null, weekSub(b))));
+      h('div', { class: 'wk-cap' + (a && a.logo ? ' logo' : '') }, a && a.logo ? null : h('b', null, b.title), h('small', null, weekSub(b)))); // a banner's logo is its name
   }
   function openThisWeek() {
     openSheet('week', 'This week', 'What’s on in the realm', (b) => {
@@ -3533,7 +3533,7 @@
   function openWeekBanner(x) {
     openSheet('week_' + x.id, x.title, weekSub(x), (b) => {
       const a = weekArt(x);
-      if (a) b.append(h('img', { class: 'wk-hero' + (x.kind === 'soon' ? ' soon' : ''), src: a.src, alt: '', draggable: 'false', style: { objectPosition: a.pos } }));
+      if (a) b.append(h('img', { class: 'wk-hero' + (a.logo ? ' wide' : '') + (x.kind === 'soon' ? ' soon' : ''), src: a.src, alt: '', draggable: 'false', style: { objectPosition: a.pos } }));
       b.append(h('div', { class: 'ev-story' }, ...x.text.map((t) => h('p', null, t))));
       if ((x.steps || []).length) {
         const p = G.weekProgress([x]), rows = h('div', { class: 'list' });

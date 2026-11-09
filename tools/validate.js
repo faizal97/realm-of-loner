@@ -198,6 +198,7 @@ for (const q of [2, 3, 4]) for (let L = 1; L < D.LEVEL_CAP; L++)
   const keysOf = (text, name) => { const m = text.match(new RegExp(name + ' = \\{([\\s\\S]*?)\\n  \\};')); return new Set(m ? [...m[1].matchAll(/^\s+'?([a-z][a-z_:]*)'?:/gm)].map((x) => x[1]) : []); };
   const checks = keysOf(src('game.js'), 'G.WEEK_CHECKS'), screens = keysOf(src('ui.js'), 'const WEEK_GO');
   const story = fs.readdirSync(path.join(ROOT, 'src')).filter((f) => /^art_story.*\.js$/.test(f)).map(src).join('\n');
+  const bsrc = src('art_banners.js'), banners = new Set(Object.keys(JSON.parse(bsrc.slice(bsrc.indexOf('const B = ') + 10, bsrc.indexOf(';\n', bsrc.indexOf('const B = ')))))), used = new Set();
   const day = /^\d{4}-\d{2}-\d{2}$/, ids = new Set();
   for (const b of D.WEEK || []) {
     const w = `this week ${b.id}`;
@@ -207,8 +208,9 @@ for (const q of [2, 3, 4]) for (let L = 1; L < D.LEVEL_CAP; L++)
     if (b.at && (!day.test(b.at) || b.kind !== 'soon')) err(`${w}: at is a YYYY-MM-DD date, only for a 'soon' banner`);
     if (!b.title || !Array.isArray(b.text) || !b.text.length) err(`${w}: needs a title and text`);
     for (const a of [b.art, b.artHorde].filter(Boolean)) {
-      if (a[0] === 'scene' ? !scenes.has(a[1]) : a[0] === 'story' ? !new RegExp('\\b' + a[1] + '\\s*:').test(story) : true) err(`${w}: no ${a[0]} art '${a[1]}'`);
+      if (a[0] !== 'banner' || !banners.has(a[1])) err(`${w}: no banner art '${a[1]}' (art/banners/banners.py)`); else used.add(a[1]);
     }
+    const end = new Date(b.to + 'T23:59:59'); if (Date.now() - end > 7 * 86400000) err(`${w}: ended ${b.to}; delete it from src/data/thisweek.js and its art from art/banners/banners.py`);
     if (!b.art) err(`${w}: needs art`);
     if ((b.steps || []).length > 5) err(`${w}: at most 5 steps`);
     for (const st of b.steps || []) {
@@ -218,6 +220,7 @@ for (const q of [2, 3, 4]) for (let L = 1; L < D.LEVEL_CAP; L++)
       if (st.go && !screens.has(st.go)) err(`${w}: unknown screen '${st.go}' (WEEK_GO in ui.js)`);
     }
   }
+  for (const k of banners) if (!used.has(k)) err(`banner art '${k}' is used by no banner in src/data/thisweek.js: delete it from art/banners/banners.py`);
 }
 
 if (errors.length) { errors.forEach((e) => console.error('  ERROR:', e)); console.error(`${errors.length} data error(s); build stopped.`); process.exit(1); }
