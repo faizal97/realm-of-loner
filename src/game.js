@@ -3610,7 +3610,7 @@
     // they can still react: sometimes they spot the pair on the move and send fighters after it (said in the log)
     if (Math.random() < G.BG_REACT && pairAt !== groupAt) {
       const from = Object.keys(bg.plan).filter((x) => x !== pairAt && bg.plan[x] > 0).sort((x, y) => bg.plan[y] - bg.plan[x])[0];
-      if (from) { const n = Math.min(bg.plan[from], rint(1, 2)); bg.plan[from] -= n; bg.plan[pairAt] = (bg.plan[pairAt] || 0) + n; sys(`They spot the pair: ${n === 1 ? '1 of them runs' : n + ' of them run'} from ${bgName(bg, from)} to ${bgName(bg, pairAt)}!`); }
+      if (from) { bg.plan[from] -= 1; bg.plan[pairAt] = (bg.plan[pairAt] || 0) + 1; sys(`They spot the pair: 1 of them runs from ${bgName(bg, from)} to ${bgName(bg, pairAt)}!`); } // one chaser, not 1–2: the pair met 3+ enemies in 24% of rounds (#532)
     }
     // and sometimes one more runs to meet your group (v10.8), from a banner neither of yours is heading to
     if (Math.random() < G.BG_REACT_GROUP) {
