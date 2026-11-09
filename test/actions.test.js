@@ -134,6 +134,8 @@ const ACTIONS = {
   noteTrade: () => { G.S.player.debtNotes = 5; G.noteTrade('marks'); }, // #523
   buyQmLook: () => { const L = G.qmLooks()[0]; G.buyQmLook(L.place, L.key); },
   buyBankTab: () => G.buyBankTab(),
+  abankBuyTab: () => G.abankBuyTab(), // the account bank (#286)
+  abankDeposit: () => { if (G.S.player.bags.length) G.abankDeposit(0); G.abankWithdraw((ABANK.view(G.abank())[0] || {}).key); },
   learnExpertRiding: () => { G.S.player.riding = true; G.learnExpertRiding(); },
   repairAll: () => { G.wear(); G.repairAll(false); if (inRun()) { G.wear(); G.repairAll(true); } },
 };

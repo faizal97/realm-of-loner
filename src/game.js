@@ -2208,9 +2208,9 @@
     if (AB.slots(b) > G.abankSlots(b)) { toast('The account bank is full.'); return false; }
     abankSave(b); P.bags.splice(idx, 1); G.save(); emit('change'); return true; // the account bank, then the bags
   };
-  G.abankWithdraw = function (key) {
+  G.abankWithdraw = function (key, most) { // most: take at most this many (one shown stack of 20)
     const b = G.abank(), row = AB.view(b).find((g) => g.key === key); if (!row) return false;
-    const k = row.stack ? Math.min(row.n, G.bagRoom(row.item)) : (G.bagsFull() ? 0 : 1);
+    const k = row.stack ? Math.min(row.n, most || row.n, G.bagRoom(row.item)) : (G.bagsFull() ? 0 : 1);
     if (!k) { toast('Bags are full.'); return false; }
     const got = AB.takeKey(b, key, k);
     if (!got.n || !G.addItem(JSON.parse(JSON.stringify(got.item)), got.n)) return false;

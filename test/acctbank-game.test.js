@@ -58,6 +58,15 @@ test('a stack put in by one character comes out for another, as far as the bags 
   assert.strictEqual(bankTotal(pid), 15);
 });
 
+test('tapping one shown stack takes only that stack', () => {
+  const pid = potionId(); const { P } = character(30); fresh();
+  P.bags = [{ item: G.copyItem(pid), n: 20 }, { item: G.copyItem(pid), n: 6 }];
+  assert.ok(G.abankDeposit(0) && G.abankDeposit(0));
+  assert.ok(G.abankWithdraw(pid, 6));
+  assert.strictEqual(bagTotal(P, pid), 6);
+  assert.strictEqual(bankTotal(pid), 20);
+});
+
 test('a piece of gear keeps its stats and its level requirement', () => {
   const one = character(50); fresh();
   const sword = G.genGear('weapon', 50, 3); one.P.bags = [{ item: sword, n: 1 }];

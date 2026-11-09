@@ -4044,6 +4044,10 @@
   function openBank() {
     openSheet('bank', 'Bank', `${G.bankSlots()} slots · tap to move`, (b, title) => {
       const P = G.S.player; P.bank = P.bank || [];
+      // two banks behind one counter (#286): this character's, and the account's that every character shares
+      const tab = (id, label) => h('button', { class: 'chip' + ((ui.bankTab || 'char') === id ? ' gold' : ''), onclick: () => { ui.bankTab = id; ui.sheetFn(); } }, label);
+      b.append(h('div', { class: 'chips' }, tab('char', 'Character'), tab('acct', 'Account')));
+      if (ui.bankTab === 'acct') return accountBank(b, title);
       const over = P.bank.length - G.bankSlots(); // rewards and expired auctions are never lost: they may overfill the bank (issue #25)
       title.querySelector('small').textContent = over > 0 ? `${P.bank.length} items in ${G.bankSlots()} slots · ${P.bags.length}/${G.bagCap()} in your bags · tap to move` : `${P.bank.length}/${G.bankSlots()} in the bank · ${P.bags.length}/${G.bagCap()} in your bags · tap to move`;
       if (over > 0) b.append(h('p', { class: 'ai-note', style: { margin: '0 0 6px' } }, `${P.bank.length} items in ${G.bankSlots()} slots: ${over} over from rewards. Take something out to deposit again.`));
@@ -4055,6 +4059,25 @@
       const bags = h('div', { class: 'list' }); P.bags.forEach((x, i) => bags.append(itemRow(x.item, x.n, '↓', () => { G.bankDeposit(i); ui.sheetFn(); })));
       b.append(bags);
     });
+  }
+  // the Account tab: what every character on the account shares (#286); only what you could sell goes in
+  function accountBank(b, title) {
+    const P = G.S.player, bank = G.abank(), view = ABANK.view(bank), cap = G.abankSlots(bank), used = ABANK.slots(bank);
+    title.querySelector('small').textContent = `Account bank: ${used}/${cap} · Shared by every character`;
+    { const n = bank.tabs, c = G.ABANK_TAB_COST[n], have = G.account().marks;
+      if (c != null) b.append(h('button', { class: 'btn alt wide', disabled: have < c, onclick: () => { G.abankBuyTab(); ui.sheetFn(); } }, `Buy account tab ${n + 1} (+${G.ABANK_TAB} slots) · ${c} Mentor Marks`)); }
+    const info = h('button', { class: 'sec-i', 'aria-label': 'About the account bank', onclick: () => toast('Every character on this account can take from it. With cloud save on, it follows you to your other devices.') }, 'ⓘ');
+    b.append(h('div', { class: 'sec-h' }, h('span', null, 'In the account bank', info), h('small', null, 'tap to take')));
+    const list = h('div', { class: 'list' });
+    for (const g of view) { // shown in stacks of 20, like the bags, so the rows add up to the slots used
+      let left = g.n;
+      do { const n = g.stack ? Math.min(ABANK.STACK, left) : g.n; list.append(itemRow(g.item, n, '↑', () => { G.abankWithdraw(g.key, n); ui.sheetFn(); })); left -= n; } while (g.stack && left > 0);
+    }
+    if (!view.length) list.append(h('div', { class: 'people' }, 'Empty. Anything you could sell can go here, for any of your characters to take.'));
+    b.append(list, h('div', { class: 'sec-h' }, 'Your bags', h('small', null, 'tap to store')));
+    const bags = h('div', { class: 'list' });
+    P.bags.forEach((x, i) => { const ok = G.abankTakes(x.item), r = itemRow(x.item, x.n, ok ? '↓' : '', () => { G.abankDeposit(i); ui.sheetFn(); }, ok ? null : 'Can\'t be shared'); if (!ok) r.classList.add('dim'); bags.append(r); });
+    b.append(bags);
   }
   function openAuction() {
     ui.ahTab = ui.ahTab || 'browse';
