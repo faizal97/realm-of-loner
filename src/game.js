@@ -1717,8 +1717,8 @@
   G.isHub = (placeId) => { const p = D.PLACES[placeId]; return !!(p && p.inn && p.safe && !p.city); };
   G.bounties = function (hub) {
     const S = G.S, P = S.player, region = D.PLACES[hub].region;
-    const mobs = [];
-    for (const [k, p] of Object.entries(D.PLACES)) if (p.region === region) for (const [m] of (p.mobs || [])) { const M = D.MOBS[m]; if (M && !M.named && !M.elite && M.lvl[1] >= P.level - 4 && M.lvl[0] <= P.level + 2 && !mobs.includes(m)) mobs.push(m); }
+    const mobs = [], cap = P.level >= D.LEVEL_CAP; // at 60 every town's board offers its zone, at level-60 pay (#553)
+    for (const [k, p] of Object.entries(D.PLACES)) if (p.region === region) for (const [m] of (p.mobs || [])) { const M = D.MOBS[m]; if (M && !M.named && !M.elite && (cap || (M.lvl[1] >= P.level - 4 && M.lvl[0] <= P.level + 2)) && !mobs.includes(m)) mobs.push(m); }
     if (!mobs.length) return [];
     const make = (key, weekly) => {
       const r = seeded(hub + key + P.level);
