@@ -78,7 +78,8 @@
   const onlineMate = (not) => { const S = G.S, d = new Date(); const m = S.bots.filter((b) => b.guild === S.player.guild && B.isOnline(b, d) && b.id !== not); return m.length ? pick(m) : null; };
 
   // the weekly guild goal: kills by everyone, you included
-  const weekId = () => Math.floor((now() / 86400000 + 3) / 7);
+  // the week starts on the player's own Monday at midnight, like the Weekly Board's other jobs (#546); it was UTC's
+  const weekId = () => { const t = now(); return Math.floor(((t - new Date(t).getTimezoneOffset() * 60000) / 86400000 + 3) / 7); };
   SOC.week = function () {
     const soc = state(), P = G.S.player; if (P.guild < 0) return null;
     // only a later week rolls a new goal: a clock set back keeps the week it has (#471)

@@ -1701,8 +1701,9 @@
   };
   // a bounty taken before the switch carries a UTC key; it stays good for that one day so nothing vanishes
   const oldDayKey = () => new Date(now()).toISOString().slice(0, 10);
-  const oldWeekKey = () => { const d = new Date(now()); const day = (d.getDay() + 6) % 7; d.setDate(d.getDate() - day); return 'w' + d.toISOString().slice(0, 10); };
-  const bountyLive = (st) => (st.weekly ? [weekKey(), oldWeekKey()] : [dayKey(), oldDayKey()]).includes(st.day);
+  // only today's (this week's) local key: the UTC key from before v10.1.1 kept yesterday's bounty live until the UTC day
+  // turned, 7 hours into the day in UTC+7 (#546); every bounty from back then has long lapsed
+  const bountyLive = (st) => st.day === (st.weekly ? weekKey() : dayKey());
   const seeded = (str) => { let h = 2166136261; for (const c of str) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return () => { h ^= h << 13; h ^= h >>> 17; h ^= h << 5; return ((h >>> 0) % 100000) / 100000; }; };
   G.isHub = (placeId) => { const p = D.PLACES[placeId]; return !!(p && p.inn && p.safe && !p.city); };
   G.bounties = function (hub) {
