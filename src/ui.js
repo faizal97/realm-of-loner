@@ -3260,7 +3260,7 @@
       const hd = t.parentNode, oldSort = hd && hd.querySelector('.bag-sort'); if (oldSort) oldSort.remove();
       { const old = hd && hd.querySelector('.bag-size'); if (old) old.remove(); }
       if (hd) hd.insertBefore(h('button', { class: 'sheet-backbtn bag-size' + (invCompact() ? ' on' : ''), 'aria-label': invCompact() ? 'Show big slots' : 'Show small slots, more to a row', 'aria-pressed': String(invCompact()), onclick: () => { setCompact(!invCompact()); toast(invCompact() ? 'Small slots: more to a row.' : 'Big slots.', true); ui.sheetFn(); } }, '▦'), hd.querySelector('.x'));
-      if (hd && P.bags.length > 1 && !ui.sellPick) hd.insertBefore(h('button', { class: 'sheet-backbtn bag-sort', 'aria-label': 'Sort bags: upgrades and gear first, junk last', onclick: () => { const moved = G.sortBags(); ui.bagSel = null; toast(moved ? 'Bags sorted: gear first, junk last.' : 'Already sorted.'); ui.sheetFn(); } }, 'Sort'), hd.querySelector('.x'));
+      if (hd && (P.bags.length > 1 || P.bags.some((x) => x.n > 20)) && !ui.sellPick) hd.insertBefore(h('button', { class: 'sheet-backbtn bag-sort', 'aria-label': 'Sort bags: upgrades and gear first, junk last', onclick: () => { const moved = G.sortBags(); ui.bagSel = null; toast(moved ? 'Bags sorted: gear first, junk last.' : 'Already sorted.'); ui.sheetFn(); } }, 'Sort'), hd.querySelector('.x'));
       // the bag bar (v10.9): your bags in one short row, empty slots shown; tap one to take it off
       if ((P.bagsEq || []).length) {
         const bar = h('div', { class: 'bagbar' });
