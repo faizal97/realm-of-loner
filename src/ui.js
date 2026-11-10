@@ -6061,7 +6061,7 @@
   // which music plays (v10.8): a cutscene's own, else G.musicFor (game.js) with the tracks this build ships
   const musicNow = () => ui.csMusic || G.musicFor((n) => !!(window.SND && SND.has(n)));
   // the main menu has its own theme once approved (before that, the menu stays as it was)
-  const menuMusic = () => { if (!window.SND) return; const f = festNow(), fm = f && (SND.has(f) ? f : D.EVENTS[f].music); if (fm && SND.has(fm)) SND.music(fm); else if (SND.has('menu')) SND.music('menu'); }; // a festival's own theme once it ships
+  const menuMusic = () => { if (!window.SND) return; const f = festNow(), fm = f && (SND.has(f) ? f : D.EVENTS[f].music); if (fm && SND.has(fm)) SND.music(fm); else if (D.PREPATCH && D.PREPATCH.live && SND.has('coronation_call')) SND.music('coronation_call'); else if (SND.has('menu')) SND.music('menu'); }; // the pre-patch's own theme until v11 sets live off // a festival's own theme once it ships
   // What's new (issue #29): the notes bundled with this build (window.AZ_NOTES), shown once per device on the first open of
   // a new version, and any time from the version tag on the main menu. A brand-new device is marked seen silently.
   const SEEN_KEY = 'azsolo.seenVersion', verNow = () => (window.UPD ? UPD.current() : String(window.AZ_VERSION || ''));

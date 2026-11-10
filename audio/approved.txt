@@ -109,3 +109,4 @@ longnight
 ln_knocker
 ln_guest
 ruinfall_opening
+coronation_call

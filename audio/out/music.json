@@ -548,5 +548,9 @@
  "ruinfall_opening": {
   "loop_s": 73.6,
   "source": "the saga theme, trimmed (not composed here)"
+ },
+ "coronation_call": {
+  "loop_s": 119.0,
+  "source": "'The Coronation Call' (Suno), the pre-patch main menu theme: cut at 1:59 before its closing hit, 6 s fade, -18 LUFS (not composed here)"
  }
 }
