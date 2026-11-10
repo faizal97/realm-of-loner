@@ -1153,6 +1153,7 @@
     if (P.gather && W.nodes.n < 4 && t >= W.nodes.next) { W.nodes.n++; W.nodes.next = t + 20000; }
     nodesTick(id, W, t);
     // guild offer
+    if (S.flags.guildOfferAt && S.player.guild >= 0) delete S.flags.guildOfferAt; // joined another way first: no offer from a different guild (#498)
     // it waits for a calm moment, like a party invite (issue #12: it opened mid-fight and a run went on without you)
     if (S.flags.guildOfferAt && t >= S.flags.guildOfferAt && !S.flags.guildOffer && !G.fight && !S.run && !S.queue && !G.bgBusy() && !S.player.travel && !S.player.ghostUntil) {
       // a guild that takes your level and that you haven't turned down, asked by its officer online; none online asks later (#481)

@@ -5584,6 +5584,7 @@
     ui.dialog.classList.add('pop-dialog'); // closed if the pop times out (#412)
   }
   function showInvite(d) {
+    if (G.S && G.S.player.guild >= 0) return; // joined another guild while it waited for a calm moment (#498)
     showDialog([h('h3', null, 'Guild invitation'), h('p', null, `${d.from} invites you to join <${d.guildName}>.`), d.line ? h('p', { class: 'ai-note' }, `"${d.line}"`) : null,
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { G.joinGuild(d.guild); closeDialog(); renderChat(); } }, 'Accept'), h('button', { class: 'btn alt', onclick: () => { G.declineGuild(d.guild); closeDialog(); } }, 'Decline'))]);
     ui.dialogLost = () => G.S && G.reofferGuild(); // the group pop took its place: asked again later
