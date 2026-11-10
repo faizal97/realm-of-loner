@@ -397,7 +397,7 @@
       const bag = matBag; const n = Math.min(bag.n, rint(5, 12)); const it = offerItem(); if (!it) return;
       W(pickT('s325', [`trade u my ${link(it)} for ${n} ${link(bag.item)}?`, `swap? my ${link(it)} for ur ${n} ${link(bag.item)}`, `need ${n} ${link(bag.item)}, ill give u ${link(it)} for them`, `i have ${link(it)}, u have ${n} ${link(bag.item)}. trade?`, `fair trade? ${link(it)} for ${n} ${link(bag.item)}`]), { kind: 'swap', item: bag.item.id, n, itemData: it });
     } else if (kind === 'where') {
-      const q = whereQuestion(); if (!q) return;
+      const q = whereQuestion(b); if (!q) return;
       W(pickT('s328', [`sorry to bother, where is ${q.name}?`, `hey do u know where ${q.name} is?`, `quick q: where do i find ${q.name}?`, `lost lol. which zone is ${q.name} in?`, `been looking for ${q.name} for ages, where is it?`, `ok i give up, where is ${q.name}?`, `hey, which way to ${q.name}?`]), Object.assign({ kind: 'where' }, q));
     } else if (kind === 'guild_invite') {
       const no = G.S.flags.declinedGuilds || [], gs = SOC.myGuilds().filter((x) => P.level >= x.min && !no.includes(x.g)); if (!gs.length) return; // not a guild you declined
@@ -488,7 +488,7 @@
       post('guild', off, pickT('s412', [`GUILD NIGHT: ${A.name} in ${mins} min! sign up here`, `guild event in ${mins} min, ${A.name}. who's coming?`, `${A.name} guild run starting in ${mins} min, bonus standing for everyone who shows`, `${A.name} guild run in ${mins} min, sign up!`, `event: ${A.name} in ${mins} min. let's fill it with guildies`]), { kind: 'g_event', guild: true, bot: off.id, act: k, startAt: now() + mins * 60000, until: now() + (mins + 3) * 60000, signed: false });
       return;
     }
-    const q = whereQuestion(); if (!q) return;
+    const q = whereQuestion(mate); if (!q) return;
     post('guild', mate, pickT('s416', [`where is ${q.name}? i forget`, `guild, where do i find ${q.name}?`, `anyone know which zone ${q.name} is in?`, `lost lol. ${q.name}?`, `where do u find ${q.name}? asking for a friend (me)`]), Object.assign({ kind: 'where', guild: true, bot: mate.id }, q));
   }
   // guildmates chat among themselves, and about you
@@ -529,9 +529,9 @@
     const slot = pick(['chest', 'legs', 'feet', 'hands', 'wrist', 'waist', 'back', 'weapon']);
     return G.genGear(slot, Math.max(2, P.level + rint(-1, 1)), chance(0.08) ? 3 : 2, slot === 'weapon' ? { wtype: pick(C.weapons) } : slot === 'back' ? {} : { atype: C.armorType });
   }
-  function whereQuestion() {
-    const P = G.S.player;
-    const places = Object.keys(D.PLACES).filter((k) => { const p = D.PLACES[k]; return p.lvl && p.lvl[0] <= P.level + 6 && p.lvl[1] >= P.level - 12 && p.zone && !G.enemyTown(k); });
+  function whereQuestion(asker) {
+    const P = G.S.player, top = Math.min(P.level + 6, asker ? asker.level + 3 : Infinity); // nowhere above the asker's own level + 3 (the chat gate's rule)
+    const places = Object.keys(D.PLACES).filter((k) => { const p = D.PLACES[k]; return p.lvl && p.lvl[0] <= top && p.lvl[1] >= P.level - 12 && p.zone && !G.enemyTown(k); });
     if (!places.length) return null;
     const k = pick(places), p = D.PLACES[k];
     const zones = [...new Set(Object.values(D.PLACES).map((x) => x.zone).filter((z) => z && z !== p.zone))];
@@ -773,7 +773,7 @@
     const A = d && D.ACTIVITIES[d.act];
     if (A && A.dungeon && S.player.guild >= 0) {
       weekProgress('boss', D.DUNGEONS[A.dungeon].pulls.filter((p) => p.boss).length);
-      if (chance(0.5)) { const mt = onlineMate(); if (mt) S.pending.push({ at: now() + rnd(4000, 9000), bot: mt.id, ch: 'guild', text: voice(mt, pick([`gz on ${A.name}!`, 'nice clear!', `${A.name} done? gz!`, 'gz on the run'])) }); }
+      if (chance(0.5)) { const mt = onlineMate(); if (mt) S.pending.push({ at: now() + rnd(4000, 9000), bot: mt.id, ch: 'guild', text: voice(mt, pick(mt.level + 3 >= (A.minLvl || 0) ? [`gz on ${A.name}!`, 'nice clear!', `${A.name} done? gz!`, 'gz on the run'] : ['nice clear!', 'gz on the run', 'gz!'])) }); } /* names it only from someone near its level (the chat gate's rule) */
     }
   };
   G.on('kill', (d) => { try { SOC.onKill(d.mob); } catch (e) { console.error(e); } });
