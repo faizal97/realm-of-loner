@@ -2341,6 +2341,12 @@
       const mk = (D.BAG_MATS_AH || []).filter((k) => D.ITEMS[k] && D.BAG_TIER[k] <= L0).pop();
       if (mk && Math.random() < 0.35 && !S.ah.listings.some((l) => l.item.id === mk)) { const it = G.copyItem(mk); S.ah.listings.push({ id: 'ah' + t + '_m' + S.ah.listings.length + '_' + rint(0, 9999), item: it, n: 1, price: Math.round(G.ahValue(it) * (1.05 + Math.random() * 0.25)), seller: pick(sellers).name, expires: t + rnd(6, 24) * 3600000 }); }
     }
+    // the basic materials your crafts use at your skill are always on sale (#560): a crafter whose gathering doesn't feed
+    // the craft can still level it. Priced like the bags, never under value, so a listing can't be bought and resold
+    for (const id of G.craftMatsNeeded()) if (!S.ah.listings.some((l) => l.item.id === id)) {
+      const it = G.copyItem(id), n = rint(2, 4) * 5;
+      S.ah.listings.push({ id: 'ah' + t + '_c' + S.ah.listings.length + '_' + rint(0, 9999), item: it, n, price: Math.round(G.ahValue(it) * n * (1.05 + Math.random() * 0.25)), seller: pick(sellers).name, expires: t + rnd(6, 24) * 3600000 });
+    }
     while (S.ah.listings.filter((l) => !D.GEAR_SLOTS.includes(l.item.slot)).length < 8) {
       const it = G.copyItem(pick(goods)), n = G.stackable(it) ? rint(1, 4) * 5 : 1;
       const price = Math.round(G.ahValue(it) * n * (0.8 + Math.random() * 0.6));
@@ -2632,6 +2638,17 @@
   G.pickRare = pickRare;
   G.rareRecipeDrop = (level) => (Math.random() < 0.1 ? G.copyItem(pickRare(level || G.S.player.level)) : null);
   // --- crafting: 1.5 s per item, repeats for a batch
+  // what your crafts need now (#560): the materials of each craft's recipes that still raise your skill (sk[2] is where a
+  // recipe turns green), skipping what a vendor sells; at most 4, the ones the most of those recipes use
+  G.craftMatsNeeded = function () {
+    const count = {};
+    for (const id of G.knownProfIds()) {
+      if (D.PROFESSIONS[id].kind !== 'craft') continue;
+      const skill = G.profs()[id].skill;
+      for (const r of G.recipesFor(id)) if (r.sk[0] <= skill && skill < r.sk[2]) for (const m in r.mats) { const it = D.ITEMS[m]; if (it && !it.cost && G.ahTrade(it)) count[m] = (count[m] || 0) + 1; }
+    }
+    return Object.keys(count).sort((a, b) => count[b] - count[a]).slice(0, 4);
+  };
   G.recipesFor = function (prof) {
     const p = G.profs()[prof]; if (!p) return [];
     return Object.values(D.RECIPES).filter((r) => r.prof === prof && (!r.rare || (p.known || []).includes(r.id))).sort((a, b) => a.sk[0] - b.sk[0]);
