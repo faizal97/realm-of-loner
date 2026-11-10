@@ -648,9 +648,11 @@
     const out = {}, add = (P, who) => { if (!P) return; for (const x of [].concat(Object.values(P.equip || {}), (P.bags || []).map((b) => b && b.item), (P.bank || []).map((b) => b && b.item))) if (x && x.effect && D.EFFECTS[x.effect]) (out[x.id] = out[x.id] || []).push({ item: x, who }); };
     if (G.S) add(G.S.player, G.S.player.name);
     for (const c of G.characters()) if (!G.S || c.id !== G.S.id) { const sv = G.readSave(c.id); if (sv) add(sv.player, sv.player && sv.player.name); }
+    for (const r of abankItems()) if (r.item && r.item.effect && D.EFFECTS[r.item.effect]) (out[r.item.id] = out[r.item.id] || []).push({ item: r.item, who: 'Account bank' }); // the shared bank counts too (#545)
     return out;
   };
-  G.ownsItem = function (id) { const P = G.S.player; return Object.values(P.equip || {}).some((x) => x && x.id === id) || (P.bags || []).some((b) => b.item.id === id) || (P.bank || []).some((b) => b.item && b.item.id === id); }; // worn, in bags or in the bank
+  const abankItems = () => { try { return G.abank ? AB.view(G.abank()) : []; } catch (e) { return []; } };
+  G.ownsItem = function (id) { const P = G.S.player; return Object.values(P.equip || {}).some((x) => x && x.id === id) || (P.bags || []).some((b) => b.item.id === id) || (P.bank || []).some((b) => b.item && b.item.id === id) || abankItems().some((r) => r.item && r.item.id === id); }; // worn, in bags, in the bank or in the Account bank (#545)
   // the items quests collect (#144) are kept with the quests (P.qitems), never in the bags, so a full bag can't lose one;
   // ones an old save holds in its bags still count
   let QITEMS = null;
