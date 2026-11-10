@@ -1282,3 +1282,7 @@ button.ev-fact { width: 100%; background: none; border: 0; border-bottom: 1px so
 .wk-open small { font-size: 12px; color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { .wk-tally .nav-arr { transition: none; } }
 @media (prefers-reduced-motion: reduce) { .wk-banner:active { transform: none; } }
+/* a locked item (#557): the padlock sits where a stack count would, which gear never has */
+.slot .lockm { position: absolute; right: 2px; bottom: 1px; font-size: 12px; line-height: 1; color: var(--gold); text-shadow: 0 1px 1px #000; }
+.bags.compact .slot .lockm { font-size: 10px; right: 1px; bottom: 0; }
+.lockm-i { color: var(--gold); font-size: 12px; }

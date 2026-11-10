@@ -708,7 +708,23 @@
   };
   // a sale that asks first (#168): green or better, or an upgrade; greys, whites and trade goods sell on one tap
   G.sellNeedsConfirm = (it) => !!it && ((it.q || 0) >= 2 || !!it.pw || (D.GEAR_SLOTS.includes(it.slot) && G.isUpgrade(it))); // upgraded (#444)
-  G.sellable = (it) => !!it && !it.noSell && it.slot !== 'quest';
+  G.sellable = (it) => !!it && !it.noSell && it.slot !== 'quest' && !it.lock; // a locked piece is kept (#557)
+  // a locked piece (#557): never sold, thrown away or auctioned until unlocked; gear only. The flag rides on the item,
+  // so saves, upgrades, reforges and both banks keep it. The item is copied first: bag entries can share one object
+  G.canLock = (it) => !!it && D.GEAR_SLOTS.includes(it.slot);
+  const withLock = (it, on) => { const c = Object.assign({}, it); if (on) c.lock = true; else delete c.lock; return c; };
+  G.setLock = function (where, key, on) {
+    const P = G.S.player;
+    if (where === 'equip') { if (!G.canLock(P.equip[key])) return false; P.equip[key] = withLock(P.equip[key], on); }
+    else { const b = P.bags[key]; if (!b || !G.canLock(b.item)) return false; b.item = withLock(b.item, on); }
+    emit('change'); G.save(); return true;
+  };
+  G.lockWorn = function () {
+    const P = G.S.player; let n = 0;
+    for (const s of D.GEAR_SLOTS) if (P.equip[s] && !P.equip[s].lock) { P.equip[s] = withLock(P.equip[s], true); n++; }
+    if (n) { emit('change'); G.save(); }
+    return n;
+  };
   // buyback (beta.3): the last 12 sales can be bought back at any vendor for what they sold for
   G.BUYBACK = 12;
   const soldKeep = (b) => { const P = G.S.player; P.buyback = [{ item: b.item, n: b.n, price: (b.item.sell || 1) * b.n }].concat(P.buyback || []).slice(0, G.BUYBACK); };
@@ -724,6 +740,7 @@
     const P = G.S.player;
     const b = P.bags[idx];
     if (!b) return;
+    if (b.item.lock) return toast('Locked. Unlock it to sell.');
     if (!G.sellable(b.item)) return toast(`The vendor won't buy ${b.item.name}.`); // (#167) the Waystone, keepsakes, quest items
     const v = (b.item.sell || 1) * b.n;
     P.money += v; P.bags.splice(idx, 1); soldKeep(b);
@@ -731,7 +748,7 @@
     emit('sold', { money: v, item: b.item, n: b.n }); emit('change');
   };
   // Throw away (v10.1.1): the whole stack, anywhere. The Waystone stays (it is how you get home).
-  G.canDiscard = (it) => !!it && it.id !== 'hearthstone';
+  G.canDiscard = (it) => !!it && it.id !== 'hearthstone' && !it.lock;
   G.discard = function (idx) {
     const P = G.S.player, b = P.bags[idx];
     if (!b || !G.canDiscard(b.item)) return false;
@@ -743,14 +760,14 @@
   G.sellJunk = function () {
     const P = G.S.player;
     let v = 0, k = 0;
-    P.bags = P.bags.filter((b) => { if (b.item.q === 0 && !b.item.noSell) { v += (b.item.sell || 1) * b.n; k++; soldKeep(b); return false; } return true; });
+    P.bags = P.bags.filter((b) => { if (b.item.q === 0 && !b.item.noSell && !b.item.lock) { v += (b.item.sell || 1) * b.n; k++; soldKeep(b); return false; } return true; });
     if (v) { P.money += v; sys(`Sold junk for ${G.moneyText(v)}.`); emit('sold', { money: v, many: k, grey: true }); }
     emit('change');
     return v;
   };
   // selling several at once (v10.3): idxs are bag indices; quest items and unsellable ones are skipped
   G.sellMany = function (idxs) {
-    const P = G.S.player, pick = [...new Set(idxs)].filter((i) => { const b = P.bags[i]; return b && !b.item.noSell && b.item.slot !== 'quest'; }).sort((a, b) => b - a);
+    const P = G.S.player, pick = [...new Set(idxs)].filter((i) => { const b = P.bags[i]; return b && G.sellable(b.item); }).sort((a, b) => b - a);
     let v = 0; for (const i of pick) { const b = P.bags[i]; v += (b.item.sell || 1) * b.n; P.bags.splice(i, 1); soldKeep(b); }
     if (v) { P.money += v; sys(`Sold ${pick.length} item${pick.length > 1 ? 's' : ''} for ${G.moneyText(v)}.`); emit('sold', { money: v, many: pick.length }); }
     emit('change');
@@ -2302,7 +2319,7 @@
   // What other players pay: the vendor price times a factor by quality.
   G.ahValue = (it) => it.slot === 'bag' && D.BAG_TIER && D.BAG_TIER[it.id] ? Math.round(0.75 * it.bag * (it.matBag ? 0.6 : 1) * G.questMoney(D.BAG_TIER[it.id]) / 100) * 100 /* a materials-only slot is worth less */ : (G.ahTrade(it) && !D.GEAR_SLOTS.includes(it.slot) ? Math.max(4, Math.round((it.sell || 2) * (it.slot === 'recipe' ? 8 : 5))) : Math.max(10, Math.round((it.sell || 5) * [2, 3, 6, 9, 14, 0][it.q || 1])));
   // what can go on the auction house: gear, trade goods and anything a profession makes
-  G.ahTrade = (it) => !it.heirloom && !it.noSell && (D.GEAR_SLOTS.includes(it.slot) ? it.q >= 1 : ['mat', 'potion', 'elixir', 'stone', 'kit', 'bag', 'recipe'].includes(it.slot));
+  G.ahTrade = (it) => !it.heirloom && !it.noSell && !it.lock && (D.GEAR_SLOTS.includes(it.slot) ? it.q >= 1 : ['mat', 'potion', 'elixir', 'stone', 'kit', 'bag', 'recipe'].includes(it.slot));
   // Listings from other players, refreshed now and then, around your level.
   function ahRefresh(force) {
     const S = G.S, P = S.player, t = now();

@@ -3097,6 +3097,7 @@
   // selling (#168): a green or better, or an upgrade, asks first; Keep carries the weight; only the last 12 sales can be bought back
   function sellAsk(idx, done) {
     const P = G.S.player, b = P.bags[idx]; if (!b) return;
+    if (b.item.lock) return toast('Locked. Unlock it to sell.');
     if (!G.sellable(b.item)) return toast(h('span', null, "The vendor won't buy ", h('span', { class: 'q' + (b.item.q || 0) }, b.item.name), '.')); // (#167)
     const sell = () => { const i = P.bags.indexOf(b); if (i >= 0) G.sell(i); done(); };
     if (!G.sellNeedsConfirm(b.item)) return sell();
@@ -3170,7 +3171,7 @@
   function itemCell(it, n, o) {
     const why = o.why, plain = o.dim || o.keep;
     return h('button', { class: 'slot qb' + (it.q || 0) + (o.sel ? ' sel' : '') + (why ? ' cant' : '') + (plain ? ' nosell' : ''), 'aria-label': it.name + (n > 1 ? ' x' + n : ''), onclick: o.onTap },
-      img(art('icon', it.icon)), o.pick ? h('span', { class: 'pick' }, '✓') : null, n > 1 ? h('span', { class: 'cnt tnum' }, n) : null,
+      img(art('icon', it.icon)), o.pick ? h('span', { class: 'pick' }, '✓') : null, n > 1 ? h('span', { class: 'cnt tnum' }, n) : it.lock ? h('span', { class: 'lockm', 'aria-label': 'Locked' }, '🔒') : null,
       plain ? null : !why && G.isUpgrade(it) ? h('span', { class: 'up' }, '▲') : !why && G.effectOf(it) ? h('span', { class: 'up eff' }, '◆') : null,
       why ? h('span', { class: 'why' }, why.kind === 'level' ? String(why.lvl) : '✕') : null);
   }
@@ -3269,10 +3270,10 @@
       }
       const vendorHereB = D.PLACES[P.place].vendor || D.PLACES[P.place].gearVendor;
       if (ui.sellPick && !vendorHereB) ui.sellPick = null;
-      const sellable = (x) => x && !x.item.noSell && x.item.slot !== 'quest';
+      const sellable = (x) => x && G.sellable(x.item);
       b.append(invTabs(P.bags.map((x) => x.item)));
       b.append(bagGrid((i) => {
-        if (ui.sellPick) { if (!sellable(P.bags[i])) return toast('That cannot be sold.'); if (ui.sellPick.has(i)) ui.sellPick.delete(i); else ui.sellPick.add(i); ui.sheetFn(); return; }
+        if (ui.sellPick) { if (!sellable(P.bags[i])) return toast(P.bags[i] && P.bags[i].item.lock ? 'Locked. Unlock it to sell.' : 'That cannot be sold.'); if (ui.sellPick.has(i)) ui.sellPick.delete(i); else ui.sellPick.add(i); ui.sheetFn(); return; }
         ui.bagSel = ui.bagSel === i ? null : i; ui.sheetFn();
       }, false, true));
       // selling several at once (v10.3): tap items to pick them, then sell them together
@@ -3298,8 +3299,9 @@
         if (G.usable(it)) acts.append(h('button', { class: 'btn', onclick: () => { G.useItem(ui.bagSel); ui.bagSel = null; ui.sheetFn(); } }, it.slot === 'bag' ? 'Equip bag' : it.slot === 'recipe' ? 'Learn' : 'Use'));
         if (it.id === 'hearthstone') acts.append(h('button', { class: 'btn', onclick: () => { G.hearth(); closeSheet(); } }, 'Use'));
         const vendorHere = D.PLACES[P.place].vendor || D.PLACES[P.place].gearVendor;
-        if (vendorHere && !it.noSell && it.slot !== 'quest') acts.append(h('button', { class: 'btn alt', onclick: () => sellAsk(ui.bagSel, () => { ui.bagSel = null; ui.sheetFn(); }) }, 'Sell'));
-        if (!it.noSell && it.slot !== 'quest' && !vendorHere) acts.append(h('div', { style: { color: 'var(--muted)', fontSize: '13px', alignSelf: 'center' } }, 'Sell it at a vendor.'));
+        if (G.canLock(it)) acts.append(h('button', { class: 'btn alt', onclick: () => { const on = !it.lock; G.setLock('bag', ui.bagSel, on); toast(on ? 'Locked.' : 'Unlocked.'); ui.sheetFn(); } }, it.lock ? 'Unlock' : 'Lock'));
+        if (vendorHere && G.sellable(it)) acts.append(h('button', { class: 'btn alt', onclick: () => sellAsk(ui.bagSel, () => { ui.bagSel = null; ui.sheetFn(); }) }, 'Sell'));
+        if (G.sellable(it) && !vendorHere) acts.append(h('div', { style: { color: 'var(--muted)', fontSize: '13px', alignSelf: 'center' } }, 'Sell it at a vendor.'));
         if (G.canDiscard(it)) acts.append(h('button', { class: 'btn alt', style: { color: '#ff6a5a' }, onclick: () => throwAway(ui.bagSel) }, 'Throw away'));
         const cur = P.equip[it.slot];
         // the buttons stay pinned to the bottom of the sheet, so selling never needs a scroll (v9.4)
@@ -4103,11 +4105,13 @@
         const gear = h('div', { class: 'gear' });
         for (const slot of D.GEAR_SLOTS) {
           const it = P.equip[slot];
-          gear.append(h('button', { class: 'row' + (it ? '' : ' off'), onclick: () => { if (it) showDialog(itemTip(it, h('div', { class: 'btn-row', style: { marginTop: '8px' } }, h('button', { class: 'btn alt', onclick: () => { G.unequip(slot); closeDialog(); ui.sheetFn(); } }, 'Unequip'), canUpgrade(it) ? h('button', { class: 'btn', onclick: () => { closeDialog(); upgradeDialog({ slot }); } }, 'Upgrade') : null, canReforge(it) ? h('button', { class: 'btn alt', onclick: () => { closeDialog(); reforgeDialog({ slot }); } }, 'Reforge') : null)), true); } },
+          gear.append(h('button', { class: 'row' + (it ? '' : ' off'), onclick: () => { if (it) showDialog(itemTip(it, h('div', { class: 'btn-row', style: { marginTop: '8px' } }, h('button', { class: 'btn alt', onclick: () => { G.unequip(slot); closeDialog(); ui.sheetFn(); } }, 'Unequip'), h('button', { class: 'btn alt', onclick: () => { const on = !it.lock; G.setLock('equip', slot, on); toast(on ? 'Locked.' : 'Unlocked.'); closeDialog(); ui.sheetFn(); } }, it.lock ? 'Unlock' : 'Lock'), canUpgrade(it) ? h('button', { class: 'btn', onclick: () => { closeDialog(); upgradeDialog({ slot }); } }, 'Upgrade') : null, canReforge(it) ? h('button', { class: 'btn alt', onclick: () => { closeDialog(); reforgeDialog({ slot }); } }, 'Reforge') : null)), true); } },
             h('div', { class: 'ic' }, it ? img(art('icon', it.icon)) : ''),
-            h('div', { class: 't' }, h('b', { class: it ? 'q' + it.q : '' }, it ? it.name : 'Empty'), h('small', null, D.SLOT_LABEL[slot])), h('div')));
+            h('div', { class: 't' }, h('b', { class: it ? 'q' + it.q : '' }, it ? it.name : 'Empty', it && it.lock ? h('span', { class: 'lockm-i', 'aria-label': 'Locked' }, ' 🔒') : null), h('small', null, D.SLOT_LABEL[slot])), h('div')));
         }
         b.append(gear);
+        // one tap locks a whole set (#557): wear it, lock it; locked pieces are never sold, thrown away or auctioned
+        if (D.GEAR_SLOTS.some((s) => P.equip[s] && !P.equip[s].lock)) b.append(h('button', { class: 'btn alt wide', onclick: () => { const n = G.lockWorn(); toast(`Locked ${n} worn item${n === 1 ? '' : 's'}.`); ui.sheetFn(); } }, 'Lock worn gear'));
         // the Effects you wear (#23, design §3): each counts once, from its strongest copy; only shown when you wear one
         const fx = E.itemEffects(P), keys = Object.keys(fx).filter((k) => D.EFFECTS[k]);
         if (keys.length) {
