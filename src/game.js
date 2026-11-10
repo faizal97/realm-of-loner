@@ -1041,10 +1041,16 @@
     const n = G.S.player.debtNotes || 0, t = (D.PREPATCH.trade || []).find((x) => x.kind === 'title');
     return t && !G.account().debtBreaker ? `${n}/${t.cost}` : String(n);
   };
+  // once the title is yours, the note line says what notes buy now (#552): the Marks trade, or the level it opens at
+  G.debtNotesNext = function () {
+    const m = (D.PREPATCH.trade || []).find((x) => x.kind === 'marks');
+    if (!m || !G.account().debtBreaker) return '';
+    return G.S.player.level >= (m.minLevel || 0) ? ` · ${m.cost} buy ${m.marks} Mentor Marks at the clerk` : ` · the Marks trade opens at level ${m.minLevel}`;
+  };
   // a torn debt note for a collector that isn't grey to you
   G.collectorKill = function (key, level) {
     const P = G.S.player; if (!D.PREPATCH || !D.PREPATCH.live || !(D.MOBS[key] || {}).collector || P.level - level >= (P.level < 6 ? 5 : 6)) return 0; /* grey exactly as the level colour shows it (ui.js conColor) */ // no notes once the event is over
-    P.debtNotes = (P.debtNotes || 0) + 1; sys('Torn debt notes: ' + G.debtNotesText()); return 1;
+    P.debtNotes = (P.debtNotes || 0) + 1; sys('Torn debt notes: ' + G.debtNotesText() + G.debtNotesNext()); return 1;
   };
   // ---- rare hunts (v10.10.0-beta.5, #43; design docs/plans/2026-10-03-rare-hunts-design.md): a level-60 rare appears once
   // in each 6-hour window (UTC) for 30 minutes or until killed. Its time is a pure function of its own key and the window
