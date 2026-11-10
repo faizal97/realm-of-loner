@@ -3279,11 +3279,11 @@
       // selling several at once (v10.3): tap items to pick them, then sell them together
       if (ui.sellPick) {
         const picked = [...ui.sellPick].filter((i) => sellable(P.bags[i])), total = picked.reduce((v, i) => v + (P.bags[i].item.sell || 1) * P.bags[i].n, 0);
-        const precious = picked.filter((i) => { const it = P.bags[i].item; return it.q >= 3 || it.pw || (D.GEAR_SLOTS.includes(it.slot) && G.isUpgrade(it)); }).length;
+        const precious = picked.filter((i) => G.sellNeedsConfirm(P.bags[i].item)).length; // the single sale's rule: green or better too (#558)
         const go = () => { const r = G.sellMany(picked); ui.sellPick = null; toast(`Sold ${r.n} item${r.n > 1 ? 's' : ''}.`, true); ui.sheetFn(); };
         b.append(h('div', { class: 'bag-acts' }, h('div', { class: 'bag-acts-t' }, h('b', null, picked.length ? `${picked.length} picked` : 'Tap items to pick them'), picked.length ? h('small', { html: ' · sells for ' + moneyHtml(total) }) : null),
           h('div', { class: 'btn-row' },
-            h('button', { class: 'btn', disabled: !picked.length, onclick: () => precious ? showDialog([h('h3', null, `Sell ${picked.length} items?`), h('p', null, `${precious} of them ${precious > 1 ? 'are' : 'is'} rare, upgraded or better than what you wear. Vendors do not sell things back.`), h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { closeDialog(); go(); } }, 'Sell'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Keep'))], true) : go() }, 'Sell'),
+            h('button', { class: 'btn', disabled: !picked.length, onclick: () => precious ? showDialog([h('h3', null, `Sell ${picked.length} items?`), h('p', null, `${precious} of them ${precious > 1 ? 'are' : 'is'} green or better, upgraded or better than what you wear. Vendors do not sell things back.`), h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { closeDialog(); go(); } }, 'Sell'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Keep'))], true) : go() }, 'Sell'),
             h('button', { class: 'btn alt', onclick: () => { ui.invTab = 'all'; ui.sellPick = new Set(P.bags.map((x, i) => i).filter((i) => sellable(P.bags[i]) && P.bags[i].item.q === 0)); ui.sheetFn(); } }, 'Pick grey'),
             h('button', { class: 'btn alt', onclick: () => { ui.sellPick = null; ui.sheetFn(); } }, 'Cancel'))));
         return;
