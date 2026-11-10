@@ -1035,10 +1035,15 @@
     if (t.kind === 'marks') G.addMarks(t.marks, 'torn debt notes');
     emit('change'); G.save(); return true;
   };
+  // the count with its goal (#552): n/40 toward the Debt-Breaker title until it's yours (account-wide), then just n
+  G.debtNotesText = function () {
+    const n = G.S.player.debtNotes || 0, t = (D.PREPATCH.trade || []).find((x) => x.kind === 'title');
+    return t && !G.account().debtBreaker ? `${n}/${t.cost}` : String(n);
+  };
   // a torn debt note for a collector that isn't grey to you
   G.collectorKill = function (key, level) {
     const P = G.S.player; if (!D.PREPATCH || !D.PREPATCH.live || !(D.MOBS[key] || {}).collector || P.level - level >= (P.level < 6 ? 5 : 6)) return 0; /* grey exactly as the level colour shows it (ui.js conColor) */ // no notes once the event is over
-    P.debtNotes = (P.debtNotes || 0) + 1; sys('Torn debt note: ' + P.debtNotes); return 1;
+    P.debtNotes = (P.debtNotes || 0) + 1; sys('Torn debt notes: ' + G.debtNotesText()); return 1;
   };
   // ---- rare hunts (v10.10.0-beta.5, #43; design docs/plans/2026-10-03-rare-hunts-design.md): a level-60 rare appears once
   // in each 6-hour window (UTC) for 30 minutes or until killed. Its time is a pure function of its own key and the window
@@ -3067,6 +3072,12 @@
   G.durOf = (it) => (it && it.dur != null ? it.dur : 100);
   G.repairCost = (it) => (G.hasDur(it) ? Math.round(((100 - G.durOf(it)) / 100) * G.REPAIR_K * Math.max(1, it.lvl || 1) * (REPAIR_Q[it.q || 0] || 1)) : 0);
   G.repairAllCost = (kit) => { let c = 0; const E2 = G.S.player.equip || {}; for (const s in E2) c += G.repairCost(E2[s]); return Math.round(c * (kit ? G.KIT_MULT : 1)); };
+  // what's worn, at a glance (#551): the lowest durability among worn pieces that wear, and how many are broken
+  G.gearCondition = function () {
+    const E2 = G.S.player.equip || {}; let low = 100, broken = 0;
+    for (const s in E2) { const it = E2[s]; if (!G.hasDur(it, s)) continue; const d = G.durOf(it); low = Math.min(low, d); if (d <= 0) broken++; }
+    return { low, broken, cost: G.repairAllCost(false) };
+  };
   G.wear = function () {
     const P = G.S.player, broke = [], low = []; if (!P || P.level < 10 || !(root.document || root.WEAR_ON)) return; // nothing wears before level 10; Node sims measure repaired gear unless they set WEAR_ON (the tests and sim/economy.js do)
     for (const s in (P.equip || {})) {

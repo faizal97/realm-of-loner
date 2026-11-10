@@ -430,6 +430,9 @@ img { max-width: 100%; display: block; }
 /* #90: free bag slots on the Bags tab, top-left (the dot keeps the top-right): amber count at 3 or fewer, red "Full" at none */
 .bag-badge { position: absolute; top: 3px; left: 22%; min-width: 16px; height: 16px; padding: 0 4px; box-sizing: border-box; border-radius: 8px; background: #e8a33a; color: #1a1209; font: 800 10px/16px var(--body); letter-spacing: 0; text-align: center; box-shadow: 0 0 0 1px #000; }
 .bag-badge.full { background: #d42a20; color: #fff; }
+.gear-badge { left: auto; right: 22%; }
+.recap-gear { margin: 8px 0 0; font: 600 14px var(--body); color: var(--text); }
+.gear-note { display: block; margin-top: 6px; color: #ff6a5a; }
 .bag-badge.inline { position: static; display: inline-block; margin-right: 6px; vertical-align: middle; }
 .bag-free { color: #e8a33a; font-weight: 700; } .bag-free.full { color: #ff6a5a; }
 .sheet-backbtn.bag-sort { margin: 0 8px 0 8px; padding: 4px 12px; }

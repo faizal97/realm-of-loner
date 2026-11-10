@@ -2248,11 +2248,16 @@
     const b = G.bagBadge(); if (!b) return null;
     return h('span', { class: 'bag-badge' + (b.full ? ' full' : '') + (inline ? ' inline' : ''), 'aria-label': b.full ? 'Bags full' : `${b.n} free bag ${b.n === 1 ? 'slot' : 'slots'}` }, b.text);
   }
+  // worn gear at 50% or less (#551): its lowest durability on Hero, amber, and red at 0% once a piece gives no stats
+  function gearBadgeEl() {
+    const c = G.gearCondition(); if (c.low > 50) return null;
+    return h('span', { class: 'bag-badge gear-badge' + (c.broken ? ' full' : ''), 'aria-label': c.broken ? `${c.broken} broken` : `Gear ${c.low}%` }, `${c.low}%`); /* red at 0%: a broken piece ("Broken" didn't fit the corner at 375 px) */
+  }
   function renderNavDots() {
     const q = Object.keys(G.S.player.quests).some((id) => G.questState(id) === 'complete');
     const b = els.nav.querySelector('[data-nav="quests"]'); if (b) b.classList.toggle('dot', q);
     const s = els.nav.querySelector('[data-nav="social"]'); if (s) s.classList.toggle('dot', !!(G.S.queue && G.S.queue.popped) || friendsWaiting());
-    const hb = els.nav.querySelector('[data-nav="hero"]'); if (hb) hb.classList.toggle('dot', G.talentPoints(G.S.player).free > 0 || loreUnread() > 0);
+    const hb = els.nav.querySelector('[data-nav="hero"]'); if (hb) { hb.classList.toggle('dot', G.talentPoints(G.S.player).free > 0 || loreUnread() > 0); const old = hb.querySelector('.gear-badge'), gb = gearBadgeEl(); if (old) old.remove(); if (gb) hb.append(gb); }
     const bb = els.nav.querySelector('[data-nav="bags"]'); if (bb) { bb.classList.toggle('dot', G.bagDot()); const old = bb.querySelector('.bag-badge'), nb = bagBadgeEl(); if (old) old.remove(); if (nb) bb.append(nb); }
     const rmb = els.scene && els.scene.querySelector('.run-menu'); if (rmb) rmb.classList.toggle('dot', !!els.nav.querySelector('button.dot:not([data-nav="map"])')); // the hidden tabs' dots (#67)
     loreNotice();
@@ -2297,6 +2302,11 @@
     return h('button', { class: cls || 'btn alt', onclick: () => { const name = FLOG.fileName(); SAVEFILE.save(name, FLOG.text(), { title: 'Share fight log', mime: 'text/plain' }).then(() => { if (!SAVEFILE.inApp()) toast('Fight log saved', true); }, (e) => toast('Could not save the fight log: ' + ((e && e.message) || 'error'))); } },
       SAVEFILE.inApp() ? 'Share fight log' : 'Save fight log');
   }
+  // after a death (#551): what it cost your gear, as label + value; nothing below level 10, where gear doesn't wear
+  function gearLine() {
+    const c = G.gearCondition(); if (G.S.player.level < 10 || c.low >= 100) return null;
+    return h('p', { class: 'recap-gear' }, c.broken ? `Broken: ${c.broken} (no stats) · ` : `Gear: ${c.low}% · `, h('span', { html: 'Repair all: ' + moneyHtml(c.cost, false, true) }));
+  }
   function recapDialog() {
     const R = G.recap; if (!R) return;
     const shown = R.deaths.slice(0, 5), more = R.deaths.length - shown.length;
@@ -2304,6 +2314,7 @@
       h('div', { class: 'recap' }, ...shown.map((d) => { const x = G.recapText(d);
         return h('div', { class: 'recap-row' }, h('div', null, h('b', { class: 'cls-' + d.cls }, d.name), ' ' + x.head), h('small', null, x.facts)); }),
         more > 0 ? h('small', { class: 'recap-more' }, `+${more} more`) : null),
+      R.self || R.deaths.some((d) => d.name === G.S.player.name) ? gearLine() : null, // you died: in a group too (#551)
       h('div', { class: 'btn-row' }, fightLogButton(), h('button', { class: 'btn', onclick: closeDialog }, 'Close'))], true);
   }
   // dismissable: true closes on a tap outside; a function runs instead (a card opened from the group pop goes back to it, #325)
@@ -2956,7 +2967,7 @@
             h('div', { class: 't' }, h('b', { style: { color: D.QUALITY[5].color } }, H.name), h('small', { style: { whiteSpace: 'normal' } }, `At your level: ${stats}. Grows with you. +5% experience.`)),
             h('div', { class: 'r' }, owned ? 'Copy' : `${H.cost} ✦`)));
         }
-        b.append(list, h('p', { class: 'ai-note' }, 'Earned from Help Wanted (group finder) and the daily Roulette.'));
+        b.append(list, h('p', { class: 'ai-note' }, `Earned from the daily Roulette, Help Wanted, featured dungeons and raids, world bosses, Trials, guild runs, the Brawl${D.PREPATCH && D.PREPATCH.live ? ', torn debt notes' : ''} and rares.`)); // every source, not two (#182)
         { // the Quartermaster's catalogue (#506): this week's stock first, then each raid's colours and the mounts
           const stock = G.qmStock(), looks = G.qmLooks(), own = new Set(acc.looks || []), mine = new Set(P.mounts || []);
           const row = (ref) => { const [kind, a1, a2] = ref.split(':'); if (kind === 'mount') { const M = D.MOUNTS[a1], c = G.qmPrice(M.marks, ref), have = mine.has(a1);
@@ -3521,7 +3532,7 @@
       list.append(h('div', { class: 'row' }, h('div', { class: 'ic' }, img(art('icon', t.kind === 'title' ? 'journal' : 'coin'))),
         h('div', { class: 't' }, h('b', null, t.kind === 'title' ? 'the Debt-Breaker' : `${t.marks} Mentor Marks`), h('small', null, t.kind === 'title' ? 'Title · account-wide' : 'Shared by all your characters')), h('div', { class: 'r' }, right)));
     }
-    b.append(h('div', { class: 'sec-h' }, 'Trade', h('small', null, `Torn debt notes: ${have}`)), list,
+    b.append(h('div', { class: 'sec-h' }, 'Trade', h('small', null, `Torn debt notes: ${G.debtNotesText()}`)), list,
       h('p', { class: 'ai-note' }, 'Every levelling zone has debt collectors at the zone\'s own level. Grey ones carry no notes. The trade lasts until The Ruinfall Saga begins.'));
   }
   function lwKeeperBlock(b) {
@@ -4078,7 +4089,7 @@
           h('div', null, h('span', null, 'Experience'), h('b', { class: 'tnum' }, P.level >= D.LEVEL_CAP ? 'Max level' : `${P.xp}/${need}`)),
           h('div', null, h('span', null, 'Rested'), h('b', { class: 'tnum' }, P.level >= D.LEVEL_CAP ? '-' : Math.round(P.rested))),
           h('div', null, h('span', null, 'Money'), h('b', { html: moneyHtml(P.money) })),
-          D.PREPATCH && D.PREPATCH.live ? h('div', null, h('span', null, 'Torn debt notes'), h('b', { class: 'tnum' }, String(P.debtNotes || 0))) : null,
+          D.PREPATCH && D.PREPATCH.live ? h('div', null, h('span', null, 'Torn debt notes'), h('b', { class: 'tnum' }, G.debtNotesText())) : null,
           h('div', null, h('span', null, 'Played'), h('b', { class: 'tnum' }, fmtTime(P.played * 1000))),
           h('div', null, h('span', null, 'Kills'), h('b', { class: 'tnum' }, P.kills)),
           h('div', null, h('span', null, 'Deaths'), h('b', { class: 'tnum' }, P.deaths)), G.renown() ? h('div', null, h('span', null, 'Renown'), h('b', { class: 'tnum' }, G.renown())) : null)); // #504
@@ -5155,6 +5166,7 @@
         : G.S.queue && !why ? [h('button', { class: 'btn why', disabled: true }, `In queue for ${D.ACTIVITIES[G.S.queue.act].name}`), // queued for something else says so (#169)
           h('button', { class: 'btn alt', onclick: () => { G.leaveQueue(); ui.sheetFn(); } }, 'Leave the queue')]
         : h('button', { class: 'btn' + (why ? ' why' : ''), disabled: !!why, onclick: () => { if (trial ? G.queueTrial(act, ui.trialLvl) : (G.queueFor(act, hard ? { hard: true } : undefined), !!G.S.queue)) closeSheet(); } }, why ? (why === 'hidden' ? 'Only for the other faction' : why) : trial ? `Queue for Trial ${lvl}` : hard ? 'Queue for Hard' : 'Queue')));
+      { const c = G.gearCondition(); if (c.broken && !queued) b.append(h('small', { class: 'gear-note' }, `Broken gear: ${c.broken} (no stats). Repair at a vendor.`)); } // before you queue (#551)
       if (!trial && A.where && G.stormBlocks(A.where)) b.append(...stormSteps()); // what lifts the storm (#288)
     });
   }
@@ -5632,6 +5644,7 @@
     dungeon: 'Dungeons are open. Social → Groups: queue from the dungeon\'s zone and the finder fills your group.',
     run: 'In a group the tank pulls. Tap Pull (or Ready) when you are set; Tactics set the pace.',
     talents: 'Talents are open: Hero → Abilities → Talents. You get a new point every level.',
+    cap: 'Level 60! The This week button shows what is left today and this week, each with a Go.', // #182 (the button is a festival's lantern while one is on)
   };
   const TIP_KEY = 'azsolo.tips';
   function tipState() {
@@ -6256,7 +6269,7 @@
     G.on('snow', (Z) => snowArena(Z)); G.on('snowLog', (l) => snowLog(l)); G.on('fireworks', () => fireworks(5)); G.on('lnGuestFirst', () => setTimeout(lnMidnight, 1500)); // Longnight
     G.on('rehearsal', (R) => rehearsalCallout(R)); G.on('fightStart', () => setTimeout(() => rehearsalCallout(G.rehearsalNow()), 50)); // #256
     G.on('levelup', (d) => { const l = d.learned || [], ks = [['marching_song', 'second'], ['play_drum', 'drum'], ['play_horn', 'horn']].filter(([a]) => l.includes(a)).map(([, k]) => k).concat(d.level === D.TALENT_START ? ['talents'] : []); ks.forEach((k, i) => whenCalm(() => setTimeout(() => bardCard(k), i * 15000))); }); // the Bard's teaching cards (#256)
-    G.on('levelup', (d) => { if (d.level === 2) tip('level'); if (d.level === G.firstDungeonLvl()) tip('dungeon'); if (d.level === D.TALENT_START) tip('talents'); });
+    G.on('levelup', (d) => { if (d.level === 2) tip('level'); if (d.level === G.firstDungeonLvl()) tip('dungeon'); if (d.level === D.TALENT_START) tip('talents'); if (d.level === D.LEVEL_CAP) tip('cap'); });
     G.on('chat', () => { if (G.S && G.S.chat.some((m) => m.act && m.act.state === 'open' && !m.act.accepted)) tip('request'); });
     G.on('fightEnd', (d) => { fightEndAt = performance.now(); if (ui.singing) { ui.singing = false; if (window.SND && SND.songOut) SND.songOut(); } renderAll(); if (d.result === 'lose' && !G.S.run) banner('You died'); });
     G.on('runUpdate', renderAll);
