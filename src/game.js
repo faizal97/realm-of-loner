@@ -2615,6 +2615,7 @@
     for (let i = bank.length - 1; i >= 0 && rest > 0; i--) { const b = bank[i]; if (b.item.id !== id) continue; const k = Math.min(b.n, rest); b.n -= k; rest -= k; if (!b.n) bank.splice(i, 1); }
     return fromBank;
   }
+  G.removeMat = (id, n) => takeMat(id, n); // bags first, then the bank: what chat requests take (#550)
   G.craftable = function (rid) { const r = D.RECIPES[rid]; let n = 99; for (const m in r.mats) n = Math.min(n, Math.floor(G.matCount(m) / r.mats[m])); return n; };
   G.craft = function (rid, count) {
     const S = G.S, P = S.player, r = D.RECIPES[rid], p = G.profs()[r.prof];

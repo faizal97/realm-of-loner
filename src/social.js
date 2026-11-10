@@ -226,7 +226,8 @@
     const pl = pick(places); const mob = pick(D.PLACES[pl].mobs)[0];
     return { place: pl, mob, n: rint(4, 8) };
   }
-  const sellable = () => G.S.player.bags.filter((b) => b.item && (b.item.slot === 'mat') && !b.item.noSell);
+  // trade goods you hold, bags and bank together (#550: after Store materials they sit in the bank), one row per item
+  const sellable = () => { const by = {}; for (const b of [].concat(G.S.player.bags, G.S.player.bank || [])) if (b && b.item && b.item.slot === 'mat' && !b.item.noSell) (by[b.item.id] = by[b.item.id] || { item: b.item, n: 0 }).n += b.n; return Object.values(by); };
   // one of your quests that asks you to kill something you can reach
   function questTarget() {
     const P = G.S.player;
@@ -587,11 +588,11 @@
         if (P.place !== a.place) return 'route:' + a.place;
       } }, decline];
     }
-    if (a.kind === 'wtb') {
-      const have = G.countItem(a.item);
+    if (a.kind === 'wtb') { // bags and bank count (#550)
+      const have = G.matCount(a.item);
       return [{ label: have >= a.n ? `Sell ${a.n} for ${coin(a.price)}` : `You have ${have}/${a.n}`, primary: true, disabled: have < a.n, why: have < a.n, fn: () => {
-        if (G.countItem(a.item) < a.n) return `You need ${a.n}.`;
-        G.removeItem(a.item, a.n); P.money += a.price;
+        if (G.matCount(a.item) < a.n) return `You need ${a.n}.`;
+        G.removeMat(a.item, a.n); P.money += a.price;
         G.sys(`You sold ${a.n} ${D.ITEMS[a.item].name} to ${b ? b.name : 'them'} for ${coin(a.price)}.`);
         reply(pick(['ty!', 'pleasure doing business', 'thx a lot', 'perfect, ty', 'awesome, ty', 'exactly what i needed'])); befriend(b, P.place); help(); close();
       } }, decline];
@@ -615,12 +616,12 @@
         } }, decline];
     }
     if (a.kind === 'swap') {
-      const have = G.countItem(a.item);
-      const full = have >= a.n && !G.wouldFit(a.itemData, 1, a.item, a.n); // the payment's emptied slot takes it (#486)
+      const have = G.matCount(a.item), fits = () => G.wouldFit(a.itemData, 1, a.item, Math.min(a.n, G.countItem(a.item))); // bags and bank pay (#550); only what leaves the bags frees a slot (#486)
+      const full = have >= a.n && !fits();
       return [{ label: have < a.n ? `You have ${have}/${a.n}` : full ? 'Bags full' : `Swap ${a.n} ${D.ITEMS[a.item].name}`, primary: true, disabled: have < a.n || full, why: have < a.n || full, fn: () => {
-        if (G.countItem(a.item) < a.n) return `You need ${a.n}.`;
-        if (!G.wouldFit(a.itemData, 1, a.item, a.n)) return 'Your bags are full.'; // checked again at the tap: the bags may have filled since the button was drawn
-        G.removeItem(a.item, a.n); G.addItem(JSON.parse(JSON.stringify(a.itemData)), 1);
+        if (G.matCount(a.item) < a.n) return `You need ${a.n}.`;
+        if (!fits()) return 'Your bags are full.'; // checked again at the tap: the bags may have filled since the button was drawn
+        G.removeMat(a.item, a.n); G.addItem(JSON.parse(JSON.stringify(a.itemData)), 1);
         G.sys(`You traded ${a.n} ${D.ITEMS[a.item].name} for ${a.itemData.name}.`);
         reply(pick(['ty, fair trade', 'perfect', 'deal!'])); befriend(b, P.place); close();
       } }, decline];
@@ -690,11 +691,11 @@
       const min = SOC.guildInfo(a.g).min || 0, low = P.level < min; // greyed with the level, as the Guild tab does (#361)
       return [{ label: P.guild >= 0 ? 'In a guild' : low ? `Level ${min}+` : `Apply to <${B.GUILDS[a.g]}>`, primary: true, disabled: P.guild >= 0 || low, why: P.guild >= 0 || low, fn: () => { if (low) return `<${B.GUILDS[a.g]}> takes level ${min}+.`; const why = SOC.apply(a.g); if (why) return why; close(); } }, decline]; // closes only on success (#166)
     }
-    if (a.kind === 'g_mats') {
-      const have = G.countItem(a.item);
+    if (a.kind === 'g_mats') { // bags and bank count (#550)
+      const have = G.matCount(a.item);
       return [{ label: have >= a.n ? `Give ${a.n}` : `You have ${have}/${a.n}`, primary: true, disabled: have < a.n, why: have < a.n, fn: () => {
-        if (G.countItem(a.item) < a.n) return `You need ${a.n}.`;
-        G.removeItem(a.item, a.n); P.money += a.pay;
+        if (G.matCount(a.item) < a.n) return `You need ${a.n}.`;
+        G.removeMat(a.item, a.n); P.money += a.pay;
         G.sys(`You gave ${a.n} ${D.ITEMS[a.item].name} to ${b ? b.name : 'your guildmate'}; they paid you ${coin(a.pay)}.`);
         reply(pick(['ur the best, ty', 'thank u!!', 'lifesaver', 'guild mvp'])); addStanding(20, 'materials for the guild'); help(); close();
       } }, decline];
