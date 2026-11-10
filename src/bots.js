@@ -254,7 +254,7 @@
         const gain = rate(b) * (stepMs / 3600000) * share; let need = 1 - b.xpf;
         b.xpf += gain;
         while (b.xpf >= 1 && b.level < D.LEVEL_CAP) {
-          b.xpf -= 1; b.level++;
+          b.xpf -= 1; b.level++; b.dingAt = Math.round(when.getTime()); // a 'ding' line needs a real level-up lately (#499)
           // their own history (#72), at the time in the step they got there (#335: all at its end read "just now")
           if (b.level % 10 === 0 || b.level === D.LEVEL_CAP) B.note(b, Math.round(when.getTime() - stepMs + stepMs * Math.min(1, need / gain)), 'lvl', b.level);
           need += 1;
@@ -422,7 +422,7 @@
     (c) => `the music in ${c.zone} tho`,
     (c) => `${c.zone} at night is so pretty`,
     (c) => `${c.town} inn is the comfiest inn, fight me`,
-    (c) => `ding ${c.me.level}!`,
+    (c) => (B.dingedLately(c.me) ? `ding ${c.me.level}!` : null),
     () => 'why is my mana always empty',
     () => 'gl everyone',
     () => 'lost my corpse again lol',
@@ -516,7 +516,7 @@
     (c) => `anyone else doing ${c.zone} quests? so many`, () => 'oom, sitting', () => 'love this spot', () => 'run!!', (c) => `heading back to ${c.town} after this`,
   ];
   const GUILD = [
-    () => 'evening all', () => 'morning guild', () => 'grats on the ding!', () => 'guild bank when', () => 'gn guys', (c) => `finally ${c.me.level}!`,
+    () => 'evening all', () => 'morning guild', () => 'grats on the ding!', () => 'guild bank when', (c) => (B.dingedLately(c.me) ? `finally ${c.me.level}!` : null), /* no goodbye from someone who stays online (#499) */
     () => 'that last run was fun', (c) => `who's in ${c.zone}? just got here`, () => 'love this guild', () => 'gz on the drop earlier',
     () => 'our tank is a legend', () => 'rip my repair bill', (c) => `just saw ${c.namedMob} lol, ran away`, () => 'the AH is crazy today',
     () => 'ty for the help earlier', () => 'long day at work, finally home', () => 'what did everyone get from the roulette today?', () => 'weekly goal is getting close',
@@ -776,6 +776,7 @@
   const keyed = (k, arr) => arr.map((f, i) => [k + i, f]);
   const wordsKey = (s) => 'w:' + String(s).toLowerCase().replace(/[.!?]+$/, '').trim(); // the same words, from any pool
   const bandOf = (b) => { const L = b.level || 1; return L < 15 ? 0 : L < 30 ? 1 : L < 45 ? 2 : 3; };
+  B.dingedLately = (b) => !!(b && b.dingAt && Date.now() - b.dingAt < 2 * 3600000); // levelled in the last 2 hours (#499)
   B.freshLine = function (S, b, ch, list, c, raw) {
     const cd = S.chatHeard || {}, t = Date.now(), mine = ((S.botSaid || {})[b.id] || '').split(',');
     const ok = list.filter(([k]) => !(cd[k] > t - HEARD_MS) && !mine.includes(k));

@@ -494,11 +494,13 @@
   // guildmates chat among themselves, and about you
   function guildTalk() {
     const P = G.S.player, a = onlineMate(); if (!a) return;
-    const lines = [`just dinged ${a.level}!`, // #73: its own level, not one it hasn't reached `this week's goal is going well`, `who's online tonight?`, `lol i fell off the lift again`, `brb food`, `gz everyone on the weekly progress`, SOC.motd(P.guild).toLowerCase(),
+    // a quiet guild is quiet (#499): one mate online rarely talks to the empty room, two now and then
+    const on = G.S.bots.filter((x) => x.guild === P.guild && B.isOnline(x, new Date())).length; if (on <= 1 ? !chance(0.25) : on === 2 && !chance(0.6)) return;
+    const lines = [B.dingedLately(a) ? `just dinged ${a.level}!` : null, /* #73: its own level; #499: only after a real level-up */ `this week's goal is going well`, `who's online tonight?`, `lol i fell off the lift again`, `brb food`, `gz everyone on the weekly progress`, SOC.motd(P.guild).toLowerCase(),
       'finally finished my set', 'repair bills are killing me', 'love seeing everyone online', 'who else is on their alt tonight?', 'rolled a new alt, starting zones are so peaceful', 'best guild on the server, no contest'];
     if (P.level >= 10) lines.push(`${P.name} carrying the guild again`, `thanks for the help earlier ${P.name}`);
     // #70: a fresh line that's true from this mate (B.freshLine: not heard in the last hour, not one it said lately)
-    const r = B.freshLine(G.S, a, 'guild', lines.map((l, i) => ['gt' + i, () => l]), {}); if (!r) return; // #73: in its own voice
+    const r = B.freshLine(G.S, a, 'guild', lines.map((l, i) => ['gt' + i, () => l]), {}); if (!r) return; // #73: in its own voice (a null line is skipped)
     const m = post('guild', a, r.text); if (m) B.heard(G.S, a, r.k, r.text);
     const b = m && chance(0.5) && onlineMate(a.id), re = b && B.freshLine(G.S, b, 'guild', ['lol', 'same', 'nice', 'gz!', 'haha', 'yep', 'lmao', 'o/'].map((l, i) => ['gr' + i, () => l]), {}, true);
     if (re) { G.S.pending.push({ at: now() + rnd(3000, 9000), bot: b.id, ch: 'guild', text: voice(b, re.text) }); B.heard(G.S, b, re.k, re.text); }
