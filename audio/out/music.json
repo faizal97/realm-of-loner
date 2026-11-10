@@ -76,23 +76,16 @@
   "loop_s": 40.0
  },
  "veshmira": {
-  "bpm": 104,
-  "bars": 24,
-  "key": "D minor",
-  "loop_s": 55.3846
+  "loop_s": 183.28,
+  "source": "'Harpsichord Counting' (Suno), cut to a 4 s crossfaded loop, -18 LUFS (not composed here)"
  },
  "magma": {
-  "bpm": 100,
-  "bars": 24,
-  "key": "C Phrygian",
-  "loop_s": 57.6
+  "loop_s": 202.64,
+  "source": "'Forge of Ender' (Suno), cut to a 4 s crossfaded loop, -18 LUFS (not composed here)"
  },
  "tidecrown": {
-  "bpm": 92,
-  "bars": 24,
-  "key": "G minor",
-  "meter": "3/4",
-  "loop_s": 46.9565
+  "loop_s": 257.22,
+  "source": "'The Descent of Aelindra' (Suno), cut to a 4 s crossfaded loop, -18 LUFS (not composed here)"
  },
  "worldboss": {
   "bpm": 126,

@@ -493,8 +493,9 @@ def render(name):
 
 
 if __name__ == '__main__':
-    names = sys.argv[1:] or list(TRACKS)
     mp = os.path.join(OUT, 'music.json'); meta = json.load(open(mp)) if os.path.exists(mp) else {}
+    # a track replaced by an outside recording (meta 'source', e.g. the Suno raid themes) is only re-rendered by name
+    names = sys.argv[1:] or [n for n in TRACKS if 'source' not in meta.get(n, {})]
     for n in names:
         meta[n] = render(n); print(n, meta[n], flush=True)
     json.dump(meta, open(mp, 'w'), indent=1)
