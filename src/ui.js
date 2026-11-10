@@ -2309,6 +2309,7 @@
   }
   function recapDialog() {
     const R = G.recap; if (!R) return;
+    document.querySelectorAll('.tip-card.fight-tip').forEach((e) => e.remove()); // a fight's teaching card never covers the recap (#556)
     const shown = R.deaths.slice(0, 5), more = R.deaths.length - shown.length;
     showDialog([h('h3', null, R.self ? 'You died' : `Deaths (${R.deaths.length})`),
       h('div', { class: 'recap' }, ...shown.map((d) => { const x = G.recapText(d);
@@ -5721,7 +5722,7 @@
     if (team ? P.teleSlamSeen : P.teleSeen) return;
     if (team) P.teleSlamSeen = 1; else P.teleSeen = 1; G.save();
     const pic = img(abIcon(teleIconId(ans))); pic.classList.add('tip-pic');
-    const el = h('div', { class: 'tip-card' }, h('div', { class: 'tip-row' }, pic, h('div', { class: 'tip-t' }, h('b', { style: { color: '#ff7a52' } }, team ? 'Slam on your tank! ' : 'Red bar! '),
+    const el = h('div', { class: 'tip-card fight-tip' }, h('div', { class: 'tip-row' }, pic, h('div', { class: 'tip-t' }, h('b', { style: { color: '#ff7a52' } }, team ? 'Slam on your tank! ' : 'Red bar! '),
       team ? 'Shield or heal the tank, or interrupt the boss, before the bar fills. Each answer makes the slam smaller.' : 'A red bar is an attack you can answer. Press the glowing button before it fills.')),
       h('div', { class: 'tip-b' }, h('button', { class: 'chip gold', onclick: () => el.remove() }, 'Got it')));
     (document.getElementById('app') || document.body).append(el);
@@ -5731,7 +5732,7 @@
     const P = G.S.player, key = pr.aura || pr.on[0]; P.procSeen = P.procSeen || {};
     if (P.procSeen[key]) return;
     P.procSeen[key] = 1; G.save();
-    const el = h('div', { class: 'tip-card' }, h('div', { class: 'tip-t' }, h('b', { style: { color: 'var(--gold)' } }, 'New reaction! '), pr.teach),
+    const el = h('div', { class: 'tip-card fight-tip' }, h('div', { class: 'tip-t' }, h('b', { style: { color: 'var(--gold)' } }, 'New reaction! '), pr.teach),
       h('div', { class: 'tip-b' }, h('button', { class: 'chip gold', onclick: () => el.remove() }, 'Got it')));
     (document.getElementById('app') || document.body).append(el);
     setTimeout(() => el.remove(), 14000);
