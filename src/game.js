@@ -605,9 +605,11 @@
   // stacks over 20 from a save before #440 split into 20s where the room allows; nothing is ever dropped (#485)
   function restack(P) {
     for (const [list, cap] of [[P.bags || [], null], [P.bank || [], G.bankSlots()]]) for (let i = 0; i < list.length; i++) {
-      const b = list[i]; if (b.n <= STACK || !G.stackable(b.item) || Math.ceil(b.n / STACK) - 1 > (cap == null ? (P.bags === list ? G.bagFree(b.item) : 0) : cap - list.length)) continue;
-      let rest = b.n - STACK; b.n = STACK;
-      while (rest > 0) { list.splice(++i, 0, { item: Object.assign({}, b.item), n: Math.min(STACK, rest) }); rest -= STACK; }
+      const b = list[i]; if (b.n <= STACK || !G.stackable(b.item)) continue;
+      // as far as the room goes (#549): with too little room, the last piece keeps what's over
+      const extra = Math.min(Math.ceil(b.n / STACK) - 1, cap == null ? (P.bags === list ? G.bagFree(b.item) : 0) : cap - list.length); if (extra <= 0) continue;
+      for (let k = 0; k < extra; k++) { const n = k < extra - 1 ? STACK : b.n - STACK * (extra); list.splice(++i, 0, { item: Object.assign({}, b.item), n }); }
+      b.n = STACK;
     }
   }
   G.addItem = function (it, n) {
@@ -772,13 +774,13 @@
   const listKey = (l) => l.map((b) => b.item.id + ':' + b.n).join();
   G.sortBags = function () {
     const P = G.S.player, was = listKey(P.bags);
-    P.bags = sortList(P.bags); restack(P); // an old stack over 20 is split while there is room
+    restack(P); P.bags = sortList(P.bags); restack(P); // an old stack over 20 is split while there is room, before the merge so no part stacks are left (#549)
     emit('change');
     return listKey(P.bags) !== was;
   };
   G.sortBank = function () { // the bank sorts and merges like the bags (beta.3)
     const P = G.S.player, was = listKey(P.bank || []);
-    P.bank = sortList(P.bank || []); restack(P);
+    restack(P); P.bank = sortList(P.bank || []); restack(P);
     emit('change');
     return listKey(P.bank) !== was;
   };
