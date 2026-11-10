@@ -3147,7 +3147,7 @@
         b.append(g);
       }
       b.append(h('div', { class: 'sec-h' }, 'Sell', h('small', null, 'tap an item to sell it')));
-      const junk = G.S.player.bags.filter((x) => x.item.q === 0).length;
+      const junk = G.S.player.bags.filter((x) => x.item.q === 0 && G.sellable(x.item)).length; // a locked grey stays (#557)
       b.append(h('button', { class: 'btn alt wide', disabled: !junk, onclick: () => { G.sellJunk(); ui.sheetFn(); } }, junk ? `Sell all grey items (${junk})` : 'No grey items to sell'));
       b.append(bagGrid((idx) => sellAsk(idx, () => ui.sheetFn()), true));
     });
@@ -3283,8 +3283,8 @@
         const go = () => { const r = G.sellMany(picked); ui.sellPick = null; toast(`Sold ${r.n} item${r.n > 1 ? 's' : ''}.`, true); ui.sheetFn(); };
         b.append(h('div', { class: 'bag-acts' }, h('div', { class: 'bag-acts-t' }, h('b', null, picked.length ? `${picked.length} picked` : 'Tap items to pick them'), picked.length ? h('small', { html: ' · sells for ' + moneyHtml(total) }) : null),
           h('div', { class: 'btn-row' },
-            h('button', { class: 'btn', disabled: !picked.length, onclick: () => precious ? showDialog([h('h3', null, `Sell ${picked.length} items?`), h('p', null, `${precious} of them ${precious > 1 ? 'are' : 'is'} green or better, upgraded or better than what you wear. Buy back keeps only your last ${G.BUYBACK} sales.`), h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { closeDialog(); go(); } }, 'Sell'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Keep'))], true) : go() }, 'Sell'),
-            h('button', { class: 'btn alt', onclick: () => { ui.invTab = 'all'; ui.sellPick = new Set(P.bags.map((x, i) => i).filter((i) => sellable(P.bags[i]) && P.bags[i].item.q === 0)); ui.sheetFn(); } }, 'Pick grey'),
+            h('button', { class: 'btn', disabled: !picked.length, onclick: () => precious ? showDialog([h('h3', null, `Sell ${picked.length} item${picked.length === 1 ? '' : 's'}?`), h('p', null, `${precious} of them ${precious > 1 ? 'are' : 'is'} green or better, upgraded or better than what you wear. Buy back keeps only your last ${G.BUYBACK} sales.`), h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { closeDialog(); go(); } }, 'Sell'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Keep'))], true) : go() }, 'Sell'),
+            h('button', { class: 'btn alt', onclick: () => { const grey = P.bags.map((x, i) => i).filter((i) => sellable(P.bags[i]) && P.bags[i].item.q === 0); if (!grey.length) return toast('No grey items to pick.'); ui.invTab = 'all'; ui.sellPick = new Set(grey); ui.sheetFn(); } }, 'Pick grey'),
             h('button', { class: 'btn alt', onclick: () => { ui.sellPick = null; ui.sheetFn(); } }, 'Cancel'))));
         return;
       }
@@ -3313,7 +3313,7 @@
         b.append(h('div', { class: 'bag-acts' }, h('div', { class: 'bag-acts-t bag-brief' }, h('div', null, h('b', { class: 'q' + (it.q || 0) }, it.name + (sel.n > 1 ? ' x' + sel.n : '')), price), h('button', { class: 'btn alt bag-insp', onclick: inspect }, 'Inspect')), itemBrief(it), acts));
       } else b.append(h('p', { style: { color: 'var(--muted)', margin: 0 } }, 'Tap an item to inspect it. A green arrow means an upgrade.'));
       const vendorNow = D.PLACES[P.place].vendor || D.PLACES[P.place].gearVendor;
-      const junk = P.bags.filter((x) => x.item.q === 0 && !x.item.noSell).length;
+      const junk = P.bags.filter((x) => x.item.q === 0 && G.sellable(x.item)).length; // a locked grey stays (#557)
       if (vendorNow && junk) b.append(h('button', { class: 'btn alt wide', onclick: () => { G.sellJunk(); ui.bagSel = null; ui.sheetFn(); } }, `Sell all grey items (${junk})`));
       if (vendorNow && P.bags.some(sellable)) b.append(h('button', { class: 'btn alt wide', style: { marginTop: '6px' }, onclick: () => { ui.bagSel = null; ui.sellPick = new Set(); ui.sheetFn(); } }, 'Sell several'));
     });
