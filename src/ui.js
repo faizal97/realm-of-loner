@@ -595,8 +595,10 @@
     if (G.lnOn && G.lnOn() && !S.run && !S.bg && !S.brawl && G.lnTown(P.place) && window.ART && ART.lnTown) sc.append(img(art('lnTown', G.lnStage()), 'ln-town')); // Longnight: the town's garlands, snow, fireworks
     if (!G.fight) { const b = sc.querySelector('img.bg'); if (b && b.classList.contains('cam')) { b.classList.remove('cam'); b.style.translate = ''; } ui.cam = null; } // out of a fight the view is still
     const place = D.PLACES[P.place];
+    // a zone inside a bigger region says both, the region the Map and Journey name (Halden Vale · Ambermoor, #433)
+    const zoneLine = (pl) => { const r = (D.REGIONS[pl.region] || {}).name; return r && r !== pl.zone ? `${pl.zone} · ${r}` : pl.zone; };
     const title = S.brawl ? 'The Bloodsand Brawl' : S.bg ? D.BG[S.bg.key].name : S.run ? S.run.name : P.travel ? 'On the road' : place.name;
-    const sub = S.brawl ? (S.brawl.phase === 'done' ? (S.brawl.champion ? 'Champion' : 'Finished') : `Round: ${S.brawl.round}/${G.BRAWL.rounds}`) : S.bg ? `Round: ${S.bg.round}/${D.BG[S.bg.key].rounds} · you ${S.bg.score.us}, them ${S.bg.score.them}` : S.run ? S.run.pulls[Math.min(S.run.idx, S.run.pulls.length - 1)].label : P.travel ? 'to ' + D.PLACES[P.travel.to].name + (P.route && P.route.length ? ` · then ${D.PLACES[P.route[P.route.length - 1]].name}` : '') : place.zone;
+    const sub = S.brawl ? (S.brawl.phase === 'done' ? (S.brawl.champion ? 'Champion' : 'Finished') : `Round: ${S.brawl.round}/${G.BRAWL.rounds}`) : S.bg ? `Round: ${S.bg.round}/${D.BG[S.bg.key].rounds} · you ${S.bg.score.us}, them ${S.bg.score.them}` : S.run ? S.run.pulls[Math.min(S.run.idx, S.run.pulls.length - 1)].label : P.travel ? 'to ' + D.PLACES[P.travel.to].name + (P.route && P.route.length ? ` · then ${D.PLACES[P.route[P.route.length - 1]].name}` : '') : zoneLine(place);
     // the place name, and under it the run menu and the battle speed (#67, the game designer's call): top-left, where the
     // party stands, so they never sit on an enemy's or a boss's nameplate (enemies stand right)
     // the strip along the scene's top (#83, the game designer's call): the place name, "N online", the battle speed and the
