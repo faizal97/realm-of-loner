@@ -134,7 +134,7 @@ const ACTIONS = {
   setDye: () => { G.setDye('chest', 1); G.setDye('chest', 0); },
   setMountTint: () => { G.setMountTint(1); G.setMountTint(0); },
   claimCode: () => G.claimCode('NOT-A-CODE'), // #507
-  noteTrade: () => { G.S.player.debtNotes = 5; G.noteTrade('marks'); }, // #523
+  noteTrade: () => { G.S.player.debtNotes = 10; G.noteTrade('marks'); }, // #523
   buyQmLook: () => { const L = G.qmLooks()[0]; G.buyQmLook(L.place, L.key); },
   buyBankTab: () => G.buyBankTab(),
   abankBuyTab: () => G.abankBuyTab(), // the account bank (#286)

@@ -3527,10 +3527,10 @@
   function noteClerkBlock(b) {
     const P = G.S.player, have = P.debtNotes || 0, list = h('div', { class: 'list' });
     for (const t of D.PREPATCH.trade) {
-      const own = t.kind === 'title' && !!G.account().debtBreaker, short = have < t.cost;
-      const right = own ? h('span', { class: 'ok' }, 'Owned') : h('button', { class: 'chip gold', disabled: short, onclick: (e) => { e.stopPropagation(); if (G.noteTrade(t.id)) toast(t.kind === 'title' ? 'Title earned: the Debt-Breaker' : `+${t.marks} Mentor Marks`); ui.sheetFn && ui.sheetFn(); } }, short ? `Need ${t.cost}` : `Trade · ${t.cost}`);
+      const own = t.kind === 'title' && !!G.account().debtBreaker, low = t.minLevel && P.level < t.minLevel, short = have < t.cost;
+      const right = own ? h('span', { class: 'ok' }, 'Owned') : low ? h('span', { class: 'muted' }, `Level ${t.minLevel}`) : h('button', { class: 'chip gold', disabled: short, onclick: (e) => { e.stopPropagation(); if (G.noteTrade(t.id)) toast(t.kind === 'title' ? 'Title earned: the Debt-Breaker' : `+${t.marks} Mentor Marks`); ui.sheetFn && ui.sheetFn(); } }, short ? `Need ${t.cost}` : `Trade · ${t.cost}`);
       list.append(h('div', { class: 'row' }, h('div', { class: 'ic' }, img(art('icon', t.kind === 'title' ? 'journal' : 'coin'))),
-        h('div', { class: 't' }, h('b', null, t.kind === 'title' ? 'the Debt-Breaker' : `${t.marks} Mentor Marks`), h('small', null, t.kind === 'title' ? 'Title · account-wide' : 'Shared by all your characters')), h('div', { class: 'r' }, right)));
+        h('div', { class: 't' }, h('b', null, t.kind === 'title' ? 'the Debt-Breaker' : `${t.marks} Mentor Marks`), h('small', null, t.kind === 'title' ? 'Title · account-wide' : t.minLevel ? `Level ${t.minLevel} · shared by all your characters` : 'Shared by all your characters')), h('div', { class: 'r' }, right)));
     }
     b.append(h('div', { class: 'sec-h' }, 'Trade', h('small', null, `Torn debt notes: ${G.debtNotesText()}`)), list,
       h('p', { class: 'ai-note' }, 'Every levelling zone has debt collectors at the zone\'s own level. Grey ones carry no notes. The trade lasts until The Ruinfall Saga begins.'));

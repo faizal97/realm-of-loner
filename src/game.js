@@ -1029,6 +1029,7 @@
     const P = G.S.player, t = (D.PREPATCH.trade || []).find((x) => x.id === id);
     if (!t || !D.PREPATCH.live) return false;
     if (t.kind === 'title' && G.account().debtBreaker) { toast('Already yours.'); return false; }
+    if (t.minLevel && P.level < t.minLevel) { toast(`Marks trade: level ${t.minLevel} only.`); return false; }
     if ((P.debtNotes || 0) < t.cost) { toast(`Need ${t.cost} torn debt notes (you have ${P.debtNotes || 0}).`); return false; }
     P.debtNotes -= t.cost;
     if (t.kind === 'title') { const a = G.account(); a.debtBreaker = 1; G.saveAccount(a); loot('Title: the Debt-Breaker. Wear it: Hero → Journey → Titles.'); }

@@ -5,7 +5,7 @@
   const D = root.D;
   D.PREPATCH.trade = [
     { id: 'debt_breaker', kind: 'title', cost: 40 },
-    { id: 'marks', kind: 'marks', cost: 5, marks: 10 },
+    { id: 'marks', kind: 'marks', cost: 10, marks: 10, minLevel: 60 }, /* level 60 only, 10 notes (#544): a low alt made ~430 Marks/h */
   ];
   D.TITLES.push({ id: 'debt_breaker', name: '%s the Debt-Breaker', need: { debtBreaker: 1 }, how: 'Trade 40 torn debt notes to a debt clerk', prepatch: true });
   D.NPCS.note_clerk = { name: 'Clerk Odell Pask', title: 'Torn Debt Notes', prepatch: true };
