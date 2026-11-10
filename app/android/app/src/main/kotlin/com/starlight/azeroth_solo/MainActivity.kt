@@ -1,4 +1,4 @@
-package com.starlighthvn.realmofloner
+package com.starlight.azeroth_solo
 
 import android.app.Activity
 import android.content.Intent
