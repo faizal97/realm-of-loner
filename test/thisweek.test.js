@@ -56,7 +56,7 @@ test('featured dungeons: one per level band, the same all week, a new set on Sat
   assert.notDeepStrictEqual(wk('2026-11-13'), wk('2026-11-14'), 'Saturday: a new set');
   assert.strictEqual(wk('2026-11-09').length, G.FD_BANDS.length + 1);
   for (const k of wk('2026-11-09')) assert.ok(!D.DUNGEONS[D.ACTIVITIES[k].dungeon].raid);
-  assert.ok(G.featuredDungeonsOn(at('2026-11-10'))); assert.ok(!G.featuredDungeonsOn(at('2026-11-20')), 'no banner, no bonus');
+  assert.ok(G.featuredDungeonsOn(at('2026-11-10'))); assert.ok(G.featuredDungeonsOn(at('2026-11-20'))); assert.ok(!G.featuredDungeonsOn(at('2026-11-25')), 'no banner, no bonus');
   const mine = G.featuredDungeonFor(30, at('2026-11-10')), A = D.ACTIVITIES[mine];
   assert.ok(A.minLvl >= 22 && A.minLvl < 33, 'level 30 gets the 22–32 band');
 });
@@ -96,4 +96,22 @@ test('the boards: only the steps this character can do, each ticking from what t
   const b = G.bounties(Object.keys(D.PLACES).find((k) => G.isHub(k) && G.bounties(k).length)).find((x) => x.weekly);
   G.acceptBounty(b); Q.bounty[b.id].prog = b.n; G.turnInBounty(b);
   assert.strictEqual(G.weekStepDone({ check: ['bounty_week'] }), true);
+});
+
+test('the week of 14 November has the pre-patch, a new featured set with its bonus, the Account bank and The Faire (#543)', () => {
+  character(30);
+  assert.deepStrictEqual(ids('2026-11-14'), ['prepatch_2026_11_14', 'featured_dungeons_2026_11_14', 'account_bank', 'faire_soon_2026_11_14']);
+  assert.deepStrictEqual(ids('2026-11-20'), ids('2026-11-14'), 'the whole week');
+  for (const b of D.WEEK) for (const st of b.steps) if (st.check) assert.ok(G.WEEK_CHECKS[st.check[0]], `${b.id}: no check '${st.check[0]}'`);
+});
+
+test("the pre-patch steps tick from the character's own progress (#543)", () => {
+  const C = G.WEEK_CHECKS;
+  character(30);
+  assert.strictEqual(C.debt_notes(1), false); G.S.player.debtNotes = 1; assert.strictEqual(C.debt_notes(1), true);
+  assert.strictEqual(C.prepatch_open(), false, 'below 60 the campaign is shut');
+  assert.strictEqual(C.prepatch_ability(), false); assert.strictEqual(C.prepatch_campaign(), false);
+  const a = D.ABILITIES[D.PREPATCH_ABILITIES[G.S.player.cls]]; G.S.player.done[a.learn] = 1; assert.strictEqual(C.prepatch_ability(), true);
+  G.S.player.done.pp_h_crown = 1; assert.strictEqual(C.prepatch_campaign(), true);
+  assert.strictEqual(C.mat_bag(), false); G.S.player.bagsEq = [{ bag: 12, matBag: true }]; assert.strictEqual(C.mat_bag(), true);
 });

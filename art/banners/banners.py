@@ -12,7 +12,7 @@ W, HH = 960, 400
 # ---------------------------------------------------------------- parts: the game's own art, drawn by the game's code
 PARTS = {
     'shadow_court': ['story', 'shadow_court'], 'stormwind': ['scene', 'stormwind'], 'orgrimmar': ['scene', 'orgrimmar'],
-    'goldshire': ['scene', 'goldshire'], 'collector': ['mob', 'defias_highwayman'],
+    'goldshire': ['scene', 'goldshire'], 'stormwind_bank': ['scene', 'stormwind_bank'], 'collector': ['mob', 'defias_highwayman'],
     'a1': ['hero', {'race': 'human', 'cls': 'paladin', 'gender': 'm', 'skin': 1, 'hair': 2}],
     'a2': ['hero', {'race': 'nightelf', 'cls': 'druid', 'gender': 'f', 'skin': 2, 'hair': 1}],
     'a3': ['hero', {'race': 'dwarf', 'cls': 'hunter', 'gender': 'm', 'skin': 0, 'hair': 4}],
@@ -332,7 +332,50 @@ def daily(P, side):
     body += figure(P[side + '4'], 150, 406, 240)
     return frame(defs, body)
 
-BANNERS = {'notes_come_due': notes, 'living_realm': lambda P: realm(P, 'a'), 'living_realm_h': lambda P: realm(P, 'h'), 'faire': faire,
+# ---------------------------------------------------------------- The Account bank: a vault door, a ring of many keys
+def abank_logo(cx, cy):
+    """a round iron vault door with its spoked wheel; on a ring at its hinge hang keys of different metals, one for each
+    character, because the bank is shared; ACCOUNT BANK on a riveted brass band across it"""
+    out = f'<circle cx="{cx}" cy="{cy}" r="142" fill="#0a0806" opacity=".55"/>'
+    out += f'<circle cx="{cx}" cy="{cy}" r="132" fill="url(#vIron)" stroke="#120c06" stroke-width="8"/>'
+    out += f'<circle cx="{cx}" cy="{cy}" r="120" fill="none" stroke="#7a6a52" stroke-width="3" opacity=".7"/>'
+    for i in range(24):  # rivets round the rim
+        a = 2 * math.pi * i / 24; out += f'<circle cx="{cx + 129 * math.cos(a):.1f}" cy="{cy + 129 * math.sin(a):.1f}" r="4.2" fill="#b8a888" stroke="#2a2016" stroke-width="1.5"/>'
+    for i in range(6):  # the wheel's spokes and grips
+        a = 2 * math.pi * i / 6 + .26; x, y = cx + 74 * math.cos(a), cy + 74 * math.sin(a)
+        out += f'<path d="M{cx},{cy} L{x:.1f},{y:.1f}" stroke="url(#vBrass)" stroke-width="11" stroke-linecap="round"/><circle cx="{x:.1f}" cy="{y:.1f}" r="10" fill="url(#vBrass)" stroke="#3a2408" stroke-width="2.5"/>'
+    out += f'<circle cx="{cx}" cy="{cy}" r="74" fill="none" stroke="url(#vBrass)" stroke-width="7"/><circle cx="{cx}" cy="{cy}" r="22" fill="url(#vBrass)" stroke="#3a2408" stroke-width="3"/>'
+    out += f'<circle cx="{cx}" cy="{cy}" r="8" fill="#2a1a08"/>'
+    # the key ring at the hinge (left), each key its own metal and bow
+    rx, ry = cx - 128, cy - 66
+    out += f'<circle cx="{rx}" cy="{ry}" r="20" fill="none" stroke="#d8c890" stroke-width="5"/>'
+    keys = [('#e8c25a', 0, 'ring'), ('#c8ccd4', 1, 'clover'), ('#c87a3a', 2, 'ring'), ('#9ad0c0', 3, 'square'), ('#e8e0c8', 4, 'clover')]
+    for col, i, bow in keys:
+        d = 58 + i * 16; a = math.radians(d); kx, ky = rx + 20 * math.cos(a), ry + 20 * math.sin(a); rot = d - 90
+        k = f'<g transform="translate({kx:.1f},{ky:.1f}) rotate({rot})">'
+        if bow == 'ring': k += f'<circle cx="0" cy="12" r="11" fill="none" stroke="{col}" stroke-width="5"/>'
+        elif bow == 'clover': k += ''.join(f'<circle cx="{dx}" cy="{12 + dy}" r="6" fill="none" stroke="{col}" stroke-width="4"/>' for dx, dy in ((-6, 0), (6, 0), (0, -7)))
+        else: k += f'<rect x="-10" y="2" width="20" height="20" rx="3" fill="none" stroke="{col}" stroke-width="5"/>'
+        k += f'<rect x="-3" y="22" width="6" height="58" fill="{col}" stroke="#1a1208" stroke-width="1.2"/><path d="M3,62 h10 v6 h-6 v6 h6 v6 h-10" fill="{col}" stroke="#1a1208" stroke-width="1.2"/></g>'
+        out += k
+    # the band and its words
+    t, tw = word('ACCOUNT BANK', 44, 0, 0, .08); bw = tw + 70
+    out += f'<rect x="{cx - bw / 2}" y="{cy + 58}" width="{bw}" height="66" rx="6" fill="url(#vBand)" stroke="#1a0c04" stroke-width="5"/>'
+    for x in (cx - bw / 2 + 16, cx + bw / 2 - 16): out += f'<circle cx="{x}" cy="{cy + 91}" r="5" fill="#f0d890" stroke="#3a2408" stroke-width="2"/>'
+    t, _ = word('ACCOUNT BANK', 44, cx - tw / 2, cy + 110, .08)
+    s2, sw = word('SHARED BY EVERY CHARACTER', 15, 0, 0, .16); s2, _ = word('SHARED BY EVERY CHARACTER', 15, cx - sw / 2, cy + 148, .16)
+    return out + letters(t, 6, 'url(#vGold)', '#1a0c04') + letters(s2, 3, '#f4e6c0', '#140a04')
+
+def abank_banner(P, side):
+    defs = (GOLD.format(id='vGold') + shade('vIron', [(0, '#5a5248', 1), (.5, '#3a342c', 1), (1, '#221e18', 1)], 1, 1)
+            + shade('vBrass', [(0, '#f0d47a', 1), (.5, '#c8902e', 1), (1, '#7a4e14', 1)], 1, 1) + shade('vBand', [(0, '#5a3418', 1), (1, '#2a1608', 1)])
+            + shade('vDark', [(0, '#0b0705', .35), (.6, '#0b0705', .25), (1, '#0b0705', .9)]))
+    body = embed(P['stormwind_bank' if side == 'a' else 'orgrimmar'], 0, 0, W, HH, 'xMidYMid slice', vb='0 40 400 167')
+    body += f'<rect width="{W}" height="{HH}" fill="url(#vDark)"/>' + abank_logo(480, 158)
+    body += figure(P[side + '1'], 120, 406, 250) + figure(P[side + '2'], 842, 408, 250, flip=True)
+    return frame(defs, body)
+
+BANNERS = {'notes_come_due': notes, 'living_realm': lambda P: realm(P, 'a'), 'living_realm_h': lambda P: realm(P, 'h'), 'faire': faire, 'account_bank': lambda P: abank_banner(P, 'a'), 'account_bank_h': lambda P: abank_banner(P, 'h'),
            'weekly_board': lambda P: weekly(P, 'a'), 'weekly_board_h': lambda P: weekly(P, 'h'), 'daily_board': lambda P: daily(P, 'a'), 'daily_board_h': lambda P: daily(P, 'h'),
            'featured_dungeons': lambda P: dungeons(P, 'a'), 'featured_dungeons_h': lambda P: dungeons(P, 'h'),
            **{'raid_' + r + x: (lambda r, sd: lambda P: raid(P, r, sd))(r, sd) for r in RAIDS for x, sd in (('', 'a'), ('_h', 'h'))}}

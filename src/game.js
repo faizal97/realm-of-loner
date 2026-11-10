@@ -5161,6 +5161,16 @@
     trials_week: () => { const R = G.trials(), T = root.TRIALS; return !!(R.week && R.week.paid && T && R.week.id === T.period(new Date(now())).id); },
     roulette: () => !G.rouletteReady(),
     brawl_chest: () => !G.brawlChestOpen(),
+    // the pre-patch (#543): what it asks of you, each read from what the game keeps
+    debt_notes: (n) => (G.S.player.debtNotes || 0) >= n || !!G.account().debtBreaker,
+    debt_breaker: () => !!G.account().debtBreaker,
+    prepatch_open: () => G.prepatchOpen(),
+    prepatch_ability: () => { const id = D.PREPATCH_ABILITIES && D.PREPATCH_ABILITIES[G.S.player.cls], a = id && D.ABILITIES[id]; return !!(a && G.S.player.done[a.learn]); },
+    prepatch_campaign: () => !!(G.S.player.done.pp_a_crown || G.S.player.done.pp_h_crown),
+    // the Account bank (#543)
+    abank: (n) => AB.view(G.abank()).length >= n,
+    abank_tab: () => G.abank().tabs >= 1,
+    mat_bag: () => (G.S.player.bagsEq || []).some((b) => b.matBag),
   };
   // The Weekly Board and the Daily Board: banners of their own every week and every day, listing only the steps this
   // character can do (a step's `need`: 'cap' level 60, 'guild' in a guild, 'brawl' the Brawl's level)

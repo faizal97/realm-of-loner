@@ -24,10 +24,11 @@
       title: 'The Notes Come Due',
       text: [
         'The Ruinfall Saga begins. Debt collectors come to every zone, and every class learns a new ability.',
-        'The campaign opens at level 60; below it, the collectors and the zone events are yours too.',
+        'Collectors and their torn debt notes are there at every level. The campaign and the new abilities open at 60, after The Drowned Crown or a raid.',
       ],
       steps: [
-        { text: 'Reach level 60 to start the campaign on day one', check: ['level', 60] },
+        { text: 'Reach level 60', check: ['level', 60] },
+        { text: 'Finish The Drowned Crown or clear a raid: the campaign opens on day one', check: ['prepatch_open'], go: 'lfg:raid' },
       ],
     },
     {
@@ -57,6 +58,57 @@
     },
     {
       id: 'faire_soon', kind: 'soon', from: '2026-11-09', to: '2026-11-13',
+      art: ['banner', 'faire'],
+      title: 'The Faire',
+      text: [
+        "A week of games at every inn: Liar's dice against the realm's players, with tickets, prizes and new looks.",
+      ],
+      steps: [],
+    },
+    // ---- the week of 14 November: the pre-patch (v10.19.0)
+    {
+      id: 'prepatch_2026_11_14', kind: 'now', from: '2026-11-14', to: '2026-11-20',
+      art: ['banner', 'notes_come_due'],
+      title: 'The Notes Come Due',
+      text: [
+        'Debt collectors walk every zone, at every level. Each one you beat leaves a torn debt note; a debt clerk in any town with trainers trades them for Mentor Marks or a title.',
+        'At 60, after The Drowned Crown or a raid, the campaign opens and every class learns a new ability.',
+      ],
+      steps: [
+        { text: 'Beat a debt collector for a torn debt note', check: ['debt_notes', 1], go: 'map' },
+        { text: 'Trade 40 torn debt notes for the title the Debt-Breaker', check: ['debt_breaker'] },
+        { text: 'At 60: finish The Drowned Crown or clear a raid to open the campaign', check: ['prepatch_open'], go: 'lfg:raid' },
+        { text: "Learn your class's new ability from Tutor Ione Calder in Rumhook Bay", check: ['prepatch_ability'] },
+        { text: 'Finish the campaign: Coronation Day', check: ['prepatch_campaign'], go: 'quests' },
+      ],
+    },
+    {
+      id: 'featured_dungeons_2026_11_14', kind: 'now', from: '2026-11-14', to: '2026-11-20', bonus: 'featured_dungeons',
+      art: ['banner', 'featured_dungeons'], artHorde: ['banner', 'featured_dungeons_h'],
+      title: 'Featured Dungeons',
+      text: [
+        'A new set: one old dungeon for every level range. Speed and no-wipe rewards pay ×1.5 there, and your first clear of one this week pays a bonus.',
+      ],
+      steps: [
+        { text: 'Clear a featured dungeon this week', check: ['featured_dungeon', 1], go: 'lfg:dungeon' },
+      ],
+    },
+    {
+      id: 'account_bank', kind: 'new', from: '2026-11-14', to: '2026-11-20',
+      art: ['banner', 'account_bank'], artHorde: ['banner', 'account_bank_h'],
+      title: 'The Account Bank',
+      text: [
+        'A tab on every bank that all your characters share: 12 slots, and 3 more tabs for Mentor Marks.',
+        'Bags and banks got filter tabs, Store materials, Buy back and materials bags too.',
+      ],
+      steps: [
+        { text: 'Put an item in the Account bank: any bank, the Account tab', check: ['abank', 1] },
+        { text: "Get a materials bag: Tailoring makes them, and they're on the auction house now and then", check: ['mat_bag'] },
+        { text: 'Buy an Account bank tab (200 Mentor Marks)', check: ['abank_tab'] },
+      ],
+    },
+    {
+      id: 'faire_soon_2026_11_14', kind: 'soon', from: '2026-11-14', to: '2026-11-20', at: '2026-11-21',
       art: ['banner', 'faire'],
       title: 'The Faire',
       text: [
