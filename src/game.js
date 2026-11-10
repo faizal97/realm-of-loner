@@ -2643,7 +2643,7 @@
     const extra = c.quality === 'perfect' && ((c.batch || 1) < 5 ? c.made === 1 : c.made % 5 === 0) ? 1 : 0;
     const it = G.copyItem(r.makes);
     if (D.GEAR_SLOTS.includes(it.slot)) { it.id = r.makes; it.crafter = P.name; }
-    if (!G.addItem(it, r.n + extra)) { for (const m in r.mats) { if (fromBank[m]) putStack(G.S.player.bank, G.copyItem(m), fromBank[m]); if (r.mats[m] > fromBank[m]) G.addItem(G.copyItem(m), r.mats[m] - fromBank[m]); } c.made--; craftStopped(c); return; }
+    if (!G.addItem(it, r.n + extra)) { for (const m in r.mats) { if (fromBank[m]) putStack(G.S.player.bank, G.copyItem(m), fromBank[m]); if (r.mats[m] > fromBank[m] && !G.addItem(G.copyItem(m), r.mats[m] - fromBank[m])) { G.S.player.bank = G.S.player.bank || []; putStack(G.S.player.bank, G.copyItem(m), r.mats[m] - fromBank[m]); sys(`${D.ITEMS[m].name} x${r.mats[m] - fromBank[m]} went to your bank: no room in your bags.`); } } /* a refund that no longer fits the bags (an old stack over 20) goes to the bank, never lost (#548) */ c.made--; craftStopped(c); return; }
     loot(`You create: ${B.link(it.name, it.q)}${r.n + extra > 1 ? ' x' + (r.n + extra) : ''}${extra ? ' (Perfect)' : ''}.`);
     skillUp(r.prof, G.skillColor(p.skill, r.sk));
     G.S.stats = G.S.stats || {}; G.S.stats.crafted = (G.S.stats.crafted || 0) + 1;
