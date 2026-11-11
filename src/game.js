@@ -2895,8 +2895,24 @@
   // ============================================================ Help Wanted, Mentor Marks, heirlooms, titles, Roulette (v2.3)
   // Account-wide: Mentor Marks and unlocked heirlooms are shared by every character on this phone.
   const ACCOUNT_KEY = 'azsolo.account';
-  G.account = function () { let a = null; try { a = JSON.parse(ls.get(ACCOUNT_KEY) || 'null'); } catch (e) { a = null; } return Object.assign({ marks: 0, heirlooms: [] }, a || {}); };
-  G.saveAccount = (a) => ls.set(ACCOUNT_KEY, JSON.stringify(a));
+  // Mentor Marks as counters (a player report: Marks spent came back at the next cloud sync, which took the higher of two
+  // balances): mk = { base, earn: { device: n }, spend: { device: n } }, the balance base + earned - spent. base is the
+  // balance the account had before counters; a device's counters only grow, so a merge takes each one's highest
+  const DEVICE_KEY = 'azsolo.device';
+  G.deviceId = () => { let d = ls.get(DEVICE_KEY); if (!d) { d = 'd' + Date.now().toString(36) + (typeof performance !== 'undefined' ? Math.floor(performance.now() * 1000).toString(36) : ''); /* no Math.random: seeded runs keep their dice */ ls.set(DEVICE_KEY, d); } return d; };
+  const sumOf = (o) => Object.values(o || {}).reduce((s, n) => s + (+n || 0), 0);
+  G.mkBalance = (mk) => Math.max(0, Math.round((+mk.base || 0) + sumOf(mk.earn) - sumOf(mk.spend)));
+  G.mkOf = (a) => (a && a.mk && typeof a.mk === 'object' ? { base: +a.mk.base || 0, earn: Object.assign({}, a.mk.earn), spend: Object.assign({}, a.mk.spend) } : { base: Math.max(0, +(a && a.marks) || 0), earn: {}, spend: {} });
+  G.account = function () { let a = null; try { a = JSON.parse(ls.get(ACCOUNT_KEY) || 'null'); } catch (e) { a = null; } a = Object.assign({ marks: 0, heirlooms: [] }, a || {}); a.mk = G.mkOf(a); a.marks = G.mkBalance(a.mk); return a; };
+  // a change to a.marks since the account was read is this device's earning or spending
+  G.saveAccount = (a) => {
+    const mk = G.mkOf(a), d = Math.round((+a.marks || 0) - G.mkBalance(mk)), dev = G.deviceId();
+    if (d > 0) mk.earn[dev] = (+mk.earn[dev] || 0) + d; else if (d < 0) mk.spend[dev] = (+mk.spend[dev] || 0) - d;
+    a.mk = mk; a.marks = G.mkBalance(mk);
+    return ls.set(ACCOUNT_KEY, JSON.stringify(a));
+  };
+  // cloud sync: the merged counters, written as they are (no earning or spending of this device's own)
+  G.writeAccountMarks = (mk) => { const a = G.account(); a.mk = G.mkOf({ mk }); a.marks = G.mkBalance(a.mk); return ls.set(ACCOUNT_KEY, JSON.stringify(a)); };
   G.addMarks = function (n, why) { const a = G.account(); a.marks += n; G.saveAccount(a); loot(`+${n} Mentor Marks${why ? ' (' + why + ')' : ''}. You have ${a.marks}.`); };
   // Heirlooms: stats follow the wearer's level, so an alt can wear the same piece from 1 to the cap.
   G.HEIR_SHARE = 0.9; // #194: an heirloom's power as a share of a fitted green at your level

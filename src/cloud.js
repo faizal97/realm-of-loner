@@ -153,9 +153,16 @@
   const AB = () => root.ABANK || require('./acctbank.js'); // looked up when a bank is merged (cloud.js also loads alone)
   const LISTS = ['heirlooms', 'story', 'lore', 'tips', 'looks'];
   const union = (x, y) => { const out = []; for (const id of (x || []).concat(y || [])) if (!out.includes(id)) out.push(id); return out; };
+  const sumOf = (o) => Object.values(o || {}).reduce((s, n) => s + (+n || 0), 0);
+  const mkOf = (x) => (x && x.mk && typeof x.mk === 'object' ? { base: +x.mk.base || 0, earn: Object.assign({}, x.mk.earn), spend: Object.assign({}, x.mk.spend) } : { base: Math.max(0, +(x && x.marks) || 0), earn: {}, spend: {} });
+  const mkBalance = (mk) => Math.max(0, Math.round(mk.base + sumOf(mk.earn) - sumOf(mk.spend)));
   CLOUD.mergeAccount = function (a, b) {
     a = a || {}; b = b || {};
-    const m = Object.assign({}, b, a, { marks: Math.max(+a.marks || 0, +b.marks || 0) });
+    // Marks (a player report: a spend came back at the next sync): each device's earned and spent counters, the highest of
+    // each; an old file with no counters brings its balance as the base, as the higher balance did before
+    const ka = mkOf(a), kb = mkOf(b), mk = { base: Math.max(ka.base, kb.base), earn: {}, spend: {} };
+    for (const f of ['earn', 'spend']) for (const k of union(Object.keys(ka[f]), Object.keys(kb[f]))) mk[f][k] = Math.max(+ka[f][k] || 0, +kb[f][k] || 0);
+    const m = Object.assign({}, b, a, { mk, marks: mkBalance(mk) });
     for (const k of LISTS) m[k] = union(a[k], b[k]);
     const fa = a.friends && a.friends.at ? a.friends : null, fb = b.friends && b.friends.at ? b.friends : null;
     if (fa || fb) m.friends = !fb || (fa && fa.at >= fb.at) ? fa : fb; else delete m.friends;
@@ -166,13 +173,14 @@
     if (a.bank || b.bank) m.bank = AB().merge(a.bank, b.bank); else delete m.bank;
     return m;
   };
-  const markOf = (x) => JSON.stringify([+x.marks || 0, x.friends || null].concat(LISTS.map((k) => (x[k] || []).slice().sort()), [Object.keys(x.trophies || {}).sort().map((k) => k + '@' + (+x.trophies[k].at || 0))], [x.bank ? AB().merge(x.bank, null) : null]));
+  const markOf = (x) => JSON.stringify([+x.marks || 0, mkOf(x), x.friends || null].concat(LISTS.map((k) => (x[k] || []).slice().sort()), [Object.keys(x.trophies || {}).sort().map((k) => k + '@' + (+x.trophies[k].at || 0))], [x.bank ? AB().merge(x.bank, null) : null]));
   const same = (x, y) => markOf(x) === markOf(y);
   const readList = (key, field) => { try { const v = JSON.parse(localStorage.getItem(key) || 'null'); return (field ? v && v[field] : v) || []; } catch (e) { return []; } };
   // everything the account file holds, as this device has it
   const localAccount = () => { const a = Object.assign({}, G.account(), { story: readList('azsolo.story'), lore: readList('azsolo.loreread'), tips: readList('azsolo.tips', 'seen') }); const f = root.FRIENDS && FRIENDS.switchInfo(); if (f) a.friends = f; return a; };
   function writeLocal(m) {
-    G.saveAccount(Object.assign(G.account(), { marks: m.marks, heirlooms: m.heirlooms, looks: m.looks }, m.trophies ? { trophies: m.trophies } : {}, m.bank ? { bank: m.bank } : {})); // keeps the wardrobe's own flags
+    if (G.writeAccountMarks) G.writeAccountMarks(mkOf(m)); // the merged counters, never counted as this device earning
+    G.saveAccount(Object.assign(G.account(), { heirlooms: m.heirlooms, looks: m.looks }, m.trophies ? { trophies: m.trophies } : {}, m.bank ? { bank: m.bank } : {})); // keeps the wardrobe's own flags
     try {
       localStorage.setItem('azsolo.story', JSON.stringify(m.story));
       localStorage.setItem('azsolo.loreread', JSON.stringify(m.lore));
