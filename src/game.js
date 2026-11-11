@@ -3088,6 +3088,16 @@
       const lead = avg(Object.keys(best).filter((k) => top[k] && best[k] > 0).map((k) => avg(top[k]) / best[k]));
       upRef = {}; for (const k in best) upRef[k] = top[k] ? avg(top[k]) : best[k] * lead; for (const k in top) upRef[k] = avg(top[k]);
       upRef['*lead'] = lead;
+      // a family's weapon damage per second and armour (#581): the ceiling raid's average, or with no raid piece the best
+      // level-57+ piece elsewhere raised by the raid's lead in that value (as the power ceiling does). Item power counts stats only, so these are carried on their own
+      const dps = (x) => (x.dmg && x.speed ? (x.dmg[0] + x.dmg[1]) / 2 / x.speed : 0), vals = { dps, armor: (x) => x.armor || 0 };
+      for (const [v, fn] of Object.entries(vals)) {
+        const t = {}, b = {}; upRef['*' + v] = {};
+        for (const x of lootOf(U.raid)) if (!x.effect && fn(x) > 0) (t[upKey(x)] = t[upKey(x)] || []).push(fn(x));
+        for (const dk in D.DUNGEONS) if (dk !== U.raid) for (const x of lootOf(dk)) if (!x.effect && (x.lvl || 0) >= U.minLvl && U.cap[x.q] && fn(x) > 0) b[upKey(x)] = Math.max(b[upKey(x)] || 0, fn(x));
+        const ks = Object.keys(b).filter((k) => t[k] && b[k] > 0), ld = ks.length ? avg(ks.map((k) => avg(t[k]) / b[k])) : lead; // the raid's lead in this value
+        for (const k in b) upRef['*' + v][k] = b[k] * ld; for (const k in t) upRef['*' + v][k] = avg(t[k]);
+      }
       // where a plain level-57+ drop of each quality starts, as a share of its ceiling (the median), for effect items below
       const share = {}; for (const dk in D.DUNGEONS) for (const x of lootOf(dk)) if (!x.effect && (x.lvl || 0) >= U.minLvl && U.cap[x.q] && upRef[upKey(x)]) (share[x.q] = share[x.q] || []).push(G.itemPoints(x) / upRef[upKey(x)]);
       upRef['*start'] = {}; for (const q in share) { const a = share[q].sort((x, y) => x - y); upRef['*start'][q] = Math.min(U.cap[q] * 0.97, a[a.length >> 1]); }
@@ -3193,10 +3203,11 @@
   };
   // the item at a given power (stat points); its own power or less gives back the item as it dropped
   G.FX_SCALE_CAP = 1.5;
-  G.upgradedCopy = function (it, pw) {
+  // over: a Hard copy, which goes past the quality's ceiling (#581)
+  G.upgradedCopy = function (it, pw, over) {
     const b = upBase(it), p0 = G.itemPoints(b), inf = G.upgradeInfo(it), out = JSON.parse(JSON.stringify(it));
-    const capPts = inf.ok ? D.UPGRADE.cap[it.q] * G.upgradeRef(it) : p0;
-    pw = Math.min(pw, Math.max(capPts, it.pw || 0));
+    const ref = inf.ok ? G.upgradeRef(it) : p0, capPts = inf.ok ? D.UPGRADE.cap[it.q] * ref : p0;
+    if (!over) pw = Math.min(pw, Math.max(capPts, it.pw || 0));
     const kit = it.kit || 0; // an armour kit sits on top of the upgraded armour (#406)
     if (!inf.ok || pw <= p0 + 1e-9) { if (it.base) { Object.assign(out, JSON.parse(JSON.stringify(b))); delete out.base; delete out.pw; delete out.fxScale; if (b.armor) out.armor = b.armor + kit; if (kit) out.kit = kit; } return out; }
     const f = pw / p0;
@@ -3204,8 +3215,14 @@
     out.base = JSON.parse(JSON.stringify(b)); out.pw = Math.round(pw * 100) / 100;
     out.stats = {}; for (const k in b.stats || {}) out.stats[k] = Math.round(b.stats[k] * f);
     if (b.sp) out.sp = Math.round(b.sp * f);
-    if (b.armor) out.armor = Math.round(b.armor * f) + kit;
-    if (b.dmg) out.dmg = [Math.round(b.dmg[0] * f), Math.round(b.dmg[1] * f)];
+    // damage per second and armour (#581): an item below its family's raid piece moves toward that piece's value by the
+    // same share of the way its stats moved, so at its ceiling it sits just under the raid piece and never passes it;
+    // a raid piece (already at the ceiling) grows with its stats, so a Hard copy is stronger by its 2 steps
+    const t = ref - p0 > 1 ? (pw - p0) / (ref - p0) : null, key = upKey(it);
+    const grow = (v0, v) => { const rv = upRef && upRef['*' + v] && upRef['*' + v][key]; return t != null && rv ? v0 + Math.max(0, rv - v0) * Math.min(1, t) : v0 * f; };
+    if (b.armor) out.armor = Math.round(grow(b.armor, 'armor')) + kit;
+    if (b.dmg && it.speed) { const d0 = (b.dmg[0] + b.dmg[1]) / 2 / it.speed, g = grow(d0, 'dps') / d0; out.dmg = [Math.round(b.dmg[0] * g), Math.round(b.dmg[1] * g)]; }
+    else if (b.dmg) out.dmg = [Math.round(b.dmg[0] * f), Math.round(b.dmg[1] * f)];
     return out;
   };
   // where = { slot } for an equipped item or { bag } for a bag index. Returns true when a step was bought.
@@ -4284,7 +4301,7 @@
   G.hardCopy = function (id) {
     const it = G.copyItem(id), inf = G.upgradeInfo(it);
     if (!inf.ok) return it;
-    const out = G.upgradedCopy(it, inf.pts + G.HARD_STEPS * D.UPGRADE.step * G.upgradeRef(it)); out.hard = true;
+    const out = G.upgradedCopy(it, inf.pts + G.HARD_STEPS * D.UPGRADE.step * G.upgradeRef(it), true); out.hard = true; // past the ceiling (#581)
     if (it.look) out.look = [it.look[0], it.look[1] + '_hard']; // the Hard recolour of the raid's set
     return out;
   };
