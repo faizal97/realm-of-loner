@@ -3128,6 +3128,7 @@
   // or not), since a staff and a dagger, or a spell-power robe and a leather tunic, carry very different totals. A family
   // the ceiling raid lacks takes its best level-57+ piece from any dungeon or raid, raised by the ceiling raid's lead.
   const upKey = (it) => `${it.slot}|${it.wtype || it.atype || ''}|${it.sp ? 'c' : ''}`;
+  const slotKey = (it) => `${it.slot}|${it.wtype || it.atype || ''}`; // slot and type, caster or not (#587)
   let upRef = null;
   G.upgradeRef = function (it) {
     if (!upRef) {
@@ -3147,6 +3148,8 @@
         for (const dk in D.DUNGEONS) if (dk !== U.raid) for (const x of lootOf(dk)) if (!x.effect && (x.lvl || 0) >= U.minLvl && U.cap[x.q] && fn(x) > 0) b[upKey(x)] = Math.max(b[upKey(x)] || 0, fn(x));
         const ks = Object.keys(b).filter((k) => t[k] && b[k] > 0), ld = ks.length ? avg(ks.map((k) => avg(t[k]) / b[k])) : lead; // the raid's lead in this value
         for (const k in b) upRef['*' + v][k] = b[k] * ld; for (const k in t) upRef['*' + v][k] = avg(t[k]);
+        const sm = upRef['*' + v + 'Slot'] = {}; /* a family with no reference stops at the raid's best of its slot and type (#587) */
+        for (const x of lootOf(U.raid)) { const k = slotKey(x); if (fn(x) > (sm[k] || 0)) sm[k] = fn(x); }
       }
       // where a plain level-57+ drop of each quality starts, as a share of its ceiling (the median), for effect items below
       const share = {}; for (const dk in D.DUNGEONS) for (const x of lootOf(dk)) if (!x.effect && (x.lvl || 0) >= U.minLvl && U.cap[x.q] && upRef[upKey(x)]) (share[x.q] = share[x.q] || []).push(G.itemPoints(x) / upRef[upKey(x)]);
@@ -3242,7 +3245,7 @@
     const cur = rfAt(r.where); if (!cur || cur.id !== r.old.id) { G.save(); return false; } // the item moved: keep what it has
     rfPut(r.where, r.old); sys(`${r.old.name}: back to how it was.`); emit('change'); G.save(); return true;
   };
-  G.upgradeInfo = function (it) {
+  const upInfo = function (it) {
     const U = D.UPGRADE, none = { ok: false, room: false, cost: 0 };
     if (!it || it.heirloom || !D.GEAR_SLOTS.includes(it.slot) || !U.cap[it.q] || (it.lvl || 0) < U.minLvl) return none;
     const ref = G.upgradeRef(it), p0 = G.itemPoints(upBase(it)); if (p0 <= 0) return none;
@@ -3251,19 +3254,44 @@
     const pc = (x) => Math.round((x / ref) * 100);
     return { ok: true, room, pts, next, pct: pc(pts), nextPct: pc(next), capPct: Math.round(U.cap[it.q] * 100), cost: room ? Math.max(1, Math.round(((next - pts) / ref) * 100 * U.perPct)) : 0 };
   };
+  // a step whose numbers all round to what the item has is merged with the next, and one that never changes them is
+  // not offered, so Marks always buy a change (#587)
+  const shown = (x) => JSON.stringify([x.stats || {}, x.sp || 0, x.armor || 0, x.dmg || null, x.fxScale || 1]);
+  G.upgradeInfo = function (it) {
+    const inf = upInfo(it); if (!inf.room) return inf;
+    const U = D.UPGRADE, ref = G.upgradeRef(it), capPts = U.cap[it.q] * ref, st = U.step * ref, now = shown(it);
+    let next = inf.next;
+    while (shown(G.upgradedCopy(it, next)) === now) {
+      if (next >= capPts - 1e-9) return Object.assign(inf, { room: false, next: inf.pts, nextPct: inf.pct, cost: 0 });
+      next = capPts - (next + st) < st / 2 ? capPts : next + st;
+    }
+    return Object.assign(inf, { next, nextPct: Math.round((next / ref) * 100), cost: Math.max(1, Math.round(((next - inf.pts) / ref) * 100 * U.perPct)) });
+  };
   // the item at a given power (stat points); its own power or less gives back the item as it dropped
   G.FX_SCALE_CAP = 1.5;
   // an item as it should be today (#581): an upgraded one rebuilt from its drop at the power it bought, a Hard copy at its
   // 2 steps past the ceiling. The same item again gives the same result
   G.regearItem = function (x) {
     if (!x || !D.GEAR_SLOTS.includes(x.slot)) return x;
-    if (x.hard && G.upgradeInfo(x).ok) return Object.assign(G.upgradedCopy(x, G.itemPoints(upBase(x)) + G.HARD_STEPS * D.UPGRADE.step * G.upgradeRef(x), true), { hard: true });
+    if (x.hard && G.upgradeInfo(x).ok) { /* never under the power its steps bought (#587) */
+      const pw = Math.max(G.hardPower(x), x.pw || 0);
+      return Object.assign(G.upgradedCopy(x, pw, true), { hard: true });
+    }
     if (x.base && x.pw) return G.upgradedCopy(x, x.pw);
     return x;
   };
+  // a Hard copy's power: 2 steps past its drop, or more steps until a stat, armour or damage number differs from the
+  // drop's, so Hard never gives only a rounding (#587)
+  G.hardPower = function (it) {
+    const b = upBase(it), st = D.UPGRADE.step * G.upgradeRef(it), was = shown(Object.assign({}, b, { fxScale: 1 }));
+    const bare = Object.assign(JSON.parse(JSON.stringify(it)), { kit: 0 }); /* a kit's armour is not the drop's */
+    let pw = G.itemPoints(b) + G.HARD_STEPS * st;
+    for (let i = 0; i < 10 && shown(Object.assign(G.upgradedCopy(bare, pw, true), { fxScale: 1 })) === was; i++) pw += st;
+    return pw;
+  };
   // over: a Hard copy, which goes past the quality's ceiling (#581)
   G.upgradedCopy = function (it, pw, over) {
-    const b = upBase(it), p0 = G.itemPoints(b), inf = G.upgradeInfo(it), out = JSON.parse(JSON.stringify(it));
+    const b = upBase(it), p0 = G.itemPoints(b), inf = upInfo(it), out = JSON.parse(JSON.stringify(it));
     const ref = inf.ok ? G.upgradeRef(it) : p0, capPts = inf.ok ? D.UPGRADE.cap[it.q] * ref : p0;
     if (!over) pw = Math.min(pw, Math.max(capPts, it.pw || 0));
     const kit = it.kit || 0; // an armour kit sits on top of the upgraded armour (#406)
@@ -3277,10 +3305,23 @@
     // same share of the way its stats moved, so at its ceiling it sits just under the raid piece and never passes it;
     // a raid piece (already at the ceiling) grows with its stats, so a Hard copy is stronger by its 2 steps
     const t = ref - p0 > 1 ? (pw - p0) / (ref - p0) : null, key = upKey(it);
-    const grow = (v0, v) => { const rv = upRef && upRef['*' + v] && upRef['*' + v][key]; return t != null && rv ? v0 + Math.max(0, rv - v0) * Math.min(1, t) : v0 * f; };
+    const grow = (v0, v) => {
+      const rv = upRef && upRef['*' + v] && upRef['*' + v][key]; if (t != null && rv) return v0 + Math.max(0, rv - v0) * Math.min(1, t);
+      const sm = !over && !rv && upRef && upRef['*' + v + 'Slot'] && upRef['*' + v + 'Slot'][slotKey(it)]; /* no reference: never past the raid's best of its slot (#587) */
+      return sm ? Math.min(v0 * f, Math.max(v0, sm)) : v0 * f;
+    };
     if (b.armor) out.armor = Math.round(grow(b.armor, 'armor')) + kit;
     if (b.dmg && it.speed) { const d0 = (b.dmg[0] + b.dmg[1]) / 2 / it.speed, g = grow(d0, 'dps') / d0; out.dmg = [Math.round(b.dmg[0] * g), Math.round(b.dmg[1] * g)]; }
     else if (b.dmg) out.dmg = [Math.round(b.dmg[0] * f), Math.round(b.dmg[1] * f)];
+    return out;
+  };
+  // what a step adds, as the upgrade dialog lists it: only numbers that grow, never a +0.0 line (#587)
+  G.upgradeGains = function (it, next) {
+    const NAME = { str: 'Strength', agi: 'Agility', sta: 'Stamina', int: 'Intellect', spi: 'Spirit' };
+    const out = Object.keys(next.stats || {}).map((k) => [next.stats[k] - ((it.stats || {})[k] || 0), NAME[k] || k]).filter(([v]) => v > 0).map(([v, k]) => `+${v} ${k}`);
+    if (next.sp && next.sp > (it.sp || 0)) out.push(`+${next.sp - (it.sp || 0)} spell power`);
+    if (next.armor && next.armor > (it.armor || 0)) out.push(`+${next.armor - (it.armor || 0)} armor`);
+    if (next.dmg && it.dmg && it.speed) { const d = (((next.dmg[0] + next.dmg[1]) - (it.dmg[0] + it.dmg[1])) / 2 / it.speed).toFixed(1); if (+d > 0) out.push(`+${d} damage per second`); }
     return out;
   };
   // where = { slot } for an equipped item or { bag } for a bag index. Returns true when a step was bought.
@@ -4360,7 +4401,7 @@
   G.hardCopy = function (id) {
     const it = G.copyItem(id), inf = G.upgradeInfo(it);
     if (!inf.ok) return it;
-    const out = G.upgradedCopy(it, inf.pts + G.HARD_STEPS * D.UPGRADE.step * G.upgradeRef(it), true); out.hard = true; // past the ceiling (#581)
+    const out = G.upgradedCopy(it, G.hardPower(it), true); out.hard = true; // past the ceiling (#581)
     if (it.look) out.look = [it.look[0], it.look[1] + '_hard']; // the Hard recolour of the raid's set
     return out;
   };

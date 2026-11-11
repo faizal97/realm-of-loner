@@ -3299,11 +3299,7 @@
   // gear upgrades (v10.3): show what the next step gives and what it costs, then buy it
   function upgradeDialog(where) {
     const P = G.S.player, it = where.slot ? P.equip[where.slot] : P.bags[where.bag].item, inf = G.upgradeInfo(it);
-    const next = G.upgradedCopy(it, inf.next), marks = G.account().marks, NAME = { str: 'Strength', agi: 'Agility', sta: 'Stamina', int: 'Intellect', spi: 'Spirit' };
-    const diff = Object.keys(next.stats || {}).map((k) => [next.stats[k] - ((it.stats || {})[k] || 0), NAME[k] || k]).filter(([v]) => v > 0).map(([v, k]) => `+${v} ${k}`);
-    if (next.sp && next.sp > (it.sp || 0)) diff.push(`+${next.sp - (it.sp || 0)} spell power`);
-    if (next.armor && next.armor > (it.armor || 0)) diff.push(`+${next.armor - (it.armor || 0)} armor`);
-    if (next.dmg) diff.push(`+${(((next.dmg[0] + next.dmg[1]) - (it.dmg[0] + it.dmg[1])) / 2 / it.speed).toFixed(1)} damage per second`);
+    const next = G.upgradedCopy(it, inf.next), marks = G.account().marks, diff = G.upgradeGains(it, next);
     // an effect item (#36): its rule before and after, every number that grows shown as "46 → 48"
     const F = G.effectOf(it), fxLine = F ? (() => { const a = F.desc(it.lvl || 1, D.fxGrow(it.fxScale, it.effect)), b = F.desc(next.lvl || 1, D.fxGrow(next.fxScale, next.effect)), re = /(\d+(?:\.\d+)?)/;
       const pa = a.split(re), pb = b.split(re); if (pa.length !== pb.length || pa.some((x, i) => i % 2 === 0 && x !== pb[i])) return `${a} After: ${b}`;
