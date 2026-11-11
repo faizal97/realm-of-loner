@@ -122,6 +122,23 @@ async function idleUploads(mA, mB) { // two devices each buy a mount, sync until
   CLOUD.setDriver(null);
   return d.updates - before;
 }
+test('Renown, an heirloom or a look bought on two devices before a sync is charged once; different buys are not refunded', () => {
+  W.character(60); setMarks(2000);
+  const synced = clone(G.account()), hid = Object.keys(D.HEIRLOOMS)[0];
+  const on = (dev, fn) => { store.setItem('azsolo.account', JSON.stringify(synced)); asDevice(dev); fn(); return clone(G.account()); };
+  const r1 = G.renownCost(1).marks, h = D.HEIRLOOMS[hid].cost;
+  const A = on('dA', () => { G.S.player.bags = []; assert.ok(G.buyRenown()); G.buyHeirloom(hid); });
+  const B = on('dB', () => { G.S.player.bags = []; assert.ok(G.buyRenown()); G.buyHeirloom(hid); });
+  const m = CLOUD.mergeAccount(A, B);
+  assert.strictEqual(m.renown, 1);
+  assert.strictEqual(m.marks, 2000 - r1 - h, 'one Renown rank and one heirloom paid for');
+  assert.strictEqual(CLOUD.mergeAccount(m, A).marks, m.marks, 'merging again refunds nothing more');
+  const C = on('dC', () => { assert.ok(G.buyRenown()); const a = G.account(); a.renown = 1; G.saveAccount(a); assert.ok(G.buyRenown()); }); // ranks 1 and 2 on one device
+  const n = CLOUD.mergeAccount(C, synced);
+  assert.strictEqual(n.marks, 2000 - r1 - G.renownCost(2).marks, 'two different ranks: both paid');
+  setMarks(500);
+});
+
 test('an account file merge that changes nothing writes nothing to Drive (two devices, mounts bought in a different order)', async () => {
   assert.strictEqual(await idleUploads(['m_one', 'm_two'], ['m_one', 'm_two']), 0, 'control: the same order uploads nothing');
   assert.strictEqual(await idleUploads(['m_one'], ['m_two']), 0, 'nothing changed, so no upload (the lists only differ in order)');

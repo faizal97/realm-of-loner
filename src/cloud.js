@@ -155,8 +155,10 @@
   const LISTS = ['heirlooms', 'story', 'lore', 'tips', 'looks'];
   const union = (x, y) => { const out = []; for (const id of (x || []).concat(y || [])) if (!out.includes(id)) out.push(id); return out; };
   const sumOf = (o) => Object.values(o || {}).reduce((s, n) => s + (+n || 0), 0);
-  const mkOf = (x) => (x && x.mk && typeof x.mk === 'object' ? { base: +x.mk.base || 0, earn: Object.assign({}, x.mk.earn), spend: Object.assign({}, x.mk.spend) } : { base: Math.max(0, +(x && x.marks) || 0), earn: {}, spend: {} });
-  const mkBalance = (mk) => Math.max(0, Math.round(mk.base + sumOf(mk.earn) - sumOf(mk.spend)));
+  const mkOf = (x) => (x && x.mk && typeof x.mk === 'object' ? { base: +x.mk.base || 0, earn: Object.assign({}, x.mk.earn), spend: Object.assign({}, x.mk.spend), paid: JSON.parse(JSON.stringify(x.mk.paid && typeof x.mk.paid === 'object' ? x.mk.paid : {})) } : { base: Math.max(0, +(x && x.marks) || 0), earn: {}, spend: {}, paid: {} });
+  // an unlock bought on two devices before a sync is charged once, the cheapest (G.mkPaidBack, #588)
+  const paidBack = (p) => { let s = 0; for (const k in p || {}) { const v = Object.values(p[k] || {}).map(Number).filter((n) => n > 0); if (v.length > 1) s += v.reduce((x, y) => x + y, 0) - Math.min(...v); } return s; };
+  const mkBalance = (mk) => Math.max(0, Math.round(mk.base + sumOf(mk.earn) - sumOf(mk.spend) + paidBack(mk.paid)));
   const GROW = ['mounts', 'renown', 'trialsworn', 'lw', 'ln', 'founder', 'debtBreaker', 'lookSeed'];
   function grow(x, y) {
     if (x === undefined || x === null) return y === null ? undefined : y;
@@ -173,6 +175,8 @@
     // each; an old file with no counters brings its balance as the base, as the higher balance did before
     const ka = mkOf(a), kb = mkOf(b), mk = { base: Math.max(ka.base, kb.base), earn: {}, spend: {} };
     for (const f of ['earn', 'spend']) for (const k of union(Object.keys(ka[f]), Object.keys(kb[f]))) mk[f][k] = Math.max(+ka[f][k] || 0, +kb[f][k] || 0);
+    mk.paid = {}; /* each device's price for each unlock, the highest (#588) */
+    for (const t of union(Object.keys(ka.paid), Object.keys(kb.paid))) { const pa = ka.paid[t] || {}, pb = kb.paid[t] || {}; mk.paid[t] = {}; for (const d of union(Object.keys(pa), Object.keys(pb))) mk.paid[t][d] = Math.max(+pa[d] || 0, +pb[d] || 0); }
     const m = Object.assign({}, b, a, { mk, marks: mkBalance(mk) });
     for (const k of LISTS) m[k] = union(a[k], b[k]);
     const fa = a.friends && a.friends.at ? a.friends : null, fb = b.friends && b.friends.at ? b.friends : null;
