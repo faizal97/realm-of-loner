@@ -3752,7 +3752,7 @@
   G.brawlTick = function () {
     const S = G.S; if (!S || !S.bots) return; const w = G.brawlWindow(), t = now(), soon = !w.open && w.opensAt.getTime() - t < 5 * 60000;
     if (!soon || S.brawlTold === w.id) return; S.brawlTold = w.id;
-    const b = S.bots.filter((x) => (x.level || 1) >= BRAWL.minLvl); if (!b.length) return;
+    const d = new Date(t), b = S.bots.filter((x) => (x.level || 1) >= BRAWL.minLvl && B.factionOf(x) === G.myFaction() && B.isOnline(x, d)); if (!b.length) return; // your side, online (#592)
     B.post(S, 'general', cpick(b), cpick(['bloodsand brawl opens in 5, who is fighting', 'arena in rumhook opens at the top of the hour', 'brawl soon, last time i got knocked out round 1 lol', 'bloodsand pit opens in a few min, chest is mine']));
     emit('chat');
   };
