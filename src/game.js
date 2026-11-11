@@ -1218,6 +1218,7 @@
   G.joinGuild = function (g) {
     const S = G.S;
     S.player.guild = g; if (S.soc) S.soc.applied = null; // joining withdraws an application elsewhere (#416)
+    for (const m of S.chat) if (m.act && m.act.state === 'open' && (m.act.kind === 'guild_invite' || m.act.kind === 'guild_apply')) m.act.state = 'expired'; // other guilds' offers lapse (#592)
     sys(`You have joined ${B.GUILDS[g]}.`);
     const mates = S.bots.filter((b) => b.guild === g && B.isOnline(b, new Date()));
     mates.slice(0, 3).forEach((b, i) => S.pending.push({ at: now() + 1200 + i * 2200, bot: b.id, ch: 'guild', text: cpick(['welcome!', 'welcome :)', 'hi!', 'o/', 'welcome to the guild']) }));
