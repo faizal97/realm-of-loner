@@ -176,3 +176,23 @@ test('the group-run tip names the Plan tab where the pace is set', () => {
   assert.doesNotMatch(tip[1], /Tactics/);
   assert.match(tip[1], /Plan tab/);
 });
+
+// ---------- the HUD's zone line (#433, #591): a zone inside a bigger region says both, as the Map names the region.
+// The region holding West and East Rotmoor was itself named West Rotmoor, so the HUD read "East Rotmoor · West Rotmoor".
+test('no HUD zone line pairs two names that differ only by a compass word, and the Map names the same region', () => {
+  const { D } = require('./world');
+  const line = src.match(/\n\s*const zoneLine = \(pl\) => [^\n]*/);
+  assert.ok(line, 'the zone line');
+  const zoneLine = new Function('D', line[0] + '; return zoneLine;')(D);
+  const bare = (x) => x.replace(/^(The )?(East|West|North|South)(ern)? /, '');
+  const bad = [];
+  for (const pl of Object.values(D.PLACES)) {
+    if (!pl.zone) continue;
+    const [z, r] = zoneLine(pl).split(' · ');
+    if (r && bare(z) !== z && bare(r) !== r && bare(z) === bare(r)) bad.push(zoneLine(pl)); /* East X · West X */
+    if (r) assert.strictEqual(r, D.REGIONS[pl.region].name, 'the HUD names the region the Map is titled with');
+  }
+  assert.deepStrictEqual([...new Set(bad)], []);
+  assert.strictEqual(zoneLine(D.PLACES.chillwind_camp), 'West Rotmoor · Rotmoor');
+  assert.match(src, />Rotmoor · contested</, 'the region map says Rotmoor too');
+});

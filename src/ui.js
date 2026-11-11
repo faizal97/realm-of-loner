@@ -2650,7 +2650,7 @@
     plaguelands: `<defs><radialGradient id="mapwp" cx="50%" cy="45%" r="75%"><stop offset="0" stop-color="#7a7a4a"/><stop offset="1" stop-color="#3a3a24"/></radialGradient></defs>
         <rect width="340" height="400" rx="6" fill="url(#mapwp)"/>
         <ellipse cx="250" cy="372" rx="70" ry="22" fill="#3a5a6a" opacity=".85"/>
-        <text x="170" y="24" text-anchor="middle" font-family="Marcellus SC, serif" font-size="12" fill="#e8e8c8" opacity=".85">West Rotmoor · contested</text>`,
+        <text x="170" y="24" text-anchor="middle" font-family="Marcellus SC, serif" font-size="12" fill="#e8e8c8" opacity=".85">Rotmoor · contested</text>`,
     winterspring: `<defs><radialGradient id="mapwsp" cx="50%" cy="45%" r="75%"><stop offset="0" stop-color="#e8f0f8"/><stop offset="1" stop-color="#9aaec4"/></radialGradient></defs>
         <rect width="340" height="400" rx="6" fill="url(#mapwsp)"/>
         <ellipse cx="150" cy="255" rx="50" ry="24" fill="#8ab4d0" opacity=".8"/>

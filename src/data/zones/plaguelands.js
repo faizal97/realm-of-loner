@@ -2,7 +2,8 @@
 // holds The Blackcloister, and the road east leads to the gates of Graymouth. The Hollow Host's heartland.
 (function (root) {
   const D = root.D;
-  D.zone('plaguelands', { name: 'West Rotmoor', faction: 'contested', music: 'rotmoor', town: 'rotmoor_town' });
+  // the region holds West and East Rotmoor, so it is Rotmoor: named West, the HUD read "East Rotmoor · West Rotmoor" (#591)
+  D.zone('plaguelands', { name: 'Rotmoor', faction: 'contested', music: 'rotmoor', town: 'rotmoor_town' });
   D.item('plaguehound_fang', { name: 'Plaguehound Fang', slot: 'quest', q: 1, icon: 'claw' });
   D.item('ghoul_flesh', { name: 'Diseased Flesh', slot: 'quest', q: 1, icon: 'rib' });
   D.item('executioner_axe', { name: "Executioner's Axe Head", slot: 'quest', q: 1, icon: 'axe' });
