@@ -298,18 +298,19 @@
     // gear power (#581), once per save and once for the account bank: every upgraded item is rebuilt from the item as it
     // dropped at the power it bought (damage and armour now stop under the raid's piece), and every Hard raid copy gets
     // the 2 steps past the ceiling it was clamped out of
-    { const regear = (root, flagOf) => {
-        if (!root || flagOf.gear581) return false;
-        const seen = new Set();
-        const walk = (o, depth) => {
-          if (!o || typeof o !== 'object' || depth > 8 || seen.has(o)) return; seen.add(o);
-          for (const k in o) { const x = o[k];
-            if (x && typeof x === 'object' && typeof x.id === 'string' && D.GEAR_SLOTS.includes(x.slot) && (x.hard || (x.base && x.pw))) o[k] = G.regearItem(x);
-            else walk(x, depth + 1); }
-        };
-        walk(root, 0); flagOf.gear581 = 1; return true;
+    { const seen = new Set();
+      const walk = (o, depth) => {
+        if (!o || typeof o !== 'object' || depth > 8 || seen.has(o)) return; seen.add(o);
+        for (const k in o) { const x = o[k];
+          if (x && typeof x === 'object' && typeof x.id === 'string' && D.GEAR_SLOTS.includes(x.slot) && (x.hard || (x.base && x.pw))) o[k] = G.regearItem(x);
+          else walk(x, depth + 1); }
       };
-      S.flags = S.flags || {}; regear(S.player, S.flags); } // the account bank's copies are rebuilt as they come out (G.abankWithdraw)
+      // the player's items outside the character: the mail, their own auctions, a reforge's undo copy (#588)
+      const away = () => [S.mail, S.ah && S.ah.mine, S.reforge];
+      S.flags = S.flags || {};
+      if (!S.flags.gear581) { walk(S.player, 0); for (const o of away()) walk(o, 0); S.flags.gear581 = 1; S.flags.gear588 = 1; }
+      else if (!S.flags.gear588) { for (const o of away()) walk(o, 0); S.flags.gear588 = 1; } /* a save rebuilt before #588: those places once */
+    } // the account bank's copies are rebuilt as they come out (G.abankWithdraw)
     // a talent no longer in its class's trees (the Bard's first trees, #253) gives its points back; so does a second
     // keystone where a tree allows one (pickOne)
     if (S.player.talents && D.TALENTS[S.player.cls]) {
