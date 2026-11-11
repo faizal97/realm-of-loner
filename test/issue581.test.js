@@ -32,3 +32,19 @@ test('a Hard raid copy is stronger than the Normal drop', () => {
     if (n.armor) assert.ok(h.armor > n.armor, it.name + ' armour');
   }
 });
+
+test('an old save\'s inflated upgrade and clamped Hard copy are rebuilt on load, once (#581)', () => {
+  const { S, P } = W.character(60);
+  const blue = Object.values(D.ITEMS).find((i) => i.name === "Saltbones' Cutlass"), epic = Object.values(D.ITEMS).find((i) => i.name === 'Tidecrown, Blade of the Prince');
+  const old = G.copyItem(blue.id), ref = G.upgradeRef(blue), pw = D.UPGRADE.cap[blue.q] * ref, f = pw / G.itemPoints(old);
+  Object.assign(old, { base: JSON.parse(JSON.stringify({ stats: old.stats, dmg: old.dmg })), pw, dmg: [Math.round(old.dmg[0] * f), Math.round(old.dmg[1] * f)], locked: true }); // as the old formula made it
+  const oldHard = Object.assign(G.copyItem(epic.id), { hard: true }); // clamped: no base, no growth
+  P.equip.weapon = old; P.bags.push({ item: oldHard, n: 1 }); S.flags = S.flags || {}; delete S.flags.gear581;
+  G.save(); G.load(S.id);
+  const w = G.S.player.equip.weapon, h = G.S.player.bags.find((b) => b.item.id === epic.id).item;
+  assert.ok(dps(w) < dps(epic), `upgraded blue ${dps(w).toFixed(1)} under the raid's ${dps(epic).toFixed(1)}`);
+  assert.strictEqual(w.locked, true, 'keeps its other fields');
+  assert.ok(dps(h) > dps(epic) && h.hard, 'Hard copy grows');
+  const again = JSON.stringify(G.regearItem(h)); assert.strictEqual(again, JSON.stringify(h), 'rebuilding again changes nothing');
+  assert.strictEqual(G.S.flags.gear581, 1);
+});

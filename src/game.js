@@ -295,6 +295,21 @@
       };
       walk(S, 0);
     }
+    // gear power (#581), once per save and once for the account bank: every upgraded item is rebuilt from the item as it
+    // dropped at the power it bought (damage and armour now stop under the raid's piece), and every Hard raid copy gets
+    // the 2 steps past the ceiling it was clamped out of
+    { const regear = (root, flagOf) => {
+        if (!root || flagOf.gear581) return false;
+        const seen = new Set();
+        const walk = (o, depth) => {
+          if (!o || typeof o !== 'object' || depth > 8 || seen.has(o)) return; seen.add(o);
+          for (const k in o) { const x = o[k];
+            if (x && typeof x === 'object' && typeof x.id === 'string' && D.GEAR_SLOTS.includes(x.slot) && (x.hard || (x.base && x.pw))) o[k] = G.regearItem(x);
+            else walk(x, depth + 1); }
+        };
+        walk(root, 0); flagOf.gear581 = 1; return true;
+      };
+      S.flags = S.flags || {}; regear(S.player, S.flags); } // the account bank's copies are rebuilt as they come out (G.abankWithdraw)
     // a talent no longer in its class's trees (the Bard's first trees, #253) gives its points back; so does a second
     // keystone where a tree allows one (pickOne)
     if (S.player.talents && D.TALENTS[S.player.cls]) {
@@ -2292,7 +2307,7 @@
     const k = row.stack ? Math.min(row.n, most || row.n, G.bagRoom(row.item)) : (G.bagsFull(row.item) ? 0 : 1);
     if (!k) { toast('Bags are full.'); return false; }
     const got = AB.takeKey(b, key, k), P = G.S.player, before = JSON.stringify(P.bags);
-    if (!got.n || !G.addItem(JSON.parse(JSON.stringify(got.item)), got.n)) return false;
+    if (!got.n || !G.addItem(G.regearItem(JSON.parse(JSON.stringify(got.item))), got.n)) return false; // #581
     if (!G.save()) { P.bags = JSON.parse(before); toast("Couldn't save. Nothing moved."); return false; } // storage full: it stays in the account bank
     abankSave(b); emit('change'); return true; // the bags, then the account bank
   };
@@ -3203,6 +3218,14 @@
   };
   // the item at a given power (stat points); its own power or less gives back the item as it dropped
   G.FX_SCALE_CAP = 1.5;
+  // an item as it should be today (#581): an upgraded one rebuilt from its drop at the power it bought, a Hard copy at its
+  // 2 steps past the ceiling. The same item again gives the same result
+  G.regearItem = function (x) {
+    if (!x || !D.GEAR_SLOTS.includes(x.slot)) return x;
+    if (x.hard && G.upgradeInfo(x).ok) return Object.assign(G.upgradedCopy(x, G.itemPoints(upBase(x)) + G.HARD_STEPS * D.UPGRADE.step * G.upgradeRef(x), true), { hard: true });
+    if (x.base && x.pw) return G.upgradedCopy(x, x.pw);
+    return x;
+  };
   // over: a Hard copy, which goes past the quality's ceiling (#581)
   G.upgradedCopy = function (it, pw, over) {
     const b = upBase(it), p0 = G.itemPoints(b), inf = G.upgradeInfo(it), out = JSON.parse(JSON.stringify(it));
