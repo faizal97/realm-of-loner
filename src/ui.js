@@ -6158,6 +6158,8 @@
   window.AZVIEW_REPLY = (s) => { try { const r = JSON.parse(s), w = view.wait[r.id]; delete view.wait[r.id]; if (w) w(r); } catch (e) { } };
   const viewCall = (cmd, args) => new Promise((res) => { if (!(window.AzView && window.AzView.postMessage)) return res(null); const id = ++view.seq; view.wait[id] = res; window.AzView.postMessage(JSON.stringify({ id, cmd, args: args || {} })); });
   viewCall('getMode').then((r) => { if (r && r.ok) view.mode = r.value; });
+  // the Android app keeps the screen on during a fight or a group run, and only then (#563); a browser has no AzView
+  if (window.AzView) { let awake = false; setInterval(() => { const want = !!(G.S && (G.fight || G.S.run)); if (want !== awake) { awake = want; viewCall('keepAwake', { on: want }); } }, 2000); }
   function switchViewMode() {
     if (!view.mode) return toast('Only in the Android app.');
     const next = view.mode === 'hybrid' ? 'texture' : 'hybrid';

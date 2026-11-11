@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -168,6 +169,12 @@ class MainActivity : FlutterActivity() {
                     val m = call.argument<String>("mode")
                     if (m != "hybrid" && m != "texture") result.error("bad_mode", "hybrid or texture", null)
                     else { try { f.writeText(m); result.success(true) } catch (e: Exception) { result.error("write", e.message, null) } }
+                }
+                // the screen stays on during a fight or a group run (#563), and only then
+                "keepAwake" -> {
+                    if (call.argument<Boolean>("on") == true) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                    else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                    result.success(true)
                 }
                 else -> result.notImplemented()
             }
