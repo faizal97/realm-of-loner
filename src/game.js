@@ -3110,6 +3110,7 @@
   // or not), since a staff and a dagger, or a spell-power robe and a leather tunic, carry very different totals. A family
   // the ceiling raid lacks takes its best level-57+ piece from any dungeon or raid, raised by the ceiling raid's lead.
   const upKey = (it) => `${it.slot}|${it.wtype || it.atype || ''}|${it.sp ? 'c' : ''}`;
+  const slotKey = (it) => `${it.slot}|${it.wtype || it.atype || ''}`; // slot and type, caster or not (#587)
   let upRef = null;
   G.upgradeRef = function (it) {
     if (!upRef) {
@@ -3129,6 +3130,8 @@
         for (const dk in D.DUNGEONS) if (dk !== U.raid) for (const x of lootOf(dk)) if (!x.effect && (x.lvl || 0) >= U.minLvl && U.cap[x.q] && fn(x) > 0) b[upKey(x)] = Math.max(b[upKey(x)] || 0, fn(x));
         const ks = Object.keys(b).filter((k) => t[k] && b[k] > 0), ld = ks.length ? avg(ks.map((k) => avg(t[k]) / b[k])) : lead; // the raid's lead in this value
         for (const k in b) upRef['*' + v][k] = b[k] * ld; for (const k in t) upRef['*' + v][k] = avg(t[k]);
+        const sm = upRef['*' + v + 'Slot'] = {}; /* a family with no reference stops at the raid's best of its slot and type (#587) */
+        for (const x of lootOf(U.raid)) { const k = slotKey(x); if (fn(x) > (sm[k] || 0)) sm[k] = fn(x); }
       }
       // where a plain level-57+ drop of each quality starts, as a share of its ceiling (the median), for effect items below
       const share = {}; for (const dk in D.DUNGEONS) for (const x of lootOf(dk)) if (!x.effect && (x.lvl || 0) >= U.minLvl && U.cap[x.q] && upRef[upKey(x)]) (share[x.q] = share[x.q] || []).push(G.itemPoints(x) / upRef[upKey(x)]);
@@ -3284,7 +3287,11 @@
     // same share of the way its stats moved, so at its ceiling it sits just under the raid piece and never passes it;
     // a raid piece (already at the ceiling) grows with its stats, so a Hard copy is stronger by its 2 steps
     const t = ref - p0 > 1 ? (pw - p0) / (ref - p0) : null, key = upKey(it);
-    const grow = (v0, v) => { const rv = upRef && upRef['*' + v] && upRef['*' + v][key]; return t != null && rv ? v0 + Math.max(0, rv - v0) * Math.min(1, t) : v0 * f; };
+    const grow = (v0, v) => {
+      const rv = upRef && upRef['*' + v] && upRef['*' + v][key]; if (t != null && rv) return v0 + Math.max(0, rv - v0) * Math.min(1, t);
+      const sm = !over && !rv && upRef && upRef['*' + v + 'Slot'] && upRef['*' + v + 'Slot'][slotKey(it)]; /* no reference: never past the raid's best of its slot (#587) */
+      return sm ? Math.min(v0 * f, Math.max(v0, sm)) : v0 * f;
+    };
     if (b.armor) out.armor = Math.round(grow(b.armor, 'armor')) + kit;
     if (b.dmg && it.speed) { const d0 = (b.dmg[0] + b.dmg[1]) / 2 / it.speed, g = grow(d0, 'dps') / d0; out.dmg = [Math.round(b.dmg[0] * g), Math.round(b.dmg[1] * g)]; }
     else if (b.dmg) out.dmg = [Math.round(b.dmg[0] * f), Math.round(b.dmg[1] * f)];
