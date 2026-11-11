@@ -692,9 +692,9 @@
         reply(pick(['sent the mats, ty!!', 'thanks, no rush'])); // no mail line: the game has no mail (#162)
         G.emitChange();
       } }, decline];
-      const made = G.countItem(r.makes);
-      return [{ label: made ? `Hand over ${it.name} (+${coin(a.tip)})` : `Craft ${it.name} first`, primary: true, disabled: !made, why: !made, fn: () => {
-        if (!G.countItem(r.makes)) return `Craft ${it.name} first (Hero → Professions).`;
+      const made = G.countFree(r.makes), locked = !made && G.countItem(r.makes) > 0; // only an unlocked copy goes (#589)
+      return [{ label: made ? `Hand over ${it.name} (+${coin(a.tip)})` : locked ? `Unlock ${it.name} first` : `Craft ${it.name} first`, primary: true, disabled: !made, why: !made, fn: () => {
+        if (!G.countFree(r.makes)) return G.countItem(r.makes) ? `Locked. Unlock ${it.name} first.` : `Craft ${it.name} first (Hero → Professions).`;
         G.removeItem(r.makes, 1); P.money += a.tip;
         G.sys(`You handed ${it.name} to ${b ? b.name : 'them'} and got ${coin(a.tip)}.`);
         reply(pick(['perfect, exactly what i needed', 'ur a legend, ty', 'looks great!'])); befriend(b, P.place); help(); close();

@@ -676,13 +676,14 @@
   let QITEMS = null;
   G.isQuestItem = (id) => { if (!QITEMS) { QITEMS = new Set(); for (const q in D.QUESTS) for (const o of D.QUESTS[q].objs) if (o.type === 'collect') QITEMS.add(o.item); } return QITEMS.has(id); };
   G.countItem = function (id) { let n = (G.S.player.qitems || {})[id] || 0; for (const b of G.S.player.bags) if (b.item.id === id) n += b.n; return n; };
+  G.countFree = function (id) { let n = (G.S.player.qitems || {})[id] || 0; for (const b of G.S.player.bags) if (b.item.id === id && !b.item.lock) n += b.n; return n; }; // what can be given away: a locked piece is kept (#589)
   G.removeItem = function (id, n) {
     const P = G.S.player;
     const held = (P.qitems || {})[id] || 0; // a quest's items first, then any an old save holds in its bags (#144)
     if (held) { const take = Math.min(held, n); n -= take; if (held - take > 0) P.qitems[id] = held - take; else delete P.qitems[id]; }
     for (let i = P.bags.length - 1; i >= 0 && n > 0; i--) {
       const b = P.bags[i];
-      if (b.item.id !== id) continue;
+      if (b.item.id !== id || b.item.lock) continue; /* a locked piece is never taken (#589) */
       const take = Math.min(b.n, n); b.n -= take; n -= take;
       if (b.n <= 0) P.bags.splice(i, 1);
     }
