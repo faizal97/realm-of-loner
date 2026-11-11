@@ -142,3 +142,11 @@ test('a pick never carries to the next run or another character', () => {
   assert.strictEqual(tab(R1, null), 'party');
   assert.strictEqual(tab(R2, null), 'next');
 });
+
+// the first group-run tip named "Tactics", gone since the run panel's tabs: the pace is on the Plan tab (#591)
+test('the group-run tip names the Plan tab where the pace is set', () => {
+  const tip = src.match(/\n\s*run: '([^']*)'/);
+  assert.ok(tip, 'the run tip');
+  assert.doesNotMatch(tip[1], /Tactics/);
+  assert.match(tip[1], /Plan tab/);
+});

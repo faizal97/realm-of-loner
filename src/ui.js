@@ -5766,7 +5766,7 @@
     mainstory: 'A ! or ? on a red crest is the main story: the quests that carry the tale of Caldreth from chapter to chapter. The others are side stories.',
     roll: 'Loot! Need if you will use it, Greed if you would sell it, Pass to leave it to others.',
     dungeon: 'Dungeons are open. Social → Groups: queue from the dungeon\'s zone and the finder fills your group.',
-    run: 'In a group the tank pulls. Tap Pull (or Ready) when you are set; Tactics set the pace.',
+    run: 'In a group the tank pulls. Tap Pull (or Ready) when you are set; the Plan tab sets the pace.',
     talents: 'Talents are open: Hero → Abilities → Talents. You get a new point every level.',
     cap: 'Level 60! The This week button shows what is left today and this week, each with a Go.', // #182 (the button is a festival's lantern while one is on)
   };
