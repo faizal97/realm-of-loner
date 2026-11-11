@@ -1740,7 +1740,7 @@
   }
   // Hero → Abilities → Arrange action bar: tap one button, then another, to swap them (no dragging on a phone)
   function openBarEditor() {
-    let pick = null;
+    let pick = null; keyCapture = null; // a wait left from an earlier visit never carries over (#571)
     openSheet('bareditor', 'Arrange action bar', 'drag a button to move it, or tap two to swap them', (b) => {
       const P = G.S.player, r = G.racial();
       const pool = barPool(), shown = barArrange(pool), hidden = pool.filter((id) => (P.barHide || []).includes(id));
@@ -1756,7 +1756,7 @@
       shown.forEach((id, i) => {
         const t = tile(id, () => {
           if (dragged) { dragged = false; return; }
-          if (pick == null || pick === i) { pick = pick === i ? null : i; return ui.sheetFn(); }
+          if (pick == null || pick === i) { pick = pick === i ? null : i; keyCapture = null; return ui.sheetFn(); } /* a new pick drops the key wait (#571) */
           const n = shown.slice(); [n[pick], n[i]] = [n[i], n[pick]]; P.barOrder = n.concat(hidden); changed();
         }, pick === i ? ' sel' : '');
         t.dataset.i = i;
@@ -1936,8 +1936,8 @@
   const keysShown = () => { try { return localStorage.getItem(KEYS_USED) === '1'; } catch (e) { return false; } };
   const keyCode = (e) => (e.shiftKey && !/^Shift/.test(e.code) ? 'Shift+' : '') + e.code;
   function keyLabel(e) {
-    const c = e.code, base = /^Digit\d$/.test(c) ? c.slice(5) : /^Key[A-Z]$/.test(c) ? c.slice(3) : /^Numpad\d$/.test(c) ? 'N' + c.slice(6) : /^F\d+$/.test(c) ? c
-      : (e.key && e.key.length === 1 ? e.key.toUpperCase() : c.replace(/^(Arrow|Numpad)/, '').slice(0, 3));
+    const c = e.code, base = c === 'Space' ? 'Spc' : /^Digit\d$/.test(c) ? c.slice(5) : /^Key[A-Z]$/.test(c) ? c.slice(3) : /^Numpad\d$/.test(c) ? 'N' + c.slice(6) : /^F\d+$/.test(c) ? c
+      : (e.key && e.key.trim().length === 1 ? e.key.toUpperCase() : c.replace(/^(Arrow|Numpad)/, '').slice(0, 3));
     return (e.shiftKey ? 'S' : '') + base;
   }
   const slotKey = (i) => { const b = keyBinds()[i]; return b ? b.l : ''; };
