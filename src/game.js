@@ -3297,6 +3297,15 @@
     else if (b.dmg) out.dmg = [Math.round(b.dmg[0] * f), Math.round(b.dmg[1] * f)];
     return out;
   };
+  // what a step adds, as the upgrade dialog lists it: only numbers that grow, never a +0.0 line (#587)
+  G.upgradeGains = function (it, next) {
+    const NAME = { str: 'Strength', agi: 'Agility', sta: 'Stamina', int: 'Intellect', spi: 'Spirit' };
+    const out = Object.keys(next.stats || {}).map((k) => [next.stats[k] - ((it.stats || {})[k] || 0), NAME[k] || k]).filter(([v]) => v > 0).map(([v, k]) => `+${v} ${k}`);
+    if (next.sp && next.sp > (it.sp || 0)) out.push(`+${next.sp - (it.sp || 0)} spell power`);
+    if (next.armor && next.armor > (it.armor || 0)) out.push(`+${next.armor - (it.armor || 0)} armor`);
+    if (next.dmg && it.dmg && it.speed) { const d = (((next.dmg[0] + next.dmg[1]) - (it.dmg[0] + it.dmg[1])) / 2 / it.speed).toFixed(1); if (+d > 0) out.push(`+${d} damage per second`); }
+    return out;
+  };
   // where = { slot } for an equipped item or { bag } for a bag index. Returns true when a step was bought.
   G.upgradeItem = function (where) {
     const P = G.S.player, it = where.slot ? P.equip[where.slot] : (P.bags[where.bag] || {}).item;

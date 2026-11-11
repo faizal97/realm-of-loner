@@ -94,6 +94,21 @@ test('an upgraded blue never ends with more armour than the newest raid\'s best 
   assert.deepStrictEqual(over, [], over.join('\n'));
 });
 
+test('the upgrade dialog lists only numbers that grow: never a +0 or +0.0 line, and a plain item always lists one', () => {
+  const zero = [], none = [];
+  for (const it of upgradable()) {
+    let cur = G.copyItem(it.id), i = 0;
+    while (G.upgradeInfo(cur).room && i++ < 40) {
+      const inf = G.upgradeInfo(cur), nx = G.upgradedCopy(cur, inf.next), g = G.upgradeGains(cur, nx);
+      for (const line of g) if (!/^\+(?!0(\.0)? )\d/.test(line)) zero.push(`${it.name} ${inf.pct}%: ${line}`);
+      if (!g.length && !G.effectOf(cur)) none.push(`${it.name} ${inf.pct}%`);
+      cur = nx;
+    }
+  }
+  assert.deepStrictEqual(zero, [], zero.join('\n')); // Saltbones' Cutlass, Nerathil Blade and Marrow Rapier showed "+0.0 damage per second"
+  assert.deepStrictEqual(none, [], none.join('\n'));
+});
+
 // ---------------------------------------------------------------- sweeps
 
 test('every upgrade step of every item: nothing goes down, nothing is NaN, the percent shown is the percent reached', () => {
