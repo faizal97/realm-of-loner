@@ -655,7 +655,7 @@
     if (ch === 'guild') {
       if (roll < 0.6) { const { pals } = B.circle(S, b), mine = pals.filter((x) => on(x) && x.guild === b.guild); const mates = mine.length ? mine : S.bots.filter((x) => on(x) && x.guild === b.guild); if (mates.length) who = cpick(mates); }
     } else {
-      const pPal = ch === 'lfg' ? 0.4 : 0.75, pMate = ch === 'lfg' ? 0.25 : 0.4;
+      const pPal = ch === 'lfg' ? 0.4 : 0.75, pMate = ch === 'lfg' ? 0.3 : 0.45; /* 0.25/0.4 -> 0.3/0.45: with only online speakers (#592) threads fell just under 25% of lines */
       if (roll < Math.max(pPal, 0.35)) {
         const { pals, rival } = B.circle(S, b);
         if (kind === 'ding' && rival && on(rival) && roll < 0.35) { who = rival; rel = 'rival'; } // a rival answers a ding, nothing else
@@ -675,7 +675,7 @@
     };
     const back = rel === 'rival' ? 'backRival' : kind === 'ding' || kind === 'up' || kind === 'any' ? 'back' : null;
     const at = now + 2500 + crand() * 6000;
-    queue(who, b, rel === 'rival' ? 'rival' : kind, at, back && cchance(0.35) ? () => queue(b, who, back, Date.now() + 3000 + crand() * 5000) : undefined);
+    queue(who, b, rel === 'rival' ? 'rival' : kind, at, back && cchance(0.5) /* 0.35 -> 0.5 (#592): with only online speakers threads sat on the 25% line */ ? () => queue(b, who, back, Date.now() + 3000 + crand() * 5000) : undefined);
   };
 
 
