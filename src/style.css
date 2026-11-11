@@ -686,6 +686,7 @@ img { max-width: 100%; display: block; }
 .ptabs button { min-height: 36px; border: 1px solid #3b2d18; border-radius: 3px; font: 13px var(--display); color: var(--muted); position: relative; }
 .ptabs button.on { color: var(--gold); border-color: var(--gold); background: rgba(240,199,94,.08); }
 .ptabs button.dot::after { content: ''; position: absolute; top: 4px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: #ffd100; box-shadow: 0 0 5px #ffd100; }
+.ptabs.run-tabs { grid-template-columns: repeat(3, 1fr); margin-top: 6px; } /* the run panel's tabs (#564) */
 .pbody { display: grid; gap: 8px; align-content: start; }
 .mgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .mcard { display: grid; grid-template-columns: 30px 1fr; gap: 6px; align-items: center; min-height: 46px; padding: 4px 6px; text-align: left; background: linear-gradient(90deg, rgba(60,45,25,.55), rgba(30,22,12,.4)); border: 1px solid #3b2d18; border-radius: 3px; min-width: 0; }

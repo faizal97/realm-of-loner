@@ -1595,31 +1595,35 @@
       h('span', { class: R.wipes ? 'no' : 'ok' }, R.wipes ? `✗ Flawless lost · ${R.wipes} wipe${R.wipes === 1 ? '' : 's'}` : '✓ Flawless (no wipes)')));
     if ((R.omens || []).length) p.append(h('div', { class: 'chips', style: { margin: '4px 0' } }, h('small', { class: 'dim', style: { alignSelf: 'center' } }, 'Omens:'), ...R.omens.map((k) => omenChip(k)))); // tap one for its rule
   }
-  function tacticsBlock(p, R) {
+  // the run panel's tabs (#564): part 'plan' draws the pace and the boss plan, open (the Plan tab is where they live),
+  // part 'next' the next pull and its marks
+  function tacticsBlock(p, R, part) {
     const pace = R.pace || 'normal';
     const chip = (label, on, fn, sub) => h('button', { class: 'chip' + (on ? ' gold' : ''), onclick: () => { fn(); renderPanel(); } }, label, sub ? h('small', null, sub) : null);
     // set once, read often: Tactics and Boss plan fold to one line (closed by default) so the pull and the party stay on screen
     // the three paces side by side as facts, read from G.PACE (#38, design mindset §1: every fact, never the answer)
     const PN = { careful: 'Careful', normal: 'Normal', fast: 'Fast' }, pct = (x) => Math.round(x * 100) + '%';
     const paceFact = (k) => { const Q = G.PACE[k]; return `rests at least ${(6.5 * Q.rest).toFixed(1)} sec, then pulls once everyone has ${pct(Q.hp)} health and ${pct(Q.mana)} mana (${pct(Math.max(Q.hp, Q.bossHp))} of both before a boss) · ${Q.chain != null ? `pulls the next group too about 1 time in ${Math.round(1 / Q.chain)}` : Q.extra ? 'sometimes pulls the next group too, less with a skilled tank' : 'never pulls the next group too'}`; };
-    p.append(...foldSec('run.tactics', 'Tactics', `Pace: ${PN[pace]}`,
-      [h('div', { class: 'chips' }, chip('Careful', pace === 'careful', () => G.setPace('careful')), chip('Normal', pace === 'normal', () => G.setPace('normal')), chip('Fast', pace === 'fast', () => G.setPace('fast'))),
+    if (part === 'plan') p.append(h('div', { class: 'sec-h' }, 'Pace', h('small', null, PN[pace])),
+      ...[h('div', { class: 'chips' }, chip('Careful', pace === 'careful', () => G.setPace('careful')), chip('Normal', pace === 'normal', () => G.setPace('normal')), chip('Fast', pace === 'fast', () => G.setPace('fast'))),
         // 'row nav': no icon, so the text takes the first column (a plain .row puts it in the 34 px icon column, one word wide)
-        h('div', { class: 'list' }, ...['careful', 'normal', 'fast'].map((k) => h('div', { class: 'row nav' + (k === pace ? ' gold' : '') }, h('div', { class: 't' }, h('b', null, PN[k]), h('small', { style: { whiteSpace: 'normal' } }, paceFact(k))))))]));
+        h('div', { class: 'list' }, ...['careful', 'normal', 'fast'].map((k) => h('div', { class: 'row nav' + (k === pace ? ' gold' : '') }, h('div', { class: 't' }, h('b', null, PN[k]), h('small', { style: { whiteSpace: 'normal' } }, paceFact(k))))))]);
     const ko = R.killOrder || 'focus';
     if (false) p.append(...foldSec('run.killorder', 'Kill order', // hidden (v10.4): in the sims it changed almost nothing, and a choice that does not matter is not a choice ko === 'spread' ? 'Spread · each on a different enemy, more area attacks' : 'One at a time · everyone on the marked target',
       [h('div', { class: 'chips' }, chip('One at a time', ko === 'focus', () => G.setKillOrder('focus')), chip('Spread', ko === 'spread', () => G.setKillOrder('spread')))]));
     const pull = R.pulls[R.idx]; if (!pull) return;
+    if (part === 'plan') {
+      if (!pull.boss) return p.append(h('div', { class: 'sec-h' }, 'Boss plan', h('small', null, 'for the next boss')), h('p', { class: 'ai-note', style: { margin: 0 } }, `Next: ${pull.label}. No boss.`));
+      const bp = R.bossPlan;
+      return p.append(h('div', { class: 'sec-h' }, 'Boss plan', h('small', null, bp === 'boss' ? 'Burn the boss' : bp === 'adds' ? 'Adds first' : 'Not set: the group improvises')),
+        h('div', { class: 'chips' }, chip('Burn the boss', bp === 'boss', () => G.setBossPlan('boss')), chip('Adds first', bp === 'adds', () => G.setBossPlan('adds'))));
+    }
     const marks = (R.marks && R.marks[R.idx]) || {};
     const next = h('div', { class: 'chips' });
     const fk = (R.omens || []).find((x) => x === 'warded' || x === 'vengeful' || x === 'sheltered'), fi = fk && pull.mobs.length >= 2 ? pull.mobs.length - 1 : -1; // Tier 3 Omen focus
     pull.mobs.forEach((k, i) => next.append(h('button', { class: 'chip mark-' + (marks[i] || 'none'), onclick: () => { G.cycleMark(i); renderPanel(); } }, h('span', { class: 'mk' }, MARK_SYM[marks[i]] || '·'), D.MOBS[k].name, i === fi ? h('small', null, fk === 'warded' ? ' warden' : fk === 'sheltered' ? ' sheltered' : ' vengeance') : null)));
     p.append(h('div', { class: 'sec-h' }, 'Next: ' + pull.label, h('small', null, 'tap to mark: ☠ first, ✖ second')), next);
-    if (pull.boss) {
-      const bp = R.bossPlan;
-      p.append(...foldSec('run.bossplan', 'Boss plan', bp === 'boss' ? 'Burn the boss' : bp === 'adds' ? 'Adds first' : 'not set · the group improvises',
-        [h('div', { class: 'chips' }, chip('Burn the boss', bp === 'boss', () => G.setBossPlan('boss')), chip('Adds first', bp === 'adds', () => G.setBossPlan('adds')))]));
-    }
+    if (pull.boss) p.append(h('button', { class: 'row nav', onclick: () => { ui.runTab = 'plan'; renderPanel(); } }, h('div', { class: 't' }, h('b', null, 'Boss plan'), h('small', null, R.bossPlan === 'boss' ? 'Burn the boss' : R.bossPlan === 'adds' ? 'Adds first' : 'Not set: the group improvises')), h('div', { class: 'r' }, '›')));
   }
   // Leaving before the last boss costs the group and gives Deserter, so ask first; once the run is done, just go.
   function confirmLeaveGroup(after) {
@@ -1639,7 +1643,7 @@
     const resting = R.phase === 'rest' && !C; // between pulls the status line sits above Ready/Pull instead (#159)
     const head = [h('div', { class: 'sec-h' }, R.name, h('small', null, `Pull: ${Math.min(R.idx + (R.phase === 'done' ? 0 : 1), R.pulls.length)}/${R.pulls.length}${R.wipes ? ' · Wipes: ' + R.wipes : ''}`)), dots, resting ? null : h('div', { style: { color: 'var(--muted)', fontSize: '13px' } }, status)].filter(Boolean);
     // Pull / Ready / Leave sit right under the progress line and stay pinned there, so a 10-player raid's frames never push them off screen
-    const actions = h('div', { class: 'run-actions' }); p.append(actions);
+    const actions = h('div', { class: 'run-actions' });
     // party frames
     const pf = h('div', { class: 'pf' });
     const units = C ? C.allies : null;
@@ -1656,13 +1660,15 @@
       if (!m.me) holdCard(row, m.char);
       pf.append(row);
     });
-    if (!C && R.phase === 'rest') tacticsBlock(p, R); // the pace: decide before the pull
-    runScore(p, R); // the clock against par, then the run's name and progress (#66: the decisions and the timer first)
-    p.append(...head);
-    pf.classList.add('compact'); p.prepend(pf); // the party first: five 30 px rows at the very top, then Pull and the pace (#65)
-    if (G.healsAllies()) p.prepend(h('div', { class: 'sec-h' }, 'Party', h('small', { class: 'heal-to' }, ...healLine()))); // where heals go (#156)
+    pf.classList.add('compact');
+    // tabs (#564): the run's name, progress, the clock and Ready / Pull stay on top; Party, Next pull (Enemies in a fight)
+    // and Plan sit under them, so a raid's ten rows never push a decision out of sight
+    const done = R.phase === 'done', healer = G.healsAllies(), pull = R.pulls[R.idx];
+    const tab = done ? 'party' : ui.runTab || (C ? (healer ? 'party' : 'next') : 'next');
+    const party = [healer ? h('div', { class: 'sec-h' }, 'Party', h('small', { class: 'heal-to' }, ...healLine())) : null, pf].filter(Boolean); // where heals go (#156)
+    let list = null;
     if (C) {
-      const list = h('div', { class: 'list' });
+      list = h('div', { class: 'list' });
       for (const u of C.enemies) {
         const tgt = C.units[u.target];
         list.append(h('button', { class: 'row' + (u.dead ? ' off' : ''), onclick: () => { G.setTarget(u.uid); renderTarget(); markTargets(); } },
@@ -1672,7 +1678,6 @@
           h('div', { class: 'buffs rowbuffs', 'data-au': u.uid })));
       }
       joiningRow(C, list);
-      pf.after(h('div', { class: 'sec-h' }, 'Enemies', h('small', null, 'tap ◎ to mark kill order')), list); // mid-pull the kill order is the decision: right under the party, above the fold (#489)
     } else {
       const row = h('div', { class: 'btn-row' });
       if (R.phase === 'rest') {
@@ -1689,7 +1694,17 @@
       row.append(h('button', { class: 'btn alt', onclick: confirmLeaveGroup }, R.phase === 'done' ? 'Leave group' : 'Leave'));
       actions.append(row);
     }
-    if (!actions.childNodes.length) actions.remove();
+    p.append(...head); runScore(p, R);
+    if (actions.childNodes.length) p.append(actions);
+    if (done) return p.append(...party);
+    const tabDots = { party: !!C && tab !== 'party' && C.allies.some((u) => u.dead), plan: !C && !!pull && !!pull.boss && !R.bossPlan };
+    const tabs = h('div', { class: 'ptabs run-tabs' });
+    for (const [k, label] of [['party', 'Party'], ['next', C ? 'Enemies' : 'Next pull'], ['plan', 'Plan']])
+      tabs.append(h('button', { class: (tab === k ? 'on' : '') + (tabDots[k] ? ' dot' : ''), onclick: () => { ui.runTab = k; renderPanel(); } }, label));
+    p.append(tabs);
+    if (tab === 'party') p.append(...party);
+    else if (tab === 'next' && C) p.append(h('div', { class: 'sec-h' }, 'Enemies', h('small', null, 'tap ◎ to mark kill order')), list);
+    else tacticsBlock(p, R, tab);
   }
 
   // ============================================================ action bar
