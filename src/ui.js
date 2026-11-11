@@ -760,6 +760,9 @@
   // At most FX_MAX at once; Settings → Combat effects turns them off.
   const FX_MAX = 14, FX_COLOR = { fire: '#ff8a2a', frost: '#8fd8ff', shadow: '#b06cff', holy: '#ffe27a', nature: '#7dff5a', arcane: '#ff8ce6', physical: '#f2f2f2' };
   const fxOn = () => { try { return localStorage.getItem('azsolo.fx') !== 'off'; } catch (e) { return true; } };
+  // a phone's buzz (#562): ability presses, red bars and dragging on the bar; Settings → Buzz turns it off on this device
+  const buzzOn = () => { try { return localStorage.getItem('azsolo.buzz') !== 'off'; } catch (e) { return true; } };
+  const buzz = (p) => { if (!buzzOn()) return; try { navigator.vibrate && navigator.vibrate(p); } catch (e) { } };
   const BOSS_FX = { slam: 'crack', hogger: 'crack', whirl: 'sweep', molten: 'splash', shadow_bolt: 'splash', firebolt: 'bolt' };
   function fxAt(uid, yf) {
     const el = ui.spriteEls[uid], sc = els.scene; if (!el || !sc) return null;
@@ -875,7 +878,7 @@
       // bosses (v10.8): a low gong before a special or a call for help, a roar when they frenzy
       if (S_ && e.type === 'emote' && C.units[e.uid] && C.units[e.uid].boss && C.units[e.uid].side === 'enemy') S_.play('warn', { gap: 1.2, vol: 0.7 });
       if (S_ && e.type === 'fx' && e.kind === 'enrage') S_.play('enrage', { gap: 1, vol: 0.8 });
-      if (e.type === 'tele' && e.what === 'start' && G.pUnit && E.teleFor(C, G.pUnit).some((x) => x.m.uid === e.src)) { const mine = E.teleFor(C, G.pUnit).find((x) => x.m.uid === e.src); if (S_) S_.play('warn', { gap: 0.5, vol: 1 }); teleCard(mine.ans); } // a red bar you can answer (#179)
+      if (e.type === 'tele' && e.what === 'start' && G.pUnit && E.teleFor(C, G.pUnit).some((x) => x.m.uid === e.src)) { const mine = E.teleFor(C, G.pUnit).find((x) => x.m.uid === e.src); if (S_) S_.play('warn', { gap: 0.5, vol: 1 }); buzz([35, 70, 35]); teleCard(mine.ans); } // a red bar you can answer (#179); a double buzz (#562)
       if (e.type === 'tele' && e.what === 'dodge' && tgt && tgt.kind === 'player') fct(e.tgt, 'Avoided', 'small');
       if (e.type === 'tele' && e.what === 'cut') fct(e.src, 'Interrupted', 'small');
       if (e.type === 'countdown') toast(`${e.name}: ${Math.round(e.until - C.t)} sec to kill her`); // Longnight's midnight
@@ -1752,7 +1755,7 @@
               ghost = t.cloneNode(true); ghost.className = 'ab ab-ghost'; ghost.style.width = r.width + 'px'; ghost.style.height = r.height + 'px';
               document.body.append(ghost); t.classList.add('dragging'); grid.classList.add('drag-on');
               // feel it lift: a short buzz on phones that have one, and the click sound
-              try { navigator.vibrate && navigator.vibrate(12); } catch (x) { }
+              buzz(12);
               if (window.SND) window.SND.play('click', { vol: 0.5 });
             }
             ghost.style.left = ev.clientX + 'px'; ghost.style.top = ev.clientY + 'px';
@@ -1762,14 +1765,14 @@
             const was = over;
             over = tgt && tgt !== t ? tgt : null; if (over) over.classList.add('drop');
             ghost.classList.toggle('over', !!over);
-            if (over && over !== was) try { navigator.vibrate && navigator.vibrate(6); } catch (x) { }
+            if (over && over !== was) buzz(6);
           };
           const up = () => {
             window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up);
             if (!ghost) return;
             ghost.remove(); t.classList.remove('dragging'); grid.classList.remove('drag-on'); dragged = true; setTimeout(() => { dragged = false; }, 0);
             if (!over) return;
-            try { navigator.vibrate && navigator.vibrate(20); } catch (x) { }
+            buzz(20);
             if (window.SND) window.SND.play('click', { vol: 0.7 });
             const n = shown.slice(); n.splice(+over.dataset.i, 0, n.splice(i, 1)[0]); P.barOrder = n.concat(hidden); changed();
           };
@@ -1882,6 +1885,7 @@
   const PULL_GRACE = 1200;
   function pressAbility(id) {
     const S = G.S, P = S.player;
+    buzz(12); // feel the press without looking (#562)
     const blocked = G.barBlock(id); if (blocked) return toast(blocked); // on the road or dead: say why (#167)
     if (id === 'eat') return G.consume('food');
     if (id === 'drink') return G.consume('drink');
@@ -4234,6 +4238,9 @@
         { const on = fxOn(); b.append(...foldSec('set.fx', 'Combat effects', on ? 'On' : 'Off', [h('div', { class: 'btn-row' },
           h('button', { class: 'btn alt', onclick: () => { try { localStorage.setItem('azsolo.fx', on ? 'off' : 'on'); } catch (e) { } ui.sheetFn(); } }, 'Combat effects: ' + (on ? 'On' : 'Off'))),
           h('p', { class: 'ai-note', style: { margin: 0 } }, 'Slashes, spells, heals and boss attacks drawn over the fight. Damage numbers always show.')])); }
+        { const on = buzzOn(); b.append(...foldSec('set.buzz', 'Buzz', on ? 'On' : 'Off', [h('div', { class: 'btn-row' },
+          h('button', { class: 'btn alt', onclick: () => { try { localStorage.setItem('azsolo.buzz', on ? 'off' : 'on'); } catch (e) { } if (!on) buzz(30); ui.sheetFn(); } }, 'Buzz: ' + (on ? 'On' : 'Off'))),
+          h('p', { class: 'ai-note', style: { margin: 0 } }, 'Phones only. A short buzz on each ability, a double buzz for a red bar.')])); }
         { const off = !!lwPrefs().off; b.append(...foldSec('set.evl', 'This week button', off ? 'Hidden' : 'Shown', [h('div', { class: 'btn-row' },
           h('button', { class: 'btn alt', onclick: () => { const p = lwPrefs(); p.off = !off; lwSavePrefs(p); evLantern(); ui.sheetFn(); } }, 'This week button: ' + (off ? 'Hidden' : 'Shown'))),
           h('p', { class: 'ai-note', style: { margin: 0 } }, 'A button floats over every screen and opens This week: what\'s on and what to do. During a festival it\'s the festival\'s lantern. Drag it to move it. This week stays in Hero → Journey either way.')])); }
