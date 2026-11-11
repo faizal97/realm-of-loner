@@ -1723,7 +1723,7 @@
   function barSlots(inFight = !!G.fight) { // inFight: the bar as it is in a fight or out of one (keys, #561)
     const P = G.S.player, r = G.racial();
     const pot = P.bags.some((b) => b.item.slot === 'potion');
-    const base = barArrange(barPool()).filter((id) => id !== 'potion' || pot);
+    const base = barArrange(barPool()); /* the Potion keeps its slot at 0 potions, so no key moves (#591) */
     const peaceOnly = (id) => id === 'eat' || id === 'drink' || !!(D.ABILITIES[id] && D.ABILITIES[id].instrument); // instruments change only outside a fight
     const fightOnly = (id) => id === 'step_back' || id === 'taunt' || id === r || !!(D.ABILITIES[id] && D.ABILITIES[id].combatOnly);
     const po = base.filter(peaceOnly), slots = [];
@@ -1734,6 +1734,7 @@
       else slots.push(id);
     }
     for (; k < po.length; k++) slots.push(inFight ? null : po[k]); // more of them than fight-only slots (one hid Step Back): at the end, either way (#261: k counts fight-only slots in a fight too, so a fight adds no empty ones)
+    if (!pot && slots[slots.length - 1] === 'potion') slots.pop(); // no potions and last on the bar: hiding it moves no key (#591)
     return slots;
   }
   // the player's own bar layout, per character and saved with it: P.barOrder (ids in order) and P.barHide.
@@ -2268,6 +2269,7 @@
         if (id === 'potion') {
           const lp = ((P.potionAt || 0) - now()) / 1000; if (lp > 0) { p = 1 - lp / 120; left = lp; }
           const ic = potionIcon(); if (btn.dataset.ic !== ic) { btn.dataset.ic = ic; const im = btn.querySelector('img'); if (im) im.src = art('icon', ic); } // follows your health in a fight
+          nores = !P.bags.some((b) => b.item.slot === 'potion'); // none left: dimmed, showing 0 (#591)
         }
         else if (C && G.pUnit && id !== 'eat' && id !== 'drink') {
           const u = G.pUnit, ab = D.ABILITIES[id];
