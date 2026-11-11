@@ -191,7 +191,13 @@
     for (const k of GROW) { const v = grow(a[k], b[k]); if (v === undefined) delete m[k]; else m[k] = v; }
     return m;
   };
-  const markOf = (x) => JSON.stringify([+x.marks || 0, mkOf(x), x.friends || null, GROW.map((k) => x[k] === undefined ? null : x[k])].concat(LISTS.map((k) => (x[k] || []).slice().sort()), [Object.keys(x.trophies || {}).sort().map((k) => k + '@' + (+x.trophies[k].at || 0))], [x.bank ? AB().merge(x.bank, null) : null]));
+  // lists sorted and keys in order, so two files that only differ in order compare equal and nothing uploads (#588)
+  const canon = (v) => {
+    if (Array.isArray(v)) return v.map(canon).map((y) => [JSON.stringify(y), y]).sort((p, q) => (p[0] < q[0] ? -1 : p[0] > q[0] ? 1 : 0)).map((p) => p[1]);
+    if (v && typeof v === 'object') { const o = {}; for (const k of Object.keys(v).sort()) o[k] = canon(v[k]); return o; }
+    return v;
+  };
+  const markOf = (x) => JSON.stringify([+x.marks || 0, canon(mkOf(x)), x.friends || null, GROW.map((k) => x[k] === undefined ? null : canon(x[k]))].concat(LISTS.map((k) => (x[k] || []).slice().sort()), [Object.keys(x.trophies || {}).sort().map((k) => k + '@' + (+x.trophies[k].at || 0))], [x.bank ? AB().merge(x.bank, null) : null]));
   const same = (x, y) => markOf(x) === markOf(y);
   const readList = (key, field) => { try { const v = JSON.parse(localStorage.getItem(key) || 'null'); return (field ? v && v[field] : v) || []; } catch (e) { return []; } };
   // everything the account file holds, as this device has it
