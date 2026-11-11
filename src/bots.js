@@ -547,6 +547,17 @@
     (c) => `${c.mobName}s everywhere`, () => 'finally, the last one', () => 'omg that crit', () => 'who pulled that lol', () => 'sorry, tagged it by accident',
     (c) => `anyone else doing ${c.zone} quests? so many`, () => 'oom, sitting', () => 'love this spot', () => 'run!!', (c) => `heading back to ${c.town} after this`,
   ];
+  // #580: a raiding, Trials or PvP guild talks about what it does too (the guild channel was the most repeated after #565)
+  const GUILD_STYLE_LINES = {
+    raiding: ['raid night is the best night', 'our healers carried last night', 'that wipe on the last boss was on me, sorry', 'great kills last night everyone', 'loot went to the right people for once', 'reading the boss plan again before tonight', 'repair bill after raid is brutal', 'one more Hard kill and we hit our goal', 'the tanks were on point yesterday', 'so close on that last pull', 'never standing in fire again', 'gz on the raid drops',
+      'my wrists finally dropped', 'that boss is on farm now', 'the breath timing makes sense now', 'we moved up on the realm ranking', 'first clean kill of the night felt amazing', 'still dreaming about that loot', 'the slam answers were perfect yesterday', 'healers, you were heroes last night', 'my mana was empty at 10%, close one', 'learned more in that wipe than in ten kills', 'new personal best on damage', 'the Hard version is no joke'],
+    trials: ['beat par by 4 seconds lol', 'the omens this week are rough', 'new best Trial last night!', 'clean pulls today', 'that skip saved us 20 seconds', 'the clock is the real boss', 'we climbed on the realm board', 'my interrupts were on fire', 'missed par by one second, pain', 'gg on that run', 'pushing feels so good when it works', 'every second counts'],
+    dungeons: ['that dungeon run was smooth', 'the last boss in there is mean', 'our healer never let anyone drop', 'finally got the drop i wanted', 'fastest run we ever had', 'that trash pack nearly got us', 'pulled two packs by accident, oops', 'dungeon blues are looking good', 'speed bonus again!', 'love a good group'],
+    leveling: ['two more levels tonight', 'quests in this zone are long', 'finally out of the starter zones', 'rested xp is the best', 'the new zone looks great', 'leveling an alt again', 'that elite quest took forever', 'almost at my mount level', 'new spell feels so good', 'the road between towns is dangerous'],
+    casual: ['just chilling tonight', 'fishing by the lake again', 'anyone else love the music in this zone', 'took a break and came back to full bags', 'nice weather in the game today', 'my cat walked on the keyboard', 'playing slow today', 'tea and questing', 'the sunset here is pretty', 'this guild is so relaxed'],
+    social: ['hi everyone', 'how was your day', 'good to see you all', 'chat is lively today', 'i missed this guild', 'you lot make my day', 'best people on the realm', 'happy weekend everyone', 'thanks for the welcome', 'love the vibes in here'],
+    pvp: ['honor grind continues', 'we got farmed in the last one', 'nice cap earlier!', 'their rogue camped me for 5 min', 'rank up incoming', 'gg, that was close', 'their healer would not die', 'stamina gear is worth it', 'that comeback was insane', 'my bags are full of honor stuff', 'the other side is stacked tonight', 'won three in a row'],
+  };
   const GUILD = [
     () => 'evening all', () => 'morning guild', () => 'grats on the ding!', () => 'guild bank when', (c) => (B.dingedLately(c.me) ? `finally ${c.me.level}!` : null), /* no goodbye from someone who stays online (#499) */
     () => 'that last run was fun', (c) => `who's in ${c.zone}? just got here`, () => 'love this guild', () => 'gz on the drop earlier',
@@ -571,6 +582,10 @@
     () => 'lol sorry, meant that for someone else',
     () => 'gl out there!',
     () => 'ur name is so good',
+    // #580: a bigger pool (9 lines for about 1,270 whispers a week); nothing that claims a shared past or asks for anything
+    () => 'that armor looks great on u', () => 'love the look', () => 'hi! just saying hello', () => 'have a good one',
+    () => 'stay safe out there', () => 'oops typed in the wrong chat', () => 'happy hunting', () => 'ur style is great lol',
+    () => 'cool colours on that set', () => 'love the name honestly',
   ];
 
   // ---- #73: a person's voice. Each bot has its own habits, drawn once from its id (no dice): a word it starts lines
@@ -928,7 +943,7 @@
     }
     if (S.player.guild != null && S.player.guild >= 0 && due('guild', 60, 140, GUILD.length)) {
       const mates = S.bots.filter((b) => b.guild === S.player.guild && B.isOnline(b, date));
-      if (mates.length) { const b = cpick(mates), text = line(b, 'guild', [keyed('gu', GUILD), B.hasStory(b) ? keyed('hs', HIST) : []]); if (text) B.thread(S, b, 'guild', text, now, date); } // #73
+      if (mates.length) { const b = cpick(mates), st = root.SOC && SOC.guildStyle ? SOC.guildStyle(S.player.guild) : null, text = line(b, 'guild', [keyed('gu', GUILD), B.hasStory(b) ? keyed('hs', HIST) : [], keyed('gs' + st, (GUILD_STYLE_LINES[st] || []).map((t) => () => t))]); if (text) B.thread(S, b, 'guild', text, now, date); } // #73
     }
     if (due('whisper', 400, 960)) line(onl(), 'whisper', [keyed('wh', WHISPER)]); // #73: in their own voice too (a gold seller's ad keeps its words, B.voiced)
   };
