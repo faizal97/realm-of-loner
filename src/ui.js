@@ -1953,7 +1953,7 @@
   function keyLabel(e) {
     const c = e.code, base = c === 'Space' ? 'Spc' : /^Digit\d$/.test(c) ? c.slice(5) : /^Key[A-Z]$/.test(c) ? c.slice(3) : /^Numpad\d$/.test(c) ? 'N' + c.slice(6) : /^F\d+$/.test(c) ? c
       : (e.key && e.key.trim().length === 1 ? e.key.toUpperCase() : c.replace(/^(Arrow|Numpad)/, '').slice(0, 3));
-    return (e.shiftKey ? 'S' : '') + base;
+    return (e.shiftKey ? 'S' : '') + (base || '?'); /* never blank (#591) */
   }
   const slotKey = (i) => { const b = keyBinds()[i]; return b ? b.l : ''; };
   let keyCapture = null; // { slot, name }: the slot Arrange is waiting on a key for, and the ability it was set from
@@ -1967,6 +1967,7 @@
       const binds = keyBinds();
       if (e.code === 'Backspace' || e.code === 'Delete') { delete binds[slot]; setKeyBinds(binds); keyCapture = null; toast(`${name}: no key.`); renderBar(); return ui.sheetFn && ui.sheetFn(); }
       if (KEY_NO.has(e.code)) return;
+      if (!e.code) return toast("Can't use that key."); // a key the browser can't name: it would bind every such key (#591)
       const code = keyCode(e), label = keyLabel(e);
       const was = Object.keys(binds).find((k) => binds[k].c === code && +k !== slot);
       if (was != null) delete binds[was];
@@ -1975,7 +1976,7 @@
       toast(was != null ? `Key ${label} moved to ${name}.` : `${name}: key ${label}.`); renderBar(); return ui.sheetFn && ui.sheetFn();
     }
     if (e.repeat || !G.S || !G.S.player || ui.dialog || ui.sheet || G.paused || (window.CS && CS.playing)) return;
-    if (!els.bar || !els.bar.isConnected) return;
+    if (!els.bar || !els.bar.isConnected || !e.code) return; /* a key with no code never fires a slot (#591) */
     const code = keyCode(e), binds = keyBinds(), slot = Object.keys(binds).find((k) => binds[k].c === code);
     if (slot == null) return;
     const id = barSlots()[+slot]; if (!id) return;

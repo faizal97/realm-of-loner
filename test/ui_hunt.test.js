@@ -78,6 +78,32 @@ test('a key wait left when Arrange closes is dropped: the next key fires the bar
   assert.strictEqual(w.api.keyBinds()[0].c, 'Digit1', 'Q was not bound');
 });
 
+// a key the browser can't name (code '' and key 'Unidentified': some Bluetooth keyboards, remotes, IME keys) was bound
+// with a blank label, and from then on every such key fired that slot (#591)
+test('Set key refuses a key with no code, says so, and keeps waiting', () => {
+  const w = keyWorld({ ui: { sheet: 'bareditor' } });
+  w.api.capture({ slot: 0, name: 'Heroic Strike' });
+  w.ev('', { key: 'Unidentified' });
+  assert.deepStrictEqual(w.api.keyBinds()[0], { c: 'Digit1', l: '1' });
+  assert.match(w.toasts.pop(), /Can't use that key/);
+  assert.ok(w.api.waiting(), 'still waiting for a key');
+  w.ev('KeyQ');
+  assert.deepStrictEqual(w.api.keyBinds()[0], { c: 'KeyQ', l: 'Q' });
+});
+
+test('a key with no code never fires a slot, even one bound to it before', () => {
+  const w = keyWorld();
+  w.store.set('azsolo.keybinds', JSON.stringify({ 0: { c: '', l: '' } }));
+  w.ev('', { key: 'Unidentified' });
+  assert.deepStrictEqual(w.pressed, []);
+});
+
+test('a key label is never blank', () => {
+  const { keyLabel } = keyWorld().api;
+  for (const e of [{ code: '', key: 'Unidentified' }, { code: '', key: 'Unidentified', shiftKey: true }, { code: 'Lang1', key: 'HangulMode' }, { code: 'Space', key: ' ' }, { code: 'Quote', key: 'Dead' }])
+    assert.ok(keyLabel(e).replace(/^S/, '').trim().length > 0, `${JSON.stringify(e)} -> '${keyLabel(e)}'`);
+});
+
 // ---------- the bar's slots: a bind belongs to a slot index, so what sits under an index must not move on its own
 function barSlotsWith(base, { fight = false, potion = true } = {}) {
   const fn = cut('  function barSlots(', '  // the player\'s own bar layout');
