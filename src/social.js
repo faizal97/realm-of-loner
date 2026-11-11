@@ -50,7 +50,7 @@
   SOC.myGuilds = () => B.GUILDS.map((_, g) => g).filter((g) => B.GUILD_FACTION[g] === G.myFaction()).map(SOC.guildInfo).sort((a, b) => SOC.guildFit(a, G.S.player.level) - SOC.guildFit(b, G.S.player.level) || a.g - b.g);
   // the message of the day changes daily
   SOC.motd = function (g) {
-    const day = Math.floor(now() / 86400000), info = SOC.guildInfo(g);
+    const day = G.dayNum(new Date(now())), info = SOC.guildInfo(g); // the local day, as the boards turn (#592)
     const lines = { casual: ['Be nice, help the new folks.', 'Remember to take breaks :)', 'Guild night on Friday, all welcome!', 'Ask in guild chat, someone always knows.'],
       leveling: ['Low dungeon runs every evening, ask in guild.', 'Share your quest drops, someone needs them.', 'Level 20? Smugglers\' Deep and The Dreaming Caves runs this week.', 'Help a guildie, earn standing.'],
       dungeons: ['Tank and healer spots always open.', 'This week: full clears only, no speedruns.', 'Sign up for guild nights in guild chat.', 'Bring potions to guild runs.'],

@@ -4271,6 +4271,7 @@
   G.RAID_START = '2026-09-28'; G.FEATURED_MARKS = 30;
   const mondayOf = (d) => { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - (x.getDay() + 6) % 7); return x; };
   const dayNum = (x) => Math.round(new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime() / 86400000);
+  G.dayNum = dayNum; // the local day as a number, for chat's daily things (#592)
   const sinceDay = (str) => { const [y, m, d] = str.split('-').map(Number); return dayNum(new Date(y, m - 1, d)); };
   G.raidActs = () => Object.keys(D.ACTIVITIES).filter((k) => { const A = D.ACTIVITIES[k], Dg = A.dungeon && D.DUNGEONS[A.dungeon]; return Dg && Dg.raid && !A.needQuest; });
   G.featuredRaid = function (date) {
