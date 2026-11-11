@@ -57,7 +57,7 @@
   H('tc_deepmother_h', { name: 'The Deepmother', lvl: 60, giver: 'hexxer_mazu', turnin: 'hexxer_mazu', dungeon: 'tidecrown_citadel', pre: ['tc_crown_h'], text: "Shal'zua's spirit is not free. The thing under the citadel ate her. Mazu wants its heart.",
     objs: [{ type: 'collect', item: 'deepmother_heart', n: 1 }], reward: { choice: ['fam_back_rare60'] } });
   Object.assign(D.DUNGEONS, {
-    tidecrown_citadel: { name: 'The Tidecrown Citadel', raid: true, music: 'tidecrown', minLvl: 60, par: 506, trialPar: 660, size: 10, trashMult: { hp: 4.4, dmg: 5.06 }, bossMult: { hp: 22, dmg: 14.49 }, trial: { trashMult: { hp: 4.4, dmg: 2.6 }, bossMult: { hp: 22, dmg: 7.4 } }, pulls: [ // Normal and Hard damage raised (#215: sim/difficulty.js, a fitted player wipes in 20-35% of runs); Trials keep the numbers they were tuned on
+    tidecrown_citadel: { name: 'The Tidecrown Citadel', raid: true, music: 'tidecrown', minLvl: 60, par: 506, trialPar: 660, size: 10, trashMult: { hp: 7.92, dmg: 5.06 }, bossMult: { hp: 39.6, dmg: 14.49 }, /* health x1.8: bots wear gear for their level (#582) */ trial: { trashMult: { hp: 4.4, dmg: 2.6 }, bossMult: { hp: 22, dmg: 7.4 } }, pulls: [ // Normal and Hard damage raised (#215: sim/difficulty.js, a fitted player wipes in 20-35% of runs); Trials keep the numbers they were tuned on
       { scene: 'citadel_court', label: 'The drowned courtyard', mobs: ['tidecrown_guard', 'tidecrown_guard', 'tidecrown_tidecaller'] },
       { scene: 'citadel_court', label: 'Commander Serathis', mobs: ['commander_serathis'], boss: true },
       { scene: 'citadel_court', label: 'The Hall of Tides', mobs: ['tidecrown_tidecaller', 'tidecrown_guard', 'abyssal_spawn'] },
@@ -69,7 +69,7 @@
       { scene: 'citadel_abyss', label: "Nal'veshra the Deepmother", mobs: ['nalveshra'], boss: true },
     ],
     // Hard (v10.7): opens after a Normal clear; stronger enemies (tuned by sim/hardraid.js) and one extra mechanic per boss
-    hard: { trashMult: { hp: 4.8, dmg: 5.16 }, bossMult: { hp: 24.2, dmg: 14.78 }, extra: {
+    hard: { trashMult: { hp: 9.94, dmg: 5.16 }, bossMult: { hp: 50.09, dmg: 14.78 }, /* health x1.8, then x1.15 for Hard (#582) */ extra: {
       commander_serathis: [{ kind: 'hit', tele: true, miss: 4, name: 'Courtyard Wave', every: 14, mult: 0.45, who: 'all', school: 'frost', text: 'Serathis raises a wave over the courtyard!' }],
       tide_twin_myrel: [{ kind: 'heal', tele: true, miss: 2.5, name: 'Rising Tide', every: 18, heal: 0.03, text: 'The rising tide gathers around Myrel!' }],
       tide_twin_sorin: [{ kind: 'enrage', at: 0.3, mult: 1.3, text: 'Sorin fights harder as the tide falls!' }],
