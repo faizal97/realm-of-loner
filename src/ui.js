@@ -1694,7 +1694,7 @@
   // in the player's order), the same as before. Out of a fight, Eat and Drink take the first fight-only slots (Step Back,
   // Taunt, the racial, combat-only abilities) and the other fight-only slots stay empty, so every other button keeps its
   // place and the bar keeps its rows. null is an empty slot.
-  function barSlots() {
+  function barSlots(inFight = !!G.fight) { // inFight: the bar as it is in a fight or out of one (keys, #561)
     const P = G.S.player, r = G.racial();
     const pot = P.bags.some((b) => b.item.slot === 'potion');
     const base = barArrange(barPool()).filter((id) => id !== 'potion' || pot);
@@ -1704,10 +1704,10 @@
     let k = 0;
     for (const id of base) {
       if (peaceOnly(id)) continue;
-      if (fightOnly(id)) slots.push(G.fight ? (id === r && G.pUnit && G.pUnit.form ? null : id) : po[k] || null), k++; // the racial waits out a form
+      if (fightOnly(id)) slots.push(inFight ? (id === r && G.pUnit && G.pUnit.form ? null : id) : po[k] || null), k++; // the racial waits out a form
       else slots.push(id);
     }
-    for (; k < po.length; k++) slots.push(G.fight ? null : po[k]); // more of them than fight-only slots (one hid Step Back): at the end, either way (#261: k counts fight-only slots in a fight too, so a fight adds no empty ones)
+    for (; k < po.length; k++) slots.push(inFight ? null : po[k]); // more of them than fight-only slots (one hid Step Back): at the end, either way (#261: k counts fight-only slots in a fight too, so a fight adds no empty ones)
     return slots;
   }
   // the player's own bar layout, per character and saved with it: P.barOrder (ids in order) and P.barHide.
@@ -1727,9 +1727,12 @@
       const P = G.S.player, r = G.racial();
       const pool = barPool(), shown = barArrange(pool), hidden = pool.filter((id) => (P.barHide || []).includes(id));
       if (pick != null && pick >= shown.length) pick = null;
-      const changed = () => { pick = null; G.save(); renderBar(); ui.sheetFn(); };
+      const changed = () => { pick = null; keyCapture = null; G.save(); renderBar(); ui.sheetFn(); };
+      // keys (#561): shown, and settable, once a key was used or on a device with a mouse
+      const fb = barSlots(true), pb = barSlots(false), slotOf = (id) => (fb.includes(id) ? fb.indexOf(id) : pb.indexOf(id)), keysOn = keysShown() || (window.matchMedia && matchMedia('(pointer: fine)').matches);
       const tile = (id, fn, cls) => h('button', { class: 'ab' + (cls || ''), 'aria-label': D.ABILITIES[barAb(id)].name, onclick: fn }, img(barIcon(id)),
-        D.ABILITIES[id].combatOnly || id === 'taunt' || id === r ? h('span', { class: 'ab-tag' }, '⚔') : null);
+        D.ABILITIES[id].combatOnly || id === 'taunt' || id === r ? h('span', { class: 'ab-tag' }, '⚔') : null,
+        keysOn && slotKey(slotOf(id)) ? h('span', { class: 'ab-key' }, slotKey(slotOf(id))) : null);
       const grid = h('div', { class: 'actionbar bar-edit', style: { gridTemplateColumns: 'repeat(7, 1fr)' } });
       let dragged = false;
       shown.forEach((id, i) => {
@@ -1775,9 +1778,15 @@
         grid.append(t);
       });
       b.append(grid);
-      if (pick != null) {
+      if (pick != null && keyCapture != null) {
+        b.append(h('p', { class: 'ai-note', style: { margin: 0 } }, `Press a key for ${D.ABILITIES[barAb(shown[pick])].name}.`), h('small', { class: 'muted' }, 'Esc: cancel · Backspace: no key'),
+          h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', onclick: () => { keyCapture = null; ui.sheetFn(); } }, 'Cancel')));
+      } else if (pick != null) {
+        const slot = slotOf(shown[pick]);
         b.append(h('p', { class: 'ai-note', style: { margin: 0 } }, `${D.ABILITIES[shown[pick]].name}: tap another button to swap places, or hide it.`),
-          shown.length > 1 ? h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', onclick: () => { P.barOrder = shown.concat(hidden); P.barHide = (P.barHide || []).concat(shown[pick]); changed(); } }, 'Hide it'), h('button', { class: 'btn alt', onclick: () => { pick = null; ui.sheetFn(); } }, 'Cancel')) : null);
+          h('div', { class: 'btn-row' }, keysOn && slot >= 0 ? h('button', { class: 'btn alt', onclick: () => { keyCapture = { slot, name: D.ABILITIES[barAb(shown[pick])].name }; ui.sheetFn(); } }, 'Set key') : null,
+            shown.length > 1 ? h('button', { class: 'btn alt', onclick: () => { P.barOrder = shown.concat(hidden); P.barHide = (P.barHide || []).concat(shown[pick]); changed(); } }, 'Hide it') : null,
+            h('button', { class: 'btn alt', onclick: () => { pick = null; ui.sheetFn(); } }, 'Cancel')));
       } else b.append(h('p', { class: 'ai-note', style: { margin: 0 } }, 'The first row stays when the bar is folded. ⚔ shows in combat; Eat and Drink out of it.'));
       if (hidden.length) {
         const hg = h('div', { class: 'actionbar bar-edit', style: { gridTemplateColumns: 'repeat(7, 1fr)' } });
@@ -1785,6 +1794,7 @@
         b.append(h('div', { class: 'sec-h' }, 'Hidden', h('small', null, 'tap to put it back')), hg);
       }
       if (P.barOrder || P.barHide) b.append(h('button', { class: 'btn alt wide', onclick: () => { delete P.barOrder; delete P.barHide; changed(); } }, 'Reset to default'));
+      if (keysOn && keysCustom()) b.append(h('button', { class: 'btn alt wide', onclick: () => { try { localStorage.removeItem(KEYS_KEY); } catch (e) { } toast('Keys: 1–9.'); changed(); } }, 'Reset keys'));
     });
   }
   function renderBar() {
@@ -1813,6 +1823,7 @@
       if (!id) { const e = h('div', { class: 'ab empty' }); let t = null; e.addEventListener('pointerdown', () => { t = setTimeout(() => abilityTip(null), 450); }); e.addEventListener('pointerup', () => clearTimeout(t)); e.addEventListener('pointerleave', () => clearTimeout(t)); bar.append(e); continue; }
       const ab = D.ABILITIES[id];
       const btn = h('button', { class: 'ab', 'aria-label': D.ABILITIES[barAb(id)].name }, img(barIcon(id)), h('div', { class: 'cd' }), h('div', { class: 'cdt tnum' }));
+      if (keysShown() && slotKey(i)) btn.append(h('span', { class: 'ab-key' }, slotKey(i))); // its key, once a key was used (#561)
       if (ab.song) btn.append(h('div', { class: 'song' }, h('i', { class: 'beatz' }), h('i', { class: 'str' })), h('div', { class: 'verses' })); // a bard's song (#252)
       if (id === 'eat' || id === 'drink' || id === 'potion') {
         const n = G.S.player.bags.filter((b) => b.item.slot === (id === 'eat' ? 'food' : id === 'potion' ? 'potion' : 'drink')).reduce((a, b) => a + b.n, 0);
@@ -1895,6 +1906,52 @@
     const why = G.castOutOfCombat(id);
     if (why) toast(why); else toast(ab.name, true);
   }
+  // ---------- keybinds (#561): keys fire action bar slots, on this device. A bind belongs to a slot, not an ability, so
+  // Arrange moves abilities under fixed keys. Default 1-9 for the first nine slots; a player's own binds replace them.
+  // A bind is a key's code ('Digit1', 'KeyQ'), with 'Shift+' in front for a shifted key; labels show once a key was used.
+  const KEYS_KEY = 'azsolo.keybinds', KEYS_USED = 'azsolo.keysUsed', KEY_NO = new Set(['Escape', 'Enter', 'NumpadEnter', 'Tab', 'Backspace', 'Delete', 'ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight', 'AltLeft', 'AltRight', 'MetaLeft', 'MetaRight', 'CapsLock', 'ContextMenu']);
+  const keyDefaults = () => Object.fromEntries(Array.from({ length: 9 }, (_, i) => [i, { c: 'Digit' + (i + 1), l: String(i + 1) }]));
+  function keyBinds() { try { const v = JSON.parse(localStorage.getItem(KEYS_KEY) || 'null'); if (v && typeof v === 'object') return v; } catch (e) { } return keyDefaults(); }
+  function setKeyBinds(v) { try { localStorage.setItem(KEYS_KEY, JSON.stringify(v)); } catch (e) { } }
+  const keysCustom = () => { try { return !!localStorage.getItem(KEYS_KEY); } catch (e) { return false; } };
+  const keysShown = () => { try { return localStorage.getItem(KEYS_USED) === '1'; } catch (e) { return false; } };
+  const keyCode = (e) => (e.shiftKey && !/^Shift/.test(e.code) ? 'Shift+' : '') + e.code;
+  function keyLabel(e) {
+    const c = e.code, base = /^Digit\d$/.test(c) ? c.slice(5) : /^Key[A-Z]$/.test(c) ? c.slice(3) : /^Numpad\d$/.test(c) ? 'N' + c.slice(6) : /^F\d+$/.test(c) ? c
+      : (e.key && e.key.length === 1 ? e.key.toUpperCase() : c.replace(/^(Arrow|Numpad)/, '').slice(0, 3));
+    return (e.shiftKey ? 'S' : '') + base;
+  }
+  const slotKey = (i) => { const b = keyBinds()[i]; return b ? b.l : ''; };
+  let keyCapture = null; // { slot, name }: the slot Arrange is waiting on a key for, and the ability it was set from
+  function onKey(e) {
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    const t = e.target; if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+    if (keyCapture != null && ui.sheet !== 'bareditor') keyCapture = null; // the sheet closed while it waited
+    if (keyCapture != null) {
+      e.preventDefault(); const { slot, name } = keyCapture;
+      if (e.code === 'Escape') { keyCapture = null; return ui.sheetFn && ui.sheetFn(); }
+      const binds = keyBinds();
+      if (e.code === 'Backspace' || e.code === 'Delete') { delete binds[slot]; setKeyBinds(binds); keyCapture = null; toast(`${name}: no key.`); renderBar(); return ui.sheetFn && ui.sheetFn(); }
+      if (KEY_NO.has(e.code)) return;
+      const code = keyCode(e), label = keyLabel(e);
+      const was = Object.keys(binds).find((k) => binds[k].c === code && +k !== slot);
+      if (was != null) delete binds[was];
+      binds[slot] = { c: code, l: label }; setKeyBinds(binds); keyCapture = null;
+      try { localStorage.setItem(KEYS_USED, '1'); } catch (x) { }
+      toast(was != null ? `Key ${label} moved to ${name}.` : `${name}: key ${label}.`); renderBar(); return ui.sheetFn && ui.sheetFn();
+    }
+    if (e.repeat || !G.S || !G.S.player || ui.dialog || ui.sheet || G.paused || (window.CS && CS.playing)) return;
+    if (!els.bar || !els.bar.isConnected) return;
+    const code = keyCode(e), binds = keyBinds(), slot = Object.keys(binds).find((k) => binds[k].c === code);
+    if (slot == null) return;
+    const id = barSlots()[+slot]; if (!id) return;
+    e.preventDefault();
+    let first = false; try { first = localStorage.getItem(KEYS_USED) !== '1'; localStorage.setItem(KEYS_USED, '1'); } catch (x) { }
+    if (first) renderBar();
+    pressAbility(id);
+    const btn = els.abs[id]; if (btn) { btn.classList.add('pressed'); setTimeout(() => btn.classList.remove('pressed'), 120); }
+  }
+  document.addEventListener('keydown', onKey);
   function abilityText(id) {
     const ab = D.ABILITIES[id], P = G.S.player, L = P.level;
     const st = G.stats();

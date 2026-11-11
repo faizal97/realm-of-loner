@@ -47,7 +47,7 @@ function ART_ICON_KEYS() {
 // slots; a fight added one empty slot for each of them as well, a row of empty buttons once there were three (#261)
 test('a fight adds no empty slots to the bar when the out-of-fight buttons fit in fight-only slots', () => {
   const ui = fs.readFileSync(path.join(__dirname, '..', 'src', 'ui.js'), 'utf8');
-  const i = ui.indexOf('  function barSlots() {'), src = ui.slice(i, ui.indexOf('\n  }\n', i) + 4);
+  const i = ui.indexOf('  function barSlots('), /* barSlots(inFight) since the keybinds (#561) */ src = ui.slice(i, ui.indexOf('\n  }\n', i) + 4);
   const AB = { a: {}, b: {}, s1: { combatOnly: true }, s2: { combatOnly: true }, s3: { combatOnly: true }, play_lute: { instrument: 'lute' } };
   const slots = (fight, base) => new Function('G', 'D', 'barArrange', 'barPool', src + '; return barSlots();')(
     { S: { player: { bags: [] } }, racial: () => null, fight }, { ABILITIES: AB }, () => base, () => base);

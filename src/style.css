@@ -271,6 +271,7 @@ img { max-width: 100%; display: block; }
 @keyframes lift { from { transform: translate(-50%, -60%) scale(1) rotate(0deg); box-shadow: 0 0 0 1px #6b4d20; } }
 @media (prefers-reduced-motion: reduce) { .bar-edit.drag-on .ab[data-i] { animation: none !important; } .ab.ab-ghost { animation: none; } }
 .ab-tag { position: absolute; left: 3px; top: 1px; font: 700 14px var(--body); color: #fff; text-shadow: 0 1px 2px #000, 0 0 2px #000; pointer-events: none; }
+.ab-key { position: absolute; right: 3px; top: 1px; font: 800 11px var(--body); color: #f4e4bc; text-shadow: 0 1px 2px #000, 0 0 2px #000; pointer-events: none; line-height: 1; } /* its key (#561) */
 .bar.xpmain { height: 13px; width: 100%; display: block; padding: 0; margin-top: 2px; cursor: pointer; }
 .bar.xpmain > i.rest { opacity: .8; background: repeating-linear-gradient(135deg, #2f78e6 0 6px, #2566c8 6px 12px); }
 .bar.xpmain b { font: 700 10.5px/12px var(--body); }
