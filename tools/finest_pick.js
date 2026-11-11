@@ -23,14 +23,14 @@ for (const dk of NEW.concat(OLD)) for (const p of D.DUNGEONS[dk].pulls) for (con
 }
 // a piece the class wears as its own: the weapon and ranged rules of G.canUseItem, armour of its own type (what the
 // group's Need rolls treat as usable), or none
-const wears = (it, cls) => G.canUseItem(it, cls) && (!it.atype || it.atype === D.CLASSES[cls].armorType || it.slot === 'back');
+const wears = (it, cls, role) => G.canUseItem(it, cls) && (!it.atype || it.atype === D.CLASSES[cls].armorType || it.slot === 'back' || (role === 'healer' && G.canUseItem(it, cls))); /* a healer may wear lighter armour: level-60 mail and leather have almost no Intellect pieces (#593) */
 const score = (it, cls, role) => G.itemScore(G.upgradedCopy(it, Infinity), cls, role);
-const pool = (keys, cls) => Object.keys(from).filter((id) => { const it = D.ITEMS[id]; return it && (it.lvl || 0) >= D.LEVEL_CAP && it.q >= 3 && D.GEAR_SLOTS.includes(it.slot) && wears(it, cls) && keys.some((k) => from[id].has(k)); });
+const pool = (keys, cls, role) => Object.keys(from).filter((id) => { const it = D.ITEMS[id]; return it && (it.lvl || 0) >= D.LEVEL_CAP && it.q >= 3 && D.GEAR_SLOTS.includes(it.slot) && wears(it, cls, role) && keys.some((k) => from[id].has(k)); });
 const placeOf = (id, keys) => keys.find((k) => from[id].has(k));
 
 const out = { best: {}, until: {} }, report = [];
 for (const cls of Object.keys(D.CLASSES)) for (const role of D.CLASSES[cls].roles || [D.CLASSES[cls].role]) {
-  const key = cls + ':' + role, nw = pool(NEW, cls), old = pool(OLD, cls);
+  const key = cls + ':' + role, nw = pool(NEW, cls, role), old = pool(OLD, cls, role);
   const ranked = (ids, slot) => ids.filter((id) => D.ITEMS[id].slot === slot).map((id) => ({ id, s: score(D.ITEMS[id], cls, role) })).filter((x) => x.s > 0).sort((a, b) => b.s - a.s || (a.id < b.id ? -1 : 1));
   const best = {}, until = {}, alts = {}, fits = {};
   for (const slot of D.GEAR_SLOTS) {

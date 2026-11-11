@@ -499,7 +499,14 @@
   };
   // A role that plays differently from its class's weights (#533): a druid tank lives in Bear Form, where Strength is attack
   // power (2 each, engine.js), Stamina counts 1.25x and armor 2.8x, and the form replaces the weapon's damage.
-  const ROLE_W = { druid: { tank: { str: 2, agi: 1, sta: 1.9, int: 0.1, spi: 0.1, armor: 0.15, sp: 0, dps: 0 } } };
+  const ROLE_W = { druid: { tank: { str: 2, agi: 1, sta: 1.9, int: 0.1, spi: 0.1, armor: 0.15, sp: 0, dps: 0 } },
+    /* a plate or mail tank lives on Stamina and armour, Strength for threat; a paladin or shaman healer on Intellect,
+       Spirit and spell power, not its class's melee stats (#593: the class weights gave tank and damage, or healer and
+       tank, the same Season's Finest list and the same upgrade arrows) */
+    warrior: { tank: { str: 1.4, agi: 0.8, sta: 2.2, int: 0, spi: 0.1, armor: 0.14, sp: 0, dps: 2.5 } },
+    paladin: { tank: { str: 1.3, agi: 0.5, sta: 2.2, int: 0.7, spi: 0.3, armor: 0.14, sp: 0.6, dps: 2 },
+      healer: { str: 0.1, agi: 0.1, sta: 1, int: 1.9, spi: 1.5, armor: 0.03, sp: 1.6, dps: 0.2 } },
+    shaman: { healer: { str: 0.1, agi: 0.1, sta: 1, int: 1.9, spi: 1.5, armor: 0.03, sp: 1.6, dps: 0.2 } } };
   G.itemScore = function (it, cls, role) {
     if (!it) return 0;
     const w = (ROLE_W[cls] && ROLE_W[cls][role]) || W[cls];

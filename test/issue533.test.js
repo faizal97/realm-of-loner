@@ -30,3 +30,11 @@ test('a druid healer still weighs Intellect and Spirit', () => {
   P.equip.waist = casterBelt();
   assert.strictEqual(G.isUpgrade(tankBelt()), false);
 });
+
+test('a paladin or shaman healer weighs Intellect over Strength; a warrior tank weighs Stamina over a damage stat (#593)', () => {
+  const caster = { slot: 'chest', stats: { int: 20, spi: 10 } }, melee = { slot: 'chest', stats: { str: 20, agi: 10 } };
+  for (const cls of ['paladin', 'shaman']) assert.ok(G.itemScore(caster, cls, 'healer') > G.itemScore(melee, cls, 'healer'), cls + ' healer');
+  const tanky = { slot: 'chest', stats: { sta: 25, str: 10 } }, dmg = { slot: 'chest', stats: { str: 25, agi: 10 } };
+  assert.ok(G.itemScore(tanky, 'warrior', 'tank') > G.itemScore(dmg, 'warrior', 'tank'), 'warrior tank');
+  assert.ok(G.itemScore(dmg, 'warrior', 'dps') > G.itemScore(tanky, 'warrior', 'dps'), 'warrior damage keeps its weights');
+});
