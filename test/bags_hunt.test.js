@@ -44,6 +44,8 @@ test('a locked piece goes into the Account bank and comes out still locked', () 
   assert.ok(row, 'still locked in the Account bank');
   assert.strictEqual(G.abankWithdraw(row.key), true);
   assert.ok(P.bags[0].item.lock, 'still locked after the round trip');
+  const h = Object.assign(G.makeHeirloom('heirloom_blade', 30), { lock: true });
+  assert.ok(!G.abankTakes(h), 'a locked heirloom still cannot be shared: only the lock is let through');
 });
 
 test('a locked heirloom stays locked after a level-up (and so cannot be sold)', () => {

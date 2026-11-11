@@ -2294,7 +2294,7 @@
   G.abank = () => AB.merge(G.account().bank, null);
   const abankSave = (b) => { const a = G.account(); a.bank = b; return G.saveAccount(a) !== false; }; // false: the write was refused
   G.abankSlots = (b) => G.ABANK_BASE + G.ABANK_TAB * Math.min(G.ABANK_TAB_COST.length, (b || G.abank()).tabs);
-  G.abankTakes = (it) => !!it && G.ahTrade(it) && !G.isQuestItem(it.id) && !(D.ITEMS[it.id] || {}).event;
+  G.abankTakes = (it) => !!it && G.ahTrade(it.lock ? Object.assign({}, it, { lock: false }) : it) && !G.isQuestItem(it.id) && !(D.ITEMS[it.id] || {}).event; // a locked piece may go in and stays locked (#589)
   // Each move writes the receiving side first, so a crash between the two writes leaves a copy, never a loss.
   G.abankDeposit = function (idx) {
     const P = G.S.player, x = P.bags[idx]; if (!x) return false;
