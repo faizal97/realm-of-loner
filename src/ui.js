@@ -4096,7 +4096,7 @@
   const finLive = () => finOn() && G.S.player.level >= D.LEVEL_CAP && !!G.finestSeason();
   // the role shown: the one picked on the page, else the role you play, else the class's first (#593)
   const finRole = (pick) => { const rs = G.finestRoles(G.S.player.cls) || []; return rs.includes(pick) ? pick : rs.includes(G.role()) ? G.role() : rs[0]; };
-  const finTitleName = (S) => { const t = (D.TITLES || []).find((x) => x.id === S.title); return t ? G.titleName(t, G.S.player.name) : S.title; };
+  const finTitleName = (id) => { const t = (D.TITLES || []).find((x) => x.id === id); return t ? G.titleName(t, G.S.player.name) : ''; };
   const finEnds = (S) => { if (!S.to) return ''; const end = typeof S.to === 'string' && /^\d{4}-\d\d-\d\d$/.test(S.to) ? new Date(S.to + 'T23:59:59') : new Date(S.to), d = Math.ceil((end - Date.now()) / 86400000); return d > 0 ? ` · Ends in ${d}d` : ''; };
   function openFinest() {
     if (!finOn()) return;
@@ -4110,11 +4110,14 @@
       if (!F) return;
       if (roles.length > 1) b.append(h('div', { class: 'chips fin-roles' }, ...roles.map((r) => h('button', { class: 'chip' + (r === role ? ' gold' : ''), 'aria-pressed': String(r === role), onclick: () => { ui.finRole = r; ui.sheetFn(); } }, ROLE_NAME[r] || r))));
       // the title plate: the season's one reward, with its rule a tap away
-      const tName = finTitleName(S), tb = F.total.best || 0;
+      const tName = finTitleName(F.title), tb = F.total.best || 0, T = F.tally || { done: [], of: 0 }, rn = (ROLE_NAME[role] || role).toLowerCase();
       b.append(h('div', { class: 'fin-plate' + (F.titleEarned ? ' won' : '') },
         h('span', { class: 'fin-plate-crest' }, finCrest('best')),
-        h('div', { class: 'fin-plate-t' }, h('small', null, 'Season title'), h('b', null, tName), h('small', null, F.titleEarned ? 'Earned' : `Found blind: ${F.blind.best}/${tb} Best`)),
-        h('button', { class: 'sec-i', 'aria-label': 'About the title', onclick: () => toast(`Found blind: found before any Hint or Reveal on its slot. Every Best piece of one role found blind earns ${tName}. Cosmetic.`, true) }, 'ⓘ')));
+        h('div', { class: 'fin-plate-t' }, h('small', null, `${ROLE_NAME[role] || role} title`), h('b', null, tName), h('small', null, F.titleEarned ? 'Earned' : `Found blind: ${F.blind.best}/${tb} Best`)),
+        h('button', { class: 'sec-i', 'aria-label': 'About the title', onclick: () => toast(`Found blind: found before any Hint or Reveal on its slot. Every Best piece of a ${rn} role found blind, on any class, earns ${tName}. Cosmetic.`, true) }, 'ⓘ')));
+      /* the class tally (#593): every class role finished blind, on any character, a crest in its class colour */
+      b.append(h('div', { class: 'ai-box fin-tally' }, h('div', { class: 'ai-row' }, h('span', null, 'Pathfinder', h('button', { class: 'sec-i', 'aria-label': 'About Pathfinder', onclick: () => toast('Class roles with every Best piece found blind, on any of your characters.', true) }, 'ⓘ')), h('b', { class: 'tnum' }, `${T.done.length}/${T.of}`)),
+        T.done.length ? h('div', { class: 'fin-tally-row' }, ...T.done.map((k) => { const [c, r] = k.split(':'); return h('span', { class: 'fin-crest best', role: 'img', style: `color:${(D.CLASSES[c] || {}).color || ''}`, 'aria-label': `${(D.CLASSES[c] || {}).name || c} ${ROLE_NAME[r] || r}` }, '⛉'); })) : null));
       b.append(h('div', { class: 'sec-h' }, h('span', null, 'Found', h('button', { class: 'sec-i', 'aria-label': 'About Best and Next best', onclick: () => toast('Best: this season\'s piece for the slot. Next best: a wider pool from older raids and dungeons.', true) }, 'ⓘ')), h('small', null, ROLE_NAME[role] || role)),
         h('div', { class: 'ai-box' }, h('div', { class: 'ai-row' }, h('span', null, finCrest('best'), ' Best'), h('b', { class: 'tnum' }, `${F.found.best}/${tb}`)),
           h('div', { class: 'ai-row' }, h('span', null, finCrest('until'), ' Next best'), h('b', { class: 'tnum' }, `${F.found.until}/${F.total.until || 0}`))));

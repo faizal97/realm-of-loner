@@ -1319,3 +1319,5 @@ button.ev-fact { width: 100%; background: none; border: 0; border-bottom: 1px so
 .fin-st.found { color: #5fd46a; }
 .fin-blind { display: block; margin-top: 2px; color: var(--gold); font-weight: 700; }
 .fin-row .chip { min-height: 36px; min-width: 64px; }
+/* the Pathfinder tally (#593): one crest per class role finished blind, in its class colour */
+.fin-tally-row { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 0 2px; font-size: 18px; }

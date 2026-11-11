@@ -3387,7 +3387,7 @@
     if (n.founder) return G.isFounder(); // #507
     if (n.debtBreaker) return !!G.account().debtBreaker; // #523
     if (n.crest) return G.crests().length >= n.crest; // #565
-    if (n.finest) return G.finestTitleEarned((D.FINEST_SEASONS || []).find((x) => x.id === n.finest)); // Season's Finest: one role's Best all found blind (#593)
+    if (n.finest) return G.finestTitleEarned((D.FINEST_SEASONS || []).find((x) => x.id === n.finest), n.role); // Season's Finest: a role's Best all found blind, any class, any character (#593)
     return Object.keys(n).every((k) => (r[k] || 0) >= n[k]);
   };
   const ROMAN = (n) => { let o = '', x = n; for (const [v, r] of [[1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']]) while (x >= v) { o += r; x -= v; } return o; };
@@ -5475,12 +5475,35 @@
           for (const [iid, c] of M.drops || []) add(iid, c); } } }
     return finSrc[id] || null;
   };
-  G.finestTitleEarned = function (s) {
-    if (!s || !G.S) return false; const st = finState(s); if (st.title) return true;
-    const cls = G.S.player.cls;
-    return finRoles(s, cls).some((r) => { const b = (s.best || {})[cls + ':' + r] || {}, slots = Object.keys(b);
-      return slots.length > 0 && slots.every((sl) => st.found[b[sl]] && st.blind[finKey(r, sl, 'best')]); });
+  // every Best piece of this class role found blind by this character (#593)
+  const finDone = (s, st, cls, r) => { const b = (s.best || {})[cls + ':' + r] || {}, slots = Object.keys(b);
+    return slots.length > 0 && slots.every((sl) => st.found[b[sl]] && st.blind[finKey(r, sl, 'best')]); };
+  // the account's record: { [season]: { 'cls:role': 1 } }, grown by every character, merged by cloud save (#593)
+  const finAcct = (s, a) => { a = a || G.account(); a.finest = a.finest && typeof a.finest === 'object' ? a.finest : {};
+    return (a.finest[s.id] = a.finest[s.id] && typeof a.finest[s.id] === 'object' ? a.finest[s.id] : {}); };
+  // a role's title: any class role of that role finished blind, by any character of the account (#593)
+  G.finestTitleEarned = function (s, role) {
+    if (!s || !G.S) return false; const rec = finAcct(s);
+    return Object.keys(rec).some((k) => rec[k] && (!role || k.split(':')[1] === role));
   };
+  // the class tally: class roles finished blind out of every class role the season lists (#593)
+  G.finestTally = function (s) {
+    s = s || G.finestSeason(); if (!s || !G.S) return { done: [], of: 0 };
+    const rec = finAcct(s), all = Object.keys(s.best || {}).filter((k) => Object.keys(s.best[k]).length);
+    return { done: all.filter((k) => rec[k]), of: all.length };
+  };
+  // record what this character has finished; a role's title the first time any class finishes it (#593)
+  const finRecord = (s, st, quiet) => {
+    const cls = G.S.player.cls, a = G.account(), rec = finAcct(s, a); let changed = false;
+    for (const r of finRoles(s, cls)) { const k = cls + ':' + r; if (rec[k] || !finDone(s, st, cls, r)) continue;
+      const had = Object.keys(rec).some((x) => rec[x] && x.split(':')[1] === r); rec[k] = 1; changed = true;
+      const t = D.TITLES.find((x) => x.id === (s.titles || {})[r]);
+      if (!had && t) loot(`New title: ${G.titleName(t, G.S.player.name)}. Wear it: Hero → Journey → Titles.`);
+      else if (!quiet) loot(`Season's Finest: every Best piece found blind as ${D.CLASSES[cls].name} ${ROLE_WORD[r] || r}.`); }
+    if (changed) G.saveAccount(a);
+    return changed;
+  };
+  const ROLE_WORD = { tank: 'tank', healer: 'healer', dps: 'damage dealer' };
   G.finest = function (cls, role) {
     const s = G.finestSeason(), out = { season: s, rows: [], found: { best: 0, until: 0 }, total: { best: 0, until: 0 }, blind: { best: 0 }, titleEarned: false };
     if (!s || !G.S) return out;
@@ -5493,7 +5516,7 @@
         where: hinted || state !== 'unknown' ? src.where || null : null, boss: revealed || state === 'found' ? src.boss || null : null, chance: revealed || state === 'found' ? (src.chance != null ? src.chance : null) : null });
       out.total[tier]++; if (state === 'found') { out.found[tier]++; if (tier === 'best' && st.blind[k]) out.blind.best++; }
     }
-    out.titleEarned = G.finestTitleEarned(s);
+    out.titleEarned = G.finestTitleEarned(s, role); out.title = (s.titles || {})[role] || null; out.tally = G.finestTally(s); out.done = !!finAcct(s)[key];
     return out;
   };
   // Hint names the place; Reveal names the item, boss and chance (and hints too). True when it changed something (#593)
@@ -5531,10 +5554,7 @@
     const st = finState(s); if (st.found[id]) return false;
     st.found[id] = 1;
     for (const r of rows) { const k = finKey(r.role, r.slot, r.tier); if (!st.hint[k] && !st.reveal[k]) st.blind[k] = 1; }
-    if (!st.title && G.finestTitleEarned(s)) {
-      st.title = 1; const t = D.TITLES.find((x) => x.id === s.title);
-      if (t) loot(`New title: ${G.titleName(t, G.S.player.name)}. Wear it: Hero → Journey → Titles.`);
-    }
+    finRecord(s, st, quiet);
     if (!quiet) emit('finestFound', { id });
     return true;
   };
@@ -5544,6 +5564,7 @@
     const P = G.S.player; let n = 0;
     const all = [].concat(Object.values(P.equip || {}), (P.bags || []).map((b) => b && b.item), (P.bank || []).map((b) => b && b.item), abankItems().map((r) => r && r.item));
     for (const x of all) if (x && G.finestGot(x, true)) n++;
+    finRecord(G.finestSeason(), finState(G.finestSeason()), true); /* a class role finished before, or on another device's save (#593) */
     return n;
   };
   G.finestFoundCount = function () { const s = G.finestSeason(); if (!s || !G.S) return 0; const P = G.S.player, f = ((P.finest || {})[s.id] || {}).found || {}; return Object.keys(f).length; };

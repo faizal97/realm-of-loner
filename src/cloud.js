@@ -159,7 +159,7 @@
   // an unlock bought on two devices before a sync is charged once, the cheapest (G.mkPaidBack, #588)
   const paidBack = (p) => { let s = 0; for (const k in p || {}) { const v = Object.values(p[k] || {}).map(Number).filter((n) => n > 0); if (v.length > 1) s += v.reduce((x, y) => x + y, 0) - Math.min(...v); } return s; };
   const mkBalance = (mk) => Math.max(0, Math.round(mk.base + sumOf(mk.earn) - sumOf(mk.spend) + paidBack(mk.paid)));
-  const GROW = ['mounts', 'renown', 'trialsworn', 'lw', 'ln', 'founder', 'debtBreaker', 'lookSeed'];
+  const GROW = ['mounts', 'renown', 'trialsworn', 'lw', 'ln', 'founder', 'debtBreaker', 'lookSeed', 'finest']; /* finest: { season: { 'cls:role': 1 } }, every class role found blind (#593) */
   function grow(x, y) {
     if (x === undefined || x === null) return y === null ? undefined : y;
     if (y === undefined || y === null) return x;

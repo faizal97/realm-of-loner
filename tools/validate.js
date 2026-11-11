@@ -240,7 +240,7 @@ for (const q of [2, 3, 4]) for (let L = 1; L < D.LEVEL_CAP; L++)
     if (sids.has(s.id)) err(`${w}: id used twice`); sids.add(s.id);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(s.from) || (s.to != null && (!/^\d{4}-\d{2}-\d{2}$/.test(s.to) || s.to < s.from))) err(`${w}: from/to must be YYYY-MM-DD (to may be null), from first`);
     if (!s.name) err(`${w}: needs a name`);
-    if (!D.TITLES.some((t) => t.id === s.title)) err(`${w}: title '${s.title}' is not in D.TITLES`);
+    for (const r of ['tank', 'healer', 'dps']) if (!D.TITLES.some((t) => t.id === (s.titles || {})[r])) err(`${w}: no ${r} title in D.TITLES (#593)`);
     for (const tier of ['best', 'until']) for (const key in s[tier] || {}) {
       const [cls, role] = key.split(':'), C = D.CLASSES[cls];
       if (!C || !(C.roles || [C.role]).includes(role)) { err(`${w} ${tier}: '${key}' is not a class and one of its roles`); continue; }

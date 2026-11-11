@@ -5,7 +5,7 @@
 (function (root) {
   const D = root.D;
   D.FINEST_SEASONS = [{
-    id: 1, name: 'Season of the Tides', title: 'finest_1', from: '2026-11-14', to: null,
+    id: 1, name: 'Season of the Tides', titles: { tank: 'finest_1_tank', healer: 'finest_1_healer', dps: 'finest_1_dps' }, from: '2026-11-14', to: null,
     best: {
       'warrior:tank': { weapon: 'aeldran_blade', chest: 'deepmother_plate', legs: 'serathis_legs', feet: 'tidefang_boots', hands: 'inkbound_gloves', wrist: 'oyala_bracers', waist: 'colossus_belt', back: 'aeldran_cloak', finger: 'brittle_crown_signet' },
       'warrior:dps': { weapon: 'aeldran_blade', chest: 'deepmother_plate', legs: 'serathis_legs', feet: 'tidefang_boots', hands: 'inkbound_gloves', wrist: 'oyala_bracers', waist: 'colossus_belt', back: 'aeldran_cloak', finger: 'brittle_crown_signet' },
@@ -45,5 +45,9 @@
       'bard:dps': { weapon: 'onyx_staff', chest: 'rivendare_leather', hands: 'geddon_gloves', wrist: 'garr_bracers', finger: 'onyx_ring' },
     },
   }];
-  D.TITLES.push({ id: 'finest_1', name: '%s, Pathfinder of the Tides', need: { finest: 1 }, how: "Season of the Tides: find every Best piece of one role's Season's Finest without a Hint or Reveal" });
+  // one title per role kind each season: any class's Best pieces for that role, all found blind (#593)
+  D.TITLES.push(
+    { id: 'finest_1_tank', name: '%s the Tideward', need: { finest: 1, role: 'tank' }, how: "Season of the Tides: find every Best piece of a tank's Season's Finest, any class, without a Hint or Reveal" },
+    { id: 'finest_1_healer', name: '%s the Tidemender', need: { finest: 1, role: 'healer' }, how: "Season of the Tides: find every Best piece of a healer's Season's Finest, any class, without a Hint or Reveal" },
+    { id: 'finest_1_dps', name: '%s the Tidebreaker', need: { finest: 1, role: 'dps' }, how: "Season of the Tides: find every Best piece of a damage dealer's Season's Finest, any class, without a Hint or Reveal" });
 })(typeof window !== 'undefined' ? window : globalThis);

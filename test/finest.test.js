@@ -9,6 +9,8 @@ const IN_SEASON = new Date(2026, 10, 15, 12).getTime(), BEFORE = new Date(2026, 
 const S1 = () => D.FINEST_SEASONS.find((s) => s.id === 1);
 const ROW_KEYS = ['slot', 'tier', 'id', 'state', 'hinted', 'revealed', 'blind', 'where', 'boss', 'chance'].sort();
 const fresh = (cls) => { setNow(IN_SEASON); return character(60, cls || 'mage'); };
+// the account's record carries across characters; a test that needs a clean one starts here
+const clean = (cls) => { const r = fresh(cls); const a = G.account(); delete a.finest; G.saveAccount(a); return r; };
 const row = (cls, role, slot, tier) => G.finest(cls, role).rows.find((r) => r.slot === slot && r.tier === tier);
 
 test('the API shape: the live season, roles in order, rows in gear-slot order', () => {
@@ -16,7 +18,7 @@ test('the API shape: the live season, roles in order, rows in gear-slot order', 
   assert.strictEqual(G.finestSeason().id, 1);
   assert.deepStrictEqual(G.finestRoles('druid'), ['healer', 'tank', 'dps']);
   const f = G.finest('druid', 'tank');
-  assert.deepStrictEqual(Object.keys(f).sort(), ['blind', 'found', 'rows', 'season', 'titleEarned', 'total']);
+  assert.deepStrictEqual(Object.keys(f).sort(), ['blind', 'done', 'found', 'rows', 'season', 'tally', 'title', 'titleEarned', 'total']);
   assert.strictEqual(f.total.best, Object.keys(S1().best['druid:tank']).length);
   assert.strictEqual(f.total.until, Object.keys(S1().until['druid:tank']).length);
   assert.strictEqual(f.rows.length, f.total.best + f.total.until);
@@ -80,20 +82,34 @@ test('finestSee marks seen for the class, and only items in its lists', () => {
   assert.strictEqual(row('mage', 'dps', 'chest', 'until').blind, true);
 });
 
-test('every Best piece of one role found blind gives the title, once', () => {
-  const { P } = fresh('mage');
-  const t = D.TITLES.find((x) => x.id === S1().title);
+test('every Best piece of one class role found blind gives that role\'s title once, and counts in the tally', () => {
+  const { P } = clean('mage');
+  const t = D.TITLES.find((x) => x.id === S1().titles.dps), tank = D.TITLES.find((x) => x.id === S1().titles.tank);
   assert.strictEqual(G.titleUnlocked(t), false);
+  const before = G.finestTally().done.length;
   for (const id of Object.values(S1().best['mage:dps'])) G.addItem(G.copyItem(id), 1);
-  assert.strictEqual(G.finest('mage', 'dps').titleEarned, true);
-  assert.strictEqual(G.titleUnlocked(t), true);
+  const F = G.finest('mage', 'dps');
+  assert.strictEqual(F.titleEarned, true); assert.strictEqual(F.done, true);
+  assert.strictEqual(G.titleUnlocked(t), true); assert.strictEqual(G.titleUnlocked(tank), false, 'only the damage title');
+  assert.ok(G.finestTally().done.includes('mage:dps')); assert.strictEqual(G.finestTally().done.length, before + 1);
   G.setTitle(t.id); assert.strictEqual(P.title, t.id);
-  assert.strictEqual(G.S.chat.filter((m) => /Pathfinder of the Tides/.test(m.text || '')).length, 1);
+  assert.strictEqual(G.S.chat.filter((m) => /Tidebreaker/.test(m.text || '')).length, 1);
+});
+
+test('the record is the account\'s: another character of another class wears the title, and the account file grows it', () => {
+  clean('mage');
+  for (const id of Object.values(S1().best['mage:dps'])) G.addItem(G.copyItem(id), 1);
+  fresh('rogue');
+  const t = D.TITLES.find((x) => x.id === S1().titles.dps);
+  assert.strictEqual(G.titleUnlocked(t), true, 'earned on the mage, worn by the rogue');
+  assert.strictEqual(G.finest('rogue', 'dps').done, false, 'the rogue\'s own class role is still open');
+  require('../src/cloud.js'); const m = globalThis.CLOUD.mergeAccount({ finest: { 1: { 'mage:dps': 1 } } }, { finest: { 1: { 'rogue:dps': 1 } } });
+  assert.deepStrictEqual(Object.keys(m.finest[1]).sort(), ['mage:dps', 'rogue:dps']);
 });
 
 test('no title when one Best row was hinted', () => {
-  fresh('mage');
-  const t = D.TITLES.find((x) => x.id === S1().title);
+  clean('mage');
+  const t = D.TITLES.find((x) => x.id === S1().titles.dps);
   G.finestHint('mage', 'dps', 'feet', 'best');
   for (const id of Object.values(S1().best['mage:dps'])) G.addItem(G.copyItem(id), 1);
   assert.strictEqual(G.finest('mage', 'dps').found.best, G.finest('mage', 'dps').total.best);

@@ -20,8 +20,10 @@ role a reason to run old raids and dungeons. Each season is planned by hand.
   in someone's gear, on the auction house: shown in a tooltip) or **Unknown**. An Unknown slot has **Hint** (names the
   place) and then **Reveal** (names the item, boss and drop chance). Nothing is behind a setting or a cost.
 - **Found blind.** A piece found before Hint or Reveal on its slot gets a Found blind mark. Every **Best** piece of a
-  role found blind gives the season's title (Season 1: "Pathfinder of the Tides"). Cosmetic only. Missed seasons stay
-  as empty rows, never earned late.
+  class role found blind gives that role kind's title for the season, three per season (Season 1: the Tideward, the
+  Tidemender, the Tidebreaker), so another role is worth playing. **Pathfinder** counts every class role finished
+  blind on the account, a crest per class role in its class colour, so another class is too. Kept in the account file
+  and merged by cloud save. Cosmetic only. Missed seasons stay as empty rows, never earned late.
 - **A crest** on any Season's Finest piece wherever it is shown, so it is recognised on sight.
 - **Visible:** a This week banner in the launch week ("Season's Finest begins", Go opens the page) and a progress step
   while the season runs.
