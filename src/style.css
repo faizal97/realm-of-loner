@@ -1289,3 +1289,33 @@ button.ev-fact { width: 100%; background: none; border: 0; border-bottom: 1px so
 .slot .lockm { position: absolute; right: 2px; bottom: 1px; font-size: 12px; line-height: 1; color: var(--gold); text-shadow: 0 1px 1px #000; }
 .bags.compact .slot .lockm { font-size: 10px; right: 1px; bottom: 0; }
 .lockm-i { color: var(--gold); font-size: 12px; }
+/* Season's Finest (#593): the crest is gold on a Best piece and a quieter bronze on an Until then piece */
+.fin-crest { color: var(--gold); }
+.fin-crest.until { color: #b39a6c; }
+.fin-nm { white-space: nowrap; }
+.fin-ic { position: relative; }
+.fin-b { position: absolute; right: 1px; top: 1px; font-size: 13px; line-height: 1; pointer-events: none; }
+.bags.compact .slot .fin-b { font-size: 11px; }
+.tooltip .fin-line.best { color: var(--gold); }
+.tooltip .fin-line.until { color: #c9b48a; }
+.fin-roles { margin-bottom: 2px; }
+.fin-plate { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px; border: 1px solid #7a5f2c; border-radius: 3px; background: radial-gradient(120% 140% at 0% 50%, rgba(240, 199, 94, .14), transparent 60%), linear-gradient(90deg, #2a1f10, #1a130b); }
+.fin-plate.won { border-color: var(--gold); box-shadow: 0 0 0 1px rgba(240, 199, 94, .35) inset; }
+.fin-plate-crest { font-size: 38px; line-height: 1; text-align: center; }
+.fin-plate:not(.won) .fin-plate-crest { opacity: .55; }
+.fin-plate-t { display: grid; gap: 1px; min-width: 0; }
+.fin-plate-t b { font: 17px/1.15 var(--display); color: var(--gold); overflow-wrap: anywhere; }
+.fin-plate-t small { font-size: 12px; color: var(--muted); }
+.fin-plate .sec-i { align-self: start; min-width: 32px; min-height: 32px; }
+.fin-slot { display: grid; gap: 4px; }
+.fin-slot + .fin-slot { margin-top: 6px; }
+.fin-slot-h { font: 12px/1 var(--display); color: var(--muted); letter-spacing: .06em; padding-left: 2px; }
+.row.fin-row .t small { white-space: normal; }
+.fin-tier.best { color: var(--gold); }
+.fin-tier.until { color: #c9b48a; }
+.row .ic.fin-empty { background: transparent; border: 1px dashed #6b5430; }
+.fin-unk { color: var(--muted); font-weight: 600; }
+.fin-st { font: 700 12px var(--body); color: var(--muted); text-align: right; }
+.fin-st.found { color: #5fd46a; }
+.fin-blind { display: block; margin-top: 2px; color: var(--gold); font-weight: 700; }
+.fin-row .chip { min-height: 36px; min-width: 64px; }

@@ -1507,9 +1507,9 @@
     const list = h('div', { class: 'list' });
     for (const slot of D.GEAR_SLOTS) {
       const it = ch.equip[slot]; if (!it) continue;
-      const tip = h('div', { style: { display: 'none' } }, itemTip(it, null, ch));
-      list.append(h('button', { class: 'row', onclick: () => { tip.style.display = tip.style.display === 'none' ? '' : 'none'; } },
-        h('div', { class: 'ic' }, img(art('icon', it.icon))), h('div', { class: 't' }, h('b', { class: 'q' + it.q }, it.name), h('small', null, D.SLOT_LABEL[slot]))), tip); // someone else's gear: the slot, not whether you can use it (no can't-use badge, #322)
+      const tip = h('div', { style: { display: 'none' } }); // built on the first tap, so a piece counts as seen only when shown (#593)
+      list.append(h('button', { class: 'row', onclick: () => { if (!tip.firstChild) tip.append(itemTip(it, null, ch)); tip.style.display = tip.style.display === 'none' ? '' : 'none'; } },
+        h('div', { class: 'ic' }, img(art('icon', it.icon))), h('div', { class: 't' }, h('b', { class: 'q' + it.q }, it.name, finName(it)), h('small', null, D.SLOT_LABEL[slot]))), tip); // someone else's gear: the slot, not whether you can use it (no can't-use badge, #322)
     }
     parts.push(h('div', { class: 'sec-h' }, 'Gear', h('small', null, 'tap to inspect')), list);
     // their own story, newest first
@@ -2434,13 +2434,24 @@
       h('p', null, `Rare at ${D.PLACES[r.place].name}. Spawns once every 6h, stays ~30 min. Last seen ${seen.toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' })}. ${huntNext(r.key)[0].toUpperCase() + huntNext(r.key).slice(1)}.`),
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: closeDialog }, 'Got it'))], true);
   }
+  // Season's Finest (#593): the engine may be missing from a build, so every call checks for it first
+  const finOn = () => typeof G.finestSeason === 'function' && typeof G.finest === 'function' && typeof G.finestRoles === 'function';
+  const finMark = (id) => (id && typeof G.finestMark === 'function' ? G.finestMark(id) : null);
+  const FIN_TIER = { best: 'Best', until: 'Until then' };
+  // the crest on a Season's Finest piece: gold for Best, a quieter bronze for Until then (#593)
+  const finName = (it) => { const f = finMark(it && it.id); return f ? h('span', { class: 'fin-nm' }, ' ', finCrest(f)) : null; };
+  const finCrest = (tier, cls) => (FIN_TIER[tier] ? h('span', { class: 'fin-crest ' + tier + (cls ? ' ' + cls : ''), role: 'img', 'aria-label': `Season's Finest: ${FIN_TIER[tier]}` }, '⛉') : null);
   // ---------- item tooltip
   const statName = { str: 'Strength', agi: 'Agility', sta: 'Stamina', int: 'Intellect', spi: 'Spirit' };
   // who: another player's character ({ level, equip }), for a friend's gear: no "can you use it" or compare lines
-  function itemTip(it, extra, who) {
+  // o.noSee: shown from the Season's Finest page itself, which never counts as seeing the piece (#593)
+  function itemTip(it, extra, who, o) {
     const P = who || G.S.player;
     const t = h('div', { class: 'tooltip' });
-    t.append(h('div', { class: 'nm q' + it.q }, it.name));
+    const fin = finMark(it.id);
+    if (it.id && !(o && o.noSee) && typeof G.finestSee === 'function') G.finestSee(it.id);
+    t.append(h('div', { class: 'nm q' + it.q }, it.name, fin ? ' ' : null, finCrest(fin)));
+    if (fin) t.append(h('div', { class: 'st fin-line ' + fin }, `Season's Finest: ${FIN_TIER[fin]}`));
     const upi = D.GEAR_SLOTS.includes(it.slot) ? G.upgradeInfo(it) : null;
     if (it.hard) t.append(h('div', { class: 'st', style: { color: '#ff8a5a' } }, `Dropped on Hard: ${G.HARD_STEPS} upgrade steps up`));
     if (it.trial60) t.append(h('div', { class: 'st', style: { color: 'var(--gold)' } }, 'Trial find: level 60'));
@@ -2566,8 +2577,8 @@
   }
   // Icon wrapper that tints unusable gear red, with a level number or a cross.
   function itemIcon(it, cls) {
-    const why = blockReason(it);
-    return h('div', { class: (cls || 'ic') + (why ? ' cant' : '') }, img(art('icon', it.icon)), why ? h('span', { class: 'why' }, why.kind === 'level' ? String(why.lvl) : '✕') : null);
+    const why = blockReason(it), fin = finMark(it.id);
+    return h('div', { class: (cls || 'ic') + (why ? ' cant' : '') + (fin ? ' fin-ic' : '') }, img(art('icon', it.icon)), why ? h('span', { class: 'why' }, why.kind === 'level' ? String(why.lvl) : '✕') : null, finCrest(fin, 'fin-b'));
   }
   // "Last run: 1,240 damage, 6% of yours": the fact a player judges an effect by (there is no damage meter)
   function lastRunText(L) {
@@ -3269,7 +3280,7 @@
     return h('button', { class: 'slot qb' + (it.q || 0) + (o.sel ? ' sel' : '') + (why ? ' cant' : '') + (plain ? ' nosell' : ''), 'aria-label': it.name + (n > 1 ? ' x' + n : ''), onclick: o.onTap },
       img(art('icon', it.icon)), o.pick ? h('span', { class: 'pick' }, '✓') : null, n > 1 ? h('span', { class: 'cnt tnum' }, n) : it.lock ? h('span', { class: 'lockm', 'aria-label': 'Locked' }, '🔒') : null,
       plain ? null : !why && G.isUpgrade(it) ? h('span', { class: 'up' }, '▲') : !why && G.effectOf(it) ? h('span', { class: 'up eff' }, '◆') : null,
-      why ? h('span', { class: 'why' }, why.kind === 'level' ? String(why.lvl) : '✕') : null);
+      why ? h('span', { class: 'why' }, why.kind === 'level' ? String(why.lvl) : '✕') : null, finCrest(finMark(it.id), 'fin-b'));
   }
   // vendor: the grid at a vendor, where what it won't buy is dimmed and loses its marks before the tap (#167)
   // filtered: the Bags screen, where the tabs pick what shows; empty slots only on All, so a tab is just its items
@@ -3402,7 +3413,7 @@
         // #537: the panel is short (name, one fact line, the buttons) so the grid stays in view; Inspect opens the full
         // tooltip and what you wear in that slot
         const inspect = () => showDialog([itemTip(it), cur && D.GEAR_SLOTS.includes(it.slot) && cur !== it ? h('div', { class: 'sec-h' }, 'Currently equipped') : null, cur && D.GEAR_SLOTS.includes(it.slot) && cur !== it ? itemTip(cur) : null, h('button', { class: 'btn alt wide', onclick: closeDialog }, 'Close')], true);
-        b.append(h('div', { class: 'bag-acts' }, h('div', { class: 'bag-acts-t bag-brief' }, h('div', null, h('b', { class: 'q' + (it.q || 0) }, it.name + (sel.n > 1 ? ' x' + sel.n : '')), price), h('button', { class: 'btn alt bag-insp', onclick: inspect }, 'Inspect')), itemBrief(it), acts));
+        b.append(h('div', { class: 'bag-acts' }, h('div', { class: 'bag-acts-t bag-brief' }, h('div', null, h('b', { class: 'q' + (it.q || 0) }, it.name + (sel.n > 1 ? ' x' + sel.n : ''), finName(it)), price), h('button', { class: 'btn alt bag-insp', onclick: inspect }, 'Inspect')), itemBrief(it), acts));
       } else b.append(h('p', { style: { color: 'var(--muted)', margin: 0 } }, 'Tap an item to inspect it. A green arrow means an upgrade.'));
       const vendorNow = D.PLACES[P.place].vendor || D.PLACES[P.place].gearVendor;
       const junk = P.bags.filter((x) => x.item.q === 0 && G.sellable(x.item)).length; // a locked grey stays (#557)
@@ -3512,6 +3523,7 @@
     if (D.EVENTS) { const on = G.liveEvents(); list.append(nav('Events', on.length ? `${on.map((k) => D.EVENTS[k].name).join(', ')} is on: ${lwEndsText(on[0]).toLowerCase()}` : (() => { const k = Object.keys(D.EVENTS).sort((a, b) => G.eventNext(a) - G.eventNext(b))[0]; return `${D.EVENTS[k].name} returns ${dayName(G.eventNext(k))}`; })(), on.length ? 'On now' : '', () => openEvents(), on.length > 0)); }
     if (D.COMPANIONS) list.append(nav('Companions', G.S.player.companion ? 'With you: ' + D.COMPANIONS[G.S.player.companion].name : 'Small friends that follow you', `${G.companions().length}/${Object.keys(D.COMPANIONS).length}`, () => openCompanions()));
     list.append(nav('Titles', tNow ? 'Wearing: ' + G.titleName(tNow, P.name) : 'No title worn', `${tOwn}/${titlesForMe().length}`, () => openTitles()));
+    if (finLive()) { const S = G.finestSeason(), role = finRole(null), F = G.finest(P.cls, role); list.append(nav("Season's Finest", `${S.name} · ${ROLE_NAME[role] || role}`, `Best ${F.found.best}/${F.total.best}`, () => openFinest())); } // #593
     list.append(nav('Trophies', 'Level-60 rares and world bosses, shared by all your characters', `${G.trophyCount()}/${G.trophyList().length}`, () => openTrophies()));
     { const own = effectsOwned(); list.append(nav('Effects', 'Every item effect: which you own, and where the rest drop', `${Object.keys(D.EFFECTS).filter((k) => own.has(k)).length}/${Object.keys(D.EFFECTS).length}`, () => openEffects())); }
     if (G.WARDROBE_PLACES) { let got = 0, all = 0; for (const pl of G.WARDROBE_PLACES) { const w = G.wardrobeAll(pl); all += w.length; got += w.filter((o) => o.have).length; } list.append(nav('Looks', 'The wardrobe, shared by all your characters', `${got}/${all}`, () => openWardrobe())); }
@@ -3761,6 +3773,7 @@
     bounty: () => { if (G.isHub(G.S.player.place)) openBountyBoard(); else toast('Bounty Boards stand in towns with an inn.'); },
     worldboss: () => { const wb = G.worldBoss(); if (wb) openBriefing(wb, false); },
     brawl: () => { closeSheet(); if (G.S.player.place !== G.BRAWL.place) routeDialog(G.BRAWL.place); },
+    finest: () => openFinest(), // #593
   };
   const WEEK_KEY = 'azsolo.weekSeen'; // this device: the banner ids already shown (the button's dot, the once-a-week opening)
   const weekSeen = () => { try { return new Set(JSON.parse(localStorage.getItem(WEEK_KEY) || '[]')); } catch (e) { return new Set(); } };
@@ -4077,6 +4090,67 @@
       b.append(box, h('p', { class: 'ai-note', style: { marginTop: '8px' } }, `First kill of a rare or world boss, by any of your characters. Level-60 rares spawn every 6h (marked on the map). ${G.TROPHY_TITLE} trophies: title "${T ? G.titleName(T, G.S.player.name) : ''}". Cosmetic.`));
     });
   }
+  // ---- Season's Finest (#593): per class and role, a Best piece and a wider Until then piece for each slot, each Found,
+  // Seen or Unknown. Hint names the place, Reveal the item, boss and drop chance. Facts only, never advice; the season,
+  // its slots and its title all come from the engine, so a new season needs nothing here.
+  const finLive = () => finOn() && G.S.player.level >= D.LEVEL_CAP && !!G.finestSeason();
+  // the role shown: the one picked on the page, else the role you play, else the class's first (#593)
+  const finRole = (pick) => { const rs = G.finestRoles(G.S.player.cls) || []; return rs.includes(pick) ? pick : rs.includes(G.role()) ? G.role() : rs[0]; };
+  const finTitleName = (S) => { const t = (D.TITLES || []).find((x) => x.id === S.title); return t ? G.titleName(t, G.S.player.name) : S.title; };
+  const finEnds = (S) => { if (!S.to) return ''; const end = typeof S.to === 'string' && /^\d{4}-\d\d-\d\d$/.test(S.to) ? new Date(S.to + 'T23:59:59') : new Date(S.to), d = Math.ceil((end - Date.now()) / 86400000); return d > 0 ? ` · Ends in ${d}d` : ''; };
+  function openFinest() {
+    if (!finOn()) return;
+    if (G.S.player.level < D.LEVEL_CAP) return toast(`Requires level ${D.LEVEL_CAP}.`);
+    const S0 = G.finestSeason(); if (!S0) return toast("Season's Finest: no season on.");
+    ui.finRole = null;
+    openSheet('finest', "Season's Finest", S0.name + finEnds(S0), (b) => {
+      const P = G.S.player, S = G.finestSeason();
+      if (!S) return b.append(h('p', { class: 'ai-note' }, 'This season has ended.'));
+      const roles = G.finestRoles(P.cls) || [], role = finRole(ui.finRole), F = G.finest(P.cls, role);
+      if (!F) return;
+      if (roles.length > 1) b.append(h('div', { class: 'chips fin-roles' }, ...roles.map((r) => h('button', { class: 'chip' + (r === role ? ' gold' : ''), 'aria-pressed': String(r === role), onclick: () => { ui.finRole = r; ui.sheetFn(); } }, ROLE_NAME[r] || r))));
+      // the title plate: the season's one reward, with its rule a tap away
+      const tName = finTitleName(S), tb = F.total.best || 0;
+      b.append(h('div', { class: 'fin-plate' + (F.titleEarned ? ' won' : '') },
+        h('span', { class: 'fin-plate-crest' }, finCrest('best')),
+        h('div', { class: 'fin-plate-t' }, h('small', null, 'Season title'), h('b', null, tName), h('small', null, F.titleEarned ? 'Earned' : `Found blind: ${F.blind.best}/${tb} Best`)),
+        h('button', { class: 'sec-i', 'aria-label': 'About the title', onclick: () => toast(`Found blind: found before any Hint or Reveal on its slot. Every Best piece of one role found blind earns ${tName}. Cosmetic.`, true) }, 'ⓘ')));
+      b.append(h('div', { class: 'sec-h' }, h('span', null, 'Found', h('button', { class: 'sec-i', 'aria-label': 'About Best and Until then', onclick: () => toast('Best: this season\'s piece for the slot. Until then: a wider pool from older raids and dungeons.', true) }, 'ⓘ')), h('small', null, ROLE_NAME[role] || role)),
+        h('div', { class: 'ai-box' }, h('div', { class: 'ai-row' }, h('span', null, finCrest('best'), ' Best'), h('b', { class: 'tnum' }, `${F.found.best}/${tb}`)),
+          h('div', { class: 'ai-row' }, h('span', null, finCrest('until'), ' Until then'), h('b', { class: 'tnum' }, `${F.found.until}/${F.total.until || 0}`))));
+      // a Best hint while the title is still open to this role says what it costs first
+      const blindOpen = !F.titleEarned && F.blind.best === F.found.best;
+      const hint = (r) => {
+        const go = () => { closeDialog(); if (!G.finestHint(P.cls, role, r.slot, r.tier)) toast('Already hinted.'); ui.sheetFn(); };
+        if (r.tier !== 'best' || !blindOpen) return go();
+        showDialog([h('h3', null, `Hint: ${D.SLOT_LABEL[r.slot] || r.slot}, Best`), h('p', null, `Ends Found blind for this piece, and ${tName} for ${ROLE_NAME[role] || role}.`),
+          h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: go }, 'Hint'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Cancel'))], true);
+      };
+      const reveal = (r) => { if (!G.finestReveal(P.cls, role, r.slot, r.tier)) toast('Already revealed.'); ui.sheetFn(); };
+      const tip = (it) => showDialog([itemTip(G.copyItem ? G.copyItem(it.id) : it, null, null, { noSee: true }), h('button', { class: 'btn alt wide', style: { marginTop: '8px' }, onclick: closeDialog }, 'Close')], true);
+      const row = (r) => {
+        const it = r.id && D.ITEMS[r.id], known = !!it && (r.state !== 'unknown' || r.revealed);
+        const tier = h('span', { class: 'fin-tier ' + r.tier }, finCrest(r.tier), ' ' + FIN_TIER[r.tier]);
+        const lines = [h('small', null, tier, r.where ? ` · ${r.where}` : '')];
+        if (known && r.boss) lines.push(h('small', null, `${r.boss}${r.chance != null ? ` · Drop: ${Math.max(1, Math.round(r.chance * 100))}%` : ''}`));
+        let right = null;
+        if (r.state === 'found') right = h('div', { class: 'fin-st found' }, '✓ Found', r.blind ? h('small', { class: 'fin-blind' }, 'Found blind') : null);
+        else if (r.state === 'seen') right = h('div', { class: 'fin-st' }, 'Seen');
+        else if (r.revealed) right = h('div', { class: 'fin-st' }, 'Revealed');
+        else right = r.hinted ? h('button', { class: 'chip', onclick: () => reveal(r) }, 'Reveal') : h('button', { class: 'chip', onclick: () => hint(r) }, 'Hint');
+        const ic = known ? h('div', { class: 'ic' }, img(art('icon', it.icon))) : h('div', { class: 'ic fin-empty', 'aria-hidden': 'true' });
+        const t = h('div', { class: 't' }, known ? h('b', { class: 'q' + it.q }, it.name) : h('b', { class: 'fin-unk' }, 'Unknown'), ...lines);
+        return known ? h('button', { class: 'row fin-row ' + r.state, onclick: () => tip(it) }, ic, t, right) : h('div', { class: 'row fin-row unknown' }, ic, t, right);
+      };
+      b.append(h('div', { class: 'sec-h' }, h('span', null, 'Pieces', h('button', { class: 'sec-i', 'aria-label': 'About Found, Seen and Unknown', onclick: () => toast('Found: you own it. Seen: shown to you in a tooltip. Hint names the place; Reveal names the item, boss and drop chance.', true) }, 'ⓘ')), h('small', null, 'tap a piece to inspect')));
+      const slots = [...new Set(F.rows.map((r) => r.slot))];
+      if (!slots.length) b.append(h('p', { class: 'ai-note' }, 'No pieces for this role this season.'));
+      for (const sl of slots) {
+        const rs = F.rows.filter((r) => r.slot === sl).sort((a, c) => (a.tier === 'best' ? 0 : 1) - (c.tier === 'best' ? 0 : 1));
+        b.append(h('div', { class: 'fin-slot' }, h('div', { class: 'fin-slot-h' }, D.SLOT_LABEL[sl] || sl), h('div', { class: 'list' }, ...rs.map(row))));
+      }
+    });
+  }
   // ---- the Effects codex (#55): every effect in D.EFFECTS (a new one adds a row), grouped by role, which ones any of your
   // characters owns, and every item that carries it with where it comes from. Facts only, never advice; sources follow
   // the lore bible's Reveals for your level (G.effectSources)
@@ -4199,7 +4273,7 @@
           const it = P.equip[slot];
           gear.append(h('button', { class: 'row' + (it ? '' : ' off'), onclick: () => { if (it) showDialog(itemTip(it, h('div', { class: 'btn-row', style: { marginTop: '8px' } }, h('button', { class: 'btn alt', onclick: () => { G.unequip(slot); closeDialog(); ui.sheetFn(); } }, 'Unequip'), h('button', { class: 'btn alt', onclick: () => { const on = !it.lock; G.setLock('equip', slot, on); toast(on ? 'Locked.' : 'Unlocked.'); closeDialog(); ui.sheetFn(); } }, it.lock ? 'Unlock' : 'Lock'), canUpgrade(it) ? h('button', { class: 'btn', onclick: () => { closeDialog(); upgradeDialog({ slot }); } }, 'Upgrade') : null, canReforge(it) ? h('button', { class: 'btn alt', onclick: () => { closeDialog(); reforgeDialog({ slot }); } }, 'Reforge') : null)), true); } },
             h('div', { class: 'ic' }, it ? img(art('icon', it.icon)) : ''),
-            h('div', { class: 't' }, h('b', { class: it ? 'q' + it.q : '' }, it ? it.name : 'Empty', it && it.lock ? h('span', { class: 'lockm-i', 'aria-label': 'Locked' }, ' 🔒') : null), h('small', null, D.SLOT_LABEL[slot])), h('div')));
+            h('div', { class: 't' }, h('b', { class: it ? 'q' + it.q : '' }, it ? it.name : 'Empty', it ? finName(it) : null, it && it.lock ? h('span', { class: 'lockm-i', 'aria-label': 'Locked' }, ' 🔒') : null), h('small', null, D.SLOT_LABEL[slot])), h('div')));
         }
         b.append(gear);
         // one tap locks a whole set (#557): wear it, lock it; locked pieces are never sold, thrown away or auctioned
@@ -4327,7 +4401,7 @@
   // ---------- bank and auction house
   const TRADE_LABEL = { mat: 'Trade goods', potion: 'Potion', elixir: 'Elixir', stone: 'Sharpening stone', kit: 'Armor kit', bag: 'Bag', recipe: 'Recipe' };
   const itemRow = (it, n, right, onclick, sub) => h('button', { class: 'row', onclick },
-    h('div', { class: 'ic' }, itemIcon(it)), h('div', { class: 't' }, h('b', { style: { color: (D.QUALITY[it.q || 1] || D.QUALITY[1]).color } }, it.name + (n > 1 ? ` ×${n}` : '')), h('small', null, sub || (it.lvl ? `Level ${it.lvl} ${D.SLOT_LABEL[it.slot] || it.slot}` : ''))), h('div', { class: 'r tnum' }, right || ''));
+    h('div', { class: 'ic' }, itemIcon(it)), h('div', { class: 't' }, h('b', { style: { color: (D.QUALITY[it.q || 1] || D.QUALITY[1]).color } }, it.name + (n > 1 ? ` ×${n}` : ''), finName(it)), h('small', null, sub || (it.lvl ? `Level ${it.lvl} ${D.SLOT_LABEL[it.slot] || it.slot}` : ''))), h('div', { class: 'r tnum' }, right || ''));
   function openBank() {
     ui.invTab = 'all';
     openSheet('bank', 'Bank', `${G.bankSlots()} slots · tap to move`, (b, title) => {
@@ -4914,7 +4988,7 @@
         const g = (c.gear || {})[slot], it = FRIENDS.item(g);
         gear.append(h('button', { class: 'row' + (it ? '' : ' off'), onclick: () => { if (it) showDialog(itemTip(it, null, who), true); else if (g) toast('Update the game to see this item.'); } },
           h('div', { class: 'ic' }, it ? img(art('icon', it.icon)) : ''),
-          h('div', { class: 't' }, h('b', { class: it ? 'q' + it.q : '' }, it ? it.name : g ? 'Unknown item' : 'Empty'), h('small', null, D.SLOT_LABEL[slot])), h('div')));
+          h('div', { class: 't' }, h('b', { class: it ? 'q' + it.q : '' }, it ? it.name : g ? 'Unknown item' : 'Empty', it ? finName(it) : null), h('small', null, D.SLOT_LABEL[slot])), h('div')));
       }
       b.append(gear);
     });
