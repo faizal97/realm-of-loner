@@ -4480,7 +4480,7 @@
   function seatLead(grp, bot) {
     const r = G.mainRole(bot); let i = grp.members.findIndex((m) => m.role === r && !m.legend);
     if (i < 0) i = grp.members.findIndex((m) => m.role === 'dps' && !m.legend); if (i < 0) return;
-    const c = G.botChar(Object.assign({}, bot, { role: grp.members[i].role })); c.syncLevel = grp.members[i].syncLevel; grp.members[i] = c;
+    const c = G.botChar(Object.assign({}, bot, { role: grp.members[i].role, gearFloor: G.gearFloor(grp.act) })); /* a raid's gear floor, as the finder's picks (#590) */ c.syncLevel = grp.members[i].syncLevel; grp.members[i] = c;
   }
   G.botChar = function (b) {
     if (!(b && b.id >= 0)) return rollBotChar(b);
