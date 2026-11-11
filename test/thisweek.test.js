@@ -98,9 +98,9 @@ test('the boards: only the steps this character can do, each ticking from what t
   assert.strictEqual(G.weekStepDone({ check: ['bounty_week'] }), true);
 });
 
-test('the week of 14 November has the pre-patch, a new featured set with its bonus, the Account bank and The Faire (#543)', () => {
+test('the week of 14 November has the pre-patch, a new featured set with its bonus, the Account bank, Season\'s Finest (#593) and The Faire (#543)', () => {
   character(30);
-  assert.deepStrictEqual(ids('2026-11-14'), ['prepatch_2026_11_14', 'featured_dungeons_2026_11_14', 'account_bank', 'faire_soon_2026_11_14']);
+  assert.deepStrictEqual(ids('2026-11-14'), ['prepatch_2026_11_14', 'featured_dungeons_2026_11_14', 'account_bank', 'seasons_finest_2026_11_14', 'faire_soon_2026_11_14']);
   assert.deepStrictEqual(ids('2026-11-20'), ids('2026-11-14'), 'the whole week');
   for (const b of D.WEEK) for (const st of b.steps) if (st.check) assert.ok(G.WEEK_CHECKS[st.check[0]], `${b.id}: no check '${st.check[0]}'`);
 });

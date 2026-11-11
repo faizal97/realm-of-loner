@@ -1,0 +1,143 @@
+// Season's Finest (#593): the engine behind Hero → Season's Finest. Rows per class and role with their state, Hint and
+// Reveal, found by any path (loot, the load scan), seen from a tooltip, found blind and the season's title.
+'use strict';
+const test = require('node:test');
+const assert = require('node:assert');
+const { G, D, character, setNow } = require('./world');
+
+const IN_SEASON = new Date(2026, 10, 15, 12).getTime(), BEFORE = new Date(2026, 10, 13, 12).getTime();
+const S1 = () => D.FINEST_SEASONS.find((s) => s.id === 1);
+const ROW_KEYS = ['slot', 'tier', 'id', 'state', 'hinted', 'revealed', 'blind', 'where', 'boss', 'chance'].sort();
+const fresh = (cls) => { setNow(IN_SEASON); return character(60, cls || 'mage'); };
+const row = (cls, role, slot, tier) => G.finest(cls, role).rows.find((r) => r.slot === slot && r.tier === tier);
+
+test('the API shape: the live season, roles in order, rows in gear-slot order', () => {
+  fresh('druid');
+  assert.strictEqual(G.finestSeason().id, 1);
+  assert.deepStrictEqual(G.finestRoles('druid'), ['healer', 'tank', 'dps']);
+  const f = G.finest('druid', 'tank');
+  assert.deepStrictEqual(Object.keys(f).sort(), ['blind', 'found', 'rows', 'season', 'titleEarned', 'total']);
+  assert.strictEqual(f.total.best, Object.keys(S1().best['druid:tank']).length);
+  assert.strictEqual(f.total.until, Object.keys(S1().until['druid:tank']).length);
+  assert.strictEqual(f.rows.length, f.total.best + f.total.until);
+  const order = f.rows.map((r) => D.GEAR_SLOTS.indexOf(r.slot) * 2 + (r.tier === 'best' ? 0 : 1));
+  assert.deepStrictEqual(order, order.slice().sort((a, b) => a - b));
+  for (const r of f.rows) assert.deepStrictEqual(Object.keys(r).sort(), ROW_KEYS);
+});
+
+test('unknown, then hint, then reveal exposes only what each step names', () => {
+  fresh('mage');
+  const slot = 'weapon', id = S1().best['mage:dps'][slot];
+  let r = row('mage', 'dps', slot, 'best');
+  assert.deepStrictEqual([r.state, r.id, r.hinted, r.revealed, r.where, r.boss, r.chance], ['unknown', null, false, false, null, null, null]);
+  assert.strictEqual(G.finestHint('mage', 'dps', slot, 'best'), true);
+  assert.strictEqual(G.finestHint('mage', 'dps', slot, 'best'), false, 'a second hint changes nothing');
+  r = row('mage', 'dps', slot, 'best');
+  assert.strictEqual(r.hinted, true); assert.strictEqual(r.id, null); assert.strictEqual(r.boss, null); assert.strictEqual(r.chance, null);
+  assert.ok(typeof r.where === 'string' && r.where.length);
+  assert.strictEqual(G.finestReveal('mage', 'dps', slot, 'best'), true);
+  r = row('mage', 'dps', slot, 'best');
+  assert.strictEqual(r.revealed, true); assert.strictEqual(r.id, id); assert.ok(r.boss);
+  assert.ok(r.chance > 0 && r.chance <= 1);
+  // the chance is the real one: a boss drops 2 of its table each kill
+  const M = Object.values(D.MOBS).find((m) => m.name === r.boss && (m.loot || []).includes(id));
+  assert.strictEqual(r.chance, Math.min(1, 2 / M.loot.length));
+});
+
+test('reveal alone implies hint', () => {
+  fresh('mage');
+  assert.strictEqual(G.finestReveal('mage', 'dps', 'chest', 'until'), true);
+  const r = row('mage', 'dps', 'chest', 'until');
+  assert.strictEqual(r.hinted, true); assert.strictEqual(r.revealed, true);
+  assert.strictEqual(G.finestHint('mage', 'dps', 'nope', 'best'), false, 'a row that is not listed');
+});
+
+test('a loot pickup marks found, blind only when not hinted', () => {
+  fresh('mage');
+  const L = S1().best['mage:dps'];
+  G.finestHint('mage', 'dps', 'chest', 'best');
+  G.giveLoot({ money: 0, items: [G.copyItem(L.weapon), G.copyItem(L.chest)] });
+  const w = row('mage', 'dps', 'weapon', 'best'), c = row('mage', 'dps', 'chest', 'best');
+  assert.strictEqual(w.state, 'found'); assert.strictEqual(w.blind, true); assert.strictEqual(w.id, L.weapon); assert.ok(w.boss && w.chance > 0);
+  assert.strictEqual(c.state, 'found'); assert.strictEqual(c.blind, false);
+  const f = G.finest('mage', 'dps');
+  assert.strictEqual(f.found.best, 2); assert.strictEqual(f.blind.best, 1);
+  assert.strictEqual(G.finestHint('mage', 'dps', 'weapon', 'best'), false, 'a found row takes no hint');
+  assert.strictEqual(G.weekStepDone({ check: ['finest', 1] }), true);
+});
+
+test('finestSee marks seen for the class, and only items in its lists', () => {
+  fresh('mage');
+  const id = S1().until['mage:dps'].chest;
+  assert.strictEqual(G.finestSee(id), true);
+  assert.strictEqual(G.finestSee(id), false);
+  const r = row('mage', 'dps', 'chest', 'until');
+  assert.strictEqual(r.state, 'seen'); assert.strictEqual(r.id, id); assert.ok(r.where); assert.strictEqual(r.boss, null);
+  assert.strictEqual(G.finestSee('linen_cloth'), false);
+  assert.strictEqual(G.finestSee(S1().best['warrior:tank'].chest), false, 'another class\'s piece');
+  // seen, then found unhinted: blind
+  G.addItem(G.copyItem(id), 1);
+  assert.strictEqual(row('mage', 'dps', 'chest', 'until').blind, true);
+});
+
+test('every Best piece of one role found blind gives the title, once', () => {
+  const { P } = fresh('mage');
+  const t = D.TITLES.find((x) => x.id === S1().title);
+  assert.strictEqual(G.titleUnlocked(t), false);
+  for (const id of Object.values(S1().best['mage:dps'])) G.addItem(G.copyItem(id), 1);
+  assert.strictEqual(G.finest('mage', 'dps').titleEarned, true);
+  assert.strictEqual(G.titleUnlocked(t), true);
+  G.setTitle(t.id); assert.strictEqual(P.title, t.id);
+  assert.strictEqual(G.S.chat.filter((m) => /Pathfinder of the Tides/.test(m.text || '')).length, 1);
+});
+
+test('no title when one Best row was hinted', () => {
+  fresh('mage');
+  const t = D.TITLES.find((x) => x.id === S1().title);
+  G.finestHint('mage', 'dps', 'feet', 'best');
+  for (const id of Object.values(S1().best['mage:dps'])) G.addItem(G.copyItem(id), 1);
+  assert.strictEqual(G.finest('mage', 'dps').found.best, G.finest('mage', 'dps').total.best);
+  assert.strictEqual(G.titleUnlocked(t), false);
+  G.setTitle(t.id); assert.notStrictEqual(G.S.player.title, t.id);
+});
+
+test('an old save without the field loads, and load marks owned items found', () => {
+  const { S, P } = fresh('mage');
+  const L = S1().best['mage:dps'];
+  delete P.finest;
+  P.equip.weapon = G.copyItem(L.weapon);
+  P.bank = (P.bank || []).concat([{ item: G.copyItem(L.chest), n: 1 }]);
+  G.save(); const id = S.id; G.logout();
+  G.load(id);
+  assert.ok(G.S && G.S.player);
+  assert.strictEqual(row('mage', 'dps', 'weapon', 'best').state, 'found');
+  assert.strictEqual(row('mage', 'dps', 'chest', 'best').state, 'found');
+  assert.strictEqual(row('mage', 'dps', 'legs', 'best').state, 'unknown');
+  // a damaged field is repaired, never thrown on
+  G.S.player.finest = { 1: { seen: null } };
+  assert.doesNotThrow(() => G.finest('mage', 'dps'));
+});
+
+test('finestMark: best before until, across every role of the class', () => {
+  fresh('druid');
+  const s = S1();
+  assert.strictEqual(G.finestMark(s.best['druid:tank'].weapon), 'best');
+  const onlyUntil = Object.values(s.until['druid:healer']).find((id) => !['healer', 'tank', 'dps'].some((r) => Object.values(s.best['druid:' + r]).includes(id)));
+  assert.strictEqual(G.finestMark(onlyUntil), 'until');
+  assert.strictEqual(G.finestMark('linen_cloth'), null);
+  assert.strictEqual(G.finestMark(s.best['warrior:tank'].chest), null, 'mail is not a druid\'s');
+});
+
+test('before the season starts: empty results, nothing thrown', () => {
+  character(60, 'mage'); setNow(BEFORE);
+  assert.strictEqual(G.finestSeason(), null);
+  assert.deepStrictEqual(G.finestRoles('mage'), []);
+  const f = G.finest('mage', 'dps');
+  assert.strictEqual(f.season, null); assert.deepStrictEqual(f.rows, []); assert.strictEqual(f.titleEarned, false);
+  assert.strictEqual(G.finestHint('mage', 'dps', 'weapon', 'best'), false);
+  assert.strictEqual(G.finestReveal('mage', 'dps', 'weapon', 'best'), false);
+  assert.strictEqual(G.finestMark(S1().best['mage:dps'].weapon), null);
+  assert.strictEqual(G.finestSee(S1().best['mage:dps'].weapon), false);
+  assert.strictEqual(G.addItem(G.copyItem(S1().best['mage:dps'].weapon), 1), true);
+  assert.strictEqual(G.weekStepDone({ check: ['finest', 1] }), false);
+});
