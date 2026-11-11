@@ -348,6 +348,7 @@
     G.rehearsalLetter(); // a Bard already past level 4 gets the Rehearsal's letter once (#256)
     G.honorLooks(true); // rank looks a character already earned (Honor ranks, #57), without a message
     deliverByes(S); // after the save's own fixes (an older one keeps only open requests)
+    try { G.finestOwned(); } catch (e) { /* never stops a load (#593) */ }
     return G.catchUp();
   };
   // Save codes (v9.7.1): "AZS2.<length>.<base64 of the deflated save>", about a fifth of the old size, so a code fits in a
@@ -642,6 +643,7 @@
     } else if (G.bagsFull(it)) { toast('Bags are full.'); return false; }
     else P.bags.push({ item: it, n });
     if (G.collectLook) G.collectLook(it); // the wardrobe (v10.3)
+    G.finestGot(it); // Season's Finest: every way an item reaches the bags passes here (#593)
     if (G.isUpgrade(it)) P.bagUpgrade = true; // the Bags button's dot until Bags is opened (v10.9, issue #11)
     if (G.effectOf(it)) { emit('effectItem', { item: it }); if (G.canUseItem(it)) { it.fxNew = 1; P.bagUpgrade = true; } } // the one-time card; a new effect item you can use lights the dot like an upgrade (#23)
     return true;
@@ -1628,6 +1630,7 @@
     const P = G.S.player;
     if (!G.slotsShort([[it, 1]]) && G.addItem(it, 1)) return 'bags'; // only when it fits, so no "full" toast before the bank (#443)
     P.bank = P.bank || []; if (G.stackable(it)) putStack(P.bank, it, 1); else P.bank.push({ item: it, n: 1 }); // onto a stack there (#476)
+    G.finestGot(it); // a reward sent to the bank is found too (#593)
     sys(`${label}: your bags were full, so the ${it.name} went to your bank.`); return 'bank';
   };
   // a quest reward offers two versions (#141): the class's own stat mix and a second mix it plays with, and a weapon in
@@ -3377,6 +3380,7 @@
     if (n.founder) return G.isFounder(); // #507
     if (n.debtBreaker) return !!G.account().debtBreaker; // #523
     if (n.crest) return G.crests().length >= n.crest; // #565
+    if (n.finest) return G.finestTitleEarned((D.FINEST_SEASONS || []).find((x) => x.id === n.finest)); // Season's Finest: one role's Best all found blind (#593)
     return Object.keys(n).every((k) => (r[k] || 0) >= n[k]);
   };
   const ROMAN = (n) => { let o = '', x = n; for (const [v, r] of [[1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']]) while (x >= v) { o += r; x -= v; } return o; };
@@ -5379,6 +5383,8 @@
     abank: (n) => AB.view(G.abank()).length >= n,
     abank_tab: () => G.abank().tabs >= 1,
     mat_bag: () => (G.S.player.bagsEq || []).some((b) => b.matBag),
+    // Season's Finest (#593)
+    finest: (n) => G.finestFoundCount() >= (n || 1),
   };
   // The Weekly Board and the Daily Board: banners of their own every week and every day, listing only the steps this
   // character can do (a step's `need`: 'cap' level 60, 'guild' in a guild, 'brawl' the Brawl's level)
@@ -5428,6 +5434,112 @@
     for (const b of list || G.weekBanners()) for (const st of b.steps || []) { const v = G.weekStepDone(st); if (v === null) continue; of++; if (v) n++; }
     return { n, of };
   };
+
+  // ---- Season's Finest (#593): the best pieces per class and role by season (D.FINEST_SEASONS). Per character, under
+  // P.finest[seasonId]: seen and found by item id; hint, reveal and blind by row ('role|slot|tier'); title once earned.
+  const FIN_TIERS = ['best', 'until'];
+  G.finestSeason = function (date) {
+    const d = date || new Date(now()); let live = null;
+    for (const s of D.FINEST_SEASONS || []) if (wkDay(s.from) <= d && (!s.to || d <= wkDay(s.to, true)) && (!live || s.from > live.from)) live = s; /* a later season ends an open one (#593) */
+    return live;
+  };
+  // every row of a season, indexed by item id: [{ cls, role, slot, tier }] (#593)
+  const finIdx = new WeakMap();
+  const finIndex = (s) => { let x = finIdx.get(s); if (x) return x; x = {};
+    for (const tier of FIN_TIERS) for (const key in s[tier] || {}) { const [cls, role] = key.split(':'); for (const slot in s[tier][key]) (x[s[tier][key][slot]] = x[s[tier][key][slot]] || []).push({ cls, role, slot, tier }); }
+    finIdx.set(s, x); return x; };
+  const finKey = (role, slot, tier) => role + '|' + slot + '|' + tier;
+  // the character's state for a season; old saves have none, and a partial one is filled in (#593)
+  const finState = (s) => { const P = G.S.player; P.finest = P.finest && typeof P.finest === 'object' ? P.finest : {};
+    const st = P.finest[s.id] = P.finest[s.id] && typeof P.finest[s.id] === 'object' ? P.finest[s.id] : {};
+    for (const k of ['seen', 'found', 'hint', 'reveal', 'blind']) if (!st[k] || typeof st[k] !== 'object') st[k] = {};
+    return st; };
+  const finRoles = (s, cls) => { const C = D.CLASSES[cls]; if (!s || !C) return [];
+    return (C.roles || [C.role]).filter((r) => FIN_TIERS.some((t) => s[t] && s[t][cls + ':' + r] && Object.keys(s[t][cls + ':' + r]).length)); };
+  G.finestRoles = (cls) => finRoles(G.finestSeason(), cls);
+  // where an item drops, from the real loot rules: a boss drops 2 of its table each kill; a mob's drop rolls its own chance (#593)
+  let finSrc = null;
+  const finSource = (id) => {
+    if (!finSrc) { finSrc = {};
+      for (const act in D.ACTIVITIES) { const A = D.ACTIVITIES[act], Dg = A.dungeon && D.DUNGEONS[A.dungeon]; if (!Dg || A.worldBoss || A.event) continue;
+        for (const p of Dg.pulls) for (const m of p.mobs) { const M = D.MOBS[m]; if (!M) continue;
+          const add = (iid, chance) => { const o = finSrc[iid]; if (!o || chance > o.chance) finSrc[iid] = { where: A.name, boss: M.name, chance }; };
+          if (p.boss && m === p.mobs[0]) for (const iid of M.loot || []) add(iid, Math.min(1, 2 / M.loot.length));
+          for (const [iid, c] of M.drops || []) add(iid, c); } } }
+    return finSrc[id] || null;
+  };
+  G.finestTitleEarned = function (s) {
+    if (!s || !G.S) return false; const st = finState(s); if (st.title) return true;
+    const cls = G.S.player.cls;
+    return finRoles(s, cls).some((r) => { const b = (s.best || {})[cls + ':' + r] || {}, slots = Object.keys(b);
+      return slots.length > 0 && slots.every((sl) => st.found[b[sl]] && st.blind[finKey(r, sl, 'best')]); });
+  };
+  G.finest = function (cls, role) {
+    const s = G.finestSeason(), out = { season: s, rows: [], found: { best: 0, until: 0 }, total: { best: 0, until: 0 }, blind: { best: 0 }, titleEarned: false };
+    if (!s || !G.S) return out;
+    const st = finState(s), key = cls + ':' + role;
+    for (const slot of D.GEAR_SLOTS) for (const tier of FIN_TIERS) {
+      const id = ((s[tier] || {})[key] || {})[slot]; if (!id) continue;
+      const k = finKey(role, slot, tier), state = st.found[id] ? 'found' : st.seen[id] ? 'seen' : 'unknown';
+      const revealed = !!st.reveal[k], hinted = revealed || !!st.hint[k], src = finSource(id) || {};
+      out.rows.push({ slot, tier, id: state !== 'unknown' || revealed ? id : null, state, hinted, revealed, blind: state === 'found' && !!st.blind[k],
+        where: hinted || state !== 'unknown' ? src.where || null : null, boss: revealed || state === 'found' ? src.boss || null : null, chance: revealed || state === 'found' ? (src.chance != null ? src.chance : null) : null });
+      out.total[tier]++; if (state === 'found') { out.found[tier]++; if (tier === 'best' && st.blind[k]) out.blind.best++; }
+    }
+    out.titleEarned = G.finestTitleEarned(s);
+    return out;
+  };
+  // Hint names the place; Reveal names the item, boss and chance (and hints too). True when it changed something (#593)
+  const finMark = (cls, role, slot, tier, reveal) => {
+    const s = G.finestSeason(); if (!s || !G.S) return false;
+    const id = ((s[tier] || {})[cls + ':' + role] || {})[slot]; if (!id) return false;
+    const st = finState(s), k = finKey(role, slot, tier); if (st.found[id]) return false;
+    let changed = false;
+    if (!st.hint[k]) { st.hint[k] = 1; changed = true; }
+    if (reveal && !st.reveal[k]) { st.reveal[k] = 1; changed = true; }
+    if (changed) { emit('change'); G.save(); }
+    return changed;
+  };
+  G.finestHint = (cls, role, slot, tier) => finMark(cls, role, slot, tier, false);
+  G.finestReveal = (cls, role, slot, tier) => finMark(cls, role, slot, tier, true);
+  // the crest: 'best' or 'until' when any role of the character's class lists the item (#593)
+  G.finestMark = function (itemId) {
+    const s = G.finestSeason(); if (!s || !G.S || !itemId) return null;
+    const rows = finIndex(s)[itemId]; if (!rows) return null; const cls = G.S.player.cls;
+    let m = null; for (const r of rows) if (r.cls === cls) { if (r.tier === 'best') return 'best'; m = 'until'; }
+    return m;
+  };
+  // a tooltip showed the item: seen for every role of the class that lists it (#593)
+  G.finestSee = function (itemId) {
+    if (itemId && typeof itemId === 'object') itemId = itemId.id;
+    const s = G.finestSeason(); if (!s || !G.S || !itemId) return false;
+    const rows = finIndex(s)[itemId]; if (!rows || !rows.some((r) => r.cls === G.S.player.cls)) return false;
+    const st = finState(s); if (st.seen[itemId]) return false;
+    st.seen[itemId] = 1; G.save(); return true;
+  };
+  // the character got the item, by any path: found, and blind on every row of its class not hinted. quiet: the load scan (#593)
+  G.finestGot = function (it, quiet) {
+    const id = it && (typeof it === 'object' ? it.id : it), s = G.S && id && G.finestSeason(); if (!s) return false;
+    const rows = (finIndex(s)[id] || []).filter((r) => r.cls === G.S.player.cls); if (!rows.length) return false;
+    const st = finState(s); if (st.found[id]) return false;
+    st.found[id] = 1;
+    for (const r of rows) { const k = finKey(r.role, r.slot, r.tier); if (!st.hint[k] && !st.reveal[k]) st.blind[k] = 1; }
+    if (!st.title && G.finestTitleEarned(s)) {
+      st.title = 1; const t = D.TITLES.find((x) => x.id === s.title);
+      if (t) loot(`New title: ${G.titleName(t, G.S.player.name)}. Wear it: Hero → Journey → Titles.`);
+    }
+    if (!quiet) emit('finestFound', { id });
+    return true;
+  };
+  // on load: anything already owned (worn, bags, bank, the Account bank) counts as found (#593)
+  G.finestOwned = function () {
+    if (!G.S || !G.finestSeason()) return 0;
+    const P = G.S.player; let n = 0;
+    const all = [].concat(Object.values(P.equip || {}), (P.bags || []).map((b) => b && b.item), (P.bank || []).map((b) => b && b.item), abankItems().map((r) => r && r.item));
+    for (const x of all) if (x && G.finestGot(x, true)) n++;
+    return n;
+  };
+  G.finestFoundCount = function () { const s = G.finestSeason(); if (!s || !G.S) return 0; const P = G.S.player, f = ((P.finest || {})[s.id] || {}).found || {}; return Object.keys(f).length; };
   const LW = () => D.EVENTS.lanternwake;
   G.lwAccount = function () { const a = G.account(); a.lw = Object.assign({ owned: [], steed: false, steedKills: 0, keepsakes: [], town: {} }, a.lw); return a; };
   // a test build's season (a beta or dev build outside the dates) keeps what it gives apart, in account.lwTest, so a beta

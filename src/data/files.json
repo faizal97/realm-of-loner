@@ -58,5 +58,6 @@
  "lore_quests.js", "prepatch_quests.js",
  "main_story.js",
  "effects.js",
- "finalize.js"
+ "finalize.js",
+ "finest.js"
 ]

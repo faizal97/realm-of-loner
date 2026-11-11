@@ -108,6 +108,18 @@
       ],
     },
     {
+      id: 'seasons_finest_2026_11_14', kind: 'new', from: '2026-11-14', to: '2026-11-20',
+      art: ['banner', 'raid_tidecrown_citadel'], artHorde: ['banner', 'raid_tidecrown_citadel_h'],
+      title: "Season's Finest begins",
+      text: [
+        'The best pieces for your class and role this season: Best from the newest raid and dungeons, Until then from the older ones.',
+        'Find every Best piece of one role without a Hint or Reveal for the title Pathfinder of the Tides. Hero → Season’s Finest.',
+      ],
+      steps: [
+        { text: 'Find a piece of Season’s Finest', check: ['finest', 1], go: 'finest' },
+      ],
+    },
+    {
       id: 'faire_soon_2026_11_14', kind: 'soon', from: '2026-11-14', to: '2026-11-20', at: '2026-11-21',
       art: ['banner', 'faire'],
       title: 'The Faire',

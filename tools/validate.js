@@ -227,6 +227,35 @@ for (const q of [2, 3, 4]) for (let L = 1; L < D.LEVEL_CAP; L++)
   for (const x of ['weekly_board', 'weekly_board_h', 'daily_board', 'daily_board_h']) { if (!banners.has(x)) err(`the boards: no banner '${x}' (art/banners/banners.py)`); used.add(x); } /* G.weekBanners adds the boards every week (#541) */
   for (const k of banners) if (!used.has(k)) err(`banner art '${k}' is used by no banner in src/data/thisweek.js: delete it from art/banners/banners.py`);
 }
+// Season's Finest (#593): every pick exists, sits in its slot, the class can use it and it drops somewhere; best and
+// until never share an item for a role and slot; the season's title exists
+{
+  const drops = new Set();
+  for (const dk in D.DUNGEONS) for (const p of D.DUNGEONS[dk].pulls) for (const m of p.mobs) { const M = D.MOBS[m]; if (!M) continue; for (const id of M.loot || []) drops.add(id); for (const [id] of M.drops || []) drops.add(id); }
+  const sids = new Set(), AR = { cloth: 0, leather: 1, mail: 2 };
+  // G.canUseItem's rules (game.js is not loaded here)
+  const canUse = (it, C) => it.slot === 'weapon' ? C.weapons.includes(it.wtype) : it.slot === 'ranged' ? (it.wtype === 'instrument' ? !!C.instrument : !!C.ranged) : it.atype ? (AR[it.atype] || 0) <= (AR[C.armorType] || 0) : true;
+  for (const s of D.FINEST_SEASONS || []) {
+    const w = `finest season ${s.id}`;
+    if (sids.has(s.id)) err(`${w}: id used twice`); sids.add(s.id);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s.from) || (s.to != null && (!/^\d{4}-\d{2}-\d{2}$/.test(s.to) || s.to < s.from))) err(`${w}: from/to must be YYYY-MM-DD (to may be null), from first`);
+    if (!s.name) err(`${w}: needs a name`);
+    if (!D.TITLES.some((t) => t.id === s.title)) err(`${w}: title '${s.title}' is not in D.TITLES`);
+    for (const tier of ['best', 'until']) for (const key in s[tier] || {}) {
+      const [cls, role] = key.split(':'), C = D.CLASSES[cls];
+      if (!C || !(C.roles || [C.role]).includes(role)) { err(`${w} ${tier}: '${key}' is not a class and one of its roles`); continue; }
+      for (const slot in s[tier][key]) {
+        const id = s[tier][key][slot], it = D.ITEMS[id], at = `${w} ${tier} ${key} ${slot}`;
+        if (!D.GEAR_SLOTS.includes(slot)) err(`${at}: unknown slot`);
+        if (!it) { err(`${at}: unknown item '${id}'`); continue; }
+        if (it.slot !== slot) err(`${at}: ${id} is a ${it.slot} item`);
+        if (!canUse(it, C)) err(`${at}: a ${cls} can't use ${id}`);
+        if (!drops.has(id)) err(`${at}: ${id} drops nowhere`);
+        if (tier === 'until' && ((s.best || {})[key] || {})[slot] === id) err(`${at}: ${id} is also its Best`);
+      }
+    }
+  }
+}
 
 if (errors.length) { errors.forEach((e) => console.error('  ERROR:', e)); console.error(`${errors.length} data error(s); build stopped.`); process.exit(1); }
 console.log('data OK');
