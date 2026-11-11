@@ -439,7 +439,8 @@
   // ============================================================ scene
   const POS_ALLY = [{ l: 28, b: 4, w: 25 }, { l: 12, b: 13, w: 19 }, { l: 1, b: 29, w: 17 }, { l: 22, b: 33, w: 15 }, { l: 10, b: 43, w: 13 }]; // slot 0 (the tank) stands nearest the enemies (#567)
   // raids (10 players plus pets): a denser formation, front line first, the first tank nearest the enemies (#567)
-  const POS_RAID = [{ l: 30, b: 4, w: 21 }, { l: 17, b: 10, w: 17 }, { l: 2, b: 3, w: 16 }, { l: 0, b: 22, w: 15 }, { l: 13, b: 25, w: 14 }, { l: 26, b: 20, w: 14 }, { l: 37, b: 27, w: 12 }, { l: 4, b: 38, w: 12 }, { l: 16, b: 40, w: 11 }, { l: 27, b: 37, w: 11 }, { l: 37, b: 44, w: 10 }, { l: 8, b: 50, w: 10 }, { l: 20, b: 52, w: 9 }, { l: 31, b: 52, w: 9 }];
+  const POS_SOLO = { l: 3, b: 4, w: 25 }; // alone you keep the spot you stand on out of a fight (#567)
+  const POS_RAID = [{ l: 30, b: 4, w: 18 }, { l: 17, b: 10, w: 17 }, { l: 2, b: 3, w: 16 }, { l: 0, b: 22, w: 15 }, { l: 13, b: 25, w: 14 }, { l: 26, b: 20, w: 14 }, { l: 37, b: 27, w: 12 }, { l: 4, b: 38, w: 12 }, { l: 16, b: 40, w: 11 }, { l: 27, b: 37, w: 11 }, { l: 37, b: 44, w: 10 }, { l: 8, b: 50, w: 10 }, { l: 20, b: 52, w: 9 }, { l: 31, b: 52, w: 9 }];
   const POS_NODE = [{ l: 31, b: 3, w: 11 }, { l: 49, b: 1, w: 10 }, { l: 40, b: 12, w: 9 }, { l: 58, b: 10, w: 9 }]; // gathering nodes: a place holds 2 ore and 2 herb (G.NODES_PER_KIND); a third had no spot and broke the scene
   const POS_EN = [{ r: 3, b: 4, w: 30 }, { r: 26, b: 15, w: 23 }, { r: 6, b: 28, w: 20 }, { r: 28, b: 34, w: 17 }, { r: 15, b: 44, w: 14 }];
   function sceneKey() {
@@ -504,7 +505,7 @@
     const pull = isFinite(alR) && isFinite(enL) ? Math.max(0, (enL - alR - gap) / 2) : 0;
     for (const u of C.allies.concat(C.enemies)) {
       const el = ui.spriteEls[u.uid]; if (!el || !u.pos || !u.pos0) continue;
-      list.push({ uid: u.uid, ally: u.side === 'ally', dead: u.dead, o: el.offsetLeft, b: el.offsetLeft + (u.side === 'ally' ? pull : -pull), w: el.offsetWidth, d: (u.pos.x - u.pos0.x) * W });
+      list.push({ uid: u.uid, ally: u.side === 'ally', ex: u.pos.x, dead: u.dead, o: el.offsetLeft, b: el.offsetLeft + (u.side === 'ally' ? pull : -pull), w: el.offsetWidth, d: (u.pos.x - u.pos0.x) * W });
     }
     const lay = (k) => {
       const xs = list.map((x) => x.b + x.d * k);
@@ -512,6 +513,13 @@
         const A = list[i], N = list[j]; if (!A.ally || N.ally || A.dead || N.dead) continue;
         const ov = xs[i] + A.w + gap - xs[j]; if (ov > 0) { xs[i] -= ov / 2; xs[j] += ov / 2; }
       }
+      // allies are drawn in the engine's front-to-back order (#567): a caster stepping in from a back slot never passes
+      // the tank holding the front, and a tank pushed back off the enemy keeps its group behind it
+      let lim = Infinity;
+      list.map((x, i) => i).filter((i) => list[i].ally && !list[i].dead).sort((a, b) => list[b].ex - list[a].ex).forEach((i) => {
+        const c = xs[i] + list[i].w / 2; if (c > lim) xs[i] = lim - list[i].w / 2;
+        lim = Math.min(lim, xs[i] + list[i].w / 2) - 0.06 * W; /* each one behind stands a step further back */
+      });
       return xs;
     };
     const span = (k) => { const xs = lay(k); let lo = Infinity, hi = -Infinity; list.forEach((x, i) => { if (x.dead) return; lo = Math.min(lo, xs[i]); hi = Math.max(hi, xs[i] + x.w); }); return { lo, hi }; };
@@ -613,7 +621,7 @@
       const slotOf = new Map(C.allies.map((u, i) => [u, i]).sort((a, b) => ((a[0].role === 'tank' ? 0 : a[0].backLine ? 2 : 1) - (b[0].role === 'tank' ? 0 : b[0].backLine ? 2 : 1)) || a[1] - b[1]).map(([u], k) => [u, k]));
       C.allies.forEach((u) => {
         const i = slotOf.get(u);
-        const pos = C.allies.length > 7 ? (POS_RAID[i] || POS_RAID[POS_RAID.length - 1]) : (POS_ALLY[i] || POS_ALLY[4]);
+        const pos = C.allies.length === 1 ? POS_SOLO : C.allies.length > 7 ? (POS_RAID[i] || POS_RAID[POS_RAID.length - 1]) : (POS_ALLY[i] || POS_ALLY[4]);
         const np = C.allies.length > 1 ? h('div', { class: 'np' }, h('span', { class: 'cls-' + u.cls }, u.kind === 'player' ? '' : u.name.split('-')[0]), h('div', { class: 'hpb' }, h('i'))) : null;
         const cos = u.kind === 'player' && !u.form && G.costumeOf(G.S.player);
         const src = cos ? mobArt(cos) : u.kind === 'pet' ? petArt(u) : u.form === 'bear' ? art('pet', 'bear_form') : u.char && u.char.legend ? art('legend', u.char.legendArt || u.char.legend) : art('hero', looks(u.char));
@@ -6196,7 +6204,10 @@
   const viewCall = (cmd, args) => new Promise((res) => { if (!(window.AzView && window.AzView.postMessage)) return res(null); const id = ++view.seq; view.wait[id] = res; window.AzView.postMessage(JSON.stringify({ id, cmd, args: args || {} })); });
   viewCall('getMode').then((r) => { if (r && r.ok) view.mode = r.value; });
   // the Android app keeps the screen on during a fight or a group run, and only then (#563); a browser has no AzView
-  if (window.AzView) { let awake = false; setInterval(() => { const want = !!(G.S && (G.fight || G.S.run)); if (want !== awake) { awake = want; viewCall('keepAwake', { on: want }); } }, 2000); }
+  // the screen stays on in a fight, and in a run still going that you touched in the last 2 minutes: a cleared run
+  // or a tank who walked away lets the phone sleep (#572)
+  if (window.AzView) { let awake = false, touched = Date.now(); for (const ev of ['pointerdown', 'keydown']) document.addEventListener(ev, () => { touched = Date.now(); }, { capture: true, passive: true });
+    setInterval(() => { const R = G.S && G.S.run, want = !!(G.S && (G.fight || (R && R.phase !== 'done' && Date.now() - touched < 120000))); if (want !== awake) { awake = want; viewCall('keepAwake', { on: want }); } }, 2000); }
   function switchViewMode() {
     if (!view.mode) return toast('Only in the Android app.');
     const next = view.mode === 'hybrid' ? 'texture' : 'hybrid';
