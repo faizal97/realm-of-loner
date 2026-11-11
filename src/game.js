@@ -298,18 +298,19 @@
     // gear power (#581), once per save and once for the account bank: every upgraded item is rebuilt from the item as it
     // dropped at the power it bought (damage and armour now stop under the raid's piece), and every Hard raid copy gets
     // the 2 steps past the ceiling it was clamped out of
-    { const regear = (root, flagOf) => {
-        if (!root || flagOf.gear581) return false;
-        const seen = new Set();
-        const walk = (o, depth) => {
-          if (!o || typeof o !== 'object' || depth > 8 || seen.has(o)) return; seen.add(o);
-          for (const k in o) { const x = o[k];
-            if (x && typeof x === 'object' && typeof x.id === 'string' && D.GEAR_SLOTS.includes(x.slot) && (x.hard || (x.base && x.pw))) o[k] = G.regearItem(x);
-            else walk(x, depth + 1); }
-        };
-        walk(root, 0); flagOf.gear581 = 1; return true;
+    { const seen = new Set();
+      const walk = (o, depth) => {
+        if (!o || typeof o !== 'object' || depth > 8 || seen.has(o)) return; seen.add(o);
+        for (const k in o) { const x = o[k];
+          if (x && typeof x === 'object' && typeof x.id === 'string' && D.GEAR_SLOTS.includes(x.slot) && (x.hard || (x.base && x.pw))) o[k] = G.regearItem(x);
+          else walk(x, depth + 1); }
       };
-      S.flags = S.flags || {}; regear(S.player, S.flags); } // the account bank's copies are rebuilt as they come out (G.abankWithdraw)
+      // the player's items outside the character: the mail, their own auctions, a reforge's undo copy (#588)
+      const away = () => [S.mail, S.ah && S.ah.mine, S.reforge];
+      S.flags = S.flags || {};
+      if (!S.flags.gear581) { walk(S.player, 0); for (const o of away()) walk(o, 0); S.flags.gear581 = 1; S.flags.gear588 = 1; }
+      else if (!S.flags.gear588) { for (const o of away()) walk(o, 0); S.flags.gear588 = 1; } /* a save rebuilt before #588: those places once */
+    } // the account bank's copies are rebuilt as they come out (G.abankWithdraw)
     // a talent no longer in its class's trees (the Bard's first trees, #253) gives its points back; so does a second
     // keystone where a tree allows one (pickOne)
     if (S.player.talents && D.TALENTS[S.player.cls]) {
@@ -1289,7 +1290,7 @@
     if (!P.riding) return toast('Learn Riding first.');
     if (M.marks) { // a Mentor Quartermaster mount (#506): Mentor Marks, every character on the account
       const a = G.account(), c = G.qmPrice(M.marks, 'mount:' + key); if (a.marks < c) return toast(`You need ${c} Mentor Marks.`);
-      a.marks -= c; a.mounts = (a.mounts || []).concat([key]); G.saveAccount(a); P.mounts.push(key); P.mount = key;
+      a.marks -= c; a.mounts = (a.mounts || []).concat([key]); G.markPaid(a, 'mount:' + key, c); G.saveAccount(a); P.mounts.push(key); P.mount = key;
       loot(`You bought a ${M.name} for every character.`); emit('change'); G.save(); return;
     }
     if (M.swift && !P.expertRiding) return toast('Learn Expert Riding first.');
@@ -2330,7 +2331,7 @@
     const a = G.account(), b = AB.merge(a.bank, null), c = G.ABANK_TAB_COST[b.tabs];
     if (c == null) { toast('The account bank has every tab.'); return false; }
     if (a.marks < c) { toast(`You need ${c} Mentor Marks.`); return false; }
-    a.marks -= c; b.tabs += 1; a.bank = b; G.saveAccount(a); // one write: the Marks and the tab together
+    a.marks -= c; b.tabs += 1; a.bank = b; G.markPaid(a, 'abank:tab' + b.tabs, c); G.saveAccount(a); // one write: the Marks and the tab together
     sys(`Account bank tab ${b.tabs} bought: ${G.abankSlots(b)} slots.`); emit('change'); return true;
   };
   // What other players pay: the vendor price times a factor by quality.
@@ -2902,9 +2903,22 @@
   const DEVICE_KEY = 'azsolo.device';
   G.deviceId = () => { let d = ls.get(DEVICE_KEY); if (!d) { d = 'd' + Date.now().toString(36) + (typeof performance !== 'undefined' ? Math.floor(performance.now() * 1000).toString(36) : ''); /* no Math.random: seeded runs keep their dice */ ls.set(DEVICE_KEY, d); } return d; };
   const sumOf = (o) => Object.values(o || {}).reduce((s, n) => s + (+n || 0), 0);
-  G.mkBalance = (mk) => Math.max(0, Math.round((+mk.base || 0) + sumOf(mk.earn) - sumOf(mk.spend)));
-  G.mkOf = (a) => (a && a.mk && typeof a.mk === 'object' ? { base: +a.mk.base || 0, earn: Object.assign({}, a.mk.earn), spend: Object.assign({}, a.mk.spend) } : { base: Math.max(0, +(a && a.marks) || 0), earn: {}, spend: {} });
-  G.account = function () { let a = null; try { a = JSON.parse(ls.get(ACCOUNT_KEY) || 'null'); } catch (e) { a = null; } a = Object.assign({ marks: 0, heirlooms: [] }, a || {}); a.mk = G.mkOf(a); a.marks = G.mkBalance(a.mk); return a; };
+  // mk.paid = { <thing>: { device: Marks } }: the same account unlock bought on two devices before a sync is charged
+  // once, the cheapest; the rest comes back (#588)
+  G.mkPaidBack = (p) => { let s = 0; for (const k in (p && typeof p === 'object' ? p : {})) { const v = Object.values(p[k] || {}).map(Number).filter((n) => n > 0); if (v.length > 1) s += v.reduce((x, y) => x + y, 0) - Math.min(...v); } return s; };
+  G.mkBalance = (mk) => Math.max(0, Math.round((+mk.base || 0) + sumOf(mk.earn) - sumOf(mk.spend) + G.mkPaidBack(mk.paid)));
+  G.mkOf = (a) => (a && a.mk && typeof a.mk === 'object' ? { base: +a.mk.base || 0, earn: Object.assign({}, a.mk.earn), spend: Object.assign({}, a.mk.spend), paid: JSON.parse(JSON.stringify(a.mk.paid && typeof a.mk.paid === 'object' ? a.mk.paid : {})) } : { base: Math.max(0, +(a && a.marks) || 0), earn: {}, spend: {}, paid: {} });
+  // what an account unlock cost on this device, so a second device's purchase of the same one is refunded (#588)
+  G.markPaid = (a, thing, c) => { a.mk = a.mk || G.mkOf(a); a.mk.paid = a.mk.paid || {}; (a.mk.paid[thing] = a.mk.paid[thing] || {})[G.deviceId()] = c; };
+  // a stored balance that differs from the counters was changed by a version without them (the live page shares this
+  // storage with /beta/): the difference is this device's earning or spending (#588)
+  const mkCatchUp = (a) => {
+    const had = a.mk && typeof a.mk === 'object' && typeof a.marks === 'number' && isFinite(a.marks), mk = G.mkOf(a);
+    const d = had ? Math.round(a.marks - G.mkBalance(mk)) : 0;
+    if (d) { const dev = G.deviceId(); if (d > 0) mk.earn[dev] = (+mk.earn[dev] || 0) + d; else mk.spend[dev] = (+mk.spend[dev] || 0) - d; }
+    return mk;
+  };
+  G.account = function () { let a = null; try { a = JSON.parse(ls.get(ACCOUNT_KEY) || 'null'); } catch (e) { a = null; } a = Object.assign({ marks: 0, heirlooms: [] }, a || {}); a.mk = mkCatchUp(a); a.marks = G.mkBalance(a.mk); return a; };
   // a change to a.marks since the account was read is this device's earning or spending
   G.saveAccount = (a) => {
     const mk = G.mkOf(a), d = Math.round((+a.marks || 0) - G.mkBalance(mk)), dev = G.deviceId();
@@ -2964,7 +2978,7 @@
     const a = G.account(), lk = place + ':' + key; a.looks = a.looks || [];
     if (a.looks.includes(lk)) { toast('You have this look.'); return false; }
     const c = G.qmPrice(L.cost, 'look:' + lk); if (a.marks < c) { toast(`You need ${c} Mentor Marks.`); return false; }
-    a.marks -= c; a.looks.push(lk); G.saveAccount(a); loot(`New look: ${L.name}. It is in your wardrobe.`); emit('change'); G.save(); return true;
+    a.marks -= c; a.looks.push(lk); G.markPaid(a, 'look:' + lk, c); G.saveAccount(a); loot(`New look: ${L.name}. It is in your wardrobe.`); emit('change'); G.save(); return true;
   };
   // ---- Renown (#504, docs/plans/2026-11-07-currency-sinks-design.md §4): an endless account rank bought with Marks and gold
   // together. Rank r costs RENOWN_MARKS and RENOWN_GOLD times (1 + r/10): a straight line, so the next rank always stays
@@ -2978,7 +2992,7 @@
     const a = G.account(), r = (a.renown || 0) + 1, c = G.renownCost(r), P = G.S.player;
     if (a.marks < c.marks) { toast(`You need ${c.marks} Mentor Marks.`); return false; }
     if (P.money < c.gold) { toast(`You need ${G.moneyText(c.gold)}.`); return false; }
-    a.marks -= c.marks; P.money -= c.gold; a.renown = r; G.saveAccount(a);
+    a.marks -= c.marks; P.money -= c.gold; a.renown = r; G.markPaid(a, 'renown:' + r, c.marks); G.saveAccount(a);
     const got = [`dye: ${D.dye(r).name}`]; if (r % 5 === 0) got.push(`title tier: ${G.titleName(D.TITLES.find((t) => t.id === 'renowned'), P.name)}`); if (r % 10 === 0) got.push(`mount tint ${r / 10}`);
     loot(`Renown ${r}. New ${got.join(', ')}.`); emit('change'); G.save(); return true;
   };
@@ -3029,7 +3043,7 @@
     const a = G.account(), H = D.HEIRLOOMS[id]; if (!H) return;
     const owned = a.heirlooms.includes(id);
     if (G.bagsFull()) return toast('Bags are full.'); // before any Marks are taken, so a full bag costs nothing (#87)
-    if (!owned) { if (a.marks < H.cost) return toast(`You need ${H.cost} Mentor Marks.`); a.marks -= H.cost; a.heirlooms.push(id); G.saveAccount(a); }
+    if (!owned) { if (a.marks < H.cost) return toast(`You need ${H.cost} Mentor Marks.`); a.marks -= H.cost; a.heirlooms.push(id); G.markPaid(a, 'heirloom:' + id, H.cost); G.saveAccount(a); }
     G.addItem(G.makeHeirloom(id, G.S.player.level), 1);
     loot(owned ? `You take a copy of ${B.link(H.name, 5)}.` : `You bought ${B.link(H.name, 5)} for ${H.cost} Mentor Marks. Every character can take a copy.`);
     emit('change');
@@ -4167,7 +4181,7 @@
     if (!it || !G.pastMonthCloaks().includes(id)) return toast('That cloak is earned in its own month.');
     if ((a.looks || []).includes(it.look.join(':'))) return toast('You have that cloak already.');
     if (a.marks < G.MONTH_CLOAK_COST) return toast(`You need ${G.MONTH_CLOAK_COST} Mentor Marks.`);
-    a.marks -= G.MONTH_CLOAK_COST; const tw = a.trialsworn = a.trialsworn || {}; (tw.bought = tw.bought || []).push(it.month); G.saveAccount(a);
+    a.marks -= G.MONTH_CLOAK_COST; const tw = a.trialsworn = a.trialsworn || {}; (tw.bought = tw.bought || []).push(it.month); G.markPaid(a, 'cloak:' + it.month, G.MONTH_CLOAK_COST); G.saveAccount(a);
     G.collectLook(it); loot(`Bought ${B.link(it.name, 4)} (${G.MONTH_CLOAK_COST} Mentor Marks). Added to your wardrobe.`); G.yearMountCheck(); emit('change');
   };
   // the yearly mount: every cloak of that year's 12 months in the wardrobe (earned or bought) gives it to every character
