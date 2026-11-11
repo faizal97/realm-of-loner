@@ -150,8 +150,11 @@ test('"happy weekend everyone" is not said on a Wednesday', () => {
   setNow(new Date(2026, 10, 11, 20).getTime()); // Wednesday 20:00
   const b = S.bots.find((x) => B.factionOf(x) === G.myFaction());
   assert.strictEqual(B.lineTrue(S, 'happy weekend everyone', b, 'guild'), false);
+  assert.strictEqual(B.lineTrue(S, 'happy friday all', b, 'guild'), false, 'a day named is today');
+  assert.strictEqual(B.lineTrue(S, 'guild run on friday, all welcome!', b, 'guild'), true, 'a plan for another day is fine');
   setNow(new Date(2026, 10, 14, 20).getTime()); // Saturday
   assert.strictEqual(B.lineTrue(S, 'happy weekend everyone', b, 'guild'), true);
+  assert.strictEqual(B.lineTrue(S, 'happy saturday all', b, 'guild'), true);
 });
 
 // a whispered guild invitation ("we're recruiting for <X>") comes from someone who isn't in <X> when none of X's

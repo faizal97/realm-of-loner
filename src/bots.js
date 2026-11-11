@@ -788,11 +788,14 @@
   // with a record of them: in the group now, or a friend (a run, trade or help, SOC.isFriend).
   const TOD = { morning: ['morning'], afternoon: ['afternoon'], evening: ['evening'], night: ['night'], tonight: ['evening', 'night'], gn: ['night'], dinner: ['evening'], breakfast: ['morning'] };
   const TOD_RE = /\b(tonight|night|morning|afternoon|evening|gn|dinner|breakfast)\b/g;
+  const WDAY_N = { sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6 }, WDAY_RE = /\b(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/g; // a day named in a line is today's (#592)
   B.timeOfDay = (h) => (h >= 5 && h < 12 ? 'morning' : h >= 12 && h < 17 ? 'afternoon' : h >= 17 && h < 21 ? 'evening' : 'night');
   B.lineTrue = function (S, text, from, ch) {
     const s = String(text).toLowerCase(), t = Date.now();
     const now = B.timeOfDay(new Date(t).getHours());
     for (const m of s.matchAll(TOD_RE)) if (!TOD[m[1]].includes(now)) return false;
+    const wd = new Date(t).getDay(); if (/\bweekend\b/.test(s) && wd !== 0 && wd !== 6) return false; // the weekend is Saturday and Sunday (#592)
+    for (const m of s.matchAll(WDAY_RE)) if (WDAY_N[m[1]] !== wd && !/\b(on|next|this|by|till|until|since|last)\s+$/.test(s.slice(0, m.index))) return false; // 'happy friday' only on a Friday; 'on friday' is a plan (#592)
     if (/\b(server|realm|tonight|today|here)\b/.test(s)) {
       const busy = /\b(packed|busy|full)\b/.test(s), quiet = /\b(dead|empty|quiet)\b/.test(s);
       if (busy || quiet) { const mood = B.serverMood(S, t); if (mood !== (busy ? 'busy' : 'quiet')) return false; }
