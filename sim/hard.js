@@ -53,7 +53,7 @@ for (const act of raids) {
   const b0 = bosses[0];
   // loot: two steps up the first time this week, Normal the second time, again after Monday
   const it = G.hardCopy(D.MOBS[b0].loot[0]), base = G.copyItem(D.MOBS[b0].loot[0]), ib = G.upgradeInfo(base), ih = G.upgradeInfo(it);
-  check(it.hard && Math.abs((ih.pts - ib.pts) - Math.min(G.HARD_STEPS * D.UPGRADE.step * G.upgradeRef(base), D.UPGRADE.cap[base.q] * G.upgradeRef(base) - ib.pts)) < 0.02, `${act}: a Hard drop is ${G.HARD_STEPS} steps up (${ib.pct}% → ${ih.pct}%)`);
+  check(it.hard && Math.abs((ih.pts - ib.pts) - G.HARD_STEPS * D.UPGRADE.step * G.upgradeRef(base)) < 0.02 /* 2 steps even past the ceiling (#581) */, `${act}: a Hard drop is ${G.HARD_STEPS} steps up (${ib.pct}% → ${ih.pct}%)`);
   check(G.hardBonusLeft(act, b0), `${act}: bonus open at the start of the week`);
   G.raidWeek().got[act + ':' + b0] = true; check(!G.hardBonusLeft(act, b0), `${act}: bonus taken`);
   t += 7 * 86400000; check(G.hardBonusLeft(act, b0), `${act}: bonus back after the Monday reset`);
