@@ -884,6 +884,8 @@
     if (S.botSaid) { const ids = new Set(S.bots.map((b) => String(b.id))); for (const k in S.botSaid) if (!ids.has(k)) delete S.botSaid[k]; }
   };
 
+  // a bot in your group-finder group or your world party: the only ones who speak in party chat (#590)
+  const inParty = (S, id) => [S.group, S.wparty].some((g) => g && g.members.some((m) => m.bot && m.bot.id === id));
   // Called every second. Schedules chatter.
   B.chatTick = function (S, now) {
     const T = S.chatTimers || (S.chatTimers = {});
@@ -909,6 +911,7 @@
       S.pending = S.pending.filter((p) => p.at > now);
       for (const p of ready) {
         if (p.unless && p.unless()) continue; // a line whose reason went away (a guild application withdrawn, #416)
+        if (p.ch === 'party' && !inParty(S, p.bot)) continue; // only from a group you are in (#590)
         let bot;
         if (p.fromName) { const gm = S.group && S.group.members.find((m) => m.name === p.fromName); bot = { name: p.fromName, cls: gm ? gm.cls : null, id: p.bot, legend: !!(gm && gm.legend) }; }
         else bot = S.bots.find((b) => b.id === p.bot) || (p.strict ? null : onl());

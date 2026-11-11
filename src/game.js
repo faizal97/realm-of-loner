@@ -4499,7 +4499,7 @@
   function seatLead(grp, bot) {
     const r = G.mainRole(bot); let i = grp.members.findIndex((m) => m.role === r && !m.legend);
     if (i < 0) i = grp.members.findIndex((m) => m.role === 'dps' && !m.legend); if (i < 0) return;
-    const c = G.botChar(Object.assign({}, bot, { role: grp.members[i].role })); c.syncLevel = grp.members[i].syncLevel; grp.members[i] = c;
+    const c = G.botChar(Object.assign({}, bot, { role: grp.members[i].role, gearFloor: G.gearFloor(grp.act) })); /* a raid's gear floor, as the finder's picks (#590) */ c.syncLevel = grp.members[i].syncLevel; grp.members[i] = c;
   }
   G.botChar = function (b) {
     if (!(b && b.id >= 0)) return rollBotChar(b);
@@ -4575,13 +4575,15 @@
     const used = new Set(), usedCls = new Set([S.player.cls]);
     const trial = opts && opts.trial, lvl = trial ? D.LEVEL_CAP : G.syncLevel(act);
     const floor = G.gearFloor(act, opts && opts.hard);
-    const members = roles.map((r) => G.botChar(Object.assign(recruit(r, lvl, used, usedCls, opts && opts.guild, !!trial), { gearFloor: floor })));
+    const bots = roles.map((r) => Object.assign(recruit(r, lvl, used, usedCls, opts && opts.guild, !!trial), { gearFloor: floor }));
+    if (trial) { const sk = TR().botSkill(G.trialRating()); for (const b of bots) b.skill = clamp(sk + rnd(-0.08, 0.05), 0.3, 0.95); } // your rating draws better players
+    if (opts && opts.hard) { const sk = TR().botSkill(G.trialRating()) + 0.05; for (const b of bots) b.skill = clamp(sk + rnd(-0.06, 0.05), 0.3, 0.95); } // Hard: skilled players, a little above your Trial rating
+    if (opts && opts.firstTimers) for (const b of bots) b.skill = Math.min(b.skill, 0.25 + Math.random() * 0.2);
+    const members = bots.map((b) => G.botChar(b)); // gear rolled once the skill is final, so it matches how they play (#590)
     // everyone fights at the activity's level (a Trial: at the level cap)
     const cap = trial ? D.LEVEL_CAP : A.scale ? lvl : A.maxLvl || D.LEVEL_CAP; // a festival run is fought at your own level
     for (const m of members) m.syncLevel = cap;
-    if (trial) { const sk = TR().botSkill(G.trialRating()); for (const m of members) m.bot.skill = clamp(sk + rnd(-0.08, 0.05), 0.3, 0.95); } // your rating draws better players
-    if (opts && opts.hard) { const sk = TR().botSkill(G.trialRating()) + 0.05; for (const m of members) m.bot.skill = clamp(sk + rnd(-0.06, 0.05), 0.3, 0.95); } // Hard: skilled players, a little above your Trial rating
-    if (opts && opts.firstTimers) for (const m of members) { m.bot.skill = Math.min(m.bot.skill, 0.25 + Math.random() * 0.2); m.level = Math.max(A.minLvl, Math.min(m.level, A.minLvl + 1)); }
+    if (opts && opts.firstTimers) for (const m of members) m.level = Math.max(A.minLvl, Math.min(m.level, A.minLvl + 1));
     // Legends (v10.2, story heroes): a legend always joins the run that is part of their own story; after their story,
     // only as a rare cameo (G.rollCameo). They take their role's slot, or a damage slot if you play that role.
     const joins = Object.keys(D.LEGENDS || {}).filter((key) => A.needQuest && D.QUESTS[A.needQuest] && D.QUESTS[A.needQuest].legend === key);
@@ -4975,10 +4977,11 @@
       }
       for (const m of S.group.members.filter((x) => x.gone && x.replacing && t >= x.replacing)) {
         const used = new Set(S.group.members.map((x) => x.bot.id));
-        const nb = G.botChar(Object.assign(recruit(m.role, G.syncLevel(R.act), used, new Set(S.group.members.filter((x) => !x.gone).map((x) => x.cls).concat([P.cls])), null, !!R.trial), { gearFloor: G.gearFloor(R.act, R.hard) }));
+        const rb = Object.assign(recruit(m.role, G.syncLevel(R.act), used, new Set(S.group.members.filter((x) => !x.gone).map((x) => x.cls).concat([P.cls])), null, !!R.trial), { gearFloor: G.gearFloor(R.act, R.hard) });
+        if (R.trial && !R.hard) rb.skill = clamp(TR().botSkill(G.trialRating()) + rnd(-0.08, 0.05), 0.3, 0.95); // drawn from your Trial rating, like the first group
+        if (R.hard) rb.skill = clamp(TR().botSkill(G.trialRating()) + 0.05 + rnd(-0.06, 0.05), 0.3, 0.95); // a Hard group refills with skilled players too
+        const nb = G.botChar(rb); /* gear once the skill is final (#590) */
         nb.syncLevel = P.syncLevel || D.ACTIVITIES[R.act].maxLvl || D.LEVEL_CAP; // the group's own level: a Trial's cap, a festival run's yours (#384)
-        if (R.trial && !R.hard) nb.bot.skill = clamp(TR().botSkill(G.trialRating()) + rnd(-0.08, 0.05), 0.3, 0.95); // drawn from your Trial rating, like the first group
-        if (R.hard) nb.bot.skill = clamp(TR().botSkill(G.trialRating()) + 0.05 + rnd(-0.06, 0.05), 0.3, 0.95); // a Hard group refills with skilled players too
         const i = S.group.members.indexOf(m);
         S.group.members[i] = nb;
         sys(`${nb.name} has joined the group.`); emit('runUpdate'); // the party frames show the new member at once, not after a tap (#281)
@@ -5107,6 +5110,7 @@
       }
       S.player.place = S.run.returnTo || 'goldshire';
     }
+    if (S.group && S.pending) { const ids = new Set(S.group.members.map((m) => m.bot && m.bot.id)); S.pending = S.pending.filter((p) => !(p.ch === 'party' && ids.has(p.bot))); } /* their queued party lines go with them (#590) */
     S.run = null; S.group = null; delete S.player.syncLevel;
     sys('You left the group.');
     S.player.hp = S.player.hp == null ? null : S.player.hp;
