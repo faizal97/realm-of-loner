@@ -32,7 +32,8 @@ test('at 60 frames a second the cast bar moves every frame; the fight still step
 
 test('the cast still finishes on the same step as before', () => {
   const { C, cast } = castingMage();
-  const end = cast.end; let doneAt = null;
+  let doneAt = null;
   for (let i = 0; i < 600 && doneAt == null; i++) { G.update(1 / 60); if (!G.pUnit || G.pUnit.cast !== cast) doneAt = C.t; }
+  const end = cast.end; // after any pushback from a hit taken while casting
   assert.ok(doneAt != null && doneAt >= end - 1e-9 && doneAt < end + 0.1 + 1e-9, `finished at ${doneAt}, due at ${end}`);
 });

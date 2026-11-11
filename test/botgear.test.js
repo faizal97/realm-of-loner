@@ -16,10 +16,11 @@ test('the same bot, met twice, wears the same gear; a new level is a new set', (
   const before = Math.random(); G.botChar(b); assert.notStrictEqual(Math.random(), before, 'the game\'s own random numbers are back after');
 });
 
-test('the quality odds are unchanged: about 40% epic chests for a skilled bot, none for an unskilled one', () => {
-  let epic = 0, low = 0; const n = 2000;
-  for (let i = 0; i < n; i++) { if (G.botChar(bot(i, 60, 0.9)).equip.chest.q === 3) epic++; if (G.botChar(bot(i, 60, 0.3)).equip.chest.q === 1) low++; }
-  assert.ok(Math.abs(epic / n - 0.4) < 0.04, `epic share ${epic / n}`);
+// #582: Rare chests for 60% of skilled bots (was 40%), and an unskilled one wears Uncommon (was Common with no stats)
+test('the quality odds: about 60% rare chests for a skilled bot, uncommon for an unskilled one', () => {
+  let rare = 0, low = 0; const n = 2000;
+  for (let i = 0; i < n; i++) { if (G.botChar(bot(i, 60, 0.9)).equip.chest.q === 3) rare++; if (G.botChar(bot(i, 60, 0.3)).equip.chest.q === 2) low++; }
+  assert.ok(Math.abs(rare / n - 0.6) < 0.04, `rare share ${rare / n}`);
   assert.strictEqual(low, n);
 });
 

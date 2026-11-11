@@ -58,7 +58,7 @@ test('an armour kit stays on top of the armour through every upgrade step (#406)
 
 test('the auction house sells into a stack the bags already have, even when they are full (#407)', () => {
   W.character(30); const P = G.S.player; P.bags = []; P.money = 1e8;
-  const L = G.ahListings().find((l) => G.stackable(l.item) && (l.n || 1) < 10); G.addItem(G.copyItem(L.item.id), 1);
+  const L = G.ahListings().find((l) => G.stackable(l.item) && (l.n || 1) < 20); /* any stack that still fits on the one in the bags */ G.addItem(G.copyItem(L.item.id), 1);
   while (!G.bagsFull()) G.addItem(G.genGear('chest', 30, 1, { atype: 'mail' }), 1);
   G.ahBuy(L.id);
   assert.strictEqual(G.countItem(L.item.id), 1 + (L.n || 1));

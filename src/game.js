@@ -601,6 +601,7 @@
       keys.forEach((k, i) => { const v = i === keys.length - 1 ? left : Math.max(1, Math.round(budget / keys.length)); it.stats[k] = v; left -= v; });
       if (it.stats[keys[keys.length - 1]] <= 0) it.stats[keys[keys.length - 1]] = 1;
       it.name += ' ' + af.name;
+      if (opts.sp) it.sp = Math.max(1, Math.round(budget * opts.sp)); // spell power on top, as hand-made caster gear has (#582: bot casters and healers had none)
     }
     it.sell = Math.max(1, Math.round((lvl * lvl * 0.9 + 4) * [0.5, 1, 3, 7, 12][q]));
     return it;
@@ -4374,6 +4375,9 @@
   };
   G.metWith = (botId, bot) => ((G.S.player.met || {})[botId]) || (bot && bot.realm && bot.name && !G.S.bots.some((b) => b.id === botId) ? (G.S.player.metAway || {})[`${bot.name}-${bot.realm}`] : null) || null;
   const OTHER_REALMS = ['Mistral', 'Hearthwick', 'Thornbury', 'Copperbell', 'Saltwind', 'Longwinter']; // our own realm names (v10)
+  // #582: the group finder's gear floor, like a real finder's item level: a Normal raid takes players in Rare gear, a Hard
+  // raid (which needs a Normal clear) players in Epic. The floor comes from what you queue for, never from your own gear
+  G.gearFloor = (act, hard) => { const A = D.ACTIVITIES[act]; return A && A.size === 10 && !A.bg && !A.worldBoss && !A.scale ? (hard ? 4 : 3) : 0; };
   function recruit(role, lvl, used, usedCls, guild, exact) { // exact: only players at this level (Trials: the cap)
     const S = G.S, date = new Date();
     const want = role === 'tank' ? ['warrior', 'warrior', 'paladin'].concat(lvl >= 10 ? ['druid'] : []) : role === 'healer' ? ['priest', 'priest', 'paladin', 'druid', 'shaman', 'bard'] : ['mage', 'rogue', 'rogue', 'mage', 'warrior', 'warlock', 'warlock', 'hunter', 'hunter', 'druid', 'shaman', 'priest', 'bard'];
@@ -4412,22 +4416,33 @@
       return F && roles.includes(F.role) && ['chest', 'legs', 'feet', 'hands'].includes(it.slot) && (!it.atype || it.atype === C.armorType) && G.canUseItem(it, b.cls) && L <= b.level && L >= b.level - 10; });
     return ids.length ? G.copyItem(pick(ids)) : null;
   };
+  // #582: a bot wears gear that fits its level: every slot, stats for its role, spell power for a healer or caster, and
+  // the quality its skill earns (Rare above 0.72 skill 60% of the time, else Uncommon). Before, a bot had 5 pieces, often
+  // Common with no stats, and never spell power, so a level-60 bot tank had about half a geared player's health
+  const BOT_CASTER = { mage: 1, warlock: 1, priest: 1, druid: 1 };
+  function botAffix(cls, role) {
+    if (role === 'tank') return D.AFFIXES.find((a) => a.name === (cls === 'druid' ? 'of the Monkey' : 'of the Bear'));
+    if (role === 'healer') return D.AFFIXES.find((a) => a.name === 'of the Eagle'); // stamina and intellect: a healer stands in the splash too
+    return G.classAffix(cls) || undefined;
+  }
   function rollBotChar(b) {
-    const C = D.CLASSES[b.cls];
-    const q = b.skill > 0.72 ? (Math.random() < 0.4 ? 3 : 2) : b.skill > 0.4 ? 2 : 1;
-    const wt = b.cls === 'paladin' ? 'mace' : b.role === 'healer' || b.cls === 'mage' || b.cls === 'warlock' ? 'staff' : C.weapons[0];
-    const equip = { weapon: G.genGear('weapon', b.level, q, { wtype: wt }) };
-    if (C.ranged || C.instrument) equip.ranged = G.genGear('ranged', b.level, q, C.instrument ? { wtype: 'instrument' } : {});
-    if (b.level >= 10 && q === 3) {
+    const C = D.CLASSES[b.cls], role = b.role || C.role || 'dps';
+    const q = Math.max(b.skill > 0.72 ? (Math.random() < 0.6 ? 3 : 2) : 2, b.gearFloor || 0); // a raid only takes players in its gear (G.gearFloor)
+    const wt = b.cls === 'paladin' ? 'mace' : role === 'healer' || b.cls === 'mage' || b.cls === 'warlock' ? 'staff' : C.weapons[0];
+    const af = botAffix(b.cls, role), sp = role === 'healer' || (role === 'dps' && BOT_CASTER[b.cls]) ? 0.5 : 0;
+    const o = (x) => Object.assign({ affix: af }, sp ? { sp } : {}, x);
+    const equip = { weapon: G.genGear('weapon', b.level, q, o({ wtype: wt })) };
+    if (C.ranged || C.instrument) equip.ranged = G.genGear('ranged', b.level, q, o(C.instrument ? { wtype: 'instrument' } : {}));
+    if (b.level >= 10 && q >= 3) {
       const wl = BOT_WEAPON_LOOKS[b.cls];
       const named = wl && wl.map((k) => Object.keys(D.ITEMS).find((id) => D.ITEMS[id].look && D.ITEMS[id].look[1] === k)).filter((id) => id && G.canUseItem(D.ITEMS[id], b.cls));
       // a bot wears a named item's look, with the stats of gear at its own level and quality (#45: a level-60 bot carried
       // a level-20 weapon's stats)
-      const asLevel = (id, slot, o) => { const it = G.copyItem(id), g = G.genGear(slot, b.level, q, o); for (const k of ['lvl', 'stats', 'armor', 'dmg', 'speed', 'sp', 'q']) { if (g[k] != null) it[k] = g[k]; else delete it[k]; } return it; };
+      const asLevel = (id, slot, x) => { const it = G.copyItem(id), g = G.genGear(slot, b.level, q, o(x)); for (const k of ['lvl', 'stats', 'armor', 'dmg', 'speed', 'sp', 'q']) { if (g[k] != null) it[k] = g[k]; else delete it[k]; } return it; };
       if (named && named.length && Math.random() < 0.6) { const id = pick(named); equip.weapon = asLevel(id, 'weapon', { wtype: D.ITEMS[id].wtype }); }
       if (Math.random() < 0.35) equip.back = asLevel('cape_brotherhood', 'back', {});
     }
-    for (const s of ['chest', 'legs', 'feet', 'hands']) equip[s] = G.genGear(s, b.level, s === 'chest' ? q : Math.max(1, q - 1), { atype: C.armorType });
+    for (const s of ['chest', 'legs', 'feet', 'hands', 'wrist', 'waist', 'back', 'finger']) if (!equip[s]) equip[s] = G.genGear(s, b.level, q, o({ atype: C.armorType }));
     { const fx = G.botEffectItem(b); if (fx) equip[fx.slot] = fx; } // sometimes an effect item, in place of one of those (#56)
     const talents = G.autoTalents(b.cls, b.role || (D.CLASSES[b.cls] || {}).role || 'dps', b.level, Math.abs(b.id || 0));
     return { name: b.name + (b.realm ? '-' + b.realm.replace(' ', '') : ''), cls: b.cls, race: b.race || 'human', level: b.level, equip, role: b.role, hp: null, res: null, auras: [], bot: b, talents };
@@ -4520,7 +4535,8 @@
     roles.splice(roles.indexOf(mine), 1);
     const used = new Set(), usedCls = new Set([S.player.cls]);
     const trial = opts && opts.trial, lvl = trial ? D.LEVEL_CAP : G.syncLevel(act);
-    const members = roles.map((r) => G.botChar(recruit(r, lvl, used, usedCls, opts && opts.guild, !!trial)));
+    const floor = G.gearFloor(act, opts && opts.hard);
+    const members = roles.map((r) => G.botChar(Object.assign(recruit(r, lvl, used, usedCls, opts && opts.guild, !!trial), { gearFloor: floor })));
     // everyone fights at the activity's level (a Trial: at the level cap)
     const cap = trial ? D.LEVEL_CAP : A.scale ? lvl : A.maxLvl || D.LEVEL_CAP; // a festival run is fought at your own level
     for (const m of members) m.syncLevel = cap;
@@ -4920,7 +4936,7 @@
       }
       for (const m of S.group.members.filter((x) => x.gone && x.replacing && t >= x.replacing)) {
         const used = new Set(S.group.members.map((x) => x.bot.id));
-        const nb = G.botChar(recruit(m.role, G.syncLevel(R.act), used, new Set(S.group.members.filter((x) => !x.gone).map((x) => x.cls).concat([P.cls])), null, !!R.trial));
+        const nb = G.botChar(Object.assign(recruit(m.role, G.syncLevel(R.act), used, new Set(S.group.members.filter((x) => !x.gone).map((x) => x.cls).concat([P.cls])), null, !!R.trial), { gearFloor: G.gearFloor(R.act, R.hard) }));
         nb.syncLevel = P.syncLevel || D.ACTIVITIES[R.act].maxLvl || D.LEVEL_CAP; // the group's own level: a Trial's cap, a festival run's yours (#384)
         if (R.trial && !R.hard) nb.bot.skill = clamp(TR().botSkill(G.trialRating()) + rnd(-0.08, 0.05), 0.3, 0.95); // drawn from your Trial rating, like the first group
         if (R.hard) nb.bot.skill = clamp(TR().botSkill(G.trialRating()) + 0.05 + rnd(-0.06, 0.05), 0.3, 0.95); // a Hard group refills with skilled players too
