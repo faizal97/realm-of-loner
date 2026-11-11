@@ -87,7 +87,8 @@ function clear(act, cls) {
   S.flags.warModeAsked = true; P.place = A.where;
   if (HARD) P.codex = { [act]: { clears: 1, flawless: 0, speed: 0, best: null } };
   G.queueFor(act, HARD ? { hard: true } : undefined); if (!S.queue) return null; G.acceptPop(); if (!S.run) return null;
-  if (PROFILE === 'baddraw') for (const m of S.group.members) if (m.bot) m.bot.skill = 0.2;
+  // a bad draw: every bot at skill 0.2, in the gear a player that careless wears (#582: gear follows skill)
+  if (PROFILE === 'baddraw') for (const m of S.group.members) if (m.bot && !m.legend) { m.bot.skill = 0.2; if (G.gearFloor) m.equip = G.botChar(Object.assign({}, m.bot, { role: m.role, gearFloor: G.gearFloor(act, HARD) })).equip; m.hp = null; m.res = null; }
   const R = S.run, atts = []; let last = null, att = null, g = 0;
   if (process.env.ONLY) { R.pulls = R.pulls.filter((p) => p.mobs.includes(process.env.ONLY)); if (!R.pulls.length) return null; } // one boss's pull alone (#179)
   const sample = (C) => {
@@ -105,7 +106,7 @@ function clear(act, cls) {
     if (C) { if (C !== last) { const pl = R.pulls[R.idx] || {}; last = C; att = { idx: R.idx, boss: !!pl.boss, name: pl.boss ? (D.MOBS[pl.mobs[0]] || {}).name : null, g: 1, m: 1, t: 0, dead: 0, res: null }; atts.push(att); } sample(C); att.res = C.over; }
     else if (last) { att.res = last.over || att.res; last = null; }
   }
-  return { done: !!(S.run && S.run.phase === 'done'), wipes: S.run ? S.run.wipes : 99, atts, size: S.group ? S.group.members.length + 1 : 0 };
+  return { done: !!(S.run && S.run.phase === 'done'), wipes: S.run ? S.run.wipes : 99, atts, size: S.group ? S.group.members.length + 1 : 0, speed: !!(S.run && S.run.bonus && S.run.bonus.speed), secs: S.run && S.run.bonus ? S.run.bonus.secs : null, par: S.run && S.run.bonus ? S.run.bonus.par : null }; // speed: under par (#582: longer fights)
 }
 const med = (a) => { const s = a.slice().sort((x, y) => x - y); return s.length ? s[s.length >> 1] : null; }, pc = (x) => Math.round(x * 100) + '%';
 const rows = [];
@@ -116,7 +117,7 @@ for (const act of ACTS) for (const cls of CLS) {
   const closest = rs.map((r, i) => won[i].slice().sort((a, b) => a.g - b.g)[0]).filter(Boolean);
   if (process.env.LOSTAT) { const by = {}; for (const a of fights) if (a.res === 'lose') { const pl = (D.ACTIVITIES[act].dungeon ? D.DUNGEONS[D.ACTIVITIES[act].dungeon] : D.ACTIVITIES[act]).pulls[a.idx] || {}, k = `${a.idx + 1} ${pl.label || '?'}`; by[k] = (by[k] || 0) + 1; } console.log(`lost fights by pull (${act} ${cls}): ${JSON.stringify(by)}`); } // LOSTAT=1: where a run's lost fights happen, by pull
   const worst = closest.slice().sort((a, b) => a.g - b.g)[0];
-  const row = { act, cls, profile: PROFILE, runs: rs.length, cleared: rs.filter((r) => r.done).length, wipeRuns: rs.filter((r) => r.wipes > 0).length, wipes: rs.reduce((a, r) => a + r.wipes, 0) / rs.length,
+  const row = { act, cls, profile: PROFILE, runs: rs.length, cleared: rs.filter((r) => r.done).length, wipeRuns: rs.filter((r) => r.wipes > 0).length, wipes: rs.reduce((a, r) => a + r.wipes, 0) / rs.length, speed: rs.filter((r) => r.speed).length, secsMed: med(rs.map((r) => r.secs).filter((x) => x != null)), par: (rs.find((r) => r.par) || {}).par || null,
     fights: fights.length, lost: fights.filter((a) => a.res === 'lose').length, deathInWin: allWon.filter((a) => a.dead > 0).length, won: allWon.length,
     closestMed: closest.length ? med(closest.map((a) => a.g)) : null, closestMin: worst ? worst.g : null, closestMinM: worst ? worst.m : null, closestSecs: worst ? Math.round(worst.t) : null, closestName: worst ? (worst.name || 'trash pull ' + (worst.idx + 1)) : null,
     under30: allWon.filter((a) => a.g < 0.3).length, size: med(rs.map((r) => r.size)) };

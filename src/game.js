@@ -4429,7 +4429,10 @@
     const C = D.CLASSES[b.cls], role = b.role || C.role || 'dps';
     const q = Math.max(b.skill > 0.72 ? (Math.random() < 0.6 ? 3 : 2) : 2, b.gearFloor || 0); // a raid only takes players in its gear (G.gearFloor)
     const wt = b.cls === 'paladin' ? 'mace' : role === 'healer' || b.cls === 'mage' || b.cls === 'warlock' ? 'staff' : C.weapons[0];
-    const af = botAffix(b.cls, role), sp = role === 'healer' || (role === 'dps' && BOT_CASTER[b.cls]) ? 0.5 : 0;
+    // a careless player (skill 0.4 or less) wears whatever dropped: random stats on every piece, so a bad draw still costs
+    // the group something now that everyone wears gear of their level (a caster's gear still has its spell power)
+    const careful = !(b.skill <= 0.4);
+    const af = careful ? botAffix(b.cls, role) : undefined, sp = role === 'healer' || (role === 'dps' && BOT_CASTER[b.cls]) ? 0.5 : 0;
     const o = (x) => Object.assign({ affix: af }, sp ? { sp } : {}, x);
     const equip = { weapon: G.genGear('weapon', b.level, q, o({ wtype: wt })) };
     if (C.ranged || C.instrument) equip.ranged = G.genGear('ranged', b.level, q, o(C.instrument ? { wtype: 'instrument' } : {}));

@@ -45,7 +45,7 @@
 
   const BREATH = (mult) => ({ kind: 'hit', name: 'Searing Breath', tele: true, every: 25, mult, who: 'all', school: 'fire', text: 'Veshmira rears back and breathes fire over the cavern!' });
   Object.assign(D.DUNGEONS, {
-    onyxias_lair: { name: "Veshmira's Lair", raid: true, music: 'veshmira', minLvl: 60, par: 188, trialPar: 330, size: 10, trashMult: { hp: 8, dmg: 2.99 }, bossMult: { hp: 48, dmg: 12.42 }, /* health x1.6: bots wear gear for their level (#582) */ trial: { trashMult: { hp: 5, dmg: 2.6 }, bossMult: { hp: 30, dmg: 9.4 } }, /* Normal hits harder since her breath is telegraphed (#179); Trials keep their numbers */ pulls: [
+    onyxias_lair: { name: "Veshmira's Lair", raid: true, music: 'veshmira', minLvl: 60, par: 250 /* x1.32: longer fights with bots in gear for their level (#582) */, trialPar: 330, size: 10, trashMult: { hp: 7.6, dmg: 2.99 }, bossMult: { hp: 45.6, dmg: 12.42 }, /* health x1.52: bots wear gear for their level (#582) */ trial: { trashMult: { hp: 5, dmg: 2.6 }, bossMult: { hp: 30, dmg: 9.4 } }, /* Normal hits harder since her breath is telegraphed (#179); Trials keep their numbers */ pulls: [
       { scene: 'lair_tunnel', label: 'The entry tunnel', mobs: ['onyxian_warder', 'onyxian_warder'] },
       { scene: 'lair_tunnel', label: 'The warders', mobs: ['onyxian_warder', 'onyxian_warder', 'onyxian_whelp'] },
       { scene: 'lair_cavern', label: 'The whelp nests', mobs: ['onyxian_whelp', 'onyxian_whelp', 'onyxian_whelp', 'onyxian_whelp'] },

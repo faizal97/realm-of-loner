@@ -31,11 +31,18 @@ test('the gear floor: Rare for a Normal raid, Epic for Hard, none for a dungeon'
   assert.strictEqual(G.gearFloor(raid, false), 3);
   assert.strictEqual(G.gearFloor(raid, true), 4);
   assert.strictEqual(G.gearFloor(dungeon, false), 0);
-  assert.ok(pieces(bot('priest', 'healer', 0.3, { gearFloor: 4 })).every((it) => it.q >= 4), 'Hard: Epic');
-  assert.ok(pieces(bot('priest', 'healer', 0.3, { gearFloor: 3 })).every((it) => it.q >= 3), 'Normal raid: Rare');
+  assert.ok(pieces(bot('priest', 'healer', 0.3, { gearFloor: 4 })).every((it) => it.q >= 4 || it.effect), 'Hard: Epic (an effect item is its own piece)');
+  assert.ok(pieces(bot('priest', 'healer', 0.3, { gearFloor: 3 })).every((it) => it.q >= 3 || it.effect), 'Normal raid: Rare');
 });
 
 test('a bot wears the same gear every time at the same floor', () => {
   const a = bot('warlock', 'dps', 0.8, { gearFloor: 3 }), b = bot('warlock', 'dps', 0.8, { gearFloor: 3 });
   assert.deepStrictEqual(pieces(a).map((x) => x.name), pieces(b).map((x) => x.name));
+});
+
+test('a careless bot (skill 0.4 or less) wears random stats; a careful one its role\'s; both keep a caster\'s spell power', () => {
+  const role = (c) => Object.values(c.equip).filter((it) => it && it.stats && !it.effect).every((it) => /of the Eagle/.test(it.name));
+  assert.ok(role(bot('priest', 'healer', 0.5)), 'careful healer: Eagle on every piece');
+  assert.ok(!role(bot('priest', 'healer', 0.3)), 'careless healer: whatever dropped');
+  assert.ok(E.statsFor(bot('priest', 'healer', 0.3)).sp > 0, 'careless healer keeps spell power');
 });

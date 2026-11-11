@@ -154,7 +154,7 @@
 
   // group finder
   Object.assign(D.DUNGEONS, {
-    blackfathom: { music: 'tidehollow', name: 'The Tidehollow Deeps', minLvl: 24, par: 349, trialPar: 390, size: 5, trashMult: { hp: 2.2, dmg: 2.53 }, bossMult: { hp: 10, dmg: 5.52 }, pulls: [
+    blackfathom: { music: 'tidehollow', name: 'The Tidehollow Deeps', minLvl: 24, par: 510 /* x1.46: longer fights with bots in gear for their level (#582) */, trialPar: 390, size: 5, trashMult: { hp: 3.74, dmg: 2.53 }, bossMult: { hp: 17, dmg: 5.52 }, /* health x1.7: bots wear gear for their level (#582) */ trial: { trashMult: { hp: 2.2, dmg: 2.53 }, bossMult: { hp: 10, dmg: 5.52 } }, /* Trials keep their numbers */ pulls: [
       { scene: 'blackfathom_deeps', label: 'The flooded steps', mobs: ['blackfathom_myrmidon', 'blackfathom_myrmidon'] },
       { scene: 'blackfathom_deeps', label: 'Shellmaw', mobs: ['ghamoo_ra'], boss: true },
       { scene: 'blackfathom_deeps', label: 'Naga ruins', mobs: ['blackfathom_myrmidon', 'aku_mai_snapjaw'] },

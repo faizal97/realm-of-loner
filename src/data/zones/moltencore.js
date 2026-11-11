@@ -87,7 +87,7 @@
     objs: [{ type: 'collect', item: 'firelord_essence', n: 1 }], reward: { choice: ['fam_back_rare60'] } });
 
   Object.assign(D.DUNGEONS, {
-    molten_core: { name: 'The Magma Throne', raid: true, music: 'magma', minLvl: 60, par: 580, trialPar: 720, size: 10, trashMult: { hp: 6.93, dmg: 4.26 }, bossMult: { hp: 35.7, dmg: 14.03 }, /* health x2.1: bots wear gear for their level (#582) */ trial: { trashMult: { hp: 3.3, dmg: 2.2 }, bossMult: { hp: 17, dmg: 7.2 } }, pulls: [ // Normal and Hard damage raised (#215: sim/difficulty.js, a fitted player wipes in 20-35% of runs); Trials keep the numbers they were tuned on
+    molten_core: { name: 'The Magma Throne', raid: true, music: 'magma', minLvl: 60, par: 910 /* x1.57: longer fights with bots in gear for their level (#582) */, trialPar: 720, size: 10, trashMult: { hp: 6.58, dmg: 4.26 }, bossMult: { hp: 33.92, dmg: 14.03 }, /* health x2: bots wear gear for their level (#582) */ trial: { trashMult: { hp: 3.3, dmg: 2.2 }, bossMult: { hp: 17, dmg: 7.2 } }, pulls: [ // Normal and Hard damage raised (#215: sim/difficulty.js, a fitted player wipes in 20-35% of runs); Trials keep the numbers they were tuned on
       { scene: 'mc_caverns', label: 'The lava caverns', mobs: ['core_hound', 'core_hound', 'core_surger'] },
       { scene: 'mc_caverns', label: 'Molten giants', mobs: ['molten_giant', 'molten_giant'] },
       { scene: 'mc_caverns', label: 'Cinderhound', mobs: ['magmadar'], boss: true },

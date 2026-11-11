@@ -44,7 +44,7 @@
   });
   Object.assign(D.DUNGEONS, {
     // since: joins the Trials rotation from November (the October season was fixed on 1 October)
-    coinworks: { music: 'coinworks', name: 'The Coinworks', minLvl: 40, par: 380, trialPar: 450, size: 5, since: '2026-11-01', trashMult: { hp: 2.2, dmg: 2.53 }, bossMult: { hp: 10, dmg: 5.52 }, pulls: [
+    coinworks: { music: 'coinworks', name: 'The Coinworks', minLvl: 40, par: 525 /* x1.38: longer fights with bots in gear for their level (#582) */, trialPar: 450, size: 5, since: '2026-11-01', trashMult: { hp: 3.74, dmg: 2.53 }, bossMult: { hp: 17, dmg: 5.52 }, /* health x1.7: bots wear gear for their level (#582) */ trial: { trashMult: { hp: 2.2, dmg: 2.53 }, bossMult: { hp: 10, dmg: 5.52 } }, /* Trials keep their numbers */ pulls: [
       { scene: 'cw_smelter', label: 'The loading dock', mobs: ['cw_coinguard', 'cw_coinguard'] },
       { scene: 'cw_smelter', label: 'The smelting floor', mobs: ['cw_smelter', 'cw_smelter', 'cw_coinguard'] },
       { scene: 'cw_smelter', label: 'Foreman Nettlecog', mobs: ['foreman_nettlecog'], boss: true },

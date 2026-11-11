@@ -46,7 +46,7 @@
   });
 
   Object.assign(D.DUNGEONS, {
-    razorfen_kraul: { music: 'thorn_warrens', name: 'The Thorn Warrens', minLvl: 29, par: 383, trialPar: 420, size: 5, trashMult: { hp: 2.2, dmg: 2.53 }, bossMult: { hp: 10, dmg: 5.52 }, pulls: [
+    razorfen_kraul: { music: 'thorn_warrens', name: 'The Thorn Warrens', minLvl: 29, par: 405 /* x1.06: longer fights with bots in gear for their level (#582) */, trialPar: 420, size: 5, trashMult: { hp: 3.3, dmg: 2.53 }, bossMult: { hp: 15, dmg: 5.52 }, /* health x1.5: bots wear gear for their level (#582) */ trial: { trashMult: { hp: 2.2, dmg: 2.53 }, bossMult: { hp: 10, dmg: 5.52 } }, /* Trials keep their numbers */ pulls: [
       { scene: 'razorfen_kraul', label: 'The thorn tunnels', mobs: ['razorfen_quilguard', 'razorfen_geomancer'] },
       { scene: 'razorfen_kraul', label: 'Hexer Brambletusk', mobs: ['aggem_thorncurse'], boss: true },
       { scene: 'razorfen_kraul', label: 'Bat roost', mobs: ['kraul_bat', 'kraul_bat', 'razorfen_quilguard'] },

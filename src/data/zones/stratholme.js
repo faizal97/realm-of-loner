@@ -49,7 +49,7 @@
   H('st_ledger_h', { name: 'The Archive', lvl: 58, giver: 'apothecary_dithers', turnin: 'apothecary_dithers', dungeon: 'stratholme', text: "The archivist's ledger names who shipped the plagued grain. The Guild wants it.",
     objs: [{ type: 'collect', item: 'stratholme_ledger', n: 1 }], reward: { choice: ['fam_ring_rare60'] } });
   Object.assign(D.DUNGEONS, {
-    stratholme: { music: 'graymouth', name: 'Graymouth', minLvl: 58, par: 412, trialPar: 570, size: 5, trashMult: { hp: 2.2, dmg: 3.57 }, bossMult: { hp: 10, dmg: 6.9 }, trial: { trashMult: { hp: 2.2, dmg: 2.2 }, bossMult: { hp: 10, dmg: 4.3 } }, pulls: [ // damage raised to the level-60 dungeon target (#215: a fitted player wipes in 10-20% of runs); Trials keep the numbers they were tuned on
+    stratholme: { music: 'graymouth', name: 'Graymouth', minLvl: 58, par: 575 /* x1.40: longer fights with bots in gear for their level (#582) */, trialPar: 570, size: 5, trashMult: { hp: 4.18, dmg: 3.57 }, bossMult: { hp: 19, dmg: 6.9 }, /* health x1.9: bots wear gear for their level (#582) */ trial: { trashMult: { hp: 2.2, dmg: 2.2 }, bossMult: { hp: 10, dmg: 4.3 } }, pulls: [ // damage raised to the level-60 dungeon target (#215: a fitted player wipes in 10-20% of runs); Trials keep the numbers they were tuned on
       { scene: 'strat_city', label: 'King\'s Square', mobs: ['crimson_guardsman', 'crimson_conjuror'] },
       { scene: 'strat_city', label: 'Nibbles the Cruel', mobs: ['timmy_the_cruel'], boss: true },
       { scene: 'strat_city', label: 'Archivist Penrose', mobs: ['archivist_galford'], boss: true },

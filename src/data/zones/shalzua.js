@@ -32,7 +32,7 @@
   H('tp_oyala', { name: 'The Hexmother', lvl: 60, giver: 'hexxer_mazu', turnin: 'hexxer_mazu', dungeon: 'shalzua_temple', text: 'Hexmother Oyala raised the drowned tribe. Her bone fetish binds them. Break it, and bring it to Mazu.',
     objs: [{ type: 'collect', item: 'oyala_fetish', n: 1 }], reward: { choice: ['fam_back_rare60'] } });
   Object.assign(D.DUNGEONS, {
-    shalzua_temple: { music: 'shalzua', name: "Temple of Shal'zua", minLvl: 60, par: 305, trialPar: 480, size: 5, trashMult: { hp: 2.2, dmg: 3.88 }, bossMult: { hp: 10, dmg: 7.5 }, trial: { trashMult: { hp: 2.2, dmg: 2.2 }, bossMult: { hp: 10, dmg: 4.3 } }, pulls: [ // damage raised to the level-60 dungeon target (#215: a fitted player wipes in 10-20% of runs); Trials keep the numbers they were tuned on
+    shalzua_temple: { music: 'shalzua', name: "Temple of Shal'zua", minLvl: 60, par: 460 /* x1.51: longer fights with bots in gear for their level (#582) */, trialPar: 480, size: 5, trashMult: { hp: 4.18, dmg: 3.88 }, bossMult: { hp: 19, dmg: 7.5 }, /* health x1.9: bots wear gear for their level (#582) */ trial: { trashMult: { hp: 2.2, dmg: 2.2 }, bossMult: { hp: 10, dmg: 4.3 } }, pulls: [ // damage raised to the level-60 dungeon target (#215: a fitted player wipes in 10-20% of runs); Trials keep the numbers they were tuned on
       { scene: 'shalzua_pools', label: 'The tide pools', mobs: ['wavebreaker_zealot', 'tide_serpent'] },
       { scene: 'shalzua_pools', label: 'Hexmother Oyala', mobs: ['hexmother_oyala'], boss: true },
       { scene: 'shalzua_pools', label: 'Tidefang', mobs: ['tidefang'], boss: true },

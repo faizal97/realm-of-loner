@@ -15,8 +15,9 @@ test('a raid run starts from Normal, Hard or its Trial numbers', () => {
     if (Dg.hard) assert.strictEqual(G.runBase(Dg, true, 0), Dg.hard, k);
     assert.strictEqual(G.runBase(Dg, false, 5), Dg.trial || Dg, k);
   }
-  const Dg5 = D.DUNGEONS.ragefire; // a dungeon with no Trial numbers of its own: its Trials start from Normal, as before
-  assert.strictEqual(G.runBase(Dg5, false, 5), Dg5);
+  const Dg5 = D.DUNGEONS.ragefire; // a dungeon's Trials keep the numbers its Normal had before bots wore gear for their level (#582)
+  assert.strictEqual(G.runBase(Dg5, false, 5), Dg5.trial);
+  assert.ok(Dg5.trial.bossMult.hp < Dg5.bossMult.hp, 'Normal has more health than its Trial now');
 });
 
 test('Hard hits harder than Normal; Trials keep their numbers', () => {

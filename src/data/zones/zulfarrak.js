@@ -45,7 +45,7 @@
       objs: [{ type: 'collect', item: 'zumrah_totem', n: 1 }], reward: { money: 5000 } },
   });
   Object.assign(D.DUNGEONS, {
-    zul_farrak: { music: 'dune_temple', name: "The Dune Temple", minLvl: 43, par: 447, trialPar: 510, size: 5, trashMult: { hp: 2.2, dmg: 2.53 }, bossMult: { hp: 10, dmg: 5.52 }, pulls: [
+    zul_farrak: { music: 'dune_temple', name: "The Dune Temple", minLvl: 43, par: 700 /* x1.56: longer fights with bots in gear for their level (#582) */, trialPar: 510, size: 5, trashMult: { hp: 4.62, dmg: 2.53 }, bossMult: { hp: 21, dmg: 5.52 }, /* health x2.1: bots wear gear for their level (#582) */ trial: { trashMult: { hp: 2.2, dmg: 2.53 }, bossMult: { hp: 10, dmg: 5.52 } }, /* Trials keep their numbers */ pulls: [
       { scene: 'zf_courtyard', label: 'The city gate', mobs: ['sandfury_blood_drinker', 'sandfury_shadowcaster'] },
       { scene: 'zf_courtyard', label: "Antuzz", mobs: ['antu_sul'], boss: true },
       { scene: 'zf_courtyard', label: 'The graveyard', mobs: ['zul_farrak_zombie', 'zul_farrak_zombie', 'sandfury_shadowcaster'] },

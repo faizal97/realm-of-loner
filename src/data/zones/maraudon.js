@@ -46,7 +46,7 @@
   H('md_vyletongue', { name: "Venomlip's Blade", lvl: 48, giver: 'orwin', turnin: 'orwin', dungeon: 'maraudon', text: 'The satyr lord Venomlip rules the caverns\' upper halls. Take his blade.',
     objs: [{ type: 'collect', item: 'vyletongue_blade', n: 1 }], reward: { choice: ['fam_weapon48'] } });
   Object.assign(D.DUNGEONS, {
-    maraudon: { music: 'gemfall', name: 'The Gemfall Caves', minLvl: 46, par: 425, trialPar: 480, size: 5, trashMult: { hp: 2.2, dmg: 2.4 }, bossMult: { hp: 10, dmg: 5.24 }, trial: { trashMult: { hp: 2.2, dmg: 2.2 }, bossMult: { hp: 10, dmg: 4.8 } }, /* damage lowered to the dungeon target (#215: a fitted player wiped in 18-49% of runs, target 5-15%); Trials keep the numbers they were tuned on */ pulls: [
+    maraudon: { music: 'gemfall', name: 'The Gemfall Caves', minLvl: 46, par: 520 /* x1.23: longer fights with bots in gear for their level (#582) */, trialPar: 480, size: 5, trashMult: { hp: 3.74, dmg: 2.4 }, bossMult: { hp: 17, dmg: 5.24 }, /* health x1.7: bots wear gear for their level (#582) */ trial: { trashMult: { hp: 2.2, dmg: 2.2 }, bossMult: { hp: 10, dmg: 4.8 } }, /* damage lowered to the dungeon target (#215: a fitted player wiped in 18-49% of runs, target 5-15%); Trials keep the numbers they were tuned on */ pulls: [
       { scene: 'maraudon_caverns', label: 'The purple caves', mobs: ['putridus_trickster', 'constrictor_vine'] },
       { scene: 'maraudon_caverns', label: 'Sludgewell', mobs: ['noxxion'], boss: true },
       { scene: 'maraudon_caverns', label: 'Thornlash', mobs: ['razorlash'], boss: true },
