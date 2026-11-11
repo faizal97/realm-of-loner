@@ -120,12 +120,13 @@
     G.sys(`+${n} guild standing${why ? ' (' + why + ')' : ''}.`);
     const r1 = SOC.rank();
     if (r1 > (P.guildRankBest || 0)) P.guildRankBest = r1; // the highest rank ever reached keeps its title (#448)
-    if (r1 > r0) { post('guild', guildOfficer(), pickT('s67', [`congrats on ${RANKS[r1].name} rank!`, `promoted you to ${RANKS[r1].name}, well earned`, `${RANKS[r1].name} now, nice work`, `everyone say gz, new ${RANKS[r1].name}!`])); G.toast(`Guild rank: ${RANKS[r1].name}. ${RANKS[r1].perk ? 'New perk: ' + RANKS[r1].perk + '.' : ''}`, true); }
+    if (r1 > r0) { const off = guildOfficer(); if (off) post('guild', off, pickT('s67', [`congrats on ${RANKS[r1].name} rank!`, `promoted you to ${RANKS[r1].name}, well earned`, `${RANKS[r1].name} now, nice work`, `everyone say gz, new ${RANKS[r1].name}!`])); G.toast(`Guild rank: ${RANKS[r1].name}. ${RANKS[r1].perk ? 'New perk: ' + RANKS[r1].perk + '.' : ''}`, true); }
   }
   SOC.addStanding = addStanding;
   SOC.GROUP_LEVELS = 3; // a sim player who asks you to group is at most this many levels from yours
   SOC.makeWhisper = () => makeWhisper(); // for tests
-  const guildOfficer = () => { const P = G.S.player; const info = SOC.guildInfo(P.guild); return info.officer || onlineMate() || pick(G.S.bots); };
+  // an online member speaks for the guild; nobody online, nobody: never a stranger from the realm (#592)
+  const guildOfficer = () => { const P = G.S.player; const info = SOC.guildInfo(P.guild); return info.officer || onlineMate() || null; };
   const onlineMate = (not) => { const S = G.S, d = new Date(); const m = S.bots.filter((b) => b.guild === S.player.guild && B.isOnline(b, d) && b.id !== not); return m.length ? pick(m) : null; };
 
   // the weekly guild goal: kills by everyone, you included
@@ -154,7 +155,7 @@
       w.done = true; state().weekPaid = Math.max(state().weekPaid || -1, w.id);
       const P = G.S.player, gold = P.level * 150;
       P.money += gold;
-      post('guild', guildOfficer(), pickT('s93', [`WEEKLY GOAL DONE! ${w.goal} ${w.what}, thanks everyone!`, `we hit the weekly goal, ${w.goal} ${w.what}. gold to everyone who helped!`]));
+      const off = guildOfficer(); if (off) post('guild', off, pickT('s93', [`WEEKLY GOAL DONE! ${w.goal} ${w.what}, thanks everyone!`, `we hit the weekly goal, ${w.goal} ${w.what}. gold to everyone who helped!`]));
       G.sys(`The guild reached its weekly goal. You receive ${coin(gold)}.`);
       addStanding(100, 'the weekly goal');
     }
@@ -529,7 +530,8 @@
     }
     if (kind === 'g_donate') {
       const amt = Math.max(100, Math.round(P.level * rnd(15, 30) / 10) * 10);
-      post('guild', guildOfficer(), pickT('s406', [`guild bank fund for new tabards, anyone chip in ${coin(amt)}?`, `we're saving for a guild bank tab, ${coin(amt)} helps a lot`, `potions for guild night, donations welcome: ${coin(amt)}`, `guild repair fund is low, ${coin(amt)} anyone?`, `saving for guild tabards, ${coin(amt)} each if you can`]), { kind: 'g_donate', guild: true, bot: guildOfficer().id, amt, until: now() + 15 * 60000 });
+      const off = guildOfficer(); if (!off) return;
+      post('guild', off, pickT('s406', [`guild bank fund for new tabards, anyone chip in ${coin(amt)}?`, `we're saving for a guild bank tab, ${coin(amt)} helps a lot`, `potions for guild night, donations welcome: ${coin(amt)}`, `guild repair fund is low, ${coin(amt)} anyone?`, `saving for guild tabards, ${coin(amt)} each if you can`]), { kind: 'g_donate', guild: true, bot: off.id, amt, until: now() + 15 * 60000 });
       return;
     }
     if (kind === 'g_event') {
