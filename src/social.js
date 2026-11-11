@@ -50,7 +50,7 @@
   SOC.myGuilds = () => B.GUILDS.map((_, g) => g).filter((g) => B.GUILD_FACTION[g] === G.myFaction()).map(SOC.guildInfo).sort((a, b) => SOC.guildFit(a, G.S.player.level) - SOC.guildFit(b, G.S.player.level) || a.g - b.g);
   // the message of the day changes daily
   SOC.motd = function (g) {
-    const day = Math.floor(now() / 86400000), info = SOC.guildInfo(g);
+    const day = G.dayNum(new Date(now())), info = SOC.guildInfo(g); // the local day, as the boards turn (#592)
     const lines = { casual: ['Be nice, help the new folks.', 'Remember to take breaks :)', 'Guild night on Friday, all welcome!', 'Ask in guild chat, someone always knows.'],
       leveling: ['Low dungeon runs every evening, ask in guild.', 'Share your quest drops, someone needs them.', 'Level 20? Smugglers\' Deep and The Dreaming Caves runs this week.', 'Help a guildie, earn standing.'],
       dungeons: ['Tank and healer spots always open.', 'This week: full clears only, no speedruns.', 'Sign up for guild nights in guild chat.', 'Bring potions to guild runs.'],
@@ -120,12 +120,13 @@
     G.sys(`+${n} guild standing${why ? ' (' + why + ')' : ''}.`);
     const r1 = SOC.rank();
     if (r1 > (P.guildRankBest || 0)) P.guildRankBest = r1; // the highest rank ever reached keeps its title (#448)
-    if (r1 > r0) { post('guild', guildOfficer(), pickT('s67', [`congrats on ${RANKS[r1].name} rank!`, `promoted you to ${RANKS[r1].name}, well earned`, `${RANKS[r1].name} now, nice work`, `everyone say gz, new ${RANKS[r1].name}!`])); G.toast(`Guild rank: ${RANKS[r1].name}. ${RANKS[r1].perk ? 'New perk: ' + RANKS[r1].perk + '.' : ''}`, true); }
+    if (r1 > r0) { const off = guildOfficer(); if (off) post('guild', off, pickT('s67', [`congrats on ${RANKS[r1].name} rank!`, `promoted you to ${RANKS[r1].name}, well earned`, `${RANKS[r1].name} now, nice work`, `everyone say gz, new ${RANKS[r1].name}!`])); G.toast(`Guild rank: ${RANKS[r1].name}. ${RANKS[r1].perk ? 'New perk: ' + RANKS[r1].perk + '.' : ''}`, true); }
   }
   SOC.addStanding = addStanding;
   SOC.GROUP_LEVELS = 3; // a sim player who asks you to group is at most this many levels from yours
   SOC.makeWhisper = () => makeWhisper(); // for tests
-  const guildOfficer = () => { const P = G.S.player; const info = SOC.guildInfo(P.guild); return info.officer || onlineMate() || pick(G.S.bots); };
+  // an online member speaks for the guild; nobody online, nobody: never a stranger from the realm (#592)
+  const guildOfficer = () => { const P = G.S.player; const info = SOC.guildInfo(P.guild); return info.officer || onlineMate() || null; };
   const onlineMate = (not) => { const S = G.S, d = new Date(); const m = S.bots.filter((b) => b.guild === S.player.guild && B.isOnline(b, d) && b.id !== not); return m.length ? pick(m) : null; };
 
   // the weekly guild goal: kills by everyone, you included
@@ -154,7 +155,7 @@
       w.done = true; state().weekPaid = Math.max(state().weekPaid || -1, w.id);
       const P = G.S.player, gold = P.level * 150;
       P.money += gold;
-      post('guild', guildOfficer(), pickT('s93', [`WEEKLY GOAL DONE! ${w.goal} ${w.what}, thanks everyone!`, `we hit the weekly goal, ${w.goal} ${w.what}. gold to everyone who helped!`]));
+      const off = guildOfficer(); if (off) post('guild', off, pickT('s93', [`WEEKLY GOAL DONE! ${w.goal} ${w.what}, thanks everyone!`, `we hit the weekly goal, ${w.goal} ${w.what}. gold to everyone who helped!`]));
       G.sys(`The guild reached its weekly goal. You receive ${coin(gold)}.`);
       addStanding(100, 'the weekly goal');
     }
@@ -451,8 +452,8 @@
       const q = whereQuestion(b); if (!q) return;
       W(pickT('s328', [`sorry to bother, where is ${q.name}?`, `hey do u know where ${q.name} is?`, `quick q: where do i find ${q.name}?`, `lost lol. which zone is ${q.name} in?`, `been looking for ${q.name} for ages, where is it?`, `ok i give up, where is ${q.name}?`, `hey, which way to ${q.name}?`]), Object.assign({ kind: 'where' }, q));
     } else if (kind === 'guild_invite') {
-      const no = G.S.flags.declinedGuilds || [], gs = SOC.myGuilds().filter((x) => P.level >= x.min && !no.includes(x.g)); if (!gs.length) return; // not a guild you declined
-      const g = pick(gs); const inv = g.officer || b;
+      const no = G.S.flags.declinedGuilds || [], gs = SOC.myGuilds().filter((x) => P.level >= x.min && !no.includes(x.g) && x.officer); if (!gs.length) return; // not a guild you declined
+      const g = pick(gs); const inv = g.officer; // a member online asks, else no invitation (#592)
       state().invites = (state().invites || 0) + 1;
       post('whisper', inv, pickT('s333', [`hey! want to join <${g.name}>? ${g.blurb.toLowerCase()}`, `we're recruiting for <${g.name}>, ${g.style} guild. want an invite?`, `saw you around, <${g.name}> could use someone like you. interested?`, `hey, <${g.name}> has a spot open. want in?`, `we're a ${g.style} guild, <${g.name}>. want an invite?`]), { kind: 'guild_invite', whisper: true, bot: inv.id, g: g.g });
     } else if (kind === 'carry') {
@@ -529,7 +530,8 @@
     }
     if (kind === 'g_donate') {
       const amt = Math.max(100, Math.round(P.level * rnd(15, 30) / 10) * 10);
-      post('guild', guildOfficer(), pickT('s406', [`guild bank fund for new tabards, anyone chip in ${coin(amt)}?`, `we're saving for a guild bank tab, ${coin(amt)} helps a lot`, `potions for guild night, donations welcome: ${coin(amt)}`, `guild repair fund is low, ${coin(amt)} anyone?`, `saving for guild tabards, ${coin(amt)} each if you can`]), { kind: 'g_donate', guild: true, bot: guildOfficer().id, amt, until: now() + 15 * 60000 });
+      const off = guildOfficer(); if (!off) return;
+      post('guild', off, pickT('s406', [`guild bank fund for new tabards, anyone chip in ${coin(amt)}?`, `we're saving for a guild bank tab, ${coin(amt)} helps a lot`, `potions for guild night, donations welcome: ${coin(amt)}`, `guild repair fund is low, ${coin(amt)} anyone?`, `saving for guild tabards, ${coin(amt)} each if you can`]), { kind: 'g_donate', guild: true, bot: off.id, amt, until: now() + 15 * 60000 });
       return;
     }
     if (kind === 'g_event') {

@@ -1220,6 +1220,7 @@
   G.joinGuild = function (g) {
     const S = G.S;
     S.player.guild = g; if (S.soc) S.soc.applied = null; // joining withdraws an application elsewhere (#416)
+    for (const m of S.chat) if (m.act && m.act.state === 'open' && (m.act.kind === 'guild_invite' || m.act.kind === 'guild_apply')) m.act.state = 'expired'; // other guilds' offers lapse (#592)
     sys(`You have joined ${B.GUILDS[g]}.`);
     const mates = S.bots.filter((b) => b.guild === g && B.isOnline(b, new Date()));
     mates.slice(0, 3).forEach((b, i) => S.pending.push({ at: now() + 1200 + i * 2200, bot: b.id, ch: 'guild', text: cpick(['welcome!', 'welcome :)', 'hi!', 'o/', 'welcome to the guild']) }));
@@ -1759,7 +1760,8 @@
   G.bounties = function (hub) {
     const S = G.S, P = S.player, region = D.PLACES[hub].region;
     const mobs = [], cap = P.level >= D.LEVEL_CAP; // at 60 every town's board offers its zone, at level-60 pay (#553)
-    for (const [k, p] of Object.entries(D.PLACES)) if (p.region === region) for (const [m] of (p.mobs || [])) { const M = D.MOBS[m]; if (M && !M.named && !M.elite && (cap || (M.lvl[1] >= P.level - 4 && M.lvl[0] <= P.level + 2)) && !mobs.includes(m)) mobs.push(m); }
+    // only places you can walk to from this town: not through an enemy town or the storm (#592)
+    for (const [k, p] of Object.entries(D.PLACES)) if (p.region === region && G.canReach(hub, k)) for (const [m] of (p.mobs || [])) { const M = D.MOBS[m]; if (M && !M.named && !M.elite && (cap || (M.lvl[1] >= P.level - 4 && M.lvl[0] <= P.level + 2)) && !mobs.includes(m)) mobs.push(m); }
     if (!mobs.length) return [];
     const make = (key, weekly) => {
       const r = seeded(hub + key + P.level);
@@ -3766,7 +3768,7 @@
   G.brawlTick = function () {
     const S = G.S; if (!S || !S.bots) return; const w = G.brawlWindow(), t = now(), soon = !w.open && w.opensAt.getTime() - t < 5 * 60000;
     if (!soon || S.brawlTold === w.id) return; S.brawlTold = w.id;
-    const b = S.bots.filter((x) => (x.level || 1) >= BRAWL.minLvl); if (!b.length) return;
+    const d = new Date(t), b = S.bots.filter((x) => (x.level || 1) >= BRAWL.minLvl && B.factionOf(x) === G.myFaction() && B.isOnline(x, d)); if (!b.length) return; // your side, online (#592)
     B.post(S, 'general', cpick(b), cpick(['bloodsand brawl opens in 5, who is fighting', 'arena in rumhook opens at the top of the hour', 'brawl soon, last time i got knocked out round 1 lol', 'bloodsand pit opens in a few min, chest is mine']));
     emit('chat');
   };
@@ -4285,6 +4287,7 @@
   G.RAID_START = '2026-09-28'; G.FEATURED_MARKS = 30;
   const mondayOf = (d) => { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - (x.getDay() + 6) % 7); return x; };
   const dayNum = (x) => Math.round(new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime() / 86400000);
+  G.dayNum = dayNum; // the local day as a number, for chat's daily things (#592)
   const sinceDay = (str) => { const [y, m, d] = str.split('-').map(Number); return dayNum(new Date(y, m - 1, d)); };
   G.raidActs = () => Object.keys(D.ACTIVITIES).filter((k) => { const A = D.ACTIVITIES[k], Dg = A.dungeon && D.DUNGEONS[A.dungeon]; return Dg && Dg.raid && !A.needQuest; });
   G.featuredRaid = function (date) {

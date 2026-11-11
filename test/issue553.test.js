@@ -8,7 +8,8 @@ const { G, D, character } = require('./world');
 const hubs = () => Object.keys(D.PLACES).filter((k) => G.isHub(k));
 
 test('at 60 every town has a board, and the kills count', () => {
-  const { P } = character(60, 'mage', 'human');
+  const { S, P } = character(60, 'mage', 'human');
+  S.flags.stormBroken = true; /* a board behind the storm offers only what you can reach from it (#592) */
   const empty = hubs().filter((k) => !G.bounties(k).length);
   assert.deepStrictEqual(empty.map((k) => D.PLACES[k].name), [], 'towns with no board at 60');
   P.place = hubs().find((k) => D.PLACES[k].name === "Drummond's Vigil");
