@@ -9,10 +9,11 @@
   const KEY = 'azsolo.cloud'; // { on, lastAuto, lastBackup, lastError, chars: { <id>: { fileId, rev, played, mark, at } } }
   const SLACK = 60; // seconds of play that never count as "played since the last sync" (just opening a character)
   // "Played since the last sync" means progress, not time: a character left standing in town is unchanged. The mark
-  // is a short fingerprint of what playing changes (level, XP, gold, gear, bags, quests, kills, where you are).
+  // is a short fingerprint of what playing changes (level, XP, gold, gear, bags, quests, kills, where you are, honor,
+  // Debt Notes, professions, talents, mounts).
   CLOUD.mark = function (S) {
     const P = S.player;
-    const str = JSON.stringify([P.level, P.xp, P.money, P.kills, P.deaths, P.place, P.quests, Object.keys(P.done || {}).length, P.equip, P.bags, P.bank || null]);
+    const str = JSON.stringify([P.level, P.xp, P.money, P.kills, P.deaths, P.place, P.quests, Object.keys(P.done || {}).length, P.equip, P.bags, P.bank || null, P.pvp || null, P.debtNotes || 0, P.prof || null, P.talents || null, P.mounts || null]); // + honor, Debt Notes, professions, talents, mounts: a change there is play too
     let h = 5381; for (let i = 0; i < str.length; i++) h = ((h * 33) ^ str.charCodeAt(i)) >>> 0;
     return h.toString(36) + '.' + str.length.toString(36);
   };
@@ -156,6 +157,16 @@
   const sumOf = (o) => Object.values(o || {}).reduce((s, n) => s + (+n || 0), 0);
   const mkOf = (x) => (x && x.mk && typeof x.mk === 'object' ? { base: +x.mk.base || 0, earn: Object.assign({}, x.mk.earn), spend: Object.assign({}, x.mk.spend) } : { base: Math.max(0, +(x && x.marks) || 0), earn: {}, spend: {} });
   const mkBalance = (mk) => Math.max(0, Math.round(mk.base + sumOf(mk.earn) - sumOf(mk.spend)));
+  const GROW = ['mounts', 'renown', 'trialsworn', 'lw', 'ln', 'founder', 'debtBreaker', 'lookSeed'];
+  function grow(x, y) {
+    if (x === undefined || x === null) return y === null ? undefined : y;
+    if (y === undefined || y === null) return x;
+    if (Array.isArray(x) || Array.isArray(y)) return union(Array.isArray(x) ? x : [], Array.isArray(y) ? y : []);
+    if (typeof x === 'number' && typeof y === 'number') return Math.max(x, y);
+    if (typeof x === 'boolean' || typeof y === 'boolean') return !!(x || y);
+    if (typeof x === 'object' && typeof y === 'object') { const o = {}; for (const k of union(Object.keys(x), Object.keys(y))) { const v = grow(x[k], y[k]); if (v !== undefined) o[k] = v; } return o; }
+    return x;
+  }
   CLOUD.mergeAccount = function (a, b) {
     a = a || {}; b = b || {};
     // Marks (a player report: a spend came back at the next sync): each device's earned and spent counters, the highest of
@@ -171,16 +182,20 @@
     for (const k of union(Object.keys(ta), Object.keys(tb))) tr[k] = !tb[k] || (ta[k] && (+ta[k].at || 0) <= (+tb[k].at || 0)) ? ta[k] : tb[k];
     if (Object.keys(tr).length) m.trophies = tr; else delete m.trophies;
     if (a.bank || b.bank) m.bank = AB().merge(a.bank, b.bank); else delete m.bank;
+    // what is bought or earned for the whole account and only ever grows (the Marks spent on it now sync, so it must
+    // too): lists combine, counts take the highest, a flag once set stays set
+    for (const k of GROW) { const v = grow(a[k], b[k]); if (v === undefined) delete m[k]; else m[k] = v; }
     return m;
   };
-  const markOf = (x) => JSON.stringify([+x.marks || 0, mkOf(x), x.friends || null].concat(LISTS.map((k) => (x[k] || []).slice().sort()), [Object.keys(x.trophies || {}).sort().map((k) => k + '@' + (+x.trophies[k].at || 0))], [x.bank ? AB().merge(x.bank, null) : null]));
+  const markOf = (x) => JSON.stringify([+x.marks || 0, mkOf(x), x.friends || null, GROW.map((k) => x[k] === undefined ? null : x[k])].concat(LISTS.map((k) => (x[k] || []).slice().sort()), [Object.keys(x.trophies || {}).sort().map((k) => k + '@' + (+x.trophies[k].at || 0))], [x.bank ? AB().merge(x.bank, null) : null]));
   const same = (x, y) => markOf(x) === markOf(y);
   const readList = (key, field) => { try { const v = JSON.parse(localStorage.getItem(key) || 'null'); return (field ? v && v[field] : v) || []; } catch (e) { return []; } };
   // everything the account file holds, as this device has it
   const localAccount = () => { const a = Object.assign({}, G.account(), { story: readList('azsolo.story'), lore: readList('azsolo.loreread'), tips: readList('azsolo.tips', 'seen') }); const f = root.FRIENDS && FRIENDS.switchInfo(); if (f) a.friends = f; return a; };
   function writeLocal(m) {
     if (G.writeAccountMarks) G.writeAccountMarks(mkOf(m)); // the merged counters, never counted as this device earning
-    G.saveAccount(Object.assign(G.account(), { heirlooms: m.heirlooms, looks: m.looks }, m.trophies ? { trophies: m.trophies } : {}, m.bank ? { bank: m.bank } : {})); // keeps the wardrobe's own flags
+    const gr = {}; for (const k of GROW) if (m[k] !== undefined) gr[k] = m[k];
+    G.saveAccount(Object.assign(G.account(), { heirlooms: m.heirlooms, looks: m.looks }, gr, m.trophies ? { trophies: m.trophies } : {}, m.bank ? { bank: m.bank } : {})); // keeps the wardrobe's own flags
     try {
       localStorage.setItem('azsolo.story', JSON.stringify(m.story));
       localStorage.setItem('azsolo.loreread', JSON.stringify(m.lore));

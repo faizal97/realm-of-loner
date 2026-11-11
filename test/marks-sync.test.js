@@ -48,3 +48,23 @@ test('a merged account written back keeps its balance and counts no new earning'
   assert.strictEqual(G.account().marks, 60);
   assert.strictEqual(CLOUD.mergeAccount(clone(G.account()), cloud).marks, 60);
 });
+
+test('what the account buys or earns syncs too: mounts, Renown, Trialsworn, festival records, titles', () => {
+  const here = { marks: 10, heirlooms: [], mounts: ['a'], renown: 2, trialsworn: { bought: [3], monthPaid: ['2026-10'] }, ln: { owned: ['x'], hound: false, houndKills: 4, town: { t1: 2 } }, founder: 1 };
+  const there = { marks: 10, heirlooms: [], mounts: ['b'], renown: 3, trialsworn: { bought: [5], earned: [4] }, ln: { owned: ['y'], hound: true, houndKills: 2, town: { t1: 1, t2: 3 } }, debtBreaker: 1 };
+  const m = CLOUD.mergeAccount(here, there);
+  assert.deepStrictEqual(m.mounts.sort(), ['a', 'b']);
+  assert.strictEqual(m.renown, 3);
+  assert.deepStrictEqual(m.trialsworn, { bought: [3, 5], monthPaid: ['2026-10'], earned: [4] });
+  assert.deepStrictEqual(m.ln, { owned: ['x', 'y'], hound: true, houndKills: 4, town: { t1: 2, t2: 3 } });
+  assert.strictEqual(m.founder, 1); assert.strictEqual(m.debtBreaker, 1);
+  assert.deepStrictEqual(CLOUD.mergeAccount(m, there), m, 'merging again changes nothing');
+});
+
+test('a character changed only in honor or talents counts as played since the last sync', () => {
+  const S = { player: { level: 60, xp: 0, money: 5, kills: 0, deaths: 0, place: 'x', quests: {}, done: {}, equip: {}, bags: [], pvp: { honor: 100 }, talents: {} } };
+  const before = CLOUD.mark(S); S.player.pvp.honor = 40;
+  assert.notStrictEqual(CLOUD.mark(S), before, 'honor spent');
+  const t = CLOUD.mark(S); S.player.talents = { a: 1 };
+  assert.notStrictEqual(CLOUD.mark(S), t, 'a talent');
+});
