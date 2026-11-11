@@ -83,6 +83,31 @@ test('a first-timer group: a bot the mentor run makes careless wears a careless 
   G.leaveGroup();
 });
 
+test('after you leave a run, the group you left says nothing more in party chat', () => {
+  const { S, P } = W.character(60, 'warrior'); P.role = 'dps';
+  G.queueFor('scholomance'); S.queue.popAt = 0; W.advance(1); if (S.queue) G.acceptPop();
+  assert.ok(S.run);
+  const names = new Set(S.group.members.map((m) => m.name));
+  G.leaveGroup();
+  const t0 = W.now();
+  W.advance(20);
+  const after = S.chat.filter((m) => m.t > t0 && m.ch === 'party' && names.has(m.from)).map((m) => `${m.from}: ${m.text}`);
+  assert.deepStrictEqual(after, [], 'no party line from a group you are no longer in');
+});
+
+test('a queued party line posts only from someone in your group or world party', () => {
+  const { S } = W.character(30, 'warrior');
+  const [a, b] = S.bots.filter((x) => B.factionOf(x) === 'alliance' && x.id > 0);
+  S.wparty = { members: [G.botChar(Object.assign({}, a, { role: 'dps' }))], place: S.player.place, until: W.now() + 600000 };
+  const t0 = W.now();
+  S.pending.push({ at: t0 + 500, bot: a.id, ch: 'party', text: 'from my party', fromName: a.name });
+  S.pending.push({ at: t0 + 500, bot: b.id, ch: 'party', text: 'from a stranger', fromName: b.name });
+  W.advance(3);
+  const said = S.chat.filter((m) => m.t > t0 && m.ch === 'party').map((m) => m.text);
+  assert.ok(said.includes('from my party'), 'your party member speaks');
+  assert.ok(!said.includes('from a stranger'), 'someone outside it does not');
+});
+
 // ============================================================ sweeps and edge cases
 
 test('every bot (all classes x their roles x levels 10-60 x skill x gear floor) fills every slot it can use, with gear it can wear, at the floor, with finite stats, the same every time', () => {

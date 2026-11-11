@@ -5091,6 +5091,7 @@
       }
       S.player.place = S.run.returnTo || 'goldshire';
     }
+    if (S.group && S.pending) { const ids = new Set(S.group.members.map((m) => m.bot && m.bot.id)); S.pending = S.pending.filter((p) => !(p.ch === 'party' && ids.has(p.bot))); } /* their queued party lines go with them (#590) */
     S.run = null; S.group = null; delete S.player.syncLevel;
     sys('You left the group.');
     S.player.hp = S.player.hp == null ? null : S.player.hp;
