@@ -3253,11 +3253,20 @@
   G.regearItem = function (x) {
     if (!x || !D.GEAR_SLOTS.includes(x.slot)) return x;
     if (x.hard && G.upgradeInfo(x).ok) { /* never under the power its steps bought (#587) */
-      const pw = Math.max(G.itemPoints(upBase(x)) + G.HARD_STEPS * D.UPGRADE.step * G.upgradeRef(x), x.pw || 0);
+      const pw = Math.max(G.hardPower(x), x.pw || 0);
       return Object.assign(G.upgradedCopy(x, pw, true), { hard: true });
     }
     if (x.base && x.pw) return G.upgradedCopy(x, x.pw);
     return x;
+  };
+  // a Hard copy's power: 2 steps past its drop, or more steps until a stat, armour or damage number differs from the
+  // drop's, so Hard never gives only a rounding (#587)
+  G.hardPower = function (it) {
+    const b = upBase(it), st = D.UPGRADE.step * G.upgradeRef(it), was = shown(Object.assign({}, b, { fxScale: 1 }));
+    const bare = Object.assign(JSON.parse(JSON.stringify(it)), { kit: 0 }); /* a kit's armour is not the drop's */
+    let pw = G.itemPoints(b) + G.HARD_STEPS * st;
+    for (let i = 0; i < 10 && shown(Object.assign(G.upgradedCopy(bare, pw, true), { fxScale: 1 })) === was; i++) pw += st;
+    return pw;
   };
   // over: a Hard copy, which goes past the quality's ceiling (#581)
   G.upgradedCopy = function (it, pw, over) {
@@ -4357,7 +4366,7 @@
   G.hardCopy = function (id) {
     const it = G.copyItem(id), inf = G.upgradeInfo(it);
     if (!inf.ok) return it;
-    const out = G.upgradedCopy(it, inf.pts + G.HARD_STEPS * D.UPGRADE.step * G.upgradeRef(it), true); out.hard = true; // past the ceiling (#581)
+    const out = G.upgradedCopy(it, G.hardPower(it), true); out.hard = true; // past the ceiling (#581)
     if (it.look) out.look = [it.look[0], it.look[1] + '_hard']; // the Hard recolour of the raid's set
     return out;
   };
