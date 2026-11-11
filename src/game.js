@@ -2904,7 +2904,15 @@
   const sumOf = (o) => Object.values(o || {}).reduce((s, n) => s + (+n || 0), 0);
   G.mkBalance = (mk) => Math.max(0, Math.round((+mk.base || 0) + sumOf(mk.earn) - sumOf(mk.spend)));
   G.mkOf = (a) => (a && a.mk && typeof a.mk === 'object' ? { base: +a.mk.base || 0, earn: Object.assign({}, a.mk.earn), spend: Object.assign({}, a.mk.spend) } : { base: Math.max(0, +(a && a.marks) || 0), earn: {}, spend: {} });
-  G.account = function () { let a = null; try { a = JSON.parse(ls.get(ACCOUNT_KEY) || 'null'); } catch (e) { a = null; } a = Object.assign({ marks: 0, heirlooms: [] }, a || {}); a.mk = G.mkOf(a); a.marks = G.mkBalance(a.mk); return a; };
+  // a stored balance that differs from the counters was changed by a version without them (the live page shares this
+  // storage with /beta/): the difference is this device's earning or spending (#588)
+  const mkCatchUp = (a) => {
+    const had = a.mk && typeof a.mk === 'object' && typeof a.marks === 'number' && isFinite(a.marks), mk = G.mkOf(a);
+    const d = had ? Math.round(a.marks - G.mkBalance(mk)) : 0;
+    if (d) { const dev = G.deviceId(); if (d > 0) mk.earn[dev] = (+mk.earn[dev] || 0) + d; else mk.spend[dev] = (+mk.spend[dev] || 0) - d; }
+    return mk;
+  };
+  G.account = function () { let a = null; try { a = JSON.parse(ls.get(ACCOUNT_KEY) || 'null'); } catch (e) { a = null; } a = Object.assign({ marks: 0, heirlooms: [] }, a || {}); a.mk = mkCatchUp(a); a.marks = G.mkBalance(a.mk); return a; };
   // a change to a.marks since the account was read is this device's earning or spending
   G.saveAccount = (a) => {
     const mk = G.mkOf(a), d = Math.round((+a.marks || 0) - G.mkBalance(mk)), dev = G.deviceId();

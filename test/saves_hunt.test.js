@@ -93,6 +93,10 @@ test('Marks the live page (v10.18.3, same site as /beta/) earns or spends are no
   assert.strictEqual(G.account().marks, 200, 'the 100 spent on the live page stay spent');
   oldSpend(-50); // 50 earned on the live page
   assert.strictEqual(G.account().marks, 250, 'the 50 earned on the live page stay earned');
+  assert.strictEqual(G.account().marks, 250, 'reading again counts nothing twice');
+  G.saveAccount(G.account()); assert.strictEqual(G.account().marks, 250, 'nor does saving it');
+  const cloud = clone(G.account()); oldSpend(30);
+  assert.strictEqual(CLOUD.mergeAccount(G.account(), cloud).marks, 220, 'a merge with the cloud keeps the live page\'s spend');
 });
 
 test('the same Account bank tab bought on two devices before a sync costs the Marks of the tabs the account ends with', () => {
