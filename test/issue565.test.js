@@ -68,3 +68,16 @@ test('each faction has a Trials guild for level 60, filled only with level-60 pl
   }
   assert.ok(SOC.guildTrials(13, new Date('2026-11-20T12:00').getTime()) > 0);
 });
+
+test('level-60 guilds hold only level-60 players; the rest move to an open guild of their side (#568)', () => {
+  const SOC = globalThis.SOC; const { S } = character(60);
+  const high = B.GUILDS.map((_, g) => g).filter((g) => SOC.guildMin(g) >= 60);
+  const low = S.bots.filter((b) => b.level < 60).slice(0, 20);
+  low.forEach((b, i) => { b.guild = high.filter((g) => B.GUILD_FACTION[g] === B.factionOf(b))[i % 2]; });
+  B.fillGuilds(S);
+  for (const b of S.bots) if (high.includes(b.guild)) assert.ok(b.level >= 60, b.name + ' ' + b.level + ' in ' + B.GUILDS[b.guild]);
+  for (const b of low) assert.ok(b.guild >= 0 && B.GUILD_FACTION[b.guild] === B.factionOf(b) && SOC.guildMin(b.guild) < 60);
+  const rr = Math.random;
+  try { for (let i = 0; i < 50; i++) { Math.random = (() => { let k = 0; return () => (k++ ? (i + 0.5) / 50 : 0.1); })(); const nb = B.assignGuild({ id: 5000 + i, level: 10, race: 'human' }); if (nb.guild >= 0) assert.ok(SOC.guildMin(nb.guild) < 60, B.GUILDS[nb.guild]); } }
+  finally { Math.random = rr; }
+});

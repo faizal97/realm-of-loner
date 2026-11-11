@@ -55,6 +55,8 @@
   // the Trials guilds (#566) take level-60 players only, filled by B.fillGuilds; the random joins and moves keep to
   // the first 13, so every sim's random stream stays as it was
   const DRAWN = 13;
+  // a guild that asks for level 60 (raiding, Trials) only takes level-60 players (#568); the min comes from SOC once it has loaded
+  const fits = (i, lvl) => !(root.SOC && SOC.guildMin) || SOC.guildMin(i) < 60 || (lvl || 1) >= 60;
   B.GUILDS = GUILDS; B.GUILD_FACTION = GUILD_FACTION;
   B.factionOf = (bot) => ((D.RACES[bot.race] || {}).faction || 'alliance');
 
@@ -79,7 +81,7 @@
   B.assignGuild = function (bot) {
     if (Math.random() >= 0.45) { bot.guild = -1; return bot; }
     const f = B.factionOf(bot);
-    const opts = GUILDS.map((g, i) => i).filter((i) => i < DRAWN && GUILD_FACTION[i] === f);
+    const opts = GUILDS.map((g, i) => i).filter((i) => i < DRAWN && GUILD_FACTION[i] === f && fits(i, bot.level));
     bot.guild = opts[Math.floor(Math.random() * opts.length)];
     return bot;
   };
@@ -225,12 +227,23 @@
   }
 
   // Advance the server by ms. Returns news items.
-  // the Trials guilds recruit level-60 players without a guild, lowest id first, up to 10 each; no random draws (#566)
+  // level-60 guilds keep to level-60 players: anyone below moves to the smallest open guild of their side (#568); then
+  // they recruit level-60 players without a guild, lowest id first, up to 10 each. No random draws (#566)
   B.fillGuilds = function (S) {
-    for (let g = DRAWN; g < GUILDS.length; g++) {
-      let have = S.bots.filter((b) => b.guild === g).length;
-      if (have >= 10) continue;
-      for (const b of S.bots.filter((x) => !(x.guild >= 0) && x.level >= 60 && B.factionOf(x) === GUILD_FACTION[g]).sort((x, y) => x.id - y.id)) { if (have >= 10) break; b.guild = g; have++; }
+    if (!(root.SOC && SOC.guildMin)) return;
+    const high = GUILDS.map((g, i) => i).filter((i) => SOC.guildMin(i) >= 60);
+    const size = {}; for (const b of S.bots) if (b.guild >= 0) size[b.guild] = (size[b.guild] || 0) + 1;
+    for (const b of S.bots) if (high.includes(b.guild) && b.level < 60) {
+      const f = B.factionOf(b), to = GUILDS.map((g, i) => i).filter((i) => i < DRAWN && GUILD_FACTION[i] === f && fits(i, b.level)).sort((x, y) => (size[x] || 0) - (size[y] || 0) || x - y)[0];
+      size[b.guild]--; b.guild = to == null ? -1 : to; if (to != null) size[to] = (size[to] || 0) + 1;
+    }
+    // they take turns, the smallest first, so a young realm's few level-60 players spread over all of them
+    const free = S.bots.filter((x) => !(x.guild >= 0) && x.level >= 60).sort((x, y) => x.id - y.id);
+    for (;;) {
+      const g = high.filter((i) => (size[i] || 0) < 10 && free.some((x) => B.factionOf(x) === GUILD_FACTION[i])).sort((x, y) => (size[x] || 0) - (size[y] || 0) || x - y)[0];
+      if (g == null) break;
+      const b = free.splice(free.findIndex((x) => B.factionOf(x) === GUILD_FACTION[g]), 1)[0];
+      b.guild = g; size[g] = (size[g] || 0) + 1;
     }
   };
   B.advance = function (S, ms) {
@@ -255,7 +268,7 @@
         delete b.gj;
         if (S.bots.filter((x) => x.guild >= 0).length >= S.bots.length * B.GUILD_SHARE) continue;
         const size = {}; for (const x of S.bots) if (x.guild >= 0) size[x.guild] = (size[x.guild] || 0) + 1;
-        const f = B.factionOf(b), opts = GUILDS.map((g, i) => i).filter((i) => i < DRAWN && GUILD_FACTION[i] === f).sort((x, y) => (size[x] || 0) - (size[y] || 0) || x - y);
+        const f = B.factionOf(b), opts = GUILDS.map((g, i) => i).filter((i) => i < DRAWN && GUILD_FACTION[i] === f && fits(i, b.level)).sort((x, y) => (size[x] || 0) - (size[y] || 0) || x - y);
         b.guild = opts[0];
       }
       for (const b of S.bots) {
@@ -337,7 +350,7 @@
     const p = Math.min(1, ms / (B.GUILD_MOVE_DAYS * 86400000));
     for (const b of S.bots) {
       if (homes.has(b.guild) || !(crand() < p) || b.gj) continue; // a newcomer has no guild yet (#328)
-      const opts = GUILDS.map((g, i) => i).filter((i) => i < DRAWN && GUILD_FACTION[i] === B.factionOf(b) && i !== b.guild && !homes.has(i));
+      const opts = GUILDS.map((g, i) => i).filter((i) => i < DRAWN && GUILD_FACTION[i] === B.factionOf(b) && i !== b.guild && !homes.has(i) && fits(i, b.level));
       const to = b.guild >= 0 && crand() < 0.25 ? -1 : opts.length ? opts[Math.floor(crand() * opts.length)] : -1;
       if (to === b.guild) continue;
       B.note(b, t, to < 0 ? 'left' : 'joined', to < 0 ? b.guild : to); b.guild = to;

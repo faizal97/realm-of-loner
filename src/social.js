@@ -36,11 +36,11 @@
     'Grey Hood Dropouts': 'casual', 'Lions Pride': 'pvp', 'Mireling Mafia': 'dungeons', 'Starlight Vanguard': 'social',
     'Blood and Thunder': 'pvp', 'Sons of the Storm': 'social', 'Dust Eaters': 'raiding', 'Bonewall Raiders': 'leveling', 'Kessari Hexers': 'dungeons',
     'Hourglass Wardens': 'trials', 'Red Clock Runners': 'trials' }; // the Trials pushers (#566)
+  SOC.guildStyle = (g) => { const name = B.GUILDS[g], x = [...name].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7); return GUILD_STYLE[name] || STYLE[x % STYLE.length]; }; // set on purpose (#565): each faction has its raiders and its PvP guild
+  SOC.guildMin = (g) => { const st = SOC.guildStyle(g); return st === 'raiding' || st === 'trials' ? 60 : st === 'dungeons' ? 15 : st === 'pvp' ? 20 : st === 'leveling' ? 5 : 1; };
   SOC.guildInfo = function (g) {
     const S = G.S, name = B.GUILDS[g];
-    const x = [...name].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
-    const style = GUILD_STYLE[name] || STYLE[x % STYLE.length]; // set on purpose (#565): each faction has its raiders and its PvP guild
-    const min = style === 'raiding' || style === 'trials' ? 60 : style === 'dungeons' ? 15 : style === 'pvp' ? 20 : style === 'leveling' ? 5 : 1;
+    const style = SOC.guildStyle(g), min = SOC.guildMin(g);
     const members = S.bots.filter((b) => b.guild === g);
     const on = members.filter((b) => B.isOnline(b, new Date())), online = on.length;
     const officer = on.slice().sort((a, b) => b.level - a.level)[0] || null; // the highest-level one online speaks for the guild; nobody online, nobody (#390)
