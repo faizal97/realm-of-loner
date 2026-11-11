@@ -81,3 +81,33 @@ test('level-60 guilds hold only level-60 players; the rest move to an open guild
   try { for (let i = 0; i < 50; i++) { Math.random = (() => { let k = 0; return () => (k++ ? (i + 0.5) / 50 : 0.1); })(); const nb = B.assignGuild({ id: 5000 + i, level: 10, race: 'human' }); if (nb.guild >= 0) assert.ok(SOC.guildMin(nb.guild) < 60, B.GUILDS[nb.guild]); } }
   finally { Math.random = rr; }
 });
+
+test('your own guild keeps its members and gets no strangers from the level-60 fill (#569)', () => {
+  const SOC = globalThis.SOC; const { S, P } = character(55);
+  const g = B.GUILDS.indexOf('Crimson Vanguard'); P.guild = g;
+  const low = S.bots.filter((b) => b.level < 60 && B.factionOf(b) === B.GUILD_FACTION[g]).slice(0, 8);
+  low.forEach((b) => { b.guild = g; });
+  const before = S.bots.filter((b) => b.guild === g).map((b) => b.id).sort().join();
+  for (const b of S.bots.slice(0, 30)) if (!(b.guild >= 0)) b.level = 60;
+  B.fillGuilds(S);
+  assert.strictEqual(S.bots.filter((b) => b.guild === g).map((b) => b.id).sort().join(), before);
+});
+
+test('every move the level-60 fill makes is in the bot\'s history (#569)', () => {
+  const SOC = globalThis.SOC; const { S, P } = character(60); P.guild = -1;
+  const g = B.GUILDS.indexOf('Dust Eaters'), b = S.bots.find((x) => x.level < 60 && B.factionOf(x) === 'horde');
+  b.guild = g; b.hist = [];
+  B.fillGuilds(S);
+  assert.deepStrictEqual(b.hist.map((e) => e.k), ['left', 'joined']);
+  assert.strictEqual(b.hist[1].v, b.guild);
+});
+
+test('a Hard clear from before Crestbearer existed is kept once a newer raid opens (#570)', () => {
+  const SOC = globalThis.SOC; const { P } = character(60);
+  const n = SOC.newestRaid(), t = D.TITLES.find((x) => x.id === 'crestbearer');
+  P.crest = undefined; P.codex = P.codex || {}; P.codex[n.act] = Object.assign({}, P.codex[n.act], { hard: 1 });
+  assert.strictEqual(G.titleUnlocked(t), true);
+  assert.ok(P.crest && P.crest[n.act], 'recorded when read');
+  const nr = SOC.newestRaid; SOC.newestRaid = () => ({ act: 'zz_new', name: 'New Raid' });
+  try { assert.strictEqual(G.titleUnlocked(t), true); } finally { SOC.newestRaid = nr; }
+});

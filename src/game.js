@@ -3238,7 +3238,7 @@
   // a Hard clear from before this existed counts while that raid is still the newest. record: write a new one down
   G.crests = function (record) {
     const P = G.S.player, n = root.SOC && SOC.newestRaid(), have = Object.keys(P.crest || {});
-    if (n && n.act && ((P.codex || {})[n.act] || {}).hard && !have.includes(n.act)) { if (!record) return have.concat(n.act); (P.crest = P.crest || {})[n.act] = Date.now(); return Object.keys(P.crest); }
+    if (n && n.act && ((P.codex || {})[n.act] || {}).hard && !have.includes(n.act)) { (P.crest = P.crest || {})[n.act] = Date.now(); return Object.keys(P.crest); } // earned is kept, even when only read (#570): a Hard clear from before the title existed stays once a newer raid opens
     return have;
   };
   G.records = function () {
@@ -4961,7 +4961,7 @@
     const cx = (P.codex = P.codex || {})[R.act] = Object.assign({ clears: 0, flawless: 0, speed: 0, best: null }, (P.codex || {})[R.act]);
     cx.clears++; if (flawless) cx.flawless++; if (speed) cx.speed++; if (cx.best == null || secs < cx.best) cx.best = Math.round(secs);
     if (R.hard) cx.hard = (cx.hard || 0) + 1; // Hard clears (v10.7), shown in the codex
-    if (R.hard && !R.trial && Dg.raid) { const had = Object.keys(P.crest || {}).length; if (G.crests(true).length > had) { sys(`Crestbearer: ${Dg.name}. Title earned: the Crestbearer.`); toast(`Crestbearer: ${Dg.name}`); } } // the newest raid on Hard (#565)
+    if (R.hard && !R.trial && Dg.raid) { const had = Object.keys(P.crest || {}).length; if (G.crests(true).length > had) { sys(`Crestbearer: ${SOC.newestRaid().name}. Title earned: the Crestbearer.`); toast(`Crestbearer: ${SOC.newestRaid().name}`); } } // the newest raid on Hard (#565)
     if (Dg.raid && !R.trial) featuredClear(R.act);
     if (R.trial) G.trialDone(R, secs, TR().par(Dg, R.omens)); // Trials pay their own Marks, against their own par
     else if (P.level >= D.LEVEL_CAP) G.payClearMarks(R.act);

@@ -229,13 +229,19 @@
   // Advance the server by ms. Returns news items.
   // level-60 guilds keep to level-60 players: anyone below moves to the smallest open guild of their side (#568); then
   // they recruit level-60 players without a guild, lowest id first, up to 10 each. No random draws (#566)
-  B.fillGuilds = function (S) {
+  // The guilds of the account's characters are never touched, the same rule as B.guildMoves (#71, #305): your
+  // guildmates stay yours, and nobody is moved into your guild behind your back (#569). Every move is in their history.
+  B.fillGuilds = function (S, t) {
     if (!(root.SOC && SOC.guildMin)) return;
-    const high = GUILDS.map((g, i) => i).filter((i) => SOC.guildMin(i) >= 60);
+    const at = t || S.lastSim || Date.now();
+    const homes = new Set(Object.values((S.server && S.server.homes) || {}).filter((g) => g >= 0));
+    if (S.player && S.player.guild != null && S.player.guild >= 0) homes.add(S.player.guild);
+    const high = GUILDS.map((g, i) => i).filter((i) => SOC.guildMin(i) >= 60 && !homes.has(i));
     const size = {}; for (const b of S.bots) if (b.guild >= 0) size[b.guild] = (size[b.guild] || 0) + 1;
     for (const b of S.bots) if (high.includes(b.guild) && b.level < 60) {
-      const f = B.factionOf(b), to = GUILDS.map((g, i) => i).filter((i) => i < DRAWN && GUILD_FACTION[i] === f && fits(i, b.level)).sort((x, y) => (size[x] || 0) - (size[y] || 0) || x - y)[0];
-      size[b.guild]--; b.guild = to == null ? -1 : to; if (to != null) size[to] = (size[to] || 0) + 1;
+      const f = B.factionOf(b), to = GUILDS.map((g, i) => i).filter((i) => i < DRAWN && GUILD_FACTION[i] === f && fits(i, b.level) && !homes.has(i)).sort((x, y) => (size[x] || 0) - (size[y] || 0) || x - y)[0];
+      B.note(b, at, 'left', b.guild); size[b.guild]--; b.guild = to == null ? -1 : to;
+      if (to != null) { size[to] = (size[to] || 0) + 1; B.note(b, at, 'joined', to); }
     }
     // they take turns, the smallest first, so a young realm's few level-60 players spread over all of them
     const free = S.bots.filter((x) => !(x.guild >= 0) && x.level >= 60).sort((x, y) => x.id - y.id);
@@ -243,7 +249,7 @@
       const g = high.filter((i) => (size[i] || 0) < 10 && free.some((x) => B.factionOf(x) === GUILD_FACTION[i])).sort((x, y) => (size[x] || 0) - (size[y] || 0) || x - y)[0];
       if (g == null) break;
       const b = free.splice(free.findIndex((x) => B.factionOf(x) === GUILD_FACTION[g]), 1)[0];
-      b.guild = g; size[g] = (size[g] || 0) + 1;
+      b.guild = g; size[g] = (size[g] || 0) + 1; B.note(b, at, 'joined', g);
     }
   };
   B.advance = function (S, ms) {
