@@ -34,7 +34,7 @@ const mcTop = avg(mc.filter((it) => !atCap(it)).map((it) => G.itemPoints(climb(i
 ok(mcTop >= 0.97, `upgraded Magma Throne reaches ${(mcTop * 100).toFixed(0)}% of the ceiling`);
 const blueTop = avg(strat.filter((it) => it.q === 3 && G.upgradeInfo(it).room).map((it) => G.itemPoints(climb(it).top) / G.upgradeRef(it)));
 ok(blueTop <= 0.93, `upgraded blues stop lower (${(blueTop * 100).toFixed(0)}%)`);
-ok(mc.every((it) => { const i = G.upgradeInfo(it); return !i.room || (i.cost >= 15 && i.cost <= 23); }), 'a step costs 15 Marks (a last step that finishes the climb up to half more)');
+ok(mc.every((it) => { const i = G.upgradeInfo(it), k = Math.max(1, Math.round((i.nextPct - i.pct) / 3)); return !i.room || (i.cost >= 15 && i.cost <= 23 * k); }), 'a step costs 15 Marks (a last step that finishes the climb up to half more; steps that round to nothing go together, #587)');
 
 // old saves: an item without it.pw is itself
 const sword = mc.find((it) => it.dmg && G.upgradeInfo(it).room);

@@ -3224,7 +3224,7 @@
     const cur = rfAt(r.where); if (!cur || cur.id !== r.old.id) { G.save(); return false; } // the item moved: keep what it has
     rfPut(r.where, r.old); sys(`${r.old.name}: back to how it was.`); emit('change'); G.save(); return true;
   };
-  G.upgradeInfo = function (it) {
+  const upInfo = function (it) {
     const U = D.UPGRADE, none = { ok: false, room: false, cost: 0 };
     if (!it || it.heirloom || !D.GEAR_SLOTS.includes(it.slot) || !U.cap[it.q] || (it.lvl || 0) < U.minLvl) return none;
     const ref = G.upgradeRef(it), p0 = G.itemPoints(upBase(it)); if (p0 <= 0) return none;
@@ -3232,6 +3232,19 @@
     const next = capPts - (pts + st) < st / 2 ? capPts : pts + st; // less than half a step left: go straight to the ceiling
     const pc = (x) => Math.round((x / ref) * 100);
     return { ok: true, room, pts, next, pct: pc(pts), nextPct: pc(next), capPct: Math.round(U.cap[it.q] * 100), cost: room ? Math.max(1, Math.round(((next - pts) / ref) * 100 * U.perPct)) : 0 };
+  };
+  // a step whose numbers all round to what the item has is merged with the next, and one that never changes them is
+  // not offered, so Marks always buy a change (#587)
+  const shown = (x) => JSON.stringify([x.stats || {}, x.sp || 0, x.armor || 0, x.dmg || null, x.fxScale || 1]);
+  G.upgradeInfo = function (it) {
+    const inf = upInfo(it); if (!inf.room) return inf;
+    const U = D.UPGRADE, ref = G.upgradeRef(it), capPts = U.cap[it.q] * ref, st = U.step * ref, now = shown(it);
+    let next = inf.next;
+    while (shown(G.upgradedCopy(it, next)) === now) {
+      if (next >= capPts - 1e-9) return Object.assign(inf, { room: false, next: inf.pts, nextPct: inf.pct, cost: 0 });
+      next = capPts - (next + st) < st / 2 ? capPts : next + st;
+    }
+    return Object.assign(inf, { next, nextPct: Math.round((next / ref) * 100), cost: Math.max(1, Math.round(((next - inf.pts) / ref) * 100 * U.perPct)) });
   };
   // the item at a given power (stat points); its own power or less gives back the item as it dropped
   G.FX_SCALE_CAP = 1.5;
@@ -3248,7 +3261,7 @@
   };
   // over: a Hard copy, which goes past the quality's ceiling (#581)
   G.upgradedCopy = function (it, pw, over) {
-    const b = upBase(it), p0 = G.itemPoints(b), inf = G.upgradeInfo(it), out = JSON.parse(JSON.stringify(it));
+    const b = upBase(it), p0 = G.itemPoints(b), inf = upInfo(it), out = JSON.parse(JSON.stringify(it));
     const ref = inf.ok ? G.upgradeRef(it) : p0, capPts = inf.ok ? D.UPGRADE.cap[it.q] * ref : p0;
     if (!over) pw = Math.min(pw, Math.max(capPts, it.pw || 0));
     const kit = it.kit || 0; // an armour kit sits on top of the upgraded armour (#406)
