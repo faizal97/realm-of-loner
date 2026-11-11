@@ -107,16 +107,38 @@ test('a fight and its end keep every ability under the same key (Eat and Drink o
   assert.strictEqual(p[f.indexOf('s1')], 'eat');
 });
 
-// ---------- run panel tabs (#564)
-function runTab({ pick, fight, healer, done }) {
-  const line = src.match(/\n\s*const tab = done \? 'party' : ui\.runTab[^\n]*/);
-  assert.ok(line, 'the run tab line');
-  return new Function('done', 'ui', 'C', 'healer', line[0] + '; return tab;')(!!done, { runTab: pick }, fight ? {} : null, !!healer);
+// ---------- run panel tabs (#564, #591)
+function runTabs() {
+  const fn = cut('  function runTabNow(', '  function runPanel(');
+  const ui = {}, now = new Function('ui', fn + '; return runTabNow;')(ui);
+  return { ui, tab: (R, C, healer) => now(R, C, !!healer) };
 }
 
 test('a run opens on Next pull, a fight on Enemies (Party for a healer), a finished run on Party', () => {
-  assert.strictEqual(runTab({}), 'next');
-  assert.strictEqual(runTab({ fight: true }), 'next');
-  assert.strictEqual(runTab({ fight: true, healer: true }), 'party');
-  assert.strictEqual(runTab({ pick: 'plan', done: true }), 'party');
+  const { tab, ui } = runTabs(), R = { phase: 'rest' };
+  assert.strictEqual(tab(R, null), 'next');
+  assert.strictEqual(tab(R, {}), 'next');
+  assert.strictEqual(runTabs().tab(R, {}, true), 'party');
+  ui.runTab = 'plan'; assert.strictEqual(tab({ phase: 'done' }, null), 'party');
+});
+
+// a pick between pulls (or the "Boss plan ›" row, which picks Plan by itself) used to hold through the next fight,
+// which then showed only the pace chips: no party frames for a healer, no enemy list (#591)
+test('a fight always opens on its default tab, whatever was picked between pulls', () => {
+  for (const healer of [false, true]) {
+    const { tab, ui } = runTabs(), R = { phase: 'rest' };
+    tab(R, null); ui.runTab = 'plan';
+    assert.strictEqual(tab(R, null), 'plan', 'the pick holds between pulls');
+    const C = {};
+    assert.strictEqual(tab(R, C, healer), healer ? 'party' : 'next', 'the fight opens on its default');
+    ui.runTab = 'plan'; assert.strictEqual(tab(R, C, healer), 'plan', 'a pick in the fight holds for that fight');
+    assert.strictEqual(tab(R, null), 'next', 'after the fight: Next pull again');
+  }
+});
+
+test('a pick never carries to the next run or another character', () => {
+  const { tab, ui } = runTabs(), R1 = { phase: 'rest' }, R2 = { phase: 'rest' };
+  tab(R1, null); ui.runTab = 'party';
+  assert.strictEqual(tab(R1, null), 'party');
+  assert.strictEqual(tab(R2, null), 'next');
 });

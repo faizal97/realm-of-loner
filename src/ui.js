@@ -1642,6 +1642,12 @@
     showDialog([h('h3', null, `Leave ${R.name}?`), h('p', null, `${left} pull${left === 1 ? '' : 's'} left. ${G.deserterFor(R) ? `Leaving now gives Deserter: no groups for ${G.deserterFor(R) / 60000} min.` : 'No Deserter: the group has wiped.'}`),
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: go }, 'Leave'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Stay'))], true);
   }
+  // the run panel's tab (#591): a pick holds for the rest or the fight it was made in; each fight, each run and each
+  // character opens on the default (Next pull; in a fight Enemies, or Party for a healer); a finished run on Party
+  function runTabNow(R, C, healer) {
+    const at = C || R; if (ui.runTabAt !== at) { ui.runTab = null; ui.runTabAt = at; }
+    return R.phase === 'done' ? 'party' : ui.runTab || (C && healer ? 'party' : 'next');
+  }
   function runPanel(p) {
     const S = G.S, R = S.run, C = G.fight;
     const dots = h('div', { class: 'progress-dots' });
@@ -1672,7 +1678,7 @@
     // tabs (#564): the run's name, progress, the clock and Ready / Pull stay on top; Party, Next pull (Enemies in a fight)
     // and Plan sit under them, so a raid's ten rows never push a decision out of sight
     const done = R.phase === 'done', healer = G.healsAllies(), pull = R.pulls[R.idx];
-    const tab = done ? 'party' : ui.runTab || (C ? (healer ? 'party' : 'next') : 'next');
+    const tab = runTabNow(R, C, healer);
     const party = [healer ? h('div', { class: 'sec-h' }, 'Party', h('small', { class: 'heal-to' }, ...healLine())) : null, pf].filter(Boolean); // where heals go (#156)
     let list = null;
     if (C) {
