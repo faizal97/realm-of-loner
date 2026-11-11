@@ -580,6 +580,7 @@
     { id: 'guide', name: '%s the Guide', need: { mentor: 25 }, how: 'Help 25 groups through Help Wanted' },
     { id: 'flawless', name: '%s the Flawless', need: { flawless: 10 }, how: 'Clear dungeons without a wipe 10 times' },
     { id: 'swift', name: '%s the Swift', need: { speed: 10 }, how: 'Beat par time 10 times' },
+    { id: 'crestbearer', name: '%s the Crestbearer', need: { crest: 1 }, how: 'Clear the newest raid on Hard while it is the newest' }, // #565
     // the Honor ranks (#57): one title per rank, from D.HONOR_RANKS below (ids pvp1..pvp8; pvp1-4 are the old titles renamed)
     ...D.HONOR_RANKS.map((r, i) => ({ id: 'pvp' + (i + 1), name: r.alliance, horde: r.horde, need: { honor: r.at }, how: `Reach Honor rank ${i + 1} (${r.at.toLocaleString('en-US')} Honor)`, rank: i + 1 })),
     { id: 'defender', name: '%s, Defender of the Realm', horde: '%s, Defender of the Krugar', need: { kills: 50 }, how: 'Defeat 50 enemy players' },

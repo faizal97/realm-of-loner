@@ -5523,6 +5523,19 @@
     showDialog(parts, true);
   }
 
+  // a guild's raid progress under its name (#565): the furthest raid, and Crestbearer once the newest is cleared on Hard
+  function progSmall(pr) { const l = SOC.progressLine(pr); return l ? h('small', { class: 'gprog' }, 'Raids: ' + l, SOC.crestGuild(pr) ? h('b', { class: 'gold' }, ' · Crestbearer') : null) : null; }
+  // the realm ranking (#565): every guild with raid progress, both factions, yours marked
+  function rankingBlock(b) {
+    const rk = SOC.ranking(), mine = G.S.player.guild;
+    b.append(h('div', { class: 'sec-h' }, 'Realm ranking', h('small', null, 'by raid progress · weekly')));
+    b.append(h('div', { class: 'list' }, ...rk.map((r) => h('div', { class: 'row' + (r.g === mine ? ' gold' : ''), style: { gridTemplateColumns: '28px auto 1fr' } },
+      h('b', { class: 'tnum', style: { alignSelf: 'center', textAlign: 'center' } }, String(r.rank)),
+      h('div', { class: 'ic crest', html: ART.crest ? ART.crest(r.info.name, r.info.faction) : '' }),
+      h('div', { class: 't' }, h('b', null, '<' + r.info.name + '>'), h('small', null, r.info.faction === 'horde' ? 'Krugar' : 'Accord'), progSmall(r.pr) || h('small', { class: 'gprog' }, 'Raids: none yet'))))));
+    const n = SOC.newestRaid();
+    if (n) b.append(h('p', { class: 'ai-note', style: { margin: 0 } }, `Crestbearer: clear ${n.name} on Hard while it is the newest raid.`));
+  }
   function guildTab(b) {
     const S = G.S, P = S.player;
     if (P.guild < 0) {
@@ -5533,22 +5546,27 @@
         const ok = P.level >= gi.min;
         b.append(h('div', { class: 'row', style: { gridTemplateColumns: 'auto 1fr auto' } },
           h('div', { class: 'ic crest', html: ART.crest ? ART.crest(gi.name, gi.faction) : '' }),
-          h('div', { class: 't' }, h('b', null, '<' + gi.name + '>'), h('small', { style: { whiteSpace: 'normal' } }, `${gi.style[0].toUpperCase() + gi.style.slice(1)} · ${gi.online}/${gi.members} online · level ${gi.min}+. ${gi.blurb}`)),
+          h('div', { class: 't' }, h('b', null, '<' + gi.name + '>'), h('small', { style: { whiteSpace: 'normal' } }, `${gi.style === 'pvp' ? 'PvP' : gi.style[0].toUpperCase() + gi.style.slice(1)} · ${gi.online}/${gi.members} online · level ${gi.min}+. ${gi.blurb}`), progSmall(SOC.guildProgress(gi.g))),
           h('button', { class: 'chip gold', disabled: !!ap || !ok, onclick: () => { SOC.apply(gi.g); ui.sheetFn(); } }, ok ? 'Apply' : `Level ${gi.min}+`)));
       }
+      rankingBlock(b);
       return;
     }
     const gi = SOC.guildInfo(P.guild), st = SOC.standing(), r = SOC.rank(), R = SOC.RANKS, nx = R[r + 1];
     const mates = S.bots.filter((x) => x.guild === P.guild);
     const on = mates.filter((x) => B.isOnline(x, new Date()));
     if (ART.crest) b.append(h('div', { class: 'guild-crest', role: 'img', 'aria-label': `<${gi.name}> crest`, html: ART.crest(gi.name, gi.faction) })); // #525
-    b.append(h('div', { class: 'sec-h' }, '<' + gi.name + '>', h('small', null, `${gi.style} · ${on.length}/${mates.length} online`)));
+    b.append(h('div', { class: 'sec-h' }, '<' + gi.name + '>', h('small', null, `${gi.style === 'pvp' ? 'PvP' : gi.style[0].toUpperCase() + gi.style.slice(1)} · ${on.length}/${mates.length} online`)));
     b.append(h('div', { class: 'ai-box' },
       h('div', { class: 'ai-row' }, h('span', null, 'Your rank'), h('b', null, R[r].name)),
       h('div', { class: 'ai-row' }, h('span', null, 'Guild standing'), h('b', { class: 'tnum' }, nx ? `${st}/${nx.at}` : String(st))), // n/max, as everywhere (#399)
       h('div', { class: 'xpbar', style: { height: '6px', background: '#1a140c', borderRadius: '3px', overflow: 'hidden', margin: '6px 0' } }, h('i', { style: { display: 'block', height: '100%', width: (nx ? Math.min(100, Math.round((st - R[r].at) / (nx.at - R[r].at) * 100)) : 100) + '%', background: 'var(--gold)' } })),
       h('p', { class: 'ai-note', style: { margin: 0 } }, 'Perks: ' + (R.slice(1, r + 1).map((k) => k.perk).join(' · ') || 'none yet') + (nx ? `. Next, ${nx.name}: ${nx.perk}.` : '.')),
       h('p', { class: 'ai-note', style: { margin: '4px 0 0' } }, 'Earn standing by helping guildmates: their requests appear in guild chat. Tap one to help.')));
+    { const rk = SOC.ranking(), me = rk.find((x) => x.g === P.guild), line = me && SOC.progressLine(me.pr); // raid progress and the realm ranking (#565)
+      b.append(h('div', { class: 'ai-box' }, h('div', { class: 'ai-row' }, h('span', null, 'Raids'), h('b', null, line || 'None yet')),
+        h('div', { class: 'ai-row' }, h('span', null, 'Realm rank'), h('b', { class: 'tnum' }, me ? `${me.rank}/${rk.length}` : '—')),
+        me && me.crest ? h('div', { class: 'ai-row' }, h('span', null, 'Crestbearer'), h('b', { class: 'gold' }, SOC.newestRaid().name)) : null)); }
     b.append(h('p', { style: { margin: 0, fontStyle: 'italic', color: '#c9b88a' } }, 'Message of the day: ' + SOC.motd(P.guild)));
     const wk = SOC.week();
     if (wk) b.append(h('div', { class: 'ai-box' },
@@ -5560,6 +5578,7 @@
     for (const m of reqs) b.append(h('button', { class: 'row', style: { gridTemplateColumns: '1fr auto', textAlign: 'left' }, onclick: () => msgDialog(m) }, h('div', { class: 't' }, h('b', { class: 'cls-' + (m.cls || '') }, m.from), h('small', { html: richText(m.text), style: { whiteSpace: 'normal' } })), h('span', { class: 'chip gold' }, 'Help')));
     b.append(h('div', { class: 'sec-h' }, 'Online'));
     b.append(h('div', { class: 'list' }, ...on.slice(0, 30).map((x) => h('button', { class: 'row', style: { minHeight: '36px' }, onclick: () => playerCard(x) }, h('div', { class: 'ic' }, img(art('portrait', looks(x)))), h('div', { class: 't' }, h('b', { class: 'cls-' + x.cls }, x.name), h('small', null, `Level ${x.level} ${D.CLASSES[x.cls].name}`))))));
+    rankingBlock(b);
     b.append(h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', onclick: () => showDialog([h('h3', null, `Leave <${gi.name}>?`), h('p', null, 'Your guild standing resets to zero.'), h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { SOC.leaveGuild(); closeDialog(); ui.sheetFn && ui.sheetFn(); } }, 'Leave'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Stay'))], true) }, 'Leave guild')));
   }
 

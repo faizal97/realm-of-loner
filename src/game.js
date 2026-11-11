@@ -3234,6 +3234,13 @@
     const r = G.records();
     return Object.keys(D.DUNGEONS).some((k) => D.DUNGEONS[k].raid && r.clears[k] && r.clears[k].clears);
   };
+  // Crestbearer (#565): the newest raid cleared on Hard while it is the newest. Kept once earned (P.crest, by activity);
+  // a Hard clear from before this existed counts while that raid is still the newest. record: write a new one down
+  G.crests = function (record) {
+    const P = G.S.player, n = root.SOC && SOC.newestRaid(), have = Object.keys(P.crest || {});
+    if (n && n.act && ((P.codex || {})[n.act] || {}).hard && !have.includes(n.act)) { if (!record) return have.concat(n.act); (P.crest = P.crest || {})[n.act] = Date.now(); return Object.keys(P.crest); }
+    return have;
+  };
   G.records = function () {
     const P = G.S.player, cx = P.codex || {}; const pv = G.pvpStats();
     let flawless = 0, speed = 0; for (const k in cx) { flawless += cx[k].flawless || 0; speed += cx[k].speed || 0; }
@@ -3253,6 +3260,7 @@
     if (n.renown) return G.renown() >= n.renown; // #504
     if (n.founder) return G.isFounder(); // #507
     if (n.debtBreaker) return !!G.account().debtBreaker; // #523
+    if (n.crest) return G.crests().length >= n.crest; // #565
     return Object.keys(n).every((k) => (r[k] || 0) >= n[k]);
   };
   const ROMAN = (n) => { let o = '', x = n; for (const [v, r] of [[1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']]) while (x >= v) { o += r; x -= v; } return o; };
@@ -4953,6 +4961,7 @@
     const cx = (P.codex = P.codex || {})[R.act] = Object.assign({ clears: 0, flawless: 0, speed: 0, best: null }, (P.codex || {})[R.act]);
     cx.clears++; if (flawless) cx.flawless++; if (speed) cx.speed++; if (cx.best == null || secs < cx.best) cx.best = Math.round(secs);
     if (R.hard) cx.hard = (cx.hard || 0) + 1; // Hard clears (v10.7), shown in the codex
+    if (R.hard && !R.trial && Dg.raid) { const had = Object.keys(P.crest || {}).length; if (G.crests(true).length > had) { sys(`Crestbearer: ${Dg.name}. Title earned: the Crestbearer.`); toast(`Crestbearer: ${Dg.name}`); } } // the newest raid on Hard (#565)
     if (Dg.raid && !R.trial) featuredClear(R.act);
     if (R.trial) G.trialDone(R, secs, TR().par(Dg, R.omens)); // Trials pay their own Marks, against their own par
     else if (P.level >= D.LEVEL_CAP) G.payClearMarks(R.act);

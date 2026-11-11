@@ -31,18 +31,22 @@
 
   // ------------------------------------------------------------ guilds: who they are
   const STYLE = ['casual', 'leveling', 'dungeons', 'raiding', 'pvp', 'social'];
+  // each guild's style, chosen (#565): a name's hash once gave the Accord no raiding or PvP guild at all
+  const GUILD_STYLE = { 'Brackenford Legends': 'dungeons', 'Crimson Vanguard': 'raiding', 'Knights of Ambermoor': 'raiding', 'Pumpkin Patrol': 'leveling',
+    'Grey Hood Dropouts': 'casual', 'Lions Pride': 'pvp', 'Mireling Mafia': 'dungeons', 'Starlight Vanguard': 'social',
+    'Blood and Thunder': 'pvp', 'Sons of the Storm': 'social', 'Dust Eaters': 'raiding', 'Bonewall Raiders': 'leveling', 'Kessari Hexers': 'dungeons' };
   SOC.guildInfo = function (g) {
     const S = G.S, name = B.GUILDS[g];
     const x = [...name].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
-    const style = STYLE[x % STYLE.length];
-    const min = style === 'raiding' ? 40 : style === 'dungeons' ? 15 : style === 'pvp' ? 20 : style === 'leveling' ? 5 : 1;
+    const style = GUILD_STYLE[name] || STYLE[x % STYLE.length]; // set on purpose (#565): each faction has its raiders and its PvP guild
+    const min = style === 'raiding' ? 60 : style === 'dungeons' ? 15 : style === 'pvp' ? 20 : style === 'leveling' ? 5 : 1;
     const members = S.bots.filter((b) => b.guild === g);
     const on = members.filter((b) => B.isOnline(b, new Date())), online = on.length;
     const officer = on.slice().sort((a, b) => b.level - a.level)[0] || null; // the highest-level one online speaks for the guild; nobody online, nobody (#390)
-    const blurb = { casual: 'Chill people, no pressure. We help each other level.', leveling: 'New and leveling players welcome. We run low dungeons every night.', dungeons: 'Dungeon runs every evening. Bring your role, we bring the rest.', raiding: 'Endgame raids three nights a week. Level 40+.', pvp: 'War Mode on, always. For the glory.', social: 'A friendly bunch who mostly talk and sometimes quest.' }[style];
+    const blurb = { casual: 'Chill people, no pressure. We help each other level.', leveling: 'New and leveling players welcome. We run low dungeons every night.', dungeons: 'Dungeon runs every evening. Bring your role, we bring the rest.', raiding: 'Raids three nights a week, Hard included.', pvp: 'War Mode on, always. For the glory.', social: 'A friendly bunch who mostly talk and sometimes quest.' }[style];
     return { g, name, style, min, members: members.length, online, officer, blurb, faction: B.GUILD_FACTION[g] };
   };
-  SOC.myGuilds = () => B.GUILDS.map((_, g) => g).filter((g) => B.GUILD_FACTION[g] === G.myFaction()).map(SOC.guildInfo);
+  SOC.myGuilds = () => B.GUILDS.map((_, g) => g).filter((g) => B.GUILD_FACTION[g] === G.myFaction()).map(SOC.guildInfo).sort((a, b) => SOC.guildFit(a, G.S.player.level) - SOC.guildFit(b, G.S.player.level) || a.g - b.g);
   // the message of the day changes daily
   SOC.motd = function (g) {
     const day = Math.floor(now() / 86400000), info = SOC.guildInfo(g);
@@ -54,6 +58,44 @@
       social: ['Tell us about your day!', 'Screenshot contest this week.', 'Fishing party at the lake, everyone welcome.', 'Be kind, stay weird.'] }[info.style];
     return lines[(day + g) % lines.length];
   };
+
+  // ------------------------------------------------------------ guild raid progress and the realm ranking (#565)
+  // Bot guilds move through the raids week by week from the day each raid opened (a raid's own 'opens' date, else the
+  // realm's), at their own pace: computed from the data and the date, so it never jumps and takes any number of raids.
+  // Your guild also counts your own clears. Crestbearer: the newest raid cleared on Hard.
+  const RAID_OPENS = '2026-09-29', DAY = 86400000;
+  const weekOf = (t) => Math.floor(((t - new Date(t).getTimezoneOffset() * 60000) / DAY + 3) / 7);
+  SOC.raids = () => Object.keys(D.DUNGEONS).filter((k) => D.DUNGEONS[k].raid).map((k, i) => {
+    const d = D.DUNGEONS[k], act = Object.keys(D.ACTIVITIES).find((a) => D.ACTIVITIES[a].dungeon === k && !D.ACTIVITIES[a].event);
+    return { k, act, i, name: d.name, opens: new Date((d.opens || RAID_OPENS) + 'T00:00:00').getTime(), bosses: d.pulls.filter((p) => p.boss).length };
+  }).sort((a, b) => a.opens - b.opens || a.i - b.i).map((r, tier) => Object.assign(r, { tier }));
+  SOC.newestRaid = () => { const R = SOC.raids(); return R[R.length - 1] || null; };
+  const PACE = { raiding: 1, dungeons: 0.32, pvp: 0.15 };
+  const RAID_PACE = { 'Crimson Vanguard': 1.25, 'Dust Eaters': 1.05, 'Knights of Ambermoor': 0.85 }; // the realm's front-runner, its rival and a steady third
+  SOC.guildProgress = function (g, t) {
+    const name = B.GUILDS[g], info = SOC.guildInfo(g);
+    const pace = (PACE[info.style] || 0) * (RAID_PACE[name] || 1), mine = G.S && G.S.player && G.S.player.guild === g;
+    const cx = mine ? (G.S.player.codex || {}) : {}, at = t || now();
+    return SOC.raids().map((r) => {
+      const eff = Math.max(0, weekOf(at) - weekOf(r.opens)) * pace - r.tier * 1.5; // a later tier takes longer
+      let normal = Math.max(0, Math.min(r.bosses, Math.floor(eff * r.bosses / 3))), hard = Math.max(0, Math.min(r.bosses, Math.floor((eff - 3) * r.bosses / 6)));
+      const c = cx[r.act] || {};
+      if (c.clears) normal = r.bosses; if (c.hard) hard = r.bosses; // your own clears count for your guild
+      return { raid: r, normal, hard: Math.min(hard, normal) };
+    });
+  };
+  // ranked by the newest raid first (Hard, then Normal), then the raid before it, and so on
+  const progKey = (pr) => pr.slice().reverse().flatMap((x) => [x.hard, x.normal]);
+  SOC.crestGuild = (pr) => { const n = pr[pr.length - 1]; return !!n && n.hard >= n.raid.bosses; };
+  SOC.ranking = function () {
+    const rows = B.GUILDS.map((_, g) => ({ g, info: SOC.guildInfo(g), pr: SOC.guildProgress(g) })).filter((r) => r.pr.some((x) => x.normal) || (G.S && G.S.player.guild === r.g));
+    rows.sort((a, b) => { const ka = progKey(a.pr), kb = progKey(b.pr); for (let i = 0; i < ka.length; i++) if (ka[i] !== kb[i]) return kb[i] - ka[i]; return a.g - b.g; });
+    return rows.map((r, i) => Object.assign(r, { rank: i + 1, crest: SOC.crestGuild(r.pr) }));
+  };
+  // the furthest raid a guild has reached, as one line: 'Tidecrown Citadel 5/5 · Hard 2/5'
+  SOC.progressLine = (pr) => { const x = pr.slice().reverse().find((y) => y.normal) || null; return x ? `${x.raid.name.replace(/^The /, '')} ${x.normal}/${x.raid.bosses}${x.hard ? ` · Hard ${x.hard}/${x.raid.bosses}` : ''}` : ''; };
+  // the list a guildless player sees, best fit first: raiders and PvP at 60, levelling guilds below
+  SOC.guildFit = (gi, lvl) => { const order = lvl >= 60 ? ['raiding', 'pvp', 'dungeons', 'social', 'casual', 'leveling'] : lvl >= 15 ? ['dungeons', 'leveling', 'social', 'casual', 'pvp', 'raiding'] : ['leveling', 'casual', 'social', 'dungeons', 'pvp', 'raiding']; return order.indexOf(gi.style); };
 
   // ------------------------------------------------------------ standing inside your guild
   const RANKS = [{ name: 'Initiate', at: 0 }, { name: 'Member', at: 100, perk: '+3% experience' }, { name: 'Veteran', at: 300, perk: '+5% gold from quests' },
