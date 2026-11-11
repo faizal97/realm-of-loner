@@ -3239,7 +3239,10 @@
   // 2 steps past the ceiling. The same item again gives the same result
   G.regearItem = function (x) {
     if (!x || !D.GEAR_SLOTS.includes(x.slot)) return x;
-    if (x.hard && G.upgradeInfo(x).ok) return Object.assign(G.upgradedCopy(x, G.itemPoints(upBase(x)) + G.HARD_STEPS * D.UPGRADE.step * G.upgradeRef(x), true), { hard: true });
+    if (x.hard && G.upgradeInfo(x).ok) { /* never under the power its steps bought (#587) */
+      const pw = Math.max(G.itemPoints(upBase(x)) + G.HARD_STEPS * D.UPGRADE.step * G.upgradeRef(x), x.pw || 0);
+      return Object.assign(G.upgradedCopy(x, pw, true), { hard: true });
+    }
     if (x.base && x.pw) return G.upgradedCopy(x, x.pw);
     return x;
   };
