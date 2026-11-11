@@ -112,7 +112,7 @@
       art: ['banner', 'raid_tidecrown_citadel'], artHorde: ['banner', 'raid_tidecrown_citadel_h'],
       title: "Season's Finest begins",
       text: [
-        'The best pieces for your class and role this season: Best from the newest raid and dungeons, Until then from the older ones.',
+        'The best pieces for your class and role this season: Best from the newest raid and dungeons, Next best from the older ones.',
         'Find every Best piece of one role without a Hint or Reveal for the title Pathfinder of the Tides. Hero → Season’s Finest.',
       ],
       steps: [

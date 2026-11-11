@@ -2437,8 +2437,8 @@
   // Season's Finest (#593): the engine may be missing from a build, so every call checks for it first
   const finOn = () => typeof G.finestSeason === 'function' && typeof G.finest === 'function' && typeof G.finestRoles === 'function';
   const finMark = (id) => (id && typeof G.finestMark === 'function' ? G.finestMark(id) : null);
-  const FIN_TIER = { best: 'Best', until: 'Until then' };
-  // the crest on a Season's Finest piece: gold for Best, a quieter bronze for Until then (#593)
+  const FIN_TIER = { best: 'Best', until: 'Next best' };
+  // the crest on a Season's Finest piece: gold for Best, a quieter bronze for Next best (#593)
   const finName = (it) => { const f = finMark(it && it.id); return f ? h('span', { class: 'fin-nm' }, ' ', finCrest(f)) : null; };
   const finCrest = (tier, cls) => (FIN_TIER[tier] ? h('span', { class: 'fin-crest ' + tier + (cls ? ' ' + cls : ''), role: 'img', 'aria-label': `Season's Finest: ${FIN_TIER[tier]}` }, '⛉') : null);
   // ---------- item tooltip
@@ -4090,7 +4090,7 @@
       b.append(box, h('p', { class: 'ai-note', style: { marginTop: '8px' } }, `First kill of a rare or world boss, by any of your characters. Level-60 rares spawn every 6h (marked on the map). ${G.TROPHY_TITLE} trophies: title "${T ? G.titleName(T, G.S.player.name) : ''}". Cosmetic.`));
     });
   }
-  // ---- Season's Finest (#593): per class and role, a Best piece and a wider Until then piece for each slot, each Found,
+  // ---- Season's Finest (#593): per class and role, a Best piece and a wider Next best piece for each slot, each Found,
   // Seen or Unknown. Hint names the place, Reveal the item, boss and drop chance. Facts only, never advice; the season,
   // its slots and its title all come from the engine, so a new season needs nothing here.
   const finLive = () => finOn() && G.S.player.level >= D.LEVEL_CAP && !!G.finestSeason();
@@ -4115,9 +4115,9 @@
         h('span', { class: 'fin-plate-crest' }, finCrest('best')),
         h('div', { class: 'fin-plate-t' }, h('small', null, 'Season title'), h('b', null, tName), h('small', null, F.titleEarned ? 'Earned' : `Found blind: ${F.blind.best}/${tb} Best`)),
         h('button', { class: 'sec-i', 'aria-label': 'About the title', onclick: () => toast(`Found blind: found before any Hint or Reveal on its slot. Every Best piece of one role found blind earns ${tName}. Cosmetic.`, true) }, 'ⓘ')));
-      b.append(h('div', { class: 'sec-h' }, h('span', null, 'Found', h('button', { class: 'sec-i', 'aria-label': 'About Best and Until then', onclick: () => toast('Best: this season\'s piece for the slot. Until then: a wider pool from older raids and dungeons.', true) }, 'ⓘ')), h('small', null, ROLE_NAME[role] || role)),
+      b.append(h('div', { class: 'sec-h' }, h('span', null, 'Found', h('button', { class: 'sec-i', 'aria-label': 'About Best and Next best', onclick: () => toast('Best: this season\'s piece for the slot. Next best: a wider pool from older raids and dungeons.', true) }, 'ⓘ')), h('small', null, ROLE_NAME[role] || role)),
         h('div', { class: 'ai-box' }, h('div', { class: 'ai-row' }, h('span', null, finCrest('best'), ' Best'), h('b', { class: 'tnum' }, `${F.found.best}/${tb}`)),
-          h('div', { class: 'ai-row' }, h('span', null, finCrest('until'), ' Until then'), h('b', { class: 'tnum' }, `${F.found.until}/${F.total.until || 0}`))));
+          h('div', { class: 'ai-row' }, h('span', null, finCrest('until'), ' Next best'), h('b', { class: 'tnum' }, `${F.found.until}/${F.total.until || 0}`))));
       // a Best hint while the title is still open to this role says what it costs first
       const blindOpen = !F.titleEarned && F.blind.best === F.found.best;
       const hint = (r) => {

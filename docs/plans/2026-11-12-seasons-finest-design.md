@@ -10,12 +10,12 @@ role a reason to run old raids and dungeons. Each season is planned by hand.
 
 ## Rules
 
-- **Two tiers per slot, per class and role.** **Best**: mostly the newest raid, some newest dungeons. **Until then**: old
+- **Two tiers per slot, per class and role.** **Best**: mostly the newest raid, some newest dungeons. **Next best**: old
   raids (need Mentor Marks for full power) and old dungeons, a wide pool. A role's list only has slots with a real piece.
 - **Add, never move.** A season never changes where an existing item drops. A new season adds new Best pieces; last
-  season's Best becomes this season's Until then.
+  season's Best becomes this season's Next best.
 - **Season 1 uses existing items only**, so item power and the balance sims do not change. New items come in later
-  seasons, proven by sim (Best about 2-4% over Until then after Marks).
+  seasons, proven by sim (Best about 2-4% over Next best after Marks).
 - **The page** (Hero → Season's Finest), per role: every slot listed with its state, **Found** (owned), **Seen** (looted,
   in someone's gear, on the auction house: shown in a tooltip) or **Unknown**. An Unknown slot has **Hint** (names the
   place) and then **Reveal** (names the item, boss and drop chance). Nothing is behind a setting or a cost.

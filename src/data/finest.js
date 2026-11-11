@@ -1,5 +1,5 @@
 // Season's Finest (#593): the best pieces per class and role, by season. Best is mostly the newest raid with some of
-// the newest dungeons; Until then is the older raids and dungeons. Seasons are data: a season with no new raid, or
+// the newest dungeons; Next best is the older raids and dungeons. Seasons are data: a season with no new raid, or
 // many, works the same. `to: null` runs until a later season starts. A season adds, never moves: no item's drop
 // changes. Picks are proposed by tools/finest_pick.js and pasted here; tools/validate.js checks them (#593).
 (function (root) {
