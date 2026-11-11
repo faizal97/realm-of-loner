@@ -1642,6 +1642,12 @@
     showDialog([h('h3', null, `Leave ${R.name}?`), h('p', null, `${left} pull${left === 1 ? '' : 's'} left. ${G.deserterFor(R) ? `Leaving now gives Deserter: no groups for ${G.deserterFor(R) / 60000} min.` : 'No Deserter: the group has wiped.'}`),
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: go }, 'Leave'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Stay'))], true);
   }
+  // the run panel's tab (#591): a pick holds for the rest or the fight it was made in; each fight, each run and each
+  // character opens on the default (Next pull; in a fight Enemies, or Party for a healer); a finished run on Party
+  function runTabNow(R, C, healer) {
+    const at = C || R; if (ui.runTabAt !== at) { ui.runTab = null; ui.runTabAt = at; }
+    return R.phase === 'done' ? 'party' : ui.runTab || (C && healer ? 'party' : 'next');
+  }
   function runPanel(p) {
     const S = G.S, R = S.run, C = G.fight;
     const dots = h('div', { class: 'progress-dots' });
@@ -1672,7 +1678,7 @@
     // tabs (#564): the run's name, progress, the clock and Ready / Pull stay on top; Party, Next pull (Enemies in a fight)
     // and Plan sit under them, so a raid's ten rows never push a decision out of sight
     const done = R.phase === 'done', healer = G.healsAllies(), pull = R.pulls[R.idx];
-    const tab = done ? 'party' : ui.runTab || (C ? (healer ? 'party' : 'next') : 'next');
+    const tab = runTabNow(R, C, healer);
     const party = [healer ? h('div', { class: 'sec-h' }, 'Party', h('small', { class: 'heal-to' }, ...healLine())) : null, pf].filter(Boolean); // where heals go (#156)
     let list = null;
     if (C) {
@@ -1723,7 +1729,7 @@
   function barSlots(inFight = !!G.fight) { // inFight: the bar as it is in a fight or out of one (keys, #561)
     const P = G.S.player, r = G.racial();
     const pot = P.bags.some((b) => b.item.slot === 'potion');
-    const base = barArrange(barPool()).filter((id) => id !== 'potion' || pot);
+    const base = barArrange(barPool()); /* the Potion keeps its slot at 0 potions, so no key moves (#591) */
     const peaceOnly = (id) => id === 'eat' || id === 'drink' || !!(D.ABILITIES[id] && D.ABILITIES[id].instrument); // instruments change only outside a fight
     const fightOnly = (id) => id === 'step_back' || id === 'taunt' || id === r || !!(D.ABILITIES[id] && D.ABILITIES[id].combatOnly);
     const po = base.filter(peaceOnly), slots = [];
@@ -1734,6 +1740,7 @@
       else slots.push(id);
     }
     for (; k < po.length; k++) slots.push(inFight ? null : po[k]); // more of them than fight-only slots (one hid Step Back): at the end, either way (#261: k counts fight-only slots in a fight too, so a fight adds no empty ones)
+    if (!pot && slots[slots.length - 1] === 'potion') slots.pop(); // no potions and last on the bar: hiding it moves no key (#591)
     return slots;
   }
   // the player's own bar layout, per character and saved with it: P.barOrder (ids in order) and P.barHide.
@@ -1946,7 +1953,7 @@
   function keyLabel(e) {
     const c = e.code, base = c === 'Space' ? 'Spc' : /^Digit\d$/.test(c) ? c.slice(5) : /^Key[A-Z]$/.test(c) ? c.slice(3) : /^Numpad\d$/.test(c) ? 'N' + c.slice(6) : /^F\d+$/.test(c) ? c
       : (e.key && e.key.trim().length === 1 ? e.key.toUpperCase() : c.replace(/^(Arrow|Numpad)/, '').slice(0, 3));
-    return (e.shiftKey ? 'S' : '') + base;
+    return (e.shiftKey ? 'S' : '') + (base || '?'); /* never blank (#591) */
   }
   const slotKey = (i) => { const b = keyBinds()[i]; return b ? b.l : ''; };
   let keyCapture = null; // { slot, name }: the slot Arrange is waiting on a key for, and the ability it was set from
@@ -1960,6 +1967,7 @@
       const binds = keyBinds();
       if (e.code === 'Backspace' || e.code === 'Delete') { delete binds[slot]; setKeyBinds(binds); keyCapture = null; toast(`${name}: no key.`); renderBar(); return ui.sheetFn && ui.sheetFn(); }
       if (KEY_NO.has(e.code)) return;
+      if (!e.code) return toast("Can't use that key."); // a key the browser can't name: it would bind every such key (#591)
       const code = keyCode(e), label = keyLabel(e);
       const was = Object.keys(binds).find((k) => binds[k].c === code && +k !== slot);
       if (was != null) delete binds[was];
@@ -1968,7 +1976,7 @@
       toast(was != null ? `Key ${label} moved to ${name}.` : `${name}: key ${label}.`); renderBar(); return ui.sheetFn && ui.sheetFn();
     }
     if (e.repeat || !G.S || !G.S.player || ui.dialog || ui.sheet || G.paused || (window.CS && CS.playing)) return;
-    if (!els.bar || !els.bar.isConnected) return;
+    if (!els.bar || !els.bar.isConnected || !e.code) return; /* a key with no code never fires a slot (#591) */
     const code = keyCode(e), binds = keyBinds(), slot = Object.keys(binds).find((k) => binds[k].c === code);
     if (slot == null) return;
     const id = barSlots()[+slot]; if (!id) return;
@@ -2268,6 +2276,7 @@
         if (id === 'potion') {
           const lp = ((P.potionAt || 0) - now()) / 1000; if (lp > 0) { p = 1 - lp / 120; left = lp; }
           const ic = potionIcon(); if (btn.dataset.ic !== ic) { btn.dataset.ic = ic; const im = btn.querySelector('img'); if (im) im.src = art('icon', ic); } // follows your health in a fight
+          nores = !P.bags.some((b) => b.item.slot === 'potion'); // none left: dimmed, showing 0 (#591)
         }
         else if (C && G.pUnit && id !== 'eat' && id !== 'drink') {
           const u = G.pUnit, ab = D.ABILITIES[id];
@@ -2641,7 +2650,7 @@
     plaguelands: `<defs><radialGradient id="mapwp" cx="50%" cy="45%" r="75%"><stop offset="0" stop-color="#7a7a4a"/><stop offset="1" stop-color="#3a3a24"/></radialGradient></defs>
         <rect width="340" height="400" rx="6" fill="url(#mapwp)"/>
         <ellipse cx="250" cy="372" rx="70" ry="22" fill="#3a5a6a" opacity=".85"/>
-        <text x="170" y="24" text-anchor="middle" font-family="Marcellus SC, serif" font-size="12" fill="#e8e8c8" opacity=".85">West Rotmoor · contested</text>`,
+        <text x="170" y="24" text-anchor="middle" font-family="Marcellus SC, serif" font-size="12" fill="#e8e8c8" opacity=".85">Rotmoor · contested</text>`,
     winterspring: `<defs><radialGradient id="mapwsp" cx="50%" cy="45%" r="75%"><stop offset="0" stop-color="#e8f0f8"/><stop offset="1" stop-color="#9aaec4"/></radialGradient></defs>
         <rect width="340" height="400" rx="6" fill="url(#mapwsp)"/>
         <ellipse cx="150" cy="255" rx="50" ry="24" fill="#8ab4d0" opacity=".8"/>
@@ -5758,7 +5767,7 @@
     mainstory: 'A ! or ? on a red crest is the main story: the quests that carry the tale of Caldreth from chapter to chapter. The others are side stories.',
     roll: 'Loot! Need if you will use it, Greed if you would sell it, Pass to leave it to others.',
     dungeon: 'Dungeons are open. Social → Groups: queue from the dungeon\'s zone and the finder fills your group.',
-    run: 'In a group the tank pulls. Tap Pull (or Ready) when you are set; Tactics set the pace.',
+    run: 'In a group the tank pulls. Tap Pull (or Ready) when you are set; the Plan tab sets the pace.',
     talents: 'Talents are open: Hero → Abilities → Talents. You get a new point every level.',
     cap: 'Level 60! The This week button shows what is left today and this week, each with a Go.', // #182 (the button is a festival's lantern while one is on)
   };
