@@ -52,6 +52,37 @@ test('a Help Wanted raid\'s poster wears the raid\'s gear floor (Rare)', () => {
   G.leaveGroup();
 });
 
+test('in a Hard raid a bot wears the gear of the skill it plays with (no careless random stats above skill 0.4)', () => {
+  const { S } = popRaid(true);
+  const bad = S.group.members.filter((m) => m.bot && !m.legend && m.bot.skill > 0.4 && affixes(m).size > 1)
+    .map((m) => `${m.cls} skill ${m.bot.skill.toFixed(2)}: ${[...affixes(m)].join(', ')}`);
+  assert.deepStrictEqual(bad, [], 'a skilled Hard player wears one affix (its role\'s), not whatever dropped');
+  // a refill too: it gets its Hard skill before its gear
+  const m = S.group.members.find((x) => x.bot && !x.legend && x.role === 'dps');
+  m.gone = true; m.replacing = W.now(); S.run.phase = 'rest'; S.run.restUntil = W.now() + 60000;
+  W.advance(1);
+  const nb = S.group.members.find((x) => x.bot && !x.legend && x.role === 'dps' && !x.gone && x.bot.id !== m.bot.id && x.name === S.chat.filter((c) => /has joined the group/.test(c.text)).pop().text.split(' has joined')[0]);
+  assert.ok(nb, 'refilled');
+  assert.ok(!(nb.bot.skill > 0.4 && affixes(nb).size > 1), `refill skill ${nb.bot.skill.toFixed(2)}: ${[...affixes(nb)].join(', ')}`);
+  G.leaveGroup();
+});
+
+test('a first-timer group: a bot the mentor run makes careless wears a careless player\'s gear (Common legs, hands and waist)', () => {
+  const { S, P } = W.character(60, 'warrior'); P.role = 'dps';
+  const poster = S.bots.find((x) => B.factionOf(x) === 'alliance' && x.id > 0);
+  S.helpWanted = [{ id: 'hw_ft', act: 'scholomance', role: 'dps', startIdx: 0, firstTimers: true, poster: poster.id, posterName: poster.name, expires: W.now() + 3600000 }];
+  G.joinHelpWanted('hw_ft');
+  assert.ok(S.run, 'in the run');
+  const picked = S.group.members.filter((m) => m.bot && !m.legend && m.bot.id !== poster.id);
+  const was = (m) => (S.bots.find((b) => b.id === m.bot.id) || {}).skill;
+  assert.ok(picked.some((m) => was(m) > 0.4 && m.bot.skill <= 0.4), 'some bot the run made careless: ' + picked.map((m) => `${was(m)}->${m.bot.skill}`).join(', '));
+  for (const m of picked) {
+    const common = ['legs', 'hands', 'waist'].every((s) => m.equip[s] && m.equip[s].q < 2);
+    assert.strictEqual(common, m.bot.skill <= 0.4, `${m.name} skill ${m.bot.skill.toFixed(2)}`);
+  }
+  G.leaveGroup();
+});
+
 // ============================================================ sweeps and edge cases
 
 test('every bot (all classes x their roles x levels 10-60 x skill x gear floor) fills every slot it can use, with gear it can wear, at the floor, with finite stats, the same every time', () => {
