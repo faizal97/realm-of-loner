@@ -20,7 +20,7 @@ const aura = (id, it, stats) => ({ id, name: it.name, icon: it.icon, stats: Obje
 function setUp(cls, set) {
   G.newGame({ name: 'C', cls, race: 'human' }); const P = G.S.player; P.level = 60; G.S.flags.warModeAsked = true;
   // a full set of level-60 blues in the class's armour (bot gear is only a few pieces, which would inflate every gain)
-  seed(7); const wpn = G.botChar({ name: 'x', cls, race: 'human', level: 60, skill: 0.8 }).equip;
+  seed(7); const wpn = G.botChar({ name: 'x', cls, race: 'human', level: 60, skill: 0.8, role: 'dps' }).equip; /* the damage role it measures: a bard's own role is healer, and its staff (#582) */
   P.equip = { weapon: wpn.weapon }; if (wpn.ranged) P.equip.ranged = wpn.ranged;
   for (const sl of D.GEAR_SLOTS) if (!P.equip[sl] && sl !== 'weapon' && sl !== 'ranged' && sl !== 'offhand') P.equip[sl] = G.genGear(sl, 60, 3, { atype: D.CLASSES[cls].armorType }); P.talents = G.autoTalents(cls, 'dps', 60, 0); P.role = 'dps';
   P.auras = [];
