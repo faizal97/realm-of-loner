@@ -96,10 +96,10 @@ const PLAN = [
   { effect: 'opening_cut', classes: ['rogue', 'warrior'], wins: ['trash'], loses: ['boss'] },
   { effect: 'echoing_mend', classes: ['priest', 'druid'], wins: ['groupwide'], loses: ['tankonly'], provisional: '#40, judged on sim/capacity.js' }, // healing done can't judge a healer's item (#40): capacity does
   { effect: 'turning_guard', classes: ['warrior', 'paladin'], wins: ['meleeboss'], loses: ['casterboss'] },
-  { effect: 'stubborn_blood', classes: ['warrior', 'rogue'], wins: ['solo'], loses: ['healed'] },
+  { effect: 'stubborn_blood', classes: ['warrior', 'rogue'], wins: ['solo'], loses: ['healed'], loseBar: -1.5 }, // its own lose bar (#582): with a healer in role gear the heal it gives is rarely wasted, so no cost the stat floor allows reaches -2
   { effect: 'kindled_edge', classes: ['rogue', 'warrior'], wins: ['boss'], loses: ['shorttrash'] },
   { effect: 'chase_the_next', classes: ['rogue', 'warrior'], wins: ['trash'], loses: ['boss'] },
-  { effect: 'steady_fuse', classes: ['mage', 'warrior'], wins: ['boss'], loses: ['highcrit'], loseBar: -1.25 }, // its own lose bar (game designer, #191, -1.25 since the bots think, #149): no cost passes both -2 and +2, and a sure crit on a timer barely loses where crits are already common
+  { effect: 'steady_fuse', classes: ['mage', 'warrior'], wins: ['boss'], loses: ['highcrit'], loseBar: -1.1 }, // its own lose bar (game designer, #191, -1.25 since the bots think, #149, -1.1 since bots wear their role's gear, #582): no cost passes both -2 and +2, and a sure crit on a timer barely loses where crits are already common
   { effect: 'glass_heart', classes: ['rogue', 'warrior'], wins: ['healed'], loses: ['solo'] },
   { effect: 'lavish_mend', classes: ['priest', 'druid'], wins: ['groupwide'], loses: ['tankonly'], provisional: '#40, judged on sim/capacity.js' }, // wins: survival, +5 to +15 points (game designer, #22),
   { effect: 'tethered_mend', classes: ['priest', 'druid'], wins: ['tankonly'], loses: ['groupwide'], provisional: '#40, judged on sim/capacity.js' },

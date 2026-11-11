@@ -4435,18 +4435,19 @@
   // #582: a bot wears gear that fits its level: every slot, stats for its role, spell power for a healer or caster, and
   // the quality its skill earns (Rare above 0.72 skill 60% of the time, else Uncommon). Before, a bot had 5 pieces, often
   // Common with no stats, and never spell power, so a level-60 bot tank had about half a geared player's health
-  const BOT_CASTER = { mage: 1, warlock: 1, priest: 1, druid: 1 };
+  const BOT_CASTER = { mage: 1, warlock: 1, priest: 1, druid: 1, shaman: 1, bard: 1 }; // their damage is spells (shaman and bard too)
+  const BOT_EAGLE = { mage: 1, shaman: 1 }; // a damage caster whose class stats miss stamina (Owl) or intellect (Tiger)
   function botAffix(cls, role) {
     if (role === 'tank') return D.AFFIXES.find((a) => a.name === (cls === 'druid' ? 'of the Monkey' : 'of the Bear'));
     if (role === 'healer') return D.AFFIXES.find((a) => a.name === 'of the Eagle'); // stamina and intellect: a healer stands in the splash too
-    return G.classAffix(cls) || undefined;
+    return BOT_EAGLE[cls] ? D.AFFIXES.find((a) => a.name === 'of the Eagle') : G.classAffix(cls) || undefined;
   }
   function rollBotChar(b) {
     const C = D.CLASSES[b.cls], role = b.role || C.role || 'dps';
     const q = Math.max(b.skill > 0.72 ? (Math.random() < 0.6 ? 3 : 2) : 2, b.gearFloor || 0); // a raid only takes players in its gear (G.gearFloor)
     const wt = b.cls === 'paladin' ? 'mace' : role === 'healer' || b.cls === 'mage' || b.cls === 'warlock' ? 'staff' : C.weapons[0];
-    // a careless player (skill 0.4 or less) wears whatever dropped: random stats on every piece, so a bad draw still costs
-    // the group something now that everyone wears gear of their level (a caster's gear still has its spell power)
+    // a careless player (skill 0.4 or less) wears whatever dropped: random stats on every piece and Common legs, hands and
+    // waist (unless the content sets a gear floor), so a bad draw still costs the group something now that everyone wears gear of their level (a caster's gear still has its spell power)
     const careful = !(b.skill <= 0.4);
     const af = careful ? botAffix(b.cls, role) : undefined, sp = role === 'healer' || (role === 'dps' && BOT_CASTER[b.cls]) ? 0.5 : 0;
     const o = (x) => Object.assign({ affix: af }, sp ? { sp } : {}, x);
@@ -4461,7 +4462,7 @@
       if (named && named.length && Math.random() < 0.6) { const id = pick(named); equip.weapon = asLevel(id, 'weapon', { wtype: D.ITEMS[id].wtype }); }
       if (Math.random() < 0.35) equip.back = asLevel('cape_brotherhood', 'back', {});
     }
-    for (const s of ['chest', 'legs', 'feet', 'hands', 'wrist', 'waist', 'back', 'finger']) if (!equip[s]) equip[s] = G.genGear(s, b.level, q, o({ atype: C.armorType }));
+    ['chest', 'legs', 'feet', 'hands', 'wrist', 'waist', 'back', 'finger'].forEach((s, i) => { if (!equip[s]) equip[s] = G.genGear(s, b.level, careful || !(i % 2) || i > 5 ? q : Math.max(1, b.gearFloor || 0), o({ atype: C.armorType })); }); // a careless player: Common legs, hands and waist, unless the content sets a floor
     { const fx = G.botEffectItem(b); if (fx) equip[fx.slot] = fx; } // sometimes an effect item, in place of one of those (#56)
     const talents = G.autoTalents(b.cls, b.role || (D.CLASSES[b.cls] || {}).role || 'dps', b.level, Math.abs(b.id || 0));
     return { name: b.name + (b.realm ? '-' + b.realm.replace(' ', '') : ''), cls: b.cls, race: b.race || 'human', level: b.level, equip, role: b.role, hp: null, res: null, auras: [], bot: b, talents };

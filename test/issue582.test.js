@@ -9,12 +9,15 @@ W.character(60);
 const bot = (cls, role, skill, extra) => G.botChar(Object.assign({ id: 4242, name: 'Testbot', cls, role, level: 60, skill }, extra));
 const pieces = (c) => Object.values(c.equip).filter(Boolean);
 
-test('a level-60 bot fills every slot it can use, none of it Common', () => {
+test('a level-60 bot fills every slot it can use; a careful one wears no Common, a careless one only legs, hands and waist', () => {
   for (const [cls, role] of [['warrior', 'tank'], ['priest', 'healer'], ['hunter', 'dps'], ['bard', 'healer']]) {
-    const c = bot(cls, role, 0.2), C = D.CLASSES[cls];
-    const want = D.GEAR_SLOTS.filter((s) => s !== 'offhand' && (s !== 'ranged' || C.ranged || C.instrument)).length;
-    assert.strictEqual(pieces(c).length, want, `${cls} ${role}`);
-    assert.ok(pieces(c).every((it) => it.q >= 2), `${cls} ${role}: Uncommon or better`);
+    const C = D.CLASSES[cls], want = D.GEAR_SLOTS.filter((s) => s !== 'offhand' && (s !== 'ranged' || C.ranged || C.instrument)).length;
+    const careful = bot(cls, role, 0.6), careless = bot(cls, role, 0.2);
+    assert.strictEqual(pieces(careful).length, want, `${cls} ${role}`);
+    assert.strictEqual(pieces(careless).length, want, `${cls} ${role} careless`);
+    assert.ok(pieces(careful).every((it) => it.q >= 2), `${cls} ${role}: Uncommon or better`);
+    const common = Object.keys(careless.equip).filter((s) => careless.equip[s] && careless.equip[s].q < 2).sort();
+    assert.deepStrictEqual(common, ['hands', 'legs', 'waist'], `${cls} ${role} careless: Common legs, hands and waist (#582)`);
   }
 });
 

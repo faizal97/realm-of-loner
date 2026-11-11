@@ -101,7 +101,7 @@ const drop = (keys) => { for (const k of keys) { delete D.DUNGEONS[k]; delete D.
   const withOmen = (key, lvl) => { const real = T.omensFor; T.omensFor = () => [key]; G.S.run = null; G.S.group = null; G.S.player.trials = { season: G.trials().season, best: {}, open: { [a]: 20 }, week: null, history: [], bestEver: 0, bestRank: null }; G.queueTrial(a, lvl); G.acceptPop(); T.omensFor = real; return G.S.run; };
   const plain = withOmen('frenzied', 1), hard = withOmen('hardened', 5);
   ok(plain.omens.length === 0 && hard.omens[0] === 'hardened', 'a run keeps the Omens it started with');
-  ok(Math.abs(hard.bossMult.hp / (T.factor(5) * ((D.DUNGEONS[D.ACTIVITIES[a].dungeon].bossMult || { hp: 1 }).hp)) - 1.3) < 1e-6, 'Hardened: bosses +30% health');
+  ok(Math.abs(hard.bossMult.hp / (T.factor(5) * ((G.runBase(D.DUNGEONS[D.ACTIVITIES[a].dungeon], false, 5).bossMult || { hp: 1 }).hp)) /* a Trial starts from its own numbers (#582) */ - 1.3) < 1e-6, 'Hardened: bosses +30% health');
   const sw = withOmen('swarming', 5); sw.restUntil = 0; const n0 = sw.pulls[0].mobs.length; G.runPull();
   ok(G.fight.enemies.length === n0 + 1, 'Swarming: one extra enemy in the pull');
   // Frenzied and Rallying in the engine
@@ -216,7 +216,7 @@ ok(G.queueTrial(easy, 3) && G.S.queue.trial === 3, 'queue a Trial 3');
 G.acceptPop();
 ok(G.S.run && G.S.run.trial && G.S.run.mobLevel === 60 && G.S.group.members.every((m) => m.syncLevel === 60), 'the run and the group are at level 60');
 ok(G.S.group.members.filter((m) => !m.legend).every((m) => m.level === 60), `every player in a Trial group is level 60 (${G.S.group.members.map((m) => m.level).join(', ')})`);
-ok(Math.abs(G.S.run.mult.hp / (D.DUNGEONS[D.ACTIVITIES[easy].dungeon].trashMult || { hp: 1 }).hp - T.factor(3)) < 1e-9, 'enemies gain the Trial factor');
+ok(Math.abs(G.S.run.mult.hp / (G.runBase(D.DUNGEONS[D.ACTIVITIES[easy].dungeon], false, 3).trashMult || { hp: 1 }).hp - T.factor(3)) < 1e-9, 'enemies gain the Trial factor');
 G.S.run.restUntil = 0; G.runPull();
 ok(G.fight && G.fight.enemies.every((e) => e.level === 60 || e.level === 58), 'the first pull fights at 60');
 G.fight = null; G.S.run = null; G.S.group = null; delete P.syncLevel;

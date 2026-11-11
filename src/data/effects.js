@@ -19,7 +19,7 @@
   D.EFFECTS = {
     // damage
     opening_cut: {
-      name: 'Opening Cut', role: 'damage', fires: 'on your first hit on each enemy', icon: 'ambush', k: 2.0, c: 4, cost: 0.6, // was 2.4 at a 75% cost (#22: the 40% stat floor; 2.4 at 60% put the trash mix at +11%)
+      name: 'Opening Cut', role: 'damage', fires: 'on your first hit on each enemy', icon: 'ambush', k: 1.6, c: 4, cost: 0.6, /* 2.0 -> 1.6: with Glass Heart's 2.7% the trash mix reached +10.1% (#582) */ // was 2.4 at a 75% cost (#22: the 40% stat floor; 2.4 at 60% put the trash mix at +11%)
       bonus: (L, f) => n((D.EFFECTS.opening_cut.k * L + D.EFFECTS.opening_cut.c) * (f || 1)),
       desc: (L, f) => `Your first hit on each enemy deals ${D.EFFECTS.opening_cut.bonus(L, f)} extra damage.`,
     },
@@ -44,11 +44,11 @@
       desc: (L, f) => `Each kill gives you ${n(D.EFFECTS.chase_the_next.haste * (f || 1))}% haste for ${D.EFFECTS.chase_the_next.dur} sec.`,
     },
     steady_fuse: {
-      name: 'Steady Fuse', role: 'damage', fires: 'on a timer while you are in combat', icon: 'cold_blood', icd: 45, cost: 0.56, grow: GROW_FUSE, // was every 30 at a 90% cost (#22: the 40% stat floor); 0.51 after #191's talents, 0.56 since the bots think (#149), with its own lose bar of -1.25 in sim/effects.js
+      name: 'Steady Fuse', role: 'damage', fires: 'on a timer while you are in combat', icon: 'cold_blood', icd: 45, cost: 0.6, grow: GROW_FUSE, // was every 30 at a 90% cost (#22: the 40% stat floor); 0.51 after #191's talents, 0.56 since the bots think (#149), 0.6 with its own lose bar of -1.1 in sim/effects.js since bots wear their role's gear (#582)
       desc: (L, f) => `Every ${n(D.EFFECTS.steady_fuse.icd / (f || 1))} sec in combat, your next hit is a sure critical hit.`, // an upgrade shortens the wait (#37)
     },
     glass_heart: {
-      name: 'Glass Heart', role: 'damage', fires: 'always on', icon: 'blood_fury', dmg: 0.025, taken: 0.1, cost: 0, // no stat cost: the downside is the cost
+      name: 'Glass Heart', role: 'damage', fires: 'always on', icon: 'blood_fury', dmg: 0.027, taken: 0.1, cost: 0, /* 2.5% -> 2.7%: its wins case fell to +1.9% (#582) */ // no stat cost: the downside is the cost
       desc: (L, f) => `You deal ${Math.round(D.EFFECTS.glass_heart.dmg * (f || 1) * 1000) / 10}% more damage, and take ${n(D.EFFECTS.glass_heart.taken * 100)}% more.`, // an upgrade grows the bonus, never the downside (#37)
     },
     // healing
@@ -68,12 +68,12 @@
     },
     // resource
     tithe_of_battle: {
-      name: 'Tithe of Battle', role: 'resource', fires: 'on each tick of your damage over time', icon: 'life_tap', mana: 0.003, rage: 1, energy: 2, cost: 0.4,
-      desc: (L, f) => { const F = D.EFFECTS.tithe_of_battle, g = f || 1; return `Each tick of your damage over time restores ${(F.mana * g * 100).toFixed(1)}% of your mana, ${n(F.rage * g)} rage or ${n(F.energy * g)} energy.`; },
+      name: 'Tithe of Battle', role: 'resource', fires: 'on each tick of your damage over time', icon: 'life_tap', mana: 0.0015, rage: 1, energy: 2, cost: 0.45, /* mana 0.3% -> 0.15%, cost 0.4 -> 0.45: longer boss fights made it +15% for a warlock (#582) */
+      desc: (L, f) => { const F = D.EFFECTS.tithe_of_battle, g = f || 1; return `Each tick of your damage over time restores ${+(F.mana * g * 100).toFixed(2)}% of your mana, ${n(F.rage * g)} rage or ${n(F.energy * g)} energy.`; },
     },
     // survival
     stubborn_blood: {
-      name: 'Stubborn Blood', role: 'survival', fires: 'you fall below a share of your health', icon: 'frenzied_regeneration', icd: 60, below: 0.3, pct: 0.06, dur: 6, cost: 0.56, // 0.56 since #191's talents (smallest cost that passes the effects gate on CI's 5-seed mean; 0.52-0.55 give -1.99)
+      name: 'Stubborn Blood', role: 'survival', fires: 'you fall below a share of your health', icon: 'frenzied_regeneration', icd: 60, below: 0.3, pct: 0.06, dur: 6, cost: 0.6, // 0.56 since #191's talents; 0.6 with its own lose bar of -1.5 since bots wear their role's gear (#582): a heal-when-low barely costs a healed player
       desc: (L, f) => { const F = D.EFFECTS.stubborn_blood; return `Falling below ${n(F.below * 100)}% health heals you for ${n(F.pct * (f || 1) * 100)}% of your health over ${F.dur} sec. At most once every ${F.icd} sec.`; },
     },
   };

@@ -14,7 +14,7 @@ function loseRun() {
   FLOG.clear();
   G.queueFor('ev_snuffed_road'); G.acceptPop();
   const R = S.run; assert.ok(R, 'in the run');
-  R.pulls = R.pulls.filter((p) => p.boss); R.bossMult = { hp: R.bossMult.hp, dmg: 20 };
+  R.pulls = R.pulls.filter((p) => p.boss); R.bossMult = { hp: R.bossMult.hp * 4, dmg: 20 }; /* 4x health too: bots in their role's gear (#582) killed it at 20x damage alone */
   let lost = null;
   for (let g = 0; g < 40000 && !lost; g++) {
     if (G.fight && G.pUnit && G.pUnit.kind === 'player') { G.pUnit.kind = 'bot'; G.pUnit.isPlayer = true; G.pUnit.bot = { skill: 0.7, react: 0.5 }; G.pUnit.role = 'healer'; }
