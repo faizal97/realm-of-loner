@@ -52,3 +52,19 @@ test('a Hard clear of the newest raid gives Crestbearer and the title, once', ()
   assert.strictEqual(G.crests(true).length, 1);
   assert.strictEqual(G.titleUnlocked(t), true);
 });
+
+test('each faction has a Trials guild for level 60, filled only with level-60 players (#566)', () => {
+  const SOC = globalThis.SOC; const { S } = character(60);
+  for (const f of ['alliance', 'horde']) {
+    const t = B.GUILDS.map((_, g) => SOC.guildInfo(g)).filter((x) => x.faction === f && x.style === 'trials');
+    assert.strictEqual(t.length, 1, f); assert.strictEqual(t[0].min, 60);
+  }
+  for (const b of S.bots.slice(0, 40)) { b.level = 60; b.guild = -1; }
+  B.fillGuilds(S);
+  for (const g of [13, 14]) {
+    const m = S.bots.filter((b) => b.guild === g);
+    assert.ok(m.length > 0 && m.length <= 10, B.GUILDS[g] + ' ' + m.length);
+    assert.ok(m.every((b) => b.level >= 60 && B.factionOf(b) === B.GUILD_FACTION[g]));
+  }
+  assert.ok(SOC.guildTrials(13, new Date('2026-11-20T12:00').getTime()) > 0);
+});

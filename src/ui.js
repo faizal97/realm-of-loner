@@ -5526,6 +5526,8 @@
   // a guild's raid progress under its name (#565): the furthest raid, and Crestbearer once the newest is cleared on Hard
   function progSmall(pr) { const l = SOC.progressLine(pr); return l ? h('small', { class: 'gprog' }, 'Raids: ' + l, SOC.crestGuild(pr) ? h('b', { class: 'gold' }, ' · Crestbearer') : null) : null; }
   // the realm ranking (#565): every guild with raid progress, both factions, yours marked
+  // a Trials guild's best rating this month (#566)
+  function trialsSmall(gi) { if (gi.style !== 'trials') return null; const r = SOC.guildTrials(gi.g); return h('small', { class: 'gprog' }, r ? `Trials: best rating ${r} this month` : 'Trials: no runs this month yet'); }
   function rankingBlock(b) {
     const rk = SOC.ranking(), mine = G.S.player.guild;
     b.append(h('div', { class: 'sec-h' }, 'Realm ranking', h('small', null, 'by raid progress · weekly')));
@@ -5546,7 +5548,7 @@
         const ok = P.level >= gi.min;
         b.append(h('div', { class: 'row', style: { gridTemplateColumns: 'auto 1fr auto' } },
           h('div', { class: 'ic crest', html: ART.crest ? ART.crest(gi.name, gi.faction) : '' }),
-          h('div', { class: 't' }, h('b', null, '<' + gi.name + '>'), h('small', { style: { whiteSpace: 'normal' } }, `${gi.style === 'pvp' ? 'PvP' : gi.style[0].toUpperCase() + gi.style.slice(1)} · ${gi.online}/${gi.members} online · level ${gi.min}+. ${gi.blurb}`), progSmall(SOC.guildProgress(gi.g))),
+          h('div', { class: 't' }, h('b', null, '<' + gi.name + '>'), h('small', { style: { whiteSpace: 'normal' } }, `${gi.style === 'pvp' ? 'PvP' : gi.style[0].toUpperCase() + gi.style.slice(1)} · ${gi.online}/${gi.members} online · level ${gi.min}+. ${gi.blurb}`), progSmall(SOC.guildProgress(gi.g)), trialsSmall(gi)),
           h('button', { class: 'chip gold', disabled: !!ap || !ok, onclick: () => { SOC.apply(gi.g); ui.sheetFn(); } }, ok ? 'Apply' : `Level ${gi.min}+`)));
       }
       rankingBlock(b);
@@ -5566,6 +5568,7 @@
     { const rk = SOC.ranking(), me = rk.find((x) => x.g === P.guild), line = me && SOC.progressLine(me.pr); // raid progress and the realm ranking (#565)
       b.append(h('div', { class: 'ai-box' }, h('div', { class: 'ai-row' }, h('span', null, 'Raids'), h('b', null, line || 'None yet')),
         h('div', { class: 'ai-row' }, h('span', null, 'Realm rank'), h('b', { class: 'tnum' }, me ? `${me.rank}/${rk.length}` : '—')),
+        gi.style === 'trials' ? h('div', { class: 'ai-row' }, h('span', null, 'Trials best'), h('b', { class: 'tnum' }, String(SOC.guildTrials(gi.g)))) : null,
         me && me.crest ? h('div', { class: 'ai-row' }, h('span', null, 'Crestbearer'), h('b', { class: 'gold' }, SOC.newestRaid().name)) : null)); }
     b.append(h('p', { style: { margin: 0, fontStyle: 'italic', color: '#c9b88a' } }, 'Message of the day: ' + SOC.motd(P.guild)));
     const wk = SOC.week();

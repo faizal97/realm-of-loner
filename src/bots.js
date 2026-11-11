@@ -49,8 +49,12 @@
   function* walk() { for (const x of SYL_A) for (const y of SYL_B) for (const z of SYL_B) for (const w of [''].concat(SYL_B)) yield x + y + z.replace(/^[aeiou](?=..)/, '') + w; }
 
   const GUILDS = ['Brackenford Legends', 'Crimson Vanguard', 'Knights of Ambermoor', 'Pumpkin Patrol', 'Grey Hood Dropouts', 'Lions Pride', 'Mireling Mafia', 'Starlight Vanguard',
-    'Blood and Thunder', 'Sons of the Storm', 'Dust Eaters', 'Bonewall Raiders', 'Kessari Hexers'];
-  const GUILD_FACTION = GUILDS.map((g, i) => (i < 8 ? 'alliance' : 'horde'));
+    'Blood and Thunder', 'Sons of the Storm', 'Dust Eaters', 'Bonewall Raiders', 'Kessari Hexers',
+    'Hourglass Wardens', 'Red Clock Runners']; // new guilds go on the end: a save keeps its guild by index
+  const GUILD_FACTION = GUILDS.map((g, i) => (i < 8 || i === 13 ? 'alliance' : 'horde'));
+  // the Trials guilds (#566) take level-60 players only, filled by B.fillGuilds; the random joins and moves keep to
+  // the first 13, so every sim's random stream stays as it was
+  const DRAWN = 13;
   B.GUILDS = GUILDS; B.GUILD_FACTION = GUILD_FACTION;
   B.factionOf = (bot) => ((D.RACES[bot.race] || {}).faction || 'alliance');
 
@@ -75,7 +79,7 @@
   B.assignGuild = function (bot) {
     if (Math.random() >= 0.45) { bot.guild = -1; return bot; }
     const f = B.factionOf(bot);
-    const opts = GUILDS.map((g, i) => i).filter((i) => GUILD_FACTION[i] === f);
+    const opts = GUILDS.map((g, i) => i).filter((i) => i < DRAWN && GUILD_FACTION[i] === f);
     bot.guild = opts[Math.floor(Math.random() * opts.length)];
     return bot;
   };
@@ -221,7 +225,16 @@
   }
 
   // Advance the server by ms. Returns news items.
+  // the Trials guilds recruit level-60 players without a guild, lowest id first, up to 10 each; no random draws (#566)
+  B.fillGuilds = function (S) {
+    for (let g = DRAWN; g < GUILDS.length; g++) {
+      let have = S.bots.filter((b) => b.guild === g).length;
+      if (have >= 10) continue;
+      for (const b of S.bots.filter((x) => !(x.guild >= 0) && x.level >= 60 && B.factionOf(x) === GUILD_FACTION[g]).sort((x, y) => x.id - y.id)) { if (have >= 10) break; b.guild = g; have++; }
+    }
+  };
   B.advance = function (S, ms) {
+    B.fillGuilds(S);
     const news = [], clears = {}; let beyond = 0; // beyond: clears the news can't name at your level (issue #18)
     const steps = Math.min(48, Math.max(1, Math.ceil(ms / 1800000)));
     const stepMs = ms / steps;
@@ -242,7 +255,7 @@
         delete b.gj;
         if (S.bots.filter((x) => x.guild >= 0).length >= S.bots.length * B.GUILD_SHARE) continue;
         const size = {}; for (const x of S.bots) if (x.guild >= 0) size[x.guild] = (size[x.guild] || 0) + 1;
-        const f = B.factionOf(b), opts = GUILDS.map((g, i) => i).filter((i) => GUILD_FACTION[i] === f).sort((x, y) => (size[x] || 0) - (size[y] || 0) || x - y);
+        const f = B.factionOf(b), opts = GUILDS.map((g, i) => i).filter((i) => i < DRAWN && GUILD_FACTION[i] === f).sort((x, y) => (size[x] || 0) - (size[y] || 0) || x - y);
         b.guild = opts[0];
       }
       for (const b of S.bots) {
@@ -324,7 +337,7 @@
     const p = Math.min(1, ms / (B.GUILD_MOVE_DAYS * 86400000));
     for (const b of S.bots) {
       if (homes.has(b.guild) || !(crand() < p) || b.gj) continue; // a newcomer has no guild yet (#328)
-      const opts = GUILDS.map((g, i) => i).filter((i) => GUILD_FACTION[i] === B.factionOf(b) && i !== b.guild && !homes.has(i));
+      const opts = GUILDS.map((g, i) => i).filter((i) => i < DRAWN && GUILD_FACTION[i] === B.factionOf(b) && i !== b.guild && !homes.has(i));
       const to = b.guild >= 0 && crand() < 0.25 ? -1 : opts.length ? opts[Math.floor(crand() * opts.length)] : -1;
       if (to === b.guild) continue;
       B.note(b, t, to < 0 ? 'left' : 'joined', to < 0 ? b.guild : to); b.guild = to;
