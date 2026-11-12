@@ -128,6 +128,10 @@
   const barAb = (id) => (D.ABILITIES[id] && D.ABILITIES[id].instrument && G.instrumentAb ? G.instrumentAb() : id);
   const abIcon = (id) => art('icon', (D.ABILITIES[id] && D.ABILITIES[id].icon) || id);
   const potionIcon = () => { const b = G.potionNext(); return (b && b.item.icon) || 'potion_red'; }; // the potion a tap drinks (#279)
+  // how many of what a tap drinks (#597): the picked potion, or on Auto health or mana potions, never the two summed
+  const potionCount = () => { const b = G.potionNext(); if (!b) return 0; const pick = G.potionChoice(), k = b.item.heal ? 'heal' : 'mana';
+    return G.S.player.bags.filter((x) => (pick ? x.item.id === b.item.id : x.item.slot === 'potion' && !!x.item[k] && (x.item.lvl || 1) <= G.S.player.level)).reduce((a, x) => a + x.n, 0); };
+  const potionName = () => { const b = G.potionNext(); return b ? (b.item.heal ? 'Health potion' : 'Mana potion') : 'Potion'; };
   const barIcon = (id) => abIcon(barAb(id)); // on the action bar only: elsewhere each instrument shows its own
   // ---------- buffs and debuffs with time left, for any unit (or the player out of combat)
   const AURA_ALIAS = { momentum: 'rapid_fire', weakened_soul: 'pw_shield', seal: 'seal_righteousness', stoneskin: 'stoneskin_totem', rockbiter: 'rockbiter_weapon', chilled: 'frost_armor', bear: 'bear_form', fireball_burn: 'fireball', stun: 'hammer_justice', searing_totem: 'searing_totem' };
@@ -1867,8 +1871,9 @@
       if (keysShown() && slotKey(i)) btn.append(h('span', { class: 'ab-key' }, slotKey(i))); // its key, once a key was used (#561)
       if (ab.song) btn.append(h('div', { class: 'song' }, h('i', { class: 'beatz' }), h('i', { class: 'str' })), h('div', { class: 'verses' })); // a bard's song (#252)
       if (id === 'eat' || id === 'drink' || id === 'potion') {
-        const n = G.S.player.bags.filter((b) => b.item.slot === (id === 'eat' ? 'food' : id === 'potion' ? 'potion' : 'drink')).reduce((a, b) => a + b.n, 0);
+        const n = id === 'potion' ? potionCount() : G.S.player.bags.filter((b) => b.item.slot === (id === 'eat' ? 'food' : 'drink')).reduce((a, b) => a + b.n, 0);
         btn.append(h('span', { class: 'cnt tnum' }, n));
+        if (id === 'potion') btn.setAttribute('aria-label', potionName());
       }
       let pressT = null, long = false;
       btn.addEventListener('pointerdown', () => { long = false; pressT = setTimeout(() => { long = true; if (id === 'potion') openPotionPicker(); else abilityTip(id); }, 450); }); // the Potion's long-press picks what it drinks (#296)
@@ -2284,6 +2289,7 @@
         if (id === 'potion') {
           const lp = ((P.potionAt || 0) - now()) / 1000; if (lp > 0) { p = 1 - lp / 120; left = lp; }
           const ic = potionIcon(); if (btn.dataset.ic !== ic) { btn.dataset.ic = ic; const im = btn.querySelector('img'); if (im) im.src = art('icon', ic); } // follows your health in a fight
+          { const pc = String(potionCount()), ce = btn.querySelector('.cnt'); if (ce && ce.textContent !== pc) { ce.textContent = pc; btn.setAttribute('aria-label', potionName()); } } /* the count follows it too (#597) */
           nores = !P.bags.some((b) => b.item.slot === 'potion'); // none left: dimmed, showing 0 (#591)
         }
         else if (C && G.pUnit && id !== 'eat' && id !== 'drink') {

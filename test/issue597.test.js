@@ -39,6 +39,18 @@ test('a finished run names its kind: raid, dungeon, Wanted target, world boss', 
   assert.strictEqual(doneText(D.ACTIVITIES.wb_ashwing), 'World boss defeated.');
 });
 
+test('the Potion button counts what a tap drinks, not health and mana potions summed', () => {
+  const line = src.slice(src.indexOf('  const potionCount = '), src.indexOf('  const potionName = '));
+  const hp = { id: 'hp', slot: 'potion', heal: [100, 200], lvl: 1 }, mp = { id: 'mp', slot: 'potion', mana: [100, 200], lvl: 1 };
+  const bags = [{ item: hp, n: 6 }, { item: mp, n: 4 }];
+  let next = bags[0], pick = null;
+  const G = { S: { player: { level: 30, bags } }, potionNext: () => next, potionChoice: () => pick };
+  const potionCount = new Function('G', line + '; return potionCount;')(G);
+  assert.strictEqual(potionCount(), 6, 'Auto, drinking health');
+  next = bags[1]; assert.strictEqual(potionCount(), 4, 'Auto, drinking mana');
+  pick = bags[1]; assert.strictEqual(potionCount(), 4, 'the picked one');
+});
+
 test('the red bar shows the answer that is ready: the shorter cooldown first, else the one ready soonest', () => {
   const D = { ABILITIES: { divine_protection: { cd: 300 }, holy_shield: { cd: 10 } }, INTERRUPTS: {} };
   const E = { answersOf: () => ['divine_protection', 'holy_shield'] }; // the class's order: the 5 min one first
