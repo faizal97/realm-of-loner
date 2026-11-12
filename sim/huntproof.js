@@ -10,12 +10,13 @@ const DAYS = 60, FROM = Date.UTC(2026, 9, 5);
 if (process.env.VARIANT) {
   globalThis.localStorage = { getItem() { return null; }, setItem() {}, removeItem() {} };
   for (const f of ['data', 'engine', 'bots', 'game']) require(ROOT + '/src/' + f + '.js');
-  const { G, D } = globalThis; G.newGame({ name: 'P', cls: 'warrior', race: 'human' });
+  const { G, D } = globalThis;
   const real = Object.keys(D.PLACES).flatMap((pk) => Object.keys(D.PLACES[pk].named || {}).filter((k) => D.MOBS[k] && D.MOBS[k].lvl[1] >= G.HUNT_LVL).map((k) => [pk, k]));
   const V = process.env.VARIANT;
   if (V === 'none') for (const [pk, k] of real) delete D.PLACES[pk].named[k];
   if (V === 'one') for (const [pk, k] of real.slice(1)) delete D.PLACES[pk].named[k];
   if (V === 'many') for (let i = 0; i < 40; i++) { const k = 'test_rare_' + i; D.MOBS[k] = Object.assign({}, D.MOBS[real[0][1]], { name: 'Test ' + i }); D.PLACES[real[i % real.length][0]].named[k] = D.PLACES[real[0][0]].named[real[0][1]] || 1; }
+  G.newGame({ name: 'P', cls: 'warrior', race: 'human' }); /* after the variant's data: a new game saves, and the save's title check reads the hunt list once (#598) */
   const W = G.HUNT_WINDOW, out = { rares: G.huntRares().map((r) => r.key), trophies: G.trophyList().length, starts: {}, bad: [] };
   for (const { key } of G.huntRares()) {
     out.starts[key] = [];
