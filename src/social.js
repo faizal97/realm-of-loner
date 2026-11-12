@@ -449,7 +449,7 @@
         `buying ${link(it)} x${n}, ${coin(price)}, better than the vendor`, `can i buy ${n} of ur ${link(it)}? ${coin(price)}`,
         `do u have spare ${link(it)}? ${n} for ${coin(price)}`, `paying ${coin(price)} for ${n} ${link(it)}, vendor gives way less`, `levelling my profession, need ${n} ${link(it)}. ${coin(price)}?`]), { kind: 'wtb', item: it.id, n, price });
     } else if (kind === 'wts') {
-      const it = offerItem(); if (!it) return; const price = Math.round((it.sell || 10) * rnd(4, 6));
+      const it = offerItem(); if (!it) return; const price = chatPrice(it);
       W(pickT('s320', [`wts ${link(it)} ${coin(price)}, good for a ${D.CLASSES[P.cls].name.toLowerCase()} ur level`, `hey, want ${link(it)}? ${coin(price)} and its yours`, `got a ${link(it)} i cant use, ${coin(price)}?`,
         `${link(it)} dropped for me but its ur armor type. ${coin(price)}?`, `selling ${link(it)} cheap, ${coin(price)}, looks like an upgrade for u`,
         `hey, ${link(it)} is yours for ${coin(price)} if u want it`, `no one in my group can use ${link(it)}, ${coin(price)}?`, `${link(it)} for ${coin(price)}? figured id ask u first`]), { kind: 'wts', itemData: it, price });
@@ -485,8 +485,8 @@
   function makeTrade() {
     const b = pick(myBots().filter((x) => SOC.gearFits(x, G.S.player.level + 1))); if (!b) return; // #73: its own level's gear
     const it = offerItem(); if (!it) return;
-    const price = Math.round((it.sell || 10) * rnd(4.5, 7));
-    post('general', b, pickT('s356', [`WTS ${link(it)} ${coin(price)} pst`, `selling ${link(it)}, ${coin(price)}`, `${link(it)} for ${coin(price)}, anyone?`, `cleaning my bags: ${link(it)} ${coin(price)}`, `${link(it)}, ${coin(price)} or best offer`, `${link(it)}, ${coin(price)}, whisper me`, `anyone need ${link(it)}? ${coin(price)}`, `${link(it)} for sale, ${coin(price)}, cheaper than the AH`]), { kind: 'wts', bot: b.id, itemData: it, price, until: now() + 6 * 60000 });
+    const price = chatPrice(it);
+    post('general', b, pickT('s356', [`WTS ${link(it)} ${coin(price)} pst`, `selling ${link(it)}, ${coin(price)}`, `${link(it)} for ${coin(price)}, anyone?`, `cleaning my bags: ${link(it)} ${coin(price)}`, `${link(it)}, ${coin(price)} or best offer`, `${link(it)}, ${coin(price)}, whisper me`, `anyone need ${link(it)}? ${coin(price)}`, `${link(it)} for sale, ${coin(price)}, fair price`]), { kind: 'wts', bot: b.id, itemData: it, price, until: now() + 6 * 60000 });
   }
   function makeRare() {
     const r = rareTarget(); if (!r) return;
@@ -584,6 +584,10 @@
     }
     const e = (state().friends || {})[b.id]; if (e) e.last = now(); // the saved entry: SOC.friends() hands out copies (#389)
   }
+  // #596: a chat sale costs 1.0–1.2x the auction house's usual price (0.8–0.96x after a good haggle). Relisting sells
+  // for sure only at 0.8x less the 5% cut (0.76x), so a bought item can't be flipped for a sure profit; the AH's own
+  // buyouts run 0.85–1.45x, so chat stays a decent deal (it was 4.5–7x vendor: a blue, worth 9x, was a free 30%+)
+  const chatPrice = (it) => Math.max(1, Math.round(G.ahValue(it) * rnd(1, 1.2)));
   function offerItem() {
     const P = G.S.player;
     if (chance(0.2) && D.ITEMS.small_pouch) return G.copyItem(P.level >= 20 && D.ITEMS.linen_bag ? 'linen_bag' : 'small_pouch');
