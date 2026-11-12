@@ -807,11 +807,15 @@
       if (!inGroup && !(SOC1 && SOC1.isFriend && SOC1.isFriend(from.id))) return false;
     }
     // a bot that posted a group in LFG in the last 10 minutes doesn't post another, or say it found a group (B.lfRecent)
-    if (ch === 'lfg' && from && B.lfRecent(S, from, t) && (LF_RE.test(s) || /\b(already (?:in|got)|full group|grouped|in a run|found a group)\b/.test(s))) return false;
+    if (ch === 'lfg' && from && from.id != null && B.lfBusy(S, from, t) && (LF_RE.test(s) || /\b(already (?:in|got)|full group|grouped|in a run|found a group)\b/.test(s))) return false;
     return true;
   };
   const LF_RE = /\b(lf\d?m|lfg|wanted|missing|need)\b/;
   B.lfRecent = (S, b, t) => ((S.lfAt || {})[b.id] || 0) > (t || Date.now()) - 600000;
+  // #596: a bot already in a group doesn't advertise for a new one: in your party, leading or posting a group still open
+  // in chat (an LFG, Trial or guild run post), or a Help Wanted still up; or one that posted a group in the last 10 minutes
+  const GROUP_ACTS = ['lfg', 'trial_lfg', 'help_wanted'];
+  B.lfBusy = (S, b, t) => { const at = t || Date.now(); return B.lfRecent(S, b, at) || inParty(S, b.id) || (S.chat || []).some((m) => m.act && m.act.state === 'open' && GROUP_ACTS.includes(m.act.kind) && (m.act.leader === b.id || m.act.bot === b.id)) || (S.helpWanted || []).some((r) => r.poster === b.id && r.expires > at); };
   // how full the server is: 'busy' with half of it or more online (an evening peak), 'quiet' with 25% or less (night or
   // morning), else null. From the schedules alone, so a server that grows or shrinks over the week stays honest.
   B.serverMood = function (S, t) {

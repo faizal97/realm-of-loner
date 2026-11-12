@@ -379,7 +379,7 @@
     if (!acts.length) return;
     const k = pick(acts), A = D.ACTIVITIES[k];
     const bots = guild ? G.S.bots.filter((b) => b.guild === P.guild && B.isOnline(b, new Date())) : myBots();
-    const free = bots.filter((b) => !B.lfRecent(G.S, b)), near = free.filter((b) => b.level >= A.minLvl - 2 && b.level <= (A.maxLvl || D.LEVEL_CAP) + 5); // #70: not a bot already looking for another group; #364: of the dungeon's levels, not a level 60 in a level 20 dungeon
+    const free = bots.filter((b) => !B.lfBusy(G.S, b)), near = free.filter((b) => b.level >= A.minLvl - 2 && b.level <= (A.maxLvl || D.LEVEL_CAP) + 5); // #70: not a bot already looking for another group; #364: of the dungeon's levels, not a level 60 in a level 20 dungeon
     const lead = pick(near.length ? near : free.filter((b) => b.level >= A.minLvl - 2)); // #73: never a bot below the dungeon's level (no fallback to anyone free)
     if (!lead) return;
     const role = pick(G.roles());
@@ -400,7 +400,7 @@
     const T = root.TRIALS; if (!T || !T.open(T.season(new Date()))) return;
     const acts = G.trialPicks().filter((k) => !G.trialBlock(k)); if (!acts.length) return;
     const k = pick(acts), max = G.trialMax(k), lvl = rint(Math.max(1, max - 3), max);
-    const lead = pick(myBots().filter((b) => b.level >= D.LEVEL_CAP && !B.lfRecent(G.S, b))); if (!lead) return;
+    const lead = pick(myBots().filter((b) => b.level >= D.LEVEL_CAP && !B.lfBusy(G.S, b))); if (!lead) return;
     const role = pick(G.roles()), c = { role: roleWord(role), name: D.ACTIVITIES[k].name, lvl, have: rint(2, 4) };
     post('lfg', lead, pickT('tlf', TRIAL_LFG_TEXT)(c), { kind: 'trial_lfg', act: k, lvl, role, leader: lead.id, until: now() + 4 * 60000 });
   }

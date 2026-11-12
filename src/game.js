@@ -3418,7 +3418,7 @@
     const role = pick(G.roles());
     const firstTimers = Math.random() < 0.6;
     const myF = (D.RACES[P.race] || {}).faction || 'alliance';
-    const mine = S.bots.filter((b) => B.factionOf(b) === myF), on = new Date(t), fit = mine.filter((b) => b.level >= A.minLvl - 3 && b.level <= (A.maxLvl || D.LEVEL_CAP) + 5 && B.isOnline(b, on) && !B.lfRecent(S, b)); // a poster of the run's level (#69: a bot names content at its own level), online, never a level 60 in a level 20 dungeon (#357, #364)
+    const mine = S.bots.filter((b) => B.factionOf(b) === myF), on = new Date(t), fit = mine.filter((b) => b.level >= A.minLvl - 3 && b.level <= (A.maxLvl || D.LEVEL_CAP) + 5 && B.isOnline(b, on) && !B.lfBusy(S, b, t)); // a poster of the run's level (#69: a bot names content at its own level), online, never a level 60 in a level 20 dungeon (#357, #364)
     const poster = pick(fit); if (!poster) return; // nobody fitting is online: no post
     const req = { id: 'hw' + t, act, role, startIdx: stuck, firstTimers, poster: poster.id, posterName: poster.name, expires: t + HW_LIFE };
     S.helpWanted.push(req);
