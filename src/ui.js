@@ -2421,6 +2421,16 @@
       R.self || R.deaths.some((d) => d.name === G.S.player.name) ? gearLine() : null, // you died: in a group too (#551)
       h('div', { class: 'btn-row' }, fightLogButton(), h('button', { class: 'btn', onclick: closeDialog }, 'Close'))], true);
   }
+  // what Mentor Marks are (#598: first met as a loot line and a bare number in Journey); from the addMarks callers and
+  // the account's spends in game.js and social.js
+  function marksHelp() {
+    const li = (t) => h('div', { class: 'obj' }, '· ' + t);
+    showDialog([h('h3', null, 'Mentor Marks'), h('p', null, `Shared by all your characters. You have ${G.account().marks}.`),
+      h('h4', null, 'Earned from'), li('Helping groups: Help Wanted and the daily Roulette'), li('Trials, raids, world bosses and featured dungeons'),
+      li('Bounties, PvP at 60 and the Bloodsand Brawl'), li('Helping players in chat'), li('Torn debt notes, at a debt clerk'),
+      h('h4', null, 'Spent on'), li('Heirlooms'), li('Upgrading and reforging endgame blue and purple gear'), li('Mounts, looks, Trialsworn cloaks and Renown'), li('Account bank tabs'),
+      h('button', { class: 'btn alt wide', onclick: closeDialog }, 'Close')], true);
+  }
   // an item's tooltip with a Close button, as Bags → Inspect has (#598: quest rewards, vendors and lists had none)
   function showItem(it) { showDialog([itemTip(it), h('button', { class: 'btn alt wide', onclick: closeDialog }, 'Close')], true); }
   // dismissable: true closes on a tap outside; a function runs instead (a card opened from the group pop goes back to it, #325)
@@ -3530,7 +3540,7 @@
       if (up.length) pr('Worn gear power', `${Math.round(up.reduce((s, it) => s + G.upgradeInfo(it).pct, 0) / up.length)}% of newest raid gear`);
       if (P.trials) pr('Best Trial beaten in time', P.trials.bestEver ? `Trial ${P.trials.bestEver}` : 'Not yet');
     }
-    if (P.level >= cap || G.account().marks) pr('Mentor Marks', G.account().marks);
+    if (P.level >= cap || G.account().marks) prog.push(h('button', { class: 'ai-row', style: { width: '100%', textAlign: 'left' }, onclick: marksHelp }, h('span', null, 'Mentor Marks ⓘ'), h('b', { class: 'tnum' }, String(G.account().marks)))); // #598: tap for what they are
     b.append(h('div', { class: 'sec-h' }, 'Progress'), h('div', { class: 'ai-box' }, ...prog));
     // the story and collections: one row each, with its count; each opens its own screen, so this list stays short
     // however many Legends, titles, looks or scenes later updates add
