@@ -3687,7 +3687,7 @@
         h('div', { class: 't' }, h('b', null, t.kind === 'title' ? 'the Debt-Breaker' : `${t.marks} Mentor Marks`), h('small', null, t.kind === 'title' ? 'Title · account-wide' : t.minLevel ? `Level ${t.minLevel} · shared by all your characters` : 'Shared by all your characters')), h('div', { class: 'r' }, right)));
     }
     b.append(h('div', { class: 'sec-h' }, 'Trade', h('small', null, `Torn debt notes: ${G.debtNotesText()}`)), list,
-      h('p', { class: 'ai-note' }, 'Every levelling zone has debt collectors at the zone\'s own level. Grey ones carry no notes. The trade lasts until The Ruinfall Saga begins.'));
+      h('p', { class: 'ai-note' }, 'Every levelling zone has debt collectors at the zone\'s own level. Grey ones carry no notes. The trade lasts until Chapter 1 of The Ruinfall Saga.'));
   }
   function lwKeeperBlock(b) {
     const st = G.lw();
