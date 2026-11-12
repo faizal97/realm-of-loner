@@ -1061,6 +1061,11 @@ svg.sym { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: 
 /* #66: a loot roll is a one-line card docked above the action bar, in its own room (the panel gives it the space) */
 .roll.docked { position: static; margin: 4px 6px 2px; padding: 5px 6px; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 6px; box-shadow: none; }
 .roll.docked img { width: 32px; height: 32px; }
+.rollcard.docked { position: static; margin: 4px 6px 2px; padding: 5px 6px; gap: 0; box-shadow: none; animation: none; } /* in a fight: one line above the bar, never over the party rows */
+.rollcard.docked .rc-item { grid-template-columns: 32px minmax(0, 1fr); gap: 6px; font-size: 12.5px; line-height: 1.2; }
+.rollcard.docked .rc-item img { width: 32px; height: 32px; }
+.rollcard.docked .rc-head.me { font-size: 13px; }
+.rollcard.docked .rc-rows, .rollcard.docked .rc-tap { display: none; }
 .roll.docked .roll-t { min-width: 0; font-size: 12.5px; line-height: 1.2; overflow-wrap: anywhere; }
 .roll.docked .bar { height: 4px; margin-top: 3px; }
 .roll.docked .roll-b { display: flex; gap: 4px; }

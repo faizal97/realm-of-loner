@@ -1734,7 +1734,10 @@
       row.append(h('button', { class: 'btn alt', onclick: confirmLeaveGroup }, R.phase === 'done' ? 'Leave group' : 'Leave'));
       actions.append(row);
     }
-    p.append(...head); runScore(p, R);
+    // in a fight the run's name stays on top and its progress, status and clock go under the tabs: on a 375 px phone the
+    // healer's party rows were pushed under the action bar (play-test: 2 of 5 rows in view with a loot roll up)
+    const later = C && !done;
+    if (later) p.append(head[0]); else { p.append(...head); runScore(p, R); }
     if (actions.childNodes.length) p.append(actions);
     if (done) return p.append(...party);
     const tabDots = { party: !!C && tab !== 'party' && C.allies.some((u) => u.dead), plan: !C && !!pull && !!pull.boss && !R.bossPlan };
@@ -1745,6 +1748,7 @@
     if (tab === 'party') p.append(...party);
     else if (tab === 'next' && C) p.append(h('div', { class: 'sec-h' }, 'Enemies', h('small', null, 'tap ◎ to mark kill order')), list);
     else tacticsBlock(p, R, tab);
+    if (later) { p.append(...head.slice(1).filter(Boolean)); runScore(p, R); }
   }
 
   // ============================================================ action bar
@@ -5773,10 +5777,13 @@
       row._e = e; row._num = num; return row;
     });
     const it = d.item;
-    const card = h('div', { class: 'rollcard', onclick: closeRollCard },
+    // in a fight the card docks above the bar in one line (the item and who won), taking its own room like the roll prompt:
+    // the full card floated over the panel and hid most of the party rows a healer needs (play-test at 375 px)
+    const docked = !!G.fight;
+    const card = h('div', { class: 'rollcard' + (docked ? ' docked' : ''), onclick: closeRollCard },
       h('div', { class: 'rc-item' }, itemIcon(it, 'rollic'), h('div', null, h('div', { class: 'q' + it.q, style: { fontWeight: 800 } }, it.name), head)),
       h('div', { class: 'rc-rows' }, ...rows), h('div', { class: 'rc-tap' }, 'Tap to close'));
-    ui.rollCard = card; els.bottom.append(card);
+    ui.rollCard = card; if (docked) els.bottom.prepend(card); else els.bottom.append(card);
     rows.forEach((row, i) => setTimeout(() => {
       if (ui.rollCard !== card) return;
       row.classList.add('in');
