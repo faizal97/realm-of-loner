@@ -674,7 +674,7 @@
     { const fz = u.auras.find((a) => a.frozen); if (fz) return abId === fz.id ? null : `In ${D.ABILITIES[fz.id].name}`; } // frozen (Ice Block, #245): only breaking out
     if (stunned(C, u) && !ab.freeOf) return 'Stunned';
     if (ab.instrument) return 'Change instruments outside a fight'; // (#251)
-    if (u.cast && !untimed) return E.castingText(u.cast.ab);
+    if (u.cast && !untimed && !E.breaksCast(C, u, abId)) return E.castingText(u.cast.ab);
     if (ab.gcd !== false && u.gcdUntil > C.t && !untimed) return E.GCD_WHY;
     if ((u.cds[abId] || 0) > C.t && !(ab.toggle && E.toggleOpen(C, u, abId))) return E.cooldownText(abId, u.cds[abId] - C.t);
     if (ab.needAura && !auraOf(u, ab.needAura)) return 'Not lit yet';
@@ -717,6 +717,7 @@
       if (near) { u.stepIn = { ab: abId, tgt: near.uid, until: C.t + 5, from: u.returnTo || { x: u.pos.x, y: u.pos.y } }; u.returnTo = null; ev(C, { type: 'stepIn', src: u.uid, ab: abId }); return null; }
     }
     if (why) return why;
+    if (u.cast) { u.cast = null; ev(C, { type: 'castStop', src: u.uid }); } /* an answer to a red bar stops the cast (E.breaksCast) */
     if (ab.gcd !== false) u.gcdUntil = C.t + (ab.gcdLen || 1.5);
     if (ab.cast && !((litAura(u, abId) || {}).proc || {}).instant) {
       const castT = Math.max(0.5, ab.cast - (tmOf(u).abilCast[abId] || 0)) / (1 + ((u.st && u.st.haste) || 0) / 100);
@@ -1247,6 +1248,16 @@
   // the abilities a unit answers with (known ones, cooldown or not)
   // a shield or a quick heal (instant or 1.5 sec at most) on a friend: what guards the tank against a slam
   const isMend = (a) => !!a && !!(a.shield || a.hot || a.heal) && (a.target === 'ally' || a.either) && (!a.cast || a.cast <= 1.5);
+  // a red bar's answer stops a cast in progress, for a bot and the player alike: Step Back moves you, a guard, an
+  // interrupt or a quick heal is what the bar asks for. Before this a caster partway through a spell could not answer
+  // and took the missed hit (a healer starting Lightning Bolt into a breath died)
+  const answerKind = (ab) => (!ab ? null : ab.stepBack ? 'step' : ab.defensive ? 'guard' : ab.interrupt || ab.stun ? 'cut' : isMend(ab) ? 'mend' : null);
+  E.breaksCast = (C, u, abId) => {
+    const k = answerKind(D.ABILITIES[abId]); if (!k || !C) return false;
+    return alive(foes(C, u)).some((m) => { const t = m.tele; if (!t || C.t >= t.until || t.done.has(u.uid)) return false;
+      const want = E.teleAnswer(t); if (want === k) return true;
+      return t.who === 'target' && t.victim !== u.uid && (k === 'cut' || k === 'mend'); }); /* a slam on someone else: kick it or mend them */
+  };
   E.isMend = isMend;
   E.answersOf = (u, ans) => (!u.cls ? [] : ans === 'step' ? ['step_back'] : D.CLASSES[u.cls].abilities.filter((id) => knows(u, id) && (ans === 'guard' ? D.ABILITIES[id].defensive : ans === 'mend' ? isMend(D.ABILITIES[id]) : D.ABILITIES[id].interrupt || D.ABILITIES[id].stun)));
   // a slam on the tank (#179): its size now, from what the team has done during the bar
@@ -2103,6 +2114,7 @@
       // casting
       if (u.cast) {
         if (stunned(C, u)) { u.cast = null; continue; }
+        if (u.kind === 'bot' && botAnswer(C, u, u.bot || {})) continue; /* a bot answers a red bar partway through a cast */
         const cast = u.cast; const ab = D.ABILITIES[cast.ab]; const tgt = C.units[cast.tgt];
         if (!tgt || tgt.dead) { u.cast = null; ev(C, { type: 'castStop', src: u.uid }); continue; }
         if (cast.channel) {
