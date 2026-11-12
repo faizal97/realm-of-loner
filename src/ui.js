@@ -5884,19 +5884,22 @@
   // own interrupt or defensive, or Step Back); the bar fills as the cast runs, and lands when it is full
   // a slam on the tank (#179) also shows who has answered: a shield for a raid tank's brace, a plus for the mend, a diamond for each kick that counts (1-3, by the boss's style); a steel bar once the tank's defensive is up
   function teleBar(cls) { return h('div', { class: 'tbar' + (cls ? ' ' + cls : ''), hidden: true }, h('span', { class: 'tb-ic' }), h('i'), h('b'), h('span', { class: 'tb-pips', hidden: true }, h('i', { class: 'pg', hidden: true }), h('i', { class: 'pm' }), h('i', { class: 'pk' }), h('i', { class: 'pk' }), h('i', { class: 'pk' }))); }
+  // of your answers, the one that is ready (two ready: the shorter cooldown, so a Paladin sees Holy Shield before Divine
+  // Protection), else the one ready soonest (#597)
   function teleIconId(ans) {
-    const u = G.pUnit, have = u ? E.answersOf(u, ans === 'kick' ? 'cut' : ans) : [];
-    return have[0] || (ans === 'step' ? 'step_back' : ans === 'cut' || ans === 'kick' ? D.INTERRUPTS[G.S.player.cls] : 'shield_wall');
+    const u = G.pUnit, C = G.fight, have = u ? E.answersOf(u, ans === 'kick' ? 'cut' : ans) : [];
+    const left = (id) => Math.max(0, ((u.cds || {})[id] || 0) - (C ? C.t : 0));
+    const best = have.slice().sort((a, b) => left(a) - left(b) || (D.ABILITIES[a].cd || 0) - (D.ABILITIES[b].cd || 0))[0];
+    return best || (ans === 'step' ? 'step_back' : ans === 'cut' || ans === 'kick' ? D.INTERRUPTS[G.S.player.cls] : 'shield_wall');
   }
   function paintTele(bar, C, u) {
     if (!bar) return;
     const t = u && !u.dead && u.tele;
     if (!t) { if (!bar.hidden) { bar.hidden = true; bar.dataset.id = ''; } return; }
-    if (bar.dataset.id != t.id) {
-      bar.dataset.id = t.id; bar.hidden = false; bar.dataset.sz = ''; bar.classList.remove('drop'); // a new telegraph starts at its full size
-      const mine = G.pUnit && E.teleFor(C, G.pUnit).find((x) => x.m === u); // your own answer's icon: a slam on the tank asks a healer for a mend, the others for a kick
-      const ic = bar.querySelector('.tb-ic'); ic.innerHTML = ''; ic.append(img(abIcon(teleIconId(mine ? mine.ans : E.teleAnswer(t)))));
-    }
+    if (bar.dataset.id != t.id) { bar.dataset.id = t.id; bar.hidden = false; bar.dataset.sz = ''; bar.classList.remove('drop'); } // a new telegraph starts at its full size
+    { const mine = G.pUnit && E.teleFor(C, G.pUnit).find((x) => x.m === u); /* your own answer's icon: a slam on the tank asks a healer for a mend, the others for a kick */
+      const id = teleIconId(mine ? mine.ans : E.teleAnswer(t)); /* recomputed while the bar is up: the one ready now (#597) */
+      if (bar.dataset.ic !== id) { bar.dataset.ic = id; const ic = bar.querySelector('.tb-ic'); ic.innerHTML = ''; ic.append(img(abIcon(id))); } }
     const team = t.who === 'target', blocked = team && E.teleBlocked(C, t), size = team ? E.teleSize(t) : 0;
     const name = blocked ? `${t.name}: blocked` : team ? `${t.name} ${size}x` : t.name; // a slam shrinks as the team answers it
     const nb = bar.querySelector('b');
