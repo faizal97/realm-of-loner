@@ -4919,7 +4919,7 @@
         if (talker) partySay(talker, B.partyLine(talker.bot, 'win'));
       }
       R.deaths = (R.deaths || 0) + C.allies.filter((u) => u.dead && u.kind !== 'pet').length;
-      if (pu && pu.dead) G.wear(); // you died, the group won (#502)
+      if (pu && pu.dead) { G.wear(); S.player.deaths = (S.player.deaths || 0) + 1; } // you died, the group won (#502): a death all the same (Hero -> Deaths)
       R.lastFightEnd = now();
       // rez the fallen
       const healerAlive = C.allies.find((u) => u.role === 'healer' && !u.dead);
@@ -4939,7 +4939,7 @@
         for (const m of S.group.members) if (m.cameo && !m.gone) { const P = S.player; P.legendMem = P.legendMem || {}; const mem = G.legendMemory(m.legend); P.legendMem[m.legend] = Object.assign(mem, { n: (mem.n || 0) + 1, where: R.name }); } // the memory on the Hero screen
       } else { R.phase = 'rest'; R.restUntil = now() + 6500 * (PACE[R.pace || 'normal'].rest); }
     } else {
-      R.wipes++; R.momentum = 0; G.wear(); // a wipe is your death (#502)
+      R.wipes++; R.momentum = 0; G.wear(); S.player.deaths = (S.player.deaths || 0) + 1; // a wipe is your death (#502), counted in Hero -> Deaths
       R.phase = 'wipe'; R.restUntil = now() + 12000;
       sys('Your party has been defeated. Running back...');
       const alive = S.group.members.filter((m) => !m.gone);
