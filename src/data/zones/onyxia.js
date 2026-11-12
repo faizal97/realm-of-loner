@@ -62,4 +62,15 @@
   Object.assign(D.ACTIVITIES, {
     onyxias_lair: { name: "Veshmira's Lair", dungeon: 'onyxias_lair', where: 'onyxias_lair_gate', size: 10, minLvl: 60, maxLvl: 60, desc: 'Raid in Saltmarsh. 10 players. Both factions.' },
   });
+  // Season's Finest, Season 1 (#593): pieces made for the season's lists. They drop only through the season roll
+  // (G.finestRoll: one extra roll per boss kill), never from the boss's own table, so its drop chances stay as they
+  // were. A Best piece (tier: 'best') is at its family's newest-raid ceiling; a Next best one at this place's own share.
+  D.item('scaleguard_cloak', { name: 'Scaleguard Cloak', slot: 'back', q: 4, lvl: 60, armor: 96, stats: { sta: 19, str: 12 }, icon: 'cloak', sell: 18000, finest: 1, tier: 'best' });
+  D.item('dragonfire_handwraps', { name: 'Dragonfire Handwraps', slot: 'hands', q: 4, atype: 'cloth', lvl: 60, armor: 79, stats: { int: 19, spi: 9 }, sp: 23, icon: 'gloves', sell: 18000, finest: 1, tier: 'best' });
+  D.item('broodsilk_leggings', { name: 'Broodsilk Leggings', slot: 'legs', q: 4, atype: 'cloth', lvl: 60, armor: 105, stats: { int: 20, spi: 15 }, sp: 24, icon: 'legs', sell: 16200, finest: 1, tier: 'until' });
+  D.item('emberscale_robe', { name: 'Emberscale Robe', slot: 'chest', q: 4, atype: 'cloth', lvl: 60, armor: 140, stats: { int: 33, spi: 15 }, sp: 40, icon: 'chest_cloth', sell: 18000, finest: 1, tier: 'best' });
+  D.item('broodwall_legguards', { name: 'Broodwall Legguards', slot: 'legs', q: 4, atype: 'mail', lvl: 60, armor: 520, stats: { sta: 29, str: 19 }, icon: 'legs', sell: 18000, finest: 1, tier: 'best' });
+  D.item('hoardkeeper_leggings', { name: "Hoardkeeper's Leggings", slot: 'legs', q: 4, atype: 'cloth', lvl: 60, armor: 105, stats: { int: 22, spi: 10 }, sp: 27, icon: 'legs', sell: 16200, finest: 1, tier: 'until' });
+  D.item('lairshadow_cloak', { name: 'Lairshadow Cloak', slot: 'back', q: 4, lvl: 60, armor: 85, stats: { int: 16, spi: 7 }, sp: 19, icon: 'cloak', sell: 16200, finest: 1, tier: 'until' });
+  D.MOBS.onyxia.finest = ['scaleguard_cloak', 'dragonfire_handwraps', 'broodsilk_leggings', 'emberscale_robe', 'broodwall_legguards', 'hoardkeeper_leggings', 'lairshadow_cloak'];
 })(typeof window !== 'undefined' ? window : globalThis);

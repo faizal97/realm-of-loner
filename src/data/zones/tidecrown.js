@@ -81,4 +81,17 @@
   Object.assign(D.ACTIVITIES, {
     tidecrown_citadel: { name: 'The Tidecrown Citadel', dungeon: 'tidecrown_citadel', where: 'tidecrown_gate', size: 10, minLvl: 60, maxLvl: 60, desc: 'Raid in the Stormveil Reach. 10 players. Both factions.' },
   });
+  // Season's Finest, Season 1 (#593): pieces made for the season's lists. They drop only through the season roll
+  // (G.finestRoll: one extra roll per boss kill), never from the boss's own table, so its drop chances stay as they
+  // were. A Best piece (tier: 'best') is at its family's newest-raid ceiling; a Next best one at this place's own share.
+  D.item('coralheart_gauntlets', { name: 'Coralheart Gauntlets', slot: 'hands', q: 4, atype: 'mail', lvl: 60, armor: 370, stats: { sta: 22, str: 15 }, icon: 'gloves', sell: 18000, finest: 1, tier: 'best' });
+  D.item('lightless_deep_leggings', { name: 'Leggings of the Lightless Deep', slot: 'legs', q: 4, atype: 'cloth', lvl: 60, armor: 117, stats: { int: 25, spi: 11 }, sp: 30, icon: 'legs', sell: 18000, finest: 1, tier: 'best' });
+  D.item('rising_tide_leggings', { name: 'Leggings of the Rising Tide', slot: 'legs', q: 4, atype: 'cloth', lvl: 60, armor: 117, stats: { int: 22, spi: 18 }, sp: 26, icon: 'legs', sell: 18000, finest: 1, tier: 'best' });
+  D.item('drowned_court_bow', { name: 'Bow of the Drowned Court', slot: 'ranged', q: 4, wtype: 'bow', lvl: 60, dmg: [92, 153], speed: 2.9, stats: { agi: 45 }, icon: 'bow', sell: 18000, finest: 1, tier: 'best' });
+  D.item('tideguard_leggings', { name: 'Tideguard Leggings', slot: 'legs', q: 4, atype: 'leather', lvl: 60, armor: 220, stats: { agi: 23, sta: 17 }, icon: 'legs', sell: 18000, finest: 1, tier: 'best' });
+  D.MOBS.coralheart_colossus.finest = ['coralheart_gauntlets'];
+  D.MOBS.nalveshra.finest = ['lightless_deep_leggings'];
+  D.MOBS.tide_twin_myrel.finest = ['rising_tide_leggings'];
+  D.MOBS.prince_aeldran.finest = ['drowned_court_bow'];
+  D.MOBS.commander_serathis.finest = ['tideguard_leggings'];
 })(typeof window !== 'undefined' ? window : globalThis);
