@@ -3165,6 +3165,12 @@
       // where a plain level-57+ drop of each quality starts, as a share of its ceiling (the median), for effect items below
       const share = {}; for (const dk in D.DUNGEONS) for (const x of lootOf(dk)) if (!x.effect && (x.lvl || 0) >= U.minLvl && U.cap[x.q] && upRef[upKey(x)]) (share[x.q] = share[x.q] || []).push(G.itemPoints(x) / upRef[upKey(x)]);
       upRef['*start'] = {}; for (const q in share) { const a = share[q].sort((x, y) => x - y); upRef['*start'][q] = Math.min(U.cap[q] * 0.97, a[a.length >> 1]); }
+      // Season's Finest pieces (a boss's `finest` list, #593) drop only through the season roll, so they never set or move a
+      // ceiling above. A family no other level-57+ boss drop has (the level-60 instrument) takes its Best piece as the ceiling
+      const seen = new Set(); for (const dk in D.DUNGEONS) for (const x of lootOf(dk)) if ((x.lvl || 0) >= U.minLvl) seen.add(upKey(x));
+      const fin = {}; for (const dk in D.DUNGEONS) for (const p of D.DUNGEONS[dk].pulls) for (const m of p.mobs) for (const id of (D.MOBS[m].finest || [])) {
+        const x = D.ITEMS[id], k = x && upKey(x); if (x && x.q === 4 && !x.effect && !seen.has(k) && (!fin[k] || G.itemPoints(x) > G.itemPoints(fin[k]))) fin[k] = x; }
+      for (const k in fin) { upRef[k] = G.itemPoints(fin[k]); if (fin[k].armor) upRef['*armor'][k] = fin[k].armor; if (fin[k].dmg && fin[k].speed) upRef['*dps'][k] = (fin[k].dmg[0] + fin[k].dmg[1]) / 2 / fin[k].speed; }
     }
     const base = upRef[upKey(it)] || G.itemPoints(it.base || it) * upRef['*lead']; // a family seen nowhere: its own power, raised by the lead
     if (!(it.effect && D.EFFECTS && D.EFFECTS[it.effect])) return base;
@@ -4825,6 +4831,8 @@
         const drops = wbA && !wbFirst ? [] : table.slice(0, 2).map(bonus ? G.hardCopy : R.trial && lastBoss ? G.trialCopy : G.copyItem); // a Trial's final boss: level 60 (#184)
         if (R.hard) { if (bonus) { G.raidWeek().got[R.act + ':' + pull.mobs[0]] = true; sys(`Hard bonus: ${M.name}'s loot is ${G.HARD_STEPS} upgrade steps higher (weekly).`); } else sys(`${M.name}: Hard bonus already taken this week. Resets Monday.`); }
         for (const it of drops) addRoll(it);
+        const fr = !(wbA && !wbFirst) && G.finestRoll(pull.mobs[0], !!(D.DUNGEONS[D.ACTIVITIES[R.act].dungeon] || {}).raid); /* the season roll: one Season's Finest piece on top of the table (#593) */
+        if (fr) addRoll((bonus ? G.hardCopy : R.trial && lastBoss ? G.trialCopy : G.copyItem)(fr));
         const rr = G.rareRecipeDrop(G.syncLevel(R.act)); if (rr) addRoll(rr);
         if (!(wbA && !wbFirst) && (!D.ACTIVITIES[R.act].dungeon || Math.random() < 0.25)) addRoll(G.genGear(pick(D.GEAR_SLOTS), G.syncLevel(R.act), !D.ACTIVITIES[R.act].dungeon ? 2 : 3));
         if (D.ACTIVITIES[R.act].dungeon && !wbA && R.pulls.map((p) => !!p.boss).lastIndexOf(true) === R.idx) G.epicDrop('boss', G.syncLevel(R.act)); // #141
@@ -5475,17 +5483,49 @@
   const finRoles = (s, cls) => { const C = D.CLASSES[cls]; if (!s || !C) return [];
     return (C.roles || [C.role]).filter((r) => FIN_TIERS.some((t) => { const L = finList(s, t)[cls + ':' + r]; return L && Object.keys(L).length; })); };
   G.finestRoles = (cls) => finRoles(G.finestSeason(), cls);
-  // where an item drops, from the real loot rules: a boss drops 2 of its table each kill; a mob's drop rolls its own chance (#593)
+  // ---- the season roll (#593): one extra roll on every boss kill, at D.FINEST_ROLL's chance for its kind (dungeon or
+  // raid), drawing one piece from the boss's season pool: the pieces the live season's lists name (any faction, either
+  // tier) that drop at this boss, from its table or its `finest` list. A boss's `finest` piece that no live list names
+  // (a past season's) stays in the roll at the `retired` share, so it never fades out. The boss's own table and its
+  // chances are never touched. Nothing is rolled (no random number drawn) when the pool is empty.
+  const finNamed = new WeakMap();
+  const finListed = (s) => { if (!s) return new Set(); let x = finNamed.get(s); if (x) return x; x = new Set();
+    for (const tier of FIN_TIERS) { const t = s[tier] || {}, split = Object.keys(t).some((k) => k.indexOf(':') < 0);
+      for (const L of split ? Object.values(t) : [t]) for (const key in L) for (const slot in L[key]) x.add(L[key][slot]); }
+    finNamed.set(s, x); return x; };
+  G.finestPool = function (mk, date) {
+    const M = D.MOBS[mk]; if (!M || !M.boss) return { now: [], old: [] };
+    const d = date || new Date(now()), named = finListed(G.finestSeason(d)), at = [...new Set((M.loot || []).concat(M.finest || []))].filter((id) => D.ITEMS[id]);
+    const begun = (id) => (D.FINEST_SEASONS || []).some((s) => s.id === D.ITEMS[id].finest && wkDay(s.from) <= d); /* a season not begun yet drops nothing */
+    return { now: at.filter((id) => named.has(id)), old: (M.finest || []).filter((id) => D.ITEMS[id] && !named.has(id) && begun(id)) };
+  };
+  const finRollOn = (P) => P.now.length && P.old.length ? [[P.now, 1 - D.FINEST_ROLL.retired], [P.old, D.FINEST_ROLL.retired]] : [[P.now.length ? P.now : P.old, 1]];
+  // the piece the roll gives for a kill of this boss, or null; raid: the boss is in a raid
+  G.finestRoll = function (mk, raid, rnd) {
+    const P = G.finestPool(mk); if (!P.now.length && !P.old.length) return null;
+    rnd = rnd || Math.random; if (!(rnd() < D.FINEST_ROLL[raid ? 'raid' : 'dungeon'])) return null;
+    const on = finRollOn(P), L = on.length > 1 && rnd() >= on[0][1] ? on[1][0] : on[0][0];
+    return L[Math.floor(rnd() * L.length)];
+  };
+  // one piece's chance per kill from the season roll alone
+  G.finestRollOdds = function (mk, raid, id, date) {
+    const P = G.finestPool(mk, date); let p = 0;
+    for (const [L, share] of P.now.length || P.old.length ? finRollOn(P) : []) if (L.includes(id)) p += share / L.length;
+    return p * D.FINEST_ROLL[raid ? 'raid' : 'dungeon'];
+  };
+  // where an item drops, from the real loot rules: a boss drops 2 of its table each kill, and the season roll may add one
+  // piece; a mob's drop rolls its own chance (#593)
   // only places the character's faction can enter, so a Hint never names the other side's dungeon (#593)
   const finSrcs = {};
   const finSource = (id) => {
-    const fac = finFac(); let finSrc = finSrcs[fac];
-    if (!finSrc) { finSrc = finSrcs[fac] = {};
+    const s = G.finestSeason(), fk = finFac() + ':' + (s ? s.id : 0), fac = finFac(); let finSrc = finSrcs[fk];
+    if (!finSrc) { finSrc = finSrcs[fk] = {};
       for (const act in D.ACTIVITIES) { const A = D.ACTIVITIES[act], Dg = A.dungeon && D.DUNGEONS[A.dungeon]; if (!Dg || A.worldBoss || A.event) continue;
         const pf = A.where ? G.placeFaction(A.where) : null; if (pf && pf !== fac) continue;
         for (const p of Dg.pulls) for (const m of p.mobs) { const M = D.MOBS[m]; if (!M) continue;
           const add = (iid, chance) => { const o = finSrc[iid]; if (!o || chance > o.chance) finSrc[iid] = { where: A.name, boss: M.name, chance }; };
-          if (p.boss && m === p.mobs[0]) for (const iid of M.loot || []) add(iid, Math.min(1, 2 / M.loot.length));
+          if (p.boss && m === p.mobs[0]) for (const iid of new Set((M.loot || []).concat(M.finest || []))) { /* its table and the season roll, either one (#593) */
+            const a = (M.loot || []).includes(iid) ? Math.min(1, 2 / M.loot.length) : 0, b = G.finestRollOdds(m, !!Dg.raid, iid); add(iid, 1 - (1 - a) * (1 - b)); }
           for (const [iid, c] of M.drops || []) add(iid, c); } } }
     return finSrc[id] || null;
   };
