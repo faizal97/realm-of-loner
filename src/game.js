@@ -195,6 +195,7 @@
   G.save = function () {
     if (!G.S) return;
     G.S.lastSeen = now();
+    G.titleCheck();
     if (G.fight && G.pUnit) E.writeBack(G.fight, G.pUnit, now(), true); // the fight goes on: don't shift it out (#217)
     const ok = ls.set(CHAR_KEY(G.S.id), JSON.stringify(G.S, ROSTER_ONLY)); if (!ok) cantSave();
     saveRoster(G.S);
@@ -515,6 +516,20 @@
     s += (it.armor || 0) * w.armor + (it.sp || 0) * w.sp;
     if (it.dmg) s += ((it.dmg[0] + it.dmg[1]) / 2 / it.speed) * (it.slot === 'ranged' ? (w.rdps || 0) : w.dps) + (it.slot === 'weapon' ? 1 : 0);
     return s;
+  };
+  // Does an item suit a role (#598: a bot Needs only on these)? The share of its stats the role weighs at full value:
+  // a warlock's Agility ring or a holy paladin's Strength mail scores low and gets Greed. No stats: a weapon suits a role
+  // that swings it, stat-free armour suits anyone who can wear it.
+  G.suitsRole = function (it, cls, role) {
+    if (!it) return false;
+    const w = (ROLE_W[cls] && ROLE_W[cls][role]) || W[cls]; if (!w) return true;
+    const keys = ['str', 'agi', 'sta', 'int', 'spi'];
+    const top = Math.max.apply(null, keys.map((k) => w[k] || 0).concat([w.sp || 0]));
+    let num = 0, tot = 0;
+    for (const k of keys) { const v = (it.stats || {})[k] || 0; num += (w[k] || 0) * v; tot += v; }
+    if (it.sp) { num += (w.sp || 0) * it.sp; tot += it.sp; }
+    if (!tot) return it.slot === 'weapon' ? (w.dps || 0) >= 1 : it.slot === 'ranged' ? (w.rdps || 0) >= 1 || it.wtype === 'instrument' : true;
+    return num / (top * tot) >= 0.4;
   };
   // Which named-gear looks a character shows. Saved item copies may predate looks, so fall back to the base item.
   const BOT_WEAPON_LOOKS = { warrior: ['cruel_barb', 'smites_hammer'], paladin: ['smites_hammer', 'cruel_barb'], rogue: ['thiefs_blade', 'buzzer_blade'],
@@ -870,7 +885,7 @@
     const P = G.S.player;
     n = n || 1;
     const cost = (it.cost || it.sell * 4) * n;
-    if (P.money < cost) return toast('You don\'t have enough money.');
+    if (P.money < cost) return toast('Not enough money.');
     const copy = JSON.parse(JSON.stringify(it));
     if (!G.addItem(copy, n)) return;
     P.money -= cost;
@@ -926,6 +941,14 @@
     if (G.treeSpent(char, info.tree.id) < need) return `Needs ${need} points in ${info.tree.name}`;
     const other = G.talentRival(char, info.t, info.tree); if (other) return `You chose ${other.name}: one per tree`;
     return null;
+  };
+  // a talent that improves abilities you don't have yet (#598: Improved Lay on Hands at 10, Lay on Hands at 14): a line
+  // naming when they come, or null
+  G.talentAbilityNote = function (char, t) {
+    const ab = new Set(); for (const x of t.fx || []) for (const a of x.ab || []) if (a !== '*' && D.ABILITIES[a]) ab.add(a);
+    const later = [...ab].filter((a) => (D.ABILITIES[a].lvl || 1) > char.level || !G.learned(a));
+    if (!later.length || later.length < ab.size) return null; /* at least one it improves is already yours */
+    return later.map((a) => { const A = D.ABILITIES[a]; return `${A.name}: ${A.learn && (A.lvl || 1) <= char.level ? `learned from a quest` : `learned at level ${A.lvl || 1}`}`; }).join(' · ');
   };
   G.learnTalent = function (id) {
     const P = G.S.player, why = G.canLearnTalent(P, id);
@@ -1683,6 +1706,7 @@
     P.money += m;
     sys(`Received ${G.moneyText(m)}.`);
     { const ta = Object.keys(D.ABILITIES).find((k) => D.ABILITIES[k].learn === qid && D.ABILITIES[k].cls === P.cls); if (ta) { loot(`You have learned a new ability: ${D.ABILITIES[ta].name}.`); } } // a class quest teaches its ability
+    G.titleCheck(true); /* a quest's title says so as it unlocks (#598) */
     if (it) { G.addItem(JSON.parse(JSON.stringify(it)), 1); loot(`You receive item: ${B.link(it.name, it.q)}.`); }
     G.gainXp(G.questXpFor(Q), false);
     G.lwEarn(D.EVENTS.lanternwake.earn.quest, 'a quest');
@@ -1863,14 +1887,15 @@
     const P = G.S.player;
     if (l.money) { l.money = Math.round(l.money * (1 + racialPassive('lootMoneyPct') / 100) * G.warBonus()); P.money += l.money; loot(`You loot ${G.moneyText(l.money)}.`); }
     let got = 0; const gotItems = [];
-    // full bags (#164): green or better goes to the bank and says so; grey and white that don't fit are named, once a kill
+    // full bags (#164): green or better goes to the bank and says so; grey and white that don't fit are lost, and named
+    // as lost once a kill (#598: "left behind" read as if they waited somewhere)
     const left = [];
     for (const it of l.items) {
       if ((it.q || 0) >= 2) { const to = G.giveReward(it, 'Loot'); if (to === 'bank') { toast(`Bags full: ${it.name} sent to your bank`); continue; } }
       else if (!G.addItem(it, 1)) { left.push(it); continue; }
       got++; gotItems.push(it); loot(`You receive loot: ${B.link(it.name, it.q)}.`);
     }
-    if (left.length) sys(`Bags full: left behind ${left.map((it) => B.link(it.name, it.q)).join(', ')}`);
+    if (left.length) sys(`Bags full. Lost: ${left.map((it) => B.link(it.name, it.q)).join(', ')}.`); /* #598: gone, not waiting anywhere */
     if (l.money || got) emit('lootGain', { money: l.money, items: got, got: gotItems });
     questCheck();
   }
@@ -2639,7 +2664,7 @@
     const n = rint(N.n[0], N.n[1]);
     const got = Math.min(n, G.bagRoom(D.ITEMS[N.item])); // what fits goes in, and the rest is named (#474)
     if (got > 0 && G.addItem(G.copyItem(N.item), got)) loot(`You receive item: ${B.link(D.ITEMS[N.item].name, D.ITEMS[N.item].q)}${got > 1 ? ' x' + got : ''}.`);
-    if (got < n) info(`Bags full: ${n - got} ${D.ITEMS[N.item].name} left behind.`);
+    if (got < n) info(`Bags full. Lost: ${D.ITEMS[N.item].name} x${n - got}.`);
     if (N.extra && Math.random() < N.extra[1] && G.addItem(G.copyItem(N.extra[0]), 1)) loot(`You receive item: ${B.link(D.ITEMS[N.extra[0]].name)}.`);
     skillUp(N.prof, G.skillColor(p.skill, G.nodeSk(N)));
     emit('lootGain', { items: 1, got: [D.ITEMS[N.item]] });
@@ -2695,6 +2720,18 @@
   }
   G.removeMat = (id, n) => takeMat(id, n); // bags first, then the bank: what chat requests take (#550)
   G.craftable = function (rid) { const r = D.RECIPES[rid]; let n = 99; for (const m in r.mats) n = Math.min(n, Math.floor(G.matCount(m) / r.mats[m])); return n; };
+  // how many of a recipe you could make that also fit your bags, the materials they use making room (#598: Create all
+  // counted materials only, so a batch stopped on the first full bag)
+  G.craftFit = function (rid) {
+    const r = D.RECIPES[rid], it = D.ITEMS[r.makes], P = G.S.player;
+    const fits = (k) => {
+      const bags = P.bags, q = P.qitems; P.bags = bags.map((b) => ({ item: b.item, n: b.n })); P.qitems = Object.assign({}, q);
+      try { for (const m in r.mats) G.removeItem(m, Math.min(r.mats[m] * k, G.countItem(m))); return G.isQuestItem(it.id) || (G.stackable(it) ? stackSlots(P.bags, it, r.n * k) <= G.bagFree(it) : G.bagFree(it) >= r.n * k); }
+      finally { P.bags = bags; if (q) P.qitems = q; else delete P.qitems; }
+    };
+    for (let k = G.craftable(rid); k > 0; k--) if (fits(k)) return k;
+    return 0;
+  };
   G.craft = function (rid, count) {
     const S = G.S, P = S.player, r = D.RECIPES[rid], p = G.profs()[r.prof];
     if (!p) return;
@@ -2861,6 +2898,15 @@
     emit('change');
   };
   G.usable = (it) => ['potion', 'elixir', 'stone', 'kit', 'bag', 'recipe', 'event'].includes(it.slot);
+  // why a recipe can't be learned yet, or null (#598: the bag panel shows it under a disabled Learn)
+  G.learnBlock = function (it) {
+    const r = it && it.slot === 'recipe' && D.RECIPES[it.teaches]; if (!r) return null;
+    const p = G.profs()[r.prof], pn = D.PROFESSIONS[r.prof].name;
+    if (!p) return `Requires ${pn}`;
+    if (p.skill < r.sk[0]) return `Requires ${pn} ${r.sk[0]}`;
+    if ((p.known || []).includes(r.id)) return 'Already known';
+    return null;
+  };
   G.useItem = function (idx) {
     const S = G.S, P = S.player, b = P.bags[idx]; if (!b) return;
     const it = b.item, t = now();
@@ -2894,11 +2940,9 @@
         P.bagsEq[P.bagsEq.indexOf(small)] = it; P.bags[idx] = { item: small, n: 1 }; sys(`You swap your ${small.name} for the ${it.name}.`);
       }
     } else if (it.slot === 'recipe') {
-      const r = D.RECIPES[it.teaches], p = G.profs()[r.prof];
-      if (!p) return toast(`Requires ${D.PROFESSIONS[r.prof].name}.`);
-      if (p.skill < r.sk[0]) return toast(`Requires ${D.PROFESSIONS[r.prof].name} ${r.sk[0]}.`);
-      p.known = p.known || []; if (p.known.includes(r.id)) return toast('You already know that.');
-      p.known.push(r.id); G.removeItem(it.id, 1); loot(`You learn how to make ${B.link(D.ITEMS[r.makes].name, D.ITEMS[r.makes].q)}.`);
+      const r = D.RECIPES[it.teaches], p = G.profs()[r.prof], why = G.learnBlock(it);
+      if (why) return toast(why + '.');
+      p.known = p.known || []; p.known.push(r.id); G.removeItem(it.id, 1); loot(`You learn how to make ${B.link(D.ITEMS[r.makes].name, D.ITEMS[r.makes].q)}.`);
     }
     emit('change'); G.save();
   };
@@ -3373,6 +3417,22 @@
     let flawless = 0, speed = 0; for (const k in cx) { flawless += cx[k].flawless || 0; speed += cx[k].speed || 0; }
     const craft = Math.max(0, ...Object.entries(P.prof || {}).filter(([k]) => D.PROFESSIONS[k] && D.PROFESSIONS[k].kind === 'craft').map(([, p]) => p.skill));
     return { mentor: P.mentorRuns || 0, flawless, speed, honor: pv.honor, kills: pv.kills, clears: cx, craft, riding: P.riding ? 1 : 0, brawl: (P.brawl || {}).champs || 0, trophies: G.trophyCount() };
+  };
+  // every title unlock says so, once (#598: Reader of Notes came silently, Tidebreaker with a message). P.titlesSeen holds
+  // the ids already announced; a save without it takes what is unlocked now, quietly. Run on each save, at most every 2 s.
+  const titleLine = (t) => loot(`New title: ${G.titleName(t, G.S.player.name)}. Wear it: Hero → Journey → Titles.`);
+  G.titleAnnounced = function (id) { const P = G.S && G.S.player; if (P && P.titlesSeen && !P.titlesSeen.includes(id)) P.titlesSeen.push(id); };
+  let titleAt = 0;
+  G.titleCheck = function (force) {
+    const P = G.S && G.S.player; if (!P || !D.TITLES) return;
+    if (!force && P.titlesSeen && now() - titleAt < 2000) return; titleAt = now();
+    const first = !P.titlesSeen; if (first) P.titlesSeen = [];
+    for (const t of D.TITLES) {
+      if (P.titlesSeen.includes(t.id) || (t.faction && t.faction !== G.myFaction())) continue;
+      let ok = false; try { ok = G.titleUnlocked(t); } catch (e) { ok = false; }
+      if (!ok) continue;
+      P.titlesSeen.push(t.id); if (!first) titleLine(t);
+    }
   };
   G.titleUnlocked = function (t) {
     const r = G.records(), n = t.need;
@@ -4885,7 +4945,7 @@
         && !(it.effect && Object.values(m.equip || {}).some((x) => x && x.effect === it.effect)); // an effect counts once (#56): no Need on one it already wears
       let c;
       if (m.bot.ninja) c = 'need';
-      else if (usable && Math.random() < 0.85) c = 'need';
+      else if (usable && G.suitsRole(it, m.cls, m.role || D.CLASSES[m.cls].role) && Math.random() < 0.85) c = 'need'; /* #598: Need only on what suits its role */
       else c = Math.random() < 0.75 ? 'greed' : 'pass';
       r.choices[m.name] = { c, v: c === 'pass' ? 0 : rint(1, 100), at: now() + rnd(1500, 7000), m };
     }
@@ -5512,7 +5572,7 @@
     for (const r of finRoles(s, cls)) { const k = cls + ':' + r; if (rec[k] || !finDone(s, st, cls, r)) continue;
       const had = Object.keys(rec).some((x) => rec[x] && x.split(':')[1] === r); rec[k] = 1; changed = true;
       const t = D.TITLES.find((x) => x.id === (s.titles || {})[r]);
-      if (!had && t) loot(`New title: ${G.titleName(t, G.S.player.name)}. Wear it: Hero → Journey → Titles.`);
+      if (!had && t) G.titleAnnounced(t.id), loot(`New title: ${G.titleName(t, G.S.player.name)}. Wear it: Hero → Journey → Titles.`);
       else if (!quiet) loot(`Season's Finest: every Best piece found blind as ${D.CLASSES[cls].name} ${ROLE_WORD[r] || r}.`); }
     if (changed) G.saveAccount(a);
     return changed;
@@ -5855,7 +5915,7 @@
       const R = LN().ranks[st.rank]; st.rank++;
       sys(`Hearth rank ${st.rank}: ${R.name}.`);
       if (R.reward.item) { if (G.addItem(G.copyItem(R.reward.item), R.reward.n || 1)) loot(`Received ${B.link(D.ITEMS[R.reward.item].name, 1)} x${R.reward.n || 1}.`); else sys('Bags are full: the reward waits at the Hearthwarden.'), st.owed = (st.owed || []).concat([R.reward]); }
-      if (R.reward.title) { lnOwn(R.reward.title); loot(`New title: ${G.titleName(D.TITLES.find((t) => t.id === R.reward.title), G.S.player.name)}. Wear it: Hero → Journey → Titles.`); }
+      if (R.reward.title) { lnOwn(R.reward.title); G.titleAnnounced(R.reward.title); loot(`New title: ${G.titleName(D.TITLES.find((t) => t.id === R.reward.title), G.S.player.name)}. Wear it: Hero → Journey → Titles.`); }
       emit('lnRank', { rank: st.rank });
     }
     emit('kindling', { n, why });
@@ -6110,7 +6170,7 @@
     const guest = R.act === Ev.guest, season = G.eventSeason('longnight');
     // each step reads the account fresh: a step before it may have saved it (a title, a rank)
     { const a = G.lnAccount(), r = lnRec(a); if (!r.keepsakes.includes(season) && !/^test/.test(season)) { r.keepsakes.push(season); G.saveAccount(a); loot(`Keepsake earned: Longnight ${season}.`); } }
-    if (guest && !G.lnOwned('ln_door_title')) { lnOwn('ln_door_title'); loot(`New title: ${G.titleName(D.TITLES.find((t) => t.id === 'ln_door_title'), G.S.player.name)}. Wear it: Hero → Journey → Titles.`); emit('lnGuestFirst'); }
+    if (guest && !G.lnOwned('ln_door_title')) { lnOwn('ln_door_title'); G.titleAnnounced('ln_door_title'); loot(`New title: ${G.titleName(D.TITLES.find((t) => t.id === 'ln_door_title'), G.S.player.name)}. Wear it: Hero → Journey → Titles.`); emit('lnGuestFirst'); }
     const dayK = guest ? (R.hard ? 'guestHardDay' : 'guestDay') : (R.hard ? 'hardDay' : 'lootDay');
     if (st[dayK] === d) return sys(`${R.hard ? 'Hard loot' : 'Daily loot'} already taken today.`);
     st[dayK] = d;

@@ -272,7 +272,7 @@
     if (noZero || c > 0) parts = parts.filter(([, v]) => v); // no "0c" after other coins (#463)
     if (compact) parts = parts.slice(0, 2);
     const word = { g: 'gold', s: 'silver', c: 'copper' };
-    return `<span class="money tnum" aria-label="${parts.map(([k, v]) => v + ' ' + word[k]).join(' ')}">${parts.map(([k, v]) => `<span class="${k}">${v}<i class="coin ${k}"></i></span>`).join(' ')}</span>`;
+    return `<span class="money tnum" aria-label="${parts.map(([k, v]) => v + ' ' + word[k]).join(' ')}">${parts.map(([k, v]) => `<span class="${k}">${v}${k}<i class="coin ${k}"></i></span>`).join(' ')}</span>`; /* #598: the letter too (25s, 25c), as in the log, so silver and copper differ by more than the coin's colour */
   }
   // folding sections: the header is a button with a one-line summary; open or closed is remembered on this device
   function foldOpen(key, def) { try { const m = JSON.parse(localStorage.getItem('azsolo.folds') || '{}'); return key in m ? !!m[key] : def; } catch (e) { return def; } }
@@ -1314,8 +1314,16 @@
     return h('span', null, ' · Lv ', num(lo), lo === hi ? null : '–', lo === hi ? null : num(hi));
   }
   // ---------- where quest things happen: the map, the quest page, the tracker and the leads all ask here
+  // for a quest, only the places in its own region (its giver's or its hand-in's) when it has any there (#598: a dwarf's
+  // Tough Wolf Meat listed Halden Abbey, the human start, because wolves drop it there too)
+  function objPlaces(o, qid) {
+    const all = objPlacesAll(o), Q = qid && D.QUESTS[qid]; if (!Q || all.length < 2) return all;
+    const regs = new Set([Q.giver, Q.turnin].map((n) => n && npcPlace(n)).filter(Boolean).map((p) => D.PLACES[p].region));
+    const near = all.filter((p) => regs.has(D.PLACES[p].region));
+    return near.length ? near : all;
+  }
   // the places an objective is done in: a visit's place, where its mob lives or its item drops, where it is gathered
-  function objPlaces(o) {
+  function objPlacesAll(o) {
     if (o.type === 'visit') return [o.place];
     const col = (k) => (D.MOBS[k] || {}).collector, L = G.S.player.level, tt = G.travelTimes(G.S.player.place); // collectors are spawned, not listed: every place that has them, not grey to you
     if (col(o.mob) || (o.item && Object.keys(D.MOBS).some((k) => col(k) && (D.MOBS[k].qdrops || []).some((d) => d[0] === o.item)))) return Object.keys(D.PLACES).filter((p) => { const pl = D.PLACES[p]; return G.collectorsHere(pl) && pl.lvl[0] >= 30 && L - pl.lvl[0] < 6 && tt[p] != null; }); /* only where every collector pays a note, and only where you can go now (not behind the storm) */
@@ -2413,6 +2421,18 @@
       R.self || R.deaths.some((d) => d.name === G.S.player.name) ? gearLine() : null, // you died: in a group too (#551)
       h('div', { class: 'btn-row' }, fightLogButton(), h('button', { class: 'btn', onclick: closeDialog }, 'Close'))], true);
   }
+  // what Mentor Marks are (#598: first met as a loot line and a bare number in Journey); from the addMarks callers and
+  // the account's spends in game.js and social.js
+  function marksHelp() {
+    const li = (t) => h('div', { class: 'obj' }, '· ' + t);
+    showDialog([h('h3', null, 'Mentor Marks'), h('p', null, `Shared by all your characters. You have ${G.account().marks}.`),
+      h('h4', null, 'Earned from'), li('Helping groups: Help Wanted and the daily Roulette'), li('Trials, raids, world bosses and featured dungeons'),
+      li('Bounties, PvP at 60 and the Bloodsand Brawl'), li('Helping players in chat'), li('Torn debt notes, at a debt clerk'),
+      h('h4', null, 'Spent on'), li('Heirlooms'), li('Upgrading and reforging endgame blue and purple gear'), li('Mounts, looks, Trialsworn cloaks and Renown'), li('Account bank tabs'),
+      h('button', { class: 'btn alt wide', onclick: closeDialog }, 'Close')], true);
+  }
+  // an item's tooltip with a Close button, as Bags → Inspect has (#598: quest rewards, vendors and lists had none)
+  function showItem(it) { showDialog([itemTip(it), h('button', { class: 'btn alt wide', onclick: closeDialog }, 'Close')], true); }
   // dismissable: true closes on a tap outside; a function runs instead (a card opened from the group pop goes back to it, #325)
   // a dialog that asks something (an invite) says what happens if another dialog replaces it unanswered (#353)
   function showDialog(content, dismissable) {
@@ -2819,7 +2839,7 @@
       for (const qid in P.quests) {
         const st = G.questState(qid), main = D.QUESTS[qid].main;
         if (st === 'complete') { const npc = D.QUESTS[qid].turnin; for (const p in D.PLACES) if (D.PLACES[p].npcs.includes(npc)) { qPlaces.set(p, 'ready'); if (main) qMain.add(p); } continue; }
-        for (const o of D.QUESTS[qid].objs) objPlaces(o).forEach((p) => { mark(p); if (main && qPlaces.get(p) === 'new') qMain.add(p); });
+        for (const o of D.QUESTS[qid].objs) objPlaces(o, qid).forEach((p) => { mark(p); if (main && qPlaces.get(p) === 'new') qMain.add(p); });
       }
       const trainAt = new Set(D.PROF_TRAINERS['crafts_' + G.myFaction()] || []), trainIc = art('icon', 'prof_blacksmithing'); // your profession trainers (#76)
       const huntUpAt = new Map(); for (const r of (G.huntRares ? G.huntRares() : [])) if (MAP[r.place] && G.huntUp(r.key, Date.now())) huntUpAt.set(r.place, r.key); // a rare hunt that's up (#43)
@@ -2961,6 +2981,7 @@
   // the XP a quest gives you now (#188): once you're more than 2 levels over it, less, drawn muted and saying why
   function questXpLine(Q, money) {
     const over = G.S.player.level - Q.lvl, cut = G.questXpShare(Q.lvl, G.S.player.level) < 1;
+    if (G.S.player.level >= D.LEVEL_CAP) return h('div', { class: 'money xp-line', html: moneyHtml(money) }); /* #598: no experience at the cap, so none promised */
     return h('div', { class: 'money xp-line' }, h('span', { class: cut ? 'xp-cut' : null }, `${G.questXpFor(Q)} experience` + (cut ? ` (reduced: you're ${over} levels over)` : '')), h('span', { html: ' · ' + moneyHtml(money) }));
   }
   function questDetail(qid, npc) {
@@ -2977,7 +2998,7 @@
       questStory(qid),
       h('h4', null, 'Objectives'),
       ...pr.map((p) => { const hint = p.have < p.n ? G.objHint(p.o) : null, pick = hint && /^Collect/.test(hint); // a pick-up names its place in the hint (#173)
-        const where = p.have < p.n && p.o.type !== 'visit' && !pick ? byNearness(objPlaces(p.o)) : [];
+        const where = p.have < p.n && p.o.type !== 'visit' && !pick ? byNearness(objPlaces(p.o, qid)) : [];
         return h('div', { class: 'obj tnum' + (p.have >= p.n ? ' done' : '') }, `${p.label}: ${p.have}/${p.n}`, where.length ? h('small', { class: 'obj-where' }, ' · ' + placeNames(where)) : null,
           hint ? h('small', { class: 'obj-src' }, hint) : null); }),
       turninLine(Q, st === 'complete'),
@@ -2987,7 +3008,7 @@
       questXpLine(Q, money),
       ...(() => { const ti = D.TITLES.find((t) => t.need && t.need.quest === qid), ta = Object.keys(D.ABILITIES).find((k) => D.ABILITIES[k].learn === qid); // a title or an ability is a reward too (#526)
         return [ti ? h('div', { class: 'obj' }, 'Title: ' + G.titleName(ti, G.S.player.name)) : null, ta ? h('div', { class: 'obj' }, 'Ability: ' + D.ABILITIES[ta].name) : null]; })());
-    const rewardRow = (reward, i) => h('button', { class: 'row', style: { background: 'rgba(60,40,15,.15)', borderColor: '#b08a4a' }, onclick: () => showDialog(itemTip(reward), true) },
+    const rewardRow = (reward, i) => h('button', { class: 'row', style: { background: 'rgba(60,40,15,.15)', borderColor: '#b08a4a' }, onclick: () => showItem(reward) },
       itemIcon(reward), h('div', { class: 't' }, h('b', { class: 'q' + reward.q, style: { textShadow: '0 1px 0 #000' } }, reward.name), h('small', { style: { color: blockReason(reward) ? '#a01010' : '#5a3a0c' } }, blockReason(reward) ? blockReason(reward).text : 'Tap to inspect')),
       rewards.length > 1 ? h('span', { class: 'chip rw-pick' + (i === chosen ? ' gold' : ''), 'data-rw': i, onclick: (e) => { e.stopPropagation(); chosen = i; box.querySelectorAll('[data-rw]').forEach((c) => { const on = +c.dataset.rw === chosen; c.classList.toggle('gold', on); c.textContent = on ? 'Chosen ✓' : 'Choose'; }); } }, i === chosen ? 'Chosen ✓' : 'Choose') : h('div'));
     if (rewards.length > 1) box.append(h('small', { class: 'rw-note' }, 'Choose one of these:'));
@@ -3133,7 +3154,7 @@
       remy: 'Pell, at your service. Twice, if you pay twice.', pestle: 'Candles, herbs, powders. I always need more.',
       farley: 'Welcome to the Bracken Arms Inn! Rest your feet a while.', corina: 'Blades, hammers, staves. All sharpened by my own hand.',
       thomas: 'The lake shore isn\'t safe. Keep your weapon ready.', ma_stonefield: 'You there! Can you help an old farmer?',
-      sten: 'Welcome to Coldridge, lad. Keep yer axe close.', balir: 'Cavekins! Everywhere I look, cavekin!', talin: 'Good hunting out here, if the wolves don\'t hunt you first.',
+      sten: 'Welcome to Rimefold, lad. Keep yer axe close.', balir: 'Cavekins! Everywhere I look, cavekin!', talin: 'Good hunting out here, if the wolves don\'t hunt you first.',
       adlin: 'Bread, water, and a wee bit of ale for the road?', ragnar: 'Welcome to the Maltsson Distillery! Best ale in Khaz Modan!',
       belm: 'Pull up a stool by the fire and warm yer bones.', stonegear: 'Careful, that engine bites. What can I do for ya?',
       senir: 'The trolls grow bolder by the day.', grawn: 'Axes, hammers, and a blade or two. All dwarf-made.',
@@ -3152,7 +3173,7 @@
       vikar: 'I keep my eyes on the coast.', vanira: 'Mokku the Hexer has turned our people against us. Help me.',
       gryshka: 'Welcome to Vazhrak. Grab a drink.', rahauro: 'Weapons for the Krugar, strong as the earth.', thrall_herald: 'The High Chief has need of heroes.',
       ilthalaine: 'Ishnu-alah. The balance of Dewfern Glade needs tending.', gilshalan: 'Something foul creeps into the glade. Can you feel it?',
-      dirania: 'Stay sharp. The spiders of Shadowthread grow bolder.', nyoma: 'Rest and eat, traveller. The night is long.',
+      dirania: 'Stay sharp. The spiders of Webhollow grow bolder.', nyoma: 'Rest and eat, traveller. The night is long.',
       tallonkai: 'The Mossback were once our friends. Something has changed them.', zenn: 'Heh heh. Pym has a small job for you, friend. Nothing strange.',
       keldamyr: 'Welcome to Ithrenne. Rest by the moonwell.', kyra: 'May the moon guide your blade.', ilyenia: 'Glaives, blades and bows, blessed by the moon.',
       gryan: 'Welcome to Warrick\'s Rise. Longfield is ours again, one farm at a time.', danuvin: 'Keep your blade drawn. The Grey Hood are never far.',
@@ -3232,15 +3253,24 @@
       t.append(h('div', { class: 'last-sale' }, !ls ? '' : ['Sold ', ls.item ? h('b', { class: 'q' + (ls.item.q || 0) }, ls.item.name) : `${ls.many} ${ls.grey ? 'grey ' : ''}item${ls.many > 1 ? 's' : ''}`, ls.item && ls.n > 1 ? ` ×${ls.n}` : '', h('span', { html: ' for ' + moneyHtml(ls.money) })]));
       const stock = G.vendorStock(npc);
       const list = h('div', { class: 'list' });
+      // #598: a purchase you can't afford says so on the row you tapped, not in a toast far from it
+      const msg = ui.vendorMsg && Date.now() - ui.vendorMsg.at < 5000 ? ui.vendorMsg : null;
+      const buyHere = (it, n, cost) => {
+        const have = G.S.player.money; ui.vendorMsg = null;
+        if (have < cost * n) ui.vendorMsg = { id: it.id, at: Date.now(), text: `Need ${G.moneyText(cost * n)} (you have ${G.moneyText(have)}).` };
+        else G.buy(it, n);
+        ui.sheetFn();
+      };
       for (const it of stock) {
         const cost = it.cost || it.sell * 4;
         const stack = G.stackable(it);
         list.append(h('div', { class: 'row', style: { gridTemplateColumns: '34px 1fr auto' } },
-          h('button', { style: { padding: 0 }, onclick: () => showDialog(itemTip(it), true) }, itemIcon(it)),
-          h('button', { class: 't', style: { textAlign: 'left' }, onclick: () => showDialog(itemTip(it), true) }, h('b', { class: 'q' + it.q }, it.name), h('small', null, h('span', { html: moneyHtml(cost, false, cost > 0) + (stack ? ' each' : '') }), gearTag(it))),
+          h('button', { style: { padding: 0 }, onclick: () => showItem(it) }, itemIcon(it)),
+          h('button', { class: 't', style: { textAlign: 'left' }, onclick: () => showItem(it) }, h('b', { class: 'q' + it.q }, it.name), h('small', null, h('span', { html: moneyHtml(cost, false, cost > 0) + (stack ? ' each' : '') }), gearTag(it)),
+            msg && msg.id === it.id ? h('small', { class: 'red', style: { display: 'block', whiteSpace: 'normal' } }, msg.text) : null),
           h('div', { class: 'btn-row', style: { flexWrap: 'nowrap' } },
-            h('button', { class: 'chip', onclick: () => { G.buy(it, 1); ui.sheetFn(); } }, 'Buy'),
-            stack ? h('button', { class: 'chip', onclick: () => { G.buy(it, 5); ui.sheetFn(); } }, '×5') : null)));
+            h('button', { class: 'chip', onclick: () => buyHere(it, 1, cost) }, 'Buy'),
+            stack ? h('button', { class: 'chip', onclick: () => buyHere(it, 5, cost) }, '×5') : null)));
       }
       b.append(list);
       const rep = G.repairAllCost(); // #502
@@ -3399,7 +3429,9 @@
         if (canUpgrade(it)) acts.append(h('button', { class: 'btn alt', onclick: () => upgradeDialog({ bag: ui.bagSel }) }, 'Upgrade'));
         if (canReforge(it)) acts.append(h('button', { class: 'btn alt', onclick: () => reforgeDialog({ bag: ui.bagSel }) }, 'Reforge'));
         if (it.slot === 'food' || it.slot === 'drink') acts.append(h('button', { class: 'btn', onclick: () => { G.consume(it.slot); closeSheet(); } }, 'Use'));
-        if (G.usable(it)) acts.append(h('button', { class: 'btn', onclick: () => { G.useItem(ui.bagSel); ui.bagSel = null; ui.sheetFn(); } }, it.slot === 'bag' ? 'Equip bag' : it.slot === 'recipe' ? 'Learn' : 'Use'));
+        const learnWhy = G.learnBlock(it); /* #598: a recipe you can't learn yet says why under a disabled Learn */
+        if (G.usable(it)) acts.append(h('button', { class: 'btn', disabled: !!learnWhy, onclick: () => { G.useItem(ui.bagSel); ui.bagSel = null; ui.sheetFn(); } }, it.slot === 'bag' ? 'Equip bag' : it.slot === 'recipe' ? 'Learn' : 'Use'));
+        if (learnWhy) acts.append(h('div', { style: { color: 'var(--muted)', fontSize: '13px', alignSelf: 'center' } }, learnWhy));
         if (it.id === 'hearthstone') acts.append(h('button', { class: 'btn', onclick: () => { G.hearth(); closeSheet(); } }, 'Use'));
         const vendorHere = D.PLACES[P.place].vendor || D.PLACES[P.place].gearVendor;
         if (G.canLock(it)) acts.append(h('button', { class: 'btn alt', onclick: () => { const on = !it.lock; G.setLock('bag', ui.bagSel, on); toast(on ? 'Locked.' : 'Unlocked.'); ui.sheetFn(); } }, it.lock ? 'Unlock' : 'Lock'));
@@ -3414,7 +3446,7 @@
         // tooltip and what you wear in that slot
         const inspect = () => showDialog([itemTip(it), cur && D.GEAR_SLOTS.includes(it.slot) && cur !== it ? h('div', { class: 'sec-h' }, 'Currently equipped') : null, cur && D.GEAR_SLOTS.includes(it.slot) && cur !== it ? itemTip(cur) : null, h('button', { class: 'btn alt wide', onclick: closeDialog }, 'Close')], true);
         b.append(h('div', { class: 'bag-acts' }, h('div', { class: 'bag-acts-t bag-brief' }, h('div', null, h('b', { class: 'q' + (it.q || 0) }, it.name + (sel.n > 1 ? ' x' + sel.n : ''), finName(it)), price), h('button', { class: 'btn alt bag-insp', onclick: inspect }, 'Inspect')), itemBrief(it), acts));
-      } else b.append(h('p', { style: { color: 'var(--muted)', margin: 0 } }, 'Tap an item to inspect it. A green arrow means an upgrade.'));
+      } else b.append(h('p', { style: { color: 'var(--muted)', margin: 0 } }, `Tap an item to inspect it. A green arrow means an upgrade for your role: ${ROLE_NAME[G.role()] || G.role()} (Hero → Role).`));
       const vendorNow = D.PLACES[P.place].vendor || D.PLACES[P.place].gearVendor;
       const junk = P.bags.filter((x) => x.item.q === 0 && G.sellable(x.item)).length; // a locked grey stays (#557)
       if (vendorNow && junk) b.append(h('button', { class: 'btn alt wide', onclick: () => { G.sellJunk(); ui.bagSel = null; ui.sheetFn(); } }, `Sell all grey items (${junk})`));
@@ -3508,7 +3540,7 @@
       if (up.length) pr('Worn gear power', `${Math.round(up.reduce((s, it) => s + G.upgradeInfo(it).pct, 0) / up.length)}% of newest raid gear`);
       if (P.trials) pr('Best Trial beaten in time', P.trials.bestEver ? `Trial ${P.trials.bestEver}` : 'Not yet');
     }
-    if (P.level >= cap || G.account().marks) pr('Mentor Marks', G.account().marks);
+    if (P.level >= cap || G.account().marks) prog.push(h('button', { class: 'ai-row', style: { width: '100%', textAlign: 'left' }, onclick: marksHelp }, h('span', null, 'Mentor Marks ⓘ'), h('b', { class: 'tnum' }, String(G.account().marks)))); // #598: tap for what they are
     b.append(h('div', { class: 'sec-h' }, 'Progress'), h('div', { class: 'ai-box' }, ...prog));
     // the story and collections: one row each, with its count; each opens its own screen, so this list stays short
     // however many Legends, titles, looks or scenes later updates add
@@ -3775,7 +3807,21 @@
     worldboss: () => { const wb = G.worldBoss(); if (wb) openBriefing(wb, false); },
     brawl: () => { closeSheet(); if (G.S.player.place !== G.BRAWL.place) routeDialog(G.BRAWL.place); },
     finest: () => openFinest(), // #593
+    'prepatch:campaign': () => weekGoQuest((Q) => Q.arc === 'The Notes Come Due' && !Q.cls), // #598: the campaign's next step, not an empty log
+    'prepatch:tutor': () => weekGoQuest((Q) => Q.prepatch && Q.cls === G.S.player.cls), // #598: the class quest that teaches the new ability
   };
+  // a This week step that leads to quests: the Quest Log when one of them is taken, else a route to the giver of the
+  // next one; before they open, why not
+  function weekGoQuest(pick) {
+    const P = G.S.player, ids = Object.keys(D.QUESTS).filter((q) => pick(D.QUESTS[q]) && (!D.QUESTS[q].faction || D.QUESTS[q].faction === G.myFaction()));
+    if (ids.some((q) => P.quests[q])) return openQuests();
+    const next = ids.find((q) => G.questState(q) === 'available');
+    if (!next) return toast(G.prepatchOpen() ? 'Nothing to take here right now.' : 'Opens at 60, after The Drowned Crown or a raid.');
+    const npc = D.QUESTS[next].giver, at = Object.keys(D.PLACES).find((p) => D.PLACES[p].npcs.includes(npc));
+    if (!at) return openQuests();
+    if (P.place === at) { closeSheet(); return toast(`${D.NPCS[npc].name} is here.`); }
+    routeDialog(at);
+  }
   const WEEK_KEY = 'azsolo.weekSeen'; // this device: the banner ids already shown (the button's dot, the once-a-week opening)
   const weekSeen = () => { try { return new Set(JSON.parse(localStorage.getItem(WEEK_KEY) || '[]')); } catch (e) { return new Set(); } };
   const weekMarkSeen = (list) => { try { const s = weekSeen(); for (const b of list) s.add(b.id); localStorage.setItem(WEEK_KEY, JSON.stringify([...s].slice(-60))); } catch (e) { } };
@@ -4275,6 +4321,12 @@
           b.append(h('div', { class: 'sec-h' }, 'Mount', h('small', null, P.mount ? `roads are ${Math.round((1 - G.rideSpeed()) * 100)}% faster` : 'walking')), row);
           if (G.mountTints() || G.isFounder()) { const tr = h('div', { class: 'chips' }, h('button', { class: 'chip' + (!P.mountTint ? ' gold' : ''), onclick: () => { G.setMountTint(0); ui.sheetFn(); } }, 'Own colour')); if (G.isFounder()) tr.append(h('button', { class: 'chip' + (P.mountTint === 'founder' ? ' gold' : ''), onclick: () => { G.setMountTint('founder'); ui.sheetFn(); } }, 'Founder gold')); for (let n = 1; n <= G.mountTints(); n++) tr.append(h('button', { class: 'chip' + (P.mountTint === n ? ' gold' : ''), onclick: () => { G.setMountTint(n); ui.sheetFn(); } }, `Tint ${n}`)); b.append(h('div', { class: 'sec-h' }, 'Mount tint', h('small', null, G.mountTints() ? `from Renown: ${G.mountTints()}` : 'Founder')), tr); } // #504
         }
+        { /* #598: the role that upgrade arrows judge by, changeable here as well as in Social → Groups */
+          const roles = G.roles(), busy = G.S.queue ? 'leave the queue to change it' : G.S.run ? 'change it after this run' : null;
+          const rr = h('div', { class: 'chips' });
+          for (const r of roles) rr.append(roles.length > 1 ? h('button', { class: 'chip' + (G.role() === r ? ' gold' : ''), disabled: !!busy, onclick: () => { G.setRole(r); ui.sheetFn(); } }, ROLE_NAME[r] || r) : h('span', { class: 'chip gold' }, ROLE_NAME[r] || r));
+          b.append(h('div', { class: 'sec-h' }, 'Role', h('small', null, roles.length > 1 && busy ? busy : 'upgrade arrows judge gear for it')), rr);
+        }
         b.append(h('div', { class: 'sec-h' }, 'Equipment', h('small', null, 'tap to inspect')));
         const gear = h('div', { class: 'gear' });
         for (const slot of D.GEAR_SLOTS) {
@@ -4293,7 +4345,7 @@
           const list = h('div', { class: 'list' }); // full-width rows: an effect's rule is a sentence, not a name
           for (const k of keys) {
             const F = D.EFFECTS[k], e = fx[k], on = D.GEAR_SLOTS.map((sl) => P.equip[sl]).filter((x) => x && x.effect === k), src = on.find((x) => x.name === e.item) || on[0];
-            list.append(h('button', { class: 'row', onclick: () => src && showDialog(itemTip(src), true) },
+            list.append(h('button', { class: 'row', onclick: () => src && showItem(src) },
               h('div', { class: 'ic' }, img(art('icon', F.icon))),
               h('div', { class: 't' }, h('b', { class: 'eff' }, F.name), h('small', { style: { whiteSpace: 'normal' } }, F.desc(e.lvl, e.f)), h('small', { style: { whiteSpace: 'normal' } }, on.length > 1 ? `From ${e.item} · on ${on.length} items, it counts once` : `From ${e.item}`)), h('div', { class: 'r' }, h('span', { class: 'nav-arr' }, '›'))));
           }
@@ -4682,8 +4734,9 @@
       const recipeRow = (r) => {
         const mk = D.ITEMS[r.makes], col = G.skillColor(p.skill, r.sk), can = G.craftable(r.id);
         const mats = Object.entries(r.mats).map(([m, n]) => `${D.ITEMS[m].name} ${G.matCount(m)}/${n}`).join(' · ');
-        list.append(h('button', { class: 'row', onclick: () => showDialog([itemTip(G.copyItem(r.makes)), h('p', { class: 'ai-note' }, `Needs: ${mats}`),
-          col < 0 ? h('p', { class: 'red' }, `Requires ${Pd.name} ${r.sk[0]}.`) : k === 'cooking' ? h('div', { class: 'btn-row' }, h('button', { class: 'btn', disabled: can < 1, onclick: () => { closeDialog(); openCookBar(r.id, 1); } }, 'Cook'), h('button', { class: 'btn alt', disabled: can < 2, onclick: () => { closeDialog(); openCookBar(r.id, can); } }, `Cook all (${can})`), h('button', { class: 'btn alt', onclick: closeDialog }, 'Close')) : h('div', { class: 'btn-row' }, h('button', { class: 'btn', disabled: can < 1, onclick: () => { closeDialog(); G.craft(r.id, 1); closeSheet(); } }, 'Create'), h('button', { class: 'btn alt', disabled: can < 2, onclick: () => { closeDialog(); G.craft(r.id, can); closeSheet(); } }, `Create all (${can})`), h('button', { class: 'btn alt', onclick: closeDialog }, 'Close'))], true) },
+        list.append(h('button', { class: 'row', onclick: () => { const fit = can > 0 && k !== 'cooking' ? G.craftFit(r.id) : can; /* #598: Create all counts bag space */ showDialog([itemTip(G.copyItem(r.makes)), h('p', { class: 'ai-note' }, `Needs: ${mats}`),
+          can > 0 && fit < can ? h('p', { class: 'red' }, fit ? `Bag room: ${fit}/${can}` : 'Bags are full.') : null,
+          col < 0 ? h('p', { class: 'red' }, `Requires ${Pd.name} ${r.sk[0]}.`) : k === 'cooking' ? h('div', { class: 'btn-row' }, h('button', { class: 'btn', disabled: can < 1, onclick: () => { closeDialog(); openCookBar(r.id, 1); } }, 'Cook'), h('button', { class: 'btn alt', disabled: can < 2, onclick: () => { closeDialog(); openCookBar(r.id, can); } }, `Cook all (${can})`), h('button', { class: 'btn alt', onclick: closeDialog }, 'Close')) : h('div', { class: 'btn-row' }, h('button', { class: 'btn', disabled: fit < 1, onclick: () => { if (G.craft(r.id, 1) === true) { closeDialog(); closeSheet(); } } }, 'Create'), h('button', { class: 'btn alt', disabled: fit < 2, onclick: () => { if (G.craft(r.id, fit) === true) { closeDialog(); closeSheet(); } } }, `Create all (${fit})`), h('button', { class: 'btn alt', onclick: closeDialog }, 'Close'))], true); } },
           h('div', { class: 'ic' }, itemIcon(mk)),
           h('div', { class: 't' }, h('b', { style: { color: SKILL_COL[col + 1] } }, mk.name + (r.n > 1 ? ` ×${r.n}` : '')), h('small', { style: { whiteSpace: 'normal' } }, col < 0 ? `Requires skill ${r.sk[0]}` : mats)),
           h('div', { class: 'r' }, can ? String(can) : '')));
@@ -4730,7 +4783,7 @@
             h('div', { class: 'ic' }, img(abIcon(t.icon))),
             h('div', { class: 't' }, h('b', null, t.name),
               h('small', { style: { whiteSpace: 'normal' } }, r ? talentText(t, r) : talentText(t, 1)),
-              r && r < t.ranks ? h('small', { class: 'next', style: { whiteSpace: 'normal' } }, 'Next rank: ' + talentText(t, r + 1)) : null),
+              r && r < t.ranks ? h('small', { class: 'next', style: { whiteSpace: 'normal' } }, 'Next rank: ' + talentText(t, r + 1)) : null, (() => { const n = G.talentAbilityNote(P, t); return n ? h('small', { class: 'lock', style: { whiteSpace: 'normal' } }, n) : null; })()),
             h('div', { class: 'r tnum rank' }, `${r}/${t.ranks}`)));
         }
         b.append(list);
@@ -4756,7 +4809,7 @@
           h('div', { class: 't' }, h('b', null, t.name),
             h('small', { style: { whiteSpace: 'normal' } }, r ? talentText(t, r) : talentText(t, 1)),
             r && r < t.ranks ? h('small', { class: 'next', style: { whiteSpace: 'normal' } }, 'Next rank: ' + talentText(t, r + 1)) : null,
-            note ? h('small', { class: 'lock', style: { whiteSpace: 'normal' } }, note) : null),
+            note ? h('small', { class: 'lock', style: { whiteSpace: 'normal' } }, note) : null, (() => { const n = G.talentAbilityNote(P, t); return n ? h('small', { class: 'lock', style: { whiteSpace: 'normal' } }, n) : null; })()),
           h('div', { class: 'r tnum rank' }, `${r}/${t.ranks}`)));
       }
       b.append(list);
@@ -5281,7 +5334,7 @@
         if (D.TRIAL_FIND && D.TRIAL_FIND[act]) { const fid = G.trialFindFor(act), fit = fid && G.copyItem(fid), F = fit && G.effectOf(fit), odds = `1 in ${Math.round(1 / D.TRIAL_FIND_CHANCE)}`;
           if (!fit) row('Beat it in time', `${odds} chance of ${5 + lvl} more Mentor Marks: you have every Trial find you can use this season`);
           else {
-            rows.push(h('button', { class: 'ai-row', style: { textAlign: 'left', width: '100%' }, onclick: () => showDialog(itemTip(fit), true) }, h('span', null, 'Beat it in time'),
+            rows.push(h('button', { class: 'ai-row', style: { textAlign: 'left', width: '100%' }, onclick: () => showItem(fit) }, h('span', null, 'Beat it in time'),
               h('b', null, `${odds} chance of `, h('span', { class: 'q' + fit.q }, fit.name))));
             if (F) rows.push(h('div', { class: 'eff', style: { fontSize: '13px' } }, `Effect: ${F.name}. ${F.desc(fit.lvl || 1, D.fxGrow(fit.fxScale, fit.effect))}`));
             const own = D.ITEMS[D.TRIAL_FIND[act]], fromAct = Object.keys(D.TRIAL_FIND).find((a) => D.TRIAL_FIND[a] === fid), from = fromAct ? D.ACTIVITIES[fromAct].name : fit.name;
@@ -5384,7 +5437,7 @@
       if (drops && drops.length) {
         b.append(h('div', { class: 'sec-h' }, 'Drops', h('small', null, `${drops.length <= 2 ? 'both drop' : `2 of ${drops.length} drop`} per kill · tap one`)));
         b.append(h('div', { class: 'list' }, ...drops.flatMap((id) => { const it = hard && G.hardBonusLeft(act, keys[0]) ? G.hardCopy(id) : G.copyItem(id), F = G.effectOf(it);
-          return [itemRow(it, 1, '', () => showDialog(itemTip(it), true)), F ? h('div', { class: 'eff', style: { fontSize: '12px', margin: '-2px 4px 6px' } }, `Effect: ${F.name}. ${F.desc(it.lvl || 1, D.fxGrow(it.fxScale, it.effect))}`) : null]; }))); // the Effect line, to plan before a run (#23)
+          return [itemRow(it, 1, '', () => showItem(it)), F ? h('div', { class: 'eff', style: { fontSize: '12px', margin: '-2px 4px 6px' } }, `Effect: ${F.name}. ${F.desc(it.lvl || 1, D.fxGrow(it.fxScale, it.effect))}`) : null]; }))); // the Effect line, to plan before a run (#23)
       }
     });
   }

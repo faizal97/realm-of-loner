@@ -53,7 +53,7 @@
   Object.assign(D.NPCS, {
     mentor_alliance: { name: 'Quartermaster Aldwin', title: 'Mentor Quartermaster' },
     banker_alliance: { name: 'Banker Olwen', title: 'Banker' }, auctioneer_alliance: { name: 'Auctioneer Redmuse', title: 'Auctioneer' },
-    sten: { name: 'Arvid Halvarsson', title: 'Coldridge Guard' },
+    sten: { name: 'Arvid Halvarsson', title: 'Rimefold Guard' },
     balir: { name: 'Toke Ormsson', title: 'Mountaineer' },
     talin: { name: 'Sigrun Eyvindsdottir', title: 'Hunter' },
     adlin: { name: 'Ulf Bjarnason', title: 'Food & Drink' },

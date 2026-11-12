@@ -1,6 +1,6 @@
 // World loot with full bags (#164): each item a creature dropped was thrown away with a generic "Inventory is full."
 // Now green-or-better items go to the bank ("Bags full: <item> sent to your bank"), and grey and white items that
-// don't fit are named in one log line per kill: "Bags full: left behind <item>, <item>".
+// don't fit are named in one log line per kill: "Bags full. Lost: <item>, <item>.".
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert');
@@ -29,7 +29,7 @@ test('full bags: grey and white items are named in one log line', () => {
   const c0 = S.chat.length;
   give([grey, white]);
   assert.ok(!P.bank.some((x) => x.item === grey || x.item === white), 'not banked');
-  const lines = S.chat.slice(c0).filter((m) => /^Bags full: left behind /.test(m.text));
+  const lines = S.chat.slice(c0).filter((m) => /^Bags full\. Lost: /.test(m.text));
   assert.strictEqual(lines.length, 1, 'one line');
   assert.ok(lines[0].text.includes(grey.name) && lines[0].text.includes(white.name), lines[0].text);
 });
