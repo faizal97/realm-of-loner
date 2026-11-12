@@ -5633,7 +5633,7 @@
     const S = G.S, P = S.player;
     if (P.guild < 0) {
       const ap = S.soc && S.soc.applied && S.soc.applied.until > Date.now() ? S.soc.applied : null;
-      b.append(h('p', null, ap ? `You applied to <${B.GUILDS[ap.g]}>. An officer will answer soon.` : 'You are not in a guild. Pick one and apply, or watch General for recruiters.'));
+      b.append(h('p', null, ap ? `You applied to <${B.GUILDS[ap.g]}>. ${ap.waiting ? 'A member answers when one is online.' : 'An officer will answer soon.'}` : 'You are not in a guild. Pick one and apply, or watch General for recruiters.'));
       b.append(h('div', { class: 'sec-h' }, 'Guilds', h('small', null, (D.RACES[P.race] || {}).faction === 'horde' ? 'Krugar' : 'Accord')));
       for (const gi of SOC.myGuilds()) {
         const ok = P.level >= gi.min;
