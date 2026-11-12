@@ -3416,7 +3416,7 @@
         // tooltip and what you wear in that slot
         const inspect = () => showDialog([itemTip(it), cur && D.GEAR_SLOTS.includes(it.slot) && cur !== it ? h('div', { class: 'sec-h' }, 'Currently equipped') : null, cur && D.GEAR_SLOTS.includes(it.slot) && cur !== it ? itemTip(cur) : null, h('button', { class: 'btn alt wide', onclick: closeDialog }, 'Close')], true);
         b.append(h('div', { class: 'bag-acts' }, h('div', { class: 'bag-acts-t bag-brief' }, h('div', null, h('b', { class: 'q' + (it.q || 0) }, it.name + (sel.n > 1 ? ' x' + sel.n : ''), finName(it)), price), h('button', { class: 'btn alt bag-insp', onclick: inspect }, 'Inspect')), itemBrief(it), acts));
-      } else b.append(h('p', { style: { color: 'var(--muted)', margin: 0 } }, 'Tap an item to inspect it. A green arrow means an upgrade.'));
+      } else b.append(h('p', { style: { color: 'var(--muted)', margin: 0 } }, `Tap an item to inspect it. A green arrow means an upgrade for your role: ${ROLE_NAME[G.role()] || G.role()} (Hero → Role).`));
       const vendorNow = D.PLACES[P.place].vendor || D.PLACES[P.place].gearVendor;
       const junk = P.bags.filter((x) => x.item.q === 0 && G.sellable(x.item)).length; // a locked grey stays (#557)
       if (vendorNow && junk) b.append(h('button', { class: 'btn alt wide', onclick: () => { G.sellJunk(); ui.bagSel = null; ui.sheetFn(); } }, `Sell all grey items (${junk})`));
@@ -4272,6 +4272,12 @@
           for (const k of (P.mounts || [])) row.append(h('button', { class: 'chip' + (P.mount === k ? ' gold' : ''), onclick: () => { G.setMount(k); ui.sheetFn(); } }, img(art('icon', 'mount_' + k)), ' ', D.MOUNTS[k].name));
           b.append(h('div', { class: 'sec-h' }, 'Mount', h('small', null, P.mount ? `roads are ${Math.round((1 - G.rideSpeed()) * 100)}% faster` : 'walking')), row);
           if (G.mountTints() || G.isFounder()) { const tr = h('div', { class: 'chips' }, h('button', { class: 'chip' + (!P.mountTint ? ' gold' : ''), onclick: () => { G.setMountTint(0); ui.sheetFn(); } }, 'Own colour')); if (G.isFounder()) tr.append(h('button', { class: 'chip' + (P.mountTint === 'founder' ? ' gold' : ''), onclick: () => { G.setMountTint('founder'); ui.sheetFn(); } }, 'Founder gold')); for (let n = 1; n <= G.mountTints(); n++) tr.append(h('button', { class: 'chip' + (P.mountTint === n ? ' gold' : ''), onclick: () => { G.setMountTint(n); ui.sheetFn(); } }, `Tint ${n}`)); b.append(h('div', { class: 'sec-h' }, 'Mount tint', h('small', null, G.mountTints() ? `from Renown: ${G.mountTints()}` : 'Founder')), tr); } // #504
+        }
+        { /* #598: the role that upgrade arrows judge by, changeable here as well as in Social → Groups */
+          const roles = G.roles(), busy = G.S.queue ? 'leave the queue to change it' : G.S.run ? 'change it after this run' : null;
+          const rr = h('div', { class: 'chips' });
+          for (const r of roles) rr.append(roles.length > 1 ? h('button', { class: 'chip' + (G.role() === r ? ' gold' : ''), disabled: !!busy, onclick: () => { G.setRole(r); ui.sheetFn(); } }, ROLE_NAME[r] || r) : h('span', { class: 'chip gold' }, ROLE_NAME[r] || r));
+          b.append(h('div', { class: 'sec-h' }, 'Role', h('small', null, roles.length > 1 && busy ? busy : 'upgrade arrows judge gear for it')), rr);
         }
         b.append(h('div', { class: 'sec-h' }, 'Equipment', h('small', null, 'tap to inspect')));
         const gear = h('div', { class: 'gear' });
