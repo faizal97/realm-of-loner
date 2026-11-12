@@ -1648,16 +1648,27 @@
   // what fits a class (issue #13): quest rewards and dungeon bonuses read the same table, class only (not role or talents)
   G.CLASS_AFFIX = { warrior: 'of the Bear', rogue: 'of the Monkey', mage: 'of the Owl', priest: 'of the Whale', paladin: 'of the Bear', warlock: 'of the Eagle', hunter: 'of the Monkey', druid: 'of the Owl', shaman: 'of the Tiger', bard: 'of the Whale' };
   G.classAffix = (cls) => D.AFFIXES.find((a) => a.name === G.CLASS_AFFIX[cls]) || null;
-  // a fitted piece: a slot the class can use, its armour type, one of its weapon types and its stat affix
-  G.fittedGear = function (L, q, cls) {
+  // the stat affix for a class played in a role: the class's own when it suits the role, else the two-stat affix the
+  // role weighs most (a healer Paladin or Shaman gets Owl, a Bear-form Druid gets Bear)
+  G.roleAffix = function (cls, role) {
+    const own = G.classAffix(cls);
+    role = role || D.CLASSES[cls].role; if (own && G.suitsRole({ slot: 'chest', stats: own.stats }, cls, role)) return own;
+    const two = D.AFFIXES.filter((a) => /^of the /.test(a.name)), sc = (a) => G.itemScore({ stats: a.stats }, cls, role);
+    return two.slice().sort((a, b) => sc(b) - sc(a))[0] || own;
+  };
+  // a fitted piece: a slot the class can use, its armour type, one of its weapon types and the stat affix for its role
+  // (your current role when it is your class; a class's own role otherwise)
+  G.fittedGear = function (L, q, cls, role) {
     const C = D.CLASSES[cls], slots = D.GEAR_SLOTS.filter((sl) => sl !== 'offhand' && (sl !== 'ranged' || C.ranged || C.instrument));
-    const slot = pick(slots), aff = G.classAffix(cls);
+    role = role || (G.S && G.S.player && G.S.player.cls === cls ? G.role() : null);
+    const slot = pick(slots), aff = G.roleAffix(cls, role);
     const opts = Object.assign(slot === 'weapon' ? { wtype: pick(C.weapons) } : slot === 'ranged' ? (C.instrument ? { wtype: 'instrument' } : {}) : { atype: C.armorType }, aff ? { affix: aff } : {});
     return G.genGear(slot, L, q, opts);
   };
-  // a dungeon's boss blues this class can use; none, then a fitted blue
+  // a dungeon's boss blues this class can use and that suit its role (your current role when it is your class); none, then a fitted blue
   G.fittedBossBlue = function (Dg, L, cls) {
-    const blues = []; for (const pl of Dg.pulls) for (const k of pl.mobs) for (const id of (D.MOBS[k].loot || [])) if (!blues.includes(id) && D.ITEMS[id] && G.canUseItem(D.ITEMS[id], cls)) blues.push(id);
+    const role = (G.S && G.S.player && G.S.player.cls === cls ? G.role() : null) || D.CLASSES[cls].role;
+    const blues = []; for (const pl of Dg.pulls) for (const k of pl.mobs) for (const id of (D.MOBS[k].loot || [])) if (!blues.includes(id) && D.ITEMS[id] && G.canUseItem(D.ITEMS[id], cls) && G.suitsRole(D.ITEMS[id], cls, role)) blues.push(id);
     return blues.length ? G.copyItem(pick(blues)) : G.fittedGear(L, 3, cls);
   };
   // purples before 60 (#141): from level 30, a dungeon's final boss has a 2% chance and a levelling rare 5% of a purple

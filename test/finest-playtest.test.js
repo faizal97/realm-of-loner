@@ -47,3 +47,12 @@ test('a gift sent this season and taken from the mail can still be Found blind',
   const r = row('mage', 'dps', 'hands', 'best');
   assert.strictEqual(r.state, 'found'); assert.strictEqual(r.blind, true);
 });
+
+test('dungeon reward gear fits the role you play, not only the class', () => {
+  for (const [cls, role] of [['paladin', 'healer'], ['shaman', 'healer'], ['druid', 'tank'], ['paladin', 'tank'], ['warrior', 'tank'], ['mage', 'dps']]) {
+    const { P } = character(60, cls, 'human'); P.role = role;
+    for (let i = 0; i < 60; i++) { const it = G.fittedGear(60, 3, cls); if (it.stats && Object.keys(it.stats).length) assert.ok(G.suitsRole(it, cls, role), `${cls} ${role}: ${it.name} ${JSON.stringify(it.stats)}`); }
+    /* the speed chest's boss blue too */
+    for (const dk in D.DUNGEONS) { const Dg = D.DUNGEONS[dk]; if (Dg.raid) continue; const it = G.fittedBossBlue(Dg, 50, cls); assert.ok(G.suitsRole(it, cls, role), `${cls} ${role} ${dk}: ${it.name} ${JSON.stringify(it.stats)}`); }
+  }
+});
