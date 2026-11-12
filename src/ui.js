@@ -1643,10 +1643,11 @@
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: go }, 'Leave'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Stay'))], true);
   }
   // the run panel's tab (#591): a pick holds for the rest or the fight it was made in; each fight, each run and each
-  // character opens on the default (Next pull; in a fight Enemies, or Party for a healer); a finished run on Party
-  function runTabNow(R, C, healer) {
+  // character opens on the default (Next pull; in a fight Enemies, or Party for a healer); a finished run on Party.
+  // A healer is the role you queued as, not a class that has a heal: a Paladin, Druid or Shaman tank or damage dealer opens on Enemies (#597)
+  function runTabNow(R, C) {
     const at = C || R; if (ui.runTabAt !== at) { ui.runTab = null; ui.runTabAt = at; }
-    return R.phase === 'done' ? 'party' : ui.runTab || (C && healer ? 'party' : 'next');
+    return R.phase === 'done' ? 'party' : ui.runTab || (C && G.role() === 'healer' ? 'party' : 'next');
   }
   function runPanel(p) {
     const S = G.S, R = S.run, C = G.fight;
@@ -1678,7 +1679,7 @@
     // tabs (#564): the run's name, progress, the clock and Ready / Pull stay on top; Party, Next pull (Enemies in a fight)
     // and Plan sit under them, so a raid's ten rows never push a decision out of sight
     const done = R.phase === 'done', healer = G.healsAllies(), pull = R.pulls[R.idx];
-    const tab = runTabNow(R, C, healer);
+    const tab = runTabNow(R, C);
     const party = [healer ? h('div', { class: 'sec-h' }, 'Party', h('small', { class: 'heal-to' }, ...healLine())) : null, pf].filter(Boolean); // where heals go (#156)
     let list = null;
     if (C) {
