@@ -17,7 +17,7 @@ const fromUi = (() => {
 
 // reads that a handler calls to decide or show something; no state changes, and covered by the actions that use them
 const NOT_ACTIONS = new Set(['canLock', 'sellable', 'isFounder', 'partySize', 'healsAllies', 'firstDungeonLvl', 'friendElsewhere', 'lnHardOpen', 'lnSnowWhy', 'rehearsalOpen', 'isHealPick', 'canDiscard', 'canUseItem', 'characters', 'copyItem', 'displayName', 'effectOf', 'enemyTown', 'isUpgrade', 'knownProfIds',
-  'legendOn', 'lwHardOpen', 'moneyText', 'hasDur', 'durOf', 'repairAllCost', 'canReforge', 'renown', 'mountTints', 'profs', 'rankName', 'role', 'travelSecs', 'treeSpent', 'usable',
+  'legendOn', 'lwHardOpen', 'moneyText', 'hasDur', 'durOf', 'repairAllCost', 'canReforge', 'renown', 'mountTints', 'profs', 'rankName', 'role', 'travelSecs', 'treeSpent', 'usable', 'account', 'craftFit',
   // these end or replace the character (the test world runs one): load, logout and wipeSave have their own test below
   'load', 'logout', 'wipeSave']);
 
