@@ -29,6 +29,16 @@ test('a player card open after a wipe: the run back goes on; while resting, only
   G.looking = false;
 });
 
+test('a finished run names its kind: raid, dungeon, Wanted target, world boss', () => {
+  const { D } = require('./world');
+  const ak = src.slice(src.indexOf('  const actKind = '), src.indexOf('\n', src.indexOf('  const actKind = ')));
+  const doneText = new Function('D', ak + '\n' + fnSrc('doneText') + '; return doneText;')(D);
+  assert.strictEqual(doneText(D.ACTIVITIES.molten_core), 'Raid complete.');
+  assert.strictEqual(doneText(D.ACTIVITIES.deadmines), 'Dungeon complete.');
+  assert.strictEqual(doneText(D.ACTIVITIES.hogger), 'Wanted target defeated.');
+  assert.strictEqual(doneText(D.ACTIVITIES.wb_ashwing), 'World boss defeated.');
+});
+
 test('the red bar shows the answer that is ready: the shorter cooldown first, else the one ready soonest', () => {
   const D = { ABILITIES: { divine_protection: { cd: 300 }, holy_shield: { cd: 10 } }, INTERRUPTS: {} };
   const E = { answersOf: () => ['divine_protection', 'holy_shield'] }; // the class's order: the 5 min one first
