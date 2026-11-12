@@ -72,6 +72,11 @@ for (const [q, t] of Object.entries(D.QUEST_STORY || {})) { const Q = D.QUESTS[q
 const placeLvl = {};
 for (const [k, p] of Object.entries(D.PLACES)) for (const n of p.npcs || []) placeLvl[n] = Math.min(placeLvl[n] || 99, (p.lvl || [1])[0]);
 for (const [k, N] of Object.entries(D.NPCS)) { add(`npc ${k}`, placeLvl[k] || 1, N.name, { title: true }); add(`npc ${k}`, placeLvl[k] || 1, N.title, { title: true }); }
+// the NPC greetings live in ui.js (greeting()), read from its source (#598: "Welcome to Coldridge" was never checked)
+try {
+  const src = fs.readFileSync(path.join(ROOT, 'src/ui.js'), 'utf8'), a = src.indexOf('function greeting(npc)'), body = a < 0 ? '' : src.slice(a, src.indexOf('\n  }\n', a));
+  const re = /(\w+): '((?:[^'\\]|\\.)*)'/g; let m; while ((m = re.exec(body))) add(`greeting ${m[1]}`, placeLvl[m[1]] || 1, m[2].replace(/\\'/g, "'"), { greeting: true });
+} catch (e) { }
 // a mob's aggro line is said in combat (engine.js), as the chat shows it (with the speaker), heard from the lowest
 // level of a place it lives in, as NPCs are (#271)
 const mobLvl = {};
@@ -153,10 +158,21 @@ if (revealsDrift(SELF ? D.REVEALS.slice(1) : D.REVEALS)) problems.push(`REVEALS 
 const lev = (a, b) => { const m = a.length, n = b.length; const d = Array.from({ length: m + 1 }, (_, i) => [i]); for (let j = 1; j <= n; j++) d[0][j] = j; for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); return d[m][n]; };
 const knownList = [...known].filter((w) => w.length >= 5);
 const allowed = (r, src) => r.allow.some((a) => src === a || src.startsWith(a + ' ') || src.startsWith(a));
+// retired names (#598): a word of a pre-v10 name the rename map replaced ("Coldridge" of Coldridge Valley, now Rimefold
+// Valley). An NPC title made it a known name, so the unknown-name check let "Coldridge Guard" through; this catches it.
+const RETIRED = new Map();
+try {
+  const newWords = new Set(); const RM = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/rename_v10.json'), 'utf8'));
+  for (const v of Object.values(RM)) if (v.new) for (const w of v.new.split(/[\s,:()"!?.-]+/)) newWords.add(stripPoss(w));
+  for (const [old, v] of Object.entries(RM)) if (v.status === 'rename' && v.new && ['place', 'region', 'character', 'dungeon or wanted'].includes(v.kind))
+    for (const w of old.split(/[\s,:()"!?.-]+/).map(stripPoss)) if (w.length >= 5 && /^[A-Z]/.test(w) && !newWords.has(w) && ![w, w.replace(/s$/, ''), w.replace(/es$/, '')].some((x) => dict.has(x.toLowerCase())) && !RETIRED.has(w)) RETIRED.set(w, `${old} → ${v.new}`);
+} catch (e) { }
+if (SELF) add('selftest retired', 1, 'Welcome to Coldridge, lad.');
 for (const t of texts) {
+  if (!t.spoilerOnly) for (const w of t.text.split(/[^A-Za-z']+/)) { const s = stripPoss(w); if (RETIRED.has(s)) problems.push(`RETIRED  ${t.src} uses "${s}", a pre-v10 name (${RETIRED.get(s)})`); }
   // spoilers
   for (const r of REVEALS) if (t.lvl < r.lvl && r.re.test(t.text) && !allowed(r, t.src)) problems.push(`SPOILER  ${t.src} (level ${t.lvl}) names "${t.text.match(r.re)[0]}" before level ${r.lvl}: ${r.what}`);
-  if (t.spoilerOnly) continue; // generated chat: bot names are random, so only the spoiler check applies
+  if (t.spoilerOnly || t.greeting) continue; // generated chat: bot names are random, so only the spoiler check applies; greetings get the spoiler and retired-name checks for now (#598)
   // faction slips: a quest that sends you into the other faction's town
   if (t.quest && t.faction) {
     const re = /\b(?:[Gg]o|[Hh]ead|[Rr]eturn|[Rr]eport|[Tt]ravel|[Tt]ake (?:it|this|them|these)|[Bb]ring (?:it|this|them|these)|[Dd]eliver (?:it|this|them|these))(?: back)? to ([A-Z][\w']*(?: [A-Z][\w']*)*)/g;
@@ -198,7 +214,7 @@ for (const [w, srcs] of unknown) {
 
 if (SELF) {
   const all = problems.concat(warnings).join('\n');
-  const want = [['spoiler', /SPOILER  selftest spoiler /], ['trophy plaque', /SPOILER  selftest trophy /], ['codex source', /SPOILER  selftest codex /], ['chat line', /SPOILER  selftest chat /], ['mob aggro line', /SPOILER  selftest aggro /], ['titles screen', /SPOILER  selftest titles /], ['reveals copy', /REVEALS  src\/data\/reveals\.js differs/], ['hale', /SPOILER  selftest spoiler2/], ['faction', /FACTION  selftest/], ['typo Blackwell', /"Blackwel".*did you mean "Blackwell"/], ['typo Carrow', /"Carow".*did you mean "Carrow"/], ['unknown name', /"Zorbulax"/], ['hooded stranger', /SPOILER  selftest hood/]];
+  const want = [['spoiler', /SPOILER  selftest spoiler /], ['trophy plaque', /SPOILER  selftest trophy /], ['codex source', /SPOILER  selftest codex /], ['chat line', /SPOILER  selftest chat /], ['mob aggro line', /SPOILER  selftest aggro /], ['titles screen', /SPOILER  selftest titles /], ['reveals copy', /REVEALS  src\/data\/reveals\.js differs/], ['hale', /SPOILER  selftest spoiler2/], ['faction', /FACTION  selftest/], ['typo Blackwell', /"Blackwel".*did you mean "Blackwell"/], ['typo Carrow', /"Carow".*did you mean "Carrow"/], ['unknown name', /"Zorbulax"/], ['retired name', /RETIRED  selftest retired uses "Coldridge"/], ['hooded stranger', /SPOILER  selftest hood/]];
   let bad = 0; for (const [k, re] of want) { const ok = re.test(all); if (!ok) bad++; console.log(`${ok ? 'caught' : 'MISSED'}  ${k}`); }
   process.exit(bad ? 1 : 0);
 }
