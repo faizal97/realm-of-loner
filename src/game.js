@@ -4554,6 +4554,8 @@
     const want = role === 'tank' ? ['warrior', 'warrior', 'paladin'].concat(lvl >= 10 ? ['druid'] : []) : role === 'healer' ? ['priest', 'priest', 'paladin', 'druid', 'shaman', 'bard'] : ['mage', 'rogue', 'rogue', 'mage', 'warrior', 'warlock', 'warlock', 'hunter', 'hunter', 'druid', 'shaman', 'priest', 'bard'];
     const myF = (D.RACES[S.player.race] || {}).faction || 'alliance';
     let pool = S.bots.filter((b) => B.isOnline(b, date) && B.factionOf(b) === myF && want.includes(b.cls) && (exact ? b.level === lvl : b.level >= lvl - 1 && b.level <= lvl + 3) && !used.has(b.id));
+    const taken = [S.player.name].concat(used.names || [], S.bots.filter((x) => used.has(x.id)).map((x) => x.name));
+    pool = pool.filter((x) => !taken.some((n) => B.namesClose(n, x.name))); /* never two names one letter apart in a group: with nobody else here, someone from another realm */
     // prefer classes the group does not have yet
     if (guild != null && guild >= 0) { const mates = pool.filter((b) => b.guild === guild); if (mates.length) pool = mates; }
     { const mains = pool.filter((b) => G.mainRole(b) === role); if (mains.length) pool = mains; } // asked for the role they play (#388)
@@ -4561,13 +4563,14 @@
     let b;
     if (pool.length) b = JSON.parse(JSON.stringify(pick(pool)));
     else {
-      const nb = B.makeBot(S.nextBotId++, new Set(S.bots.map((x) => x.name)), { level: exact ? lvl : clamp(lvl + rint(-1, 1), 8, D.LEVEL_CAP) });
+      const names = new Set(S.bots.map((x) => x.name)), nb = B.makeBot(S.nextBotId++, names, { level: exact ? lvl : clamp(lvl + rint(-1, 1), 8, D.LEVEL_CAP) });
+      for (let k = 0; k < 8 && taken.some((n) => B.namesClose(n, nb.name)); k++) nb.name = B.makeName(names);
       const freshCls = usedCls ? want.filter((c) => !usedCls.has(c)) : want;
       nb.cls = pick(freshCls.length ? freshCls : want); nb.realm = pick(OTHER_REALMS);
       nb.race = myF === 'horde' ? pick(['orc', 'troll', 'tauren', 'undead']) : pick(['human', 'dwarf', 'gnome', 'nightelf']);
       b = nb;
     }
-    used.add(b.id); if (usedCls) usedCls.add(b.cls);
+    used.add(b.id); (used.names = used.names || []).push(b.name); if (usedCls) usedCls.add(b.cls);
     b.role = role;
     b.level = clamp(Math.max(b.level, lvl - 1), 1, D.LEVEL_CAP);
     return b;
@@ -5117,7 +5120,7 @@
         sys(`Looking for a new ${m.role === 'tank' ? 'tank' : m.role === 'healer' ? 'healer' : 'damage dealer'}...`);
       }
       for (const m of S.group.members.filter((x) => x.gone && x.replacing && t >= x.replacing)) {
-        const used = new Set(S.group.members.map((x) => x.bot.id));
+        const used = new Set(S.group.members.map((x) => x.bot.id)); used.names = S.group.members.map((x) => x.bot.name);
         const rb = Object.assign(recruit(m.role, G.syncLevel(R.act), used, new Set(S.group.members.filter((x) => !x.gone).map((x) => x.cls).concat([P.cls])), null, !!R.trial), { gearFloor: G.gearFloor(R.act, R.hard) });
         if (R.trial && !R.hard) rb.skill = clamp(TR().botSkill(G.trialRating()) + rnd(-0.08, 0.05), 0.3, 0.95); // drawn from your Trial rating, like the first group
         if (R.hard) rb.skill = clamp(TR().botSkill(G.trialRating()) + 0.05 + rnd(-0.06, 0.05), 0.3, 0.95); // a Hard group refills with skilled players too

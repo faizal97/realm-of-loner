@@ -27,6 +27,16 @@
   // name the syllables can make and checks it against this and tools/rename_v10.json
   const NAME_BLOCK = new Set(['Mordor', 'Moria', 'Gondor', 'Rohan', 'Arwen', 'Elrond', 'Isildur', 'Elendil', 'Sauron', 'Morgoth', 'Gandalf', 'Gimli', 'Thorin', 'Erebor', 'Arnor', 'Lorien']);
   B.NAME_PARTS = { a: SYL_A, b: SYL_B, end: ['a', 'e', 'i'] }; B.NAME_BLOCK = NAME_BLOCK;
+  // two names one letter apart (one changed, added or dropped, any case): Zanrim and Zanric read as the same person, so
+  // the group finder never seats them together
+  B.namesClose = function (a, b) {
+    a = String(a || '').toLowerCase(); b = String(b || '').toLowerCase();
+    if (a === b) return true;
+    if (Math.abs(a.length - b.length) > 1) return false;
+    let i = 0; while (i < a.length && i < b.length && a[i] === b[i]) i++;
+    let j = 0; while (j < a.length - i && j < b.length - i && a[a.length - 1 - j] === b[b.length - 1 - j]) j++;
+    return Math.max(a.length, b.length) - i - j <= 1;
+  };
   B.makeName = function (used) {
     for (let i = 0; i < 50; i++) {
       let n;
