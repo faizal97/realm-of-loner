@@ -2971,6 +2971,7 @@
   // the XP a quest gives you now (#188): once you're more than 2 levels over it, less, drawn muted and saying why
   function questXpLine(Q, money) {
     const over = G.S.player.level - Q.lvl, cut = G.questXpShare(Q.lvl, G.S.player.level) < 1;
+    if (G.S.player.level >= D.LEVEL_CAP) return h('div', { class: 'money xp-line', html: moneyHtml(money) }); /* #598: no experience at the cap, so none promised */
     return h('div', { class: 'money xp-line' }, h('span', { class: cut ? 'xp-cut' : null }, `${G.questXpFor(Q)} experience` + (cut ? ` (reduced: you're ${over} levels over)` : '')), h('span', { html: ' · ' + moneyHtml(money) }));
   }
   function questDetail(qid, npc) {
