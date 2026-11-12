@@ -530,10 +530,10 @@
   G.suitsRole = function (it, cls, role) {
     if (!it) return false;
     const w = (ROLE_W[cls] && ROLE_W[cls][role]) || W[cls]; if (!w) return true;
-    const keys = ['str', 'agi', 'sta', 'int', 'spi'];
-    const top = Math.max.apply(null, keys.map((k) => w[k] || 0).concat([w.sp || 0]));
+    const keys = ['str', 'agi', 'sta', 'int', 'spi'], wk = (k) => (k === 'sta' && role !== 'tank' ? 0 : w[k] || 0); /* Stamina is a tank's stat: every role weighs it, so a Stamina ring otherwise suited every role */
+    const top = Math.max.apply(null, keys.map(wk).concat([w.sp || 0]));
     let num = 0, tot = 0;
-    for (const k of keys) { const v = (it.stats || {})[k] || 0; num += (w[k] || 0) * v; tot += v; }
+    for (const k of keys) { const v = (it.stats || {})[k] || 0; num += wk(k) * v; tot += v; }
     if (it.sp) { num += (w.sp || 0) * it.sp; tot += it.sp; }
     if (!tot) return it.slot === 'weapon' ? (w.dps || 0) >= 1 : it.slot === 'ranged' ? (w.rdps || 0) >= 1 || it.wtype === 'instrument' : true;
     return num / (top * tot) >= 0.4;
@@ -659,7 +659,8 @@
       b.n = STACK;
     }
   }
-  G.addItem = function (it, n) {
+  // how: passed to G.finestGot, 'back' for an item that comes back to you (mail, buyback, bank, a cancelled auction)
+  G.addItem = function (it, n, how) {
     const P = G.S.player;
     n = n || 1;
     if (G.isQuestItem(it.id)) { P.qitems = P.qitems || {}; P.qitems[it.id] = (P.qitems[it.id] || 0) + n; return true; } // kept with the quests, no slot (#144)
@@ -672,7 +673,7 @@
     } else if (G.bagsFull(it)) { toast('Bags are full.'); return false; }
     else P.bags.push({ item: it, n });
     if (G.collectLook) G.collectLook(it); // the wardrobe (v10.3)
-    G.finestGot(it); // Season's Finest: every way an item reaches the bags passes here (#593)
+    G.finestGot(it, how); // Season's Finest: every way an item reaches the bags passes here (#593)
     if (G.isUpgrade(it)) P.bagUpgrade = true; // the Bags button's dot until Bags is opened (v10.9, issue #11)
     if (G.effectOf(it)) { emit('effectItem', { item: it }); if (G.canUseItem(it)) { it.fxNew = 1; P.bagUpgrade = true; } } // the one-time card; a new effect item you can use lights the dot like an upgrade (#23)
     return true;
@@ -781,7 +782,7 @@
     const P = G.S.player, x = (P.buyback || [])[i]; if (!x) return false;
     if (P.money < x.price) { toast('Not enough money.'); return false; }
     if (G.stackable(x.item) ? G.bagRoom(x.item) < x.n : G.bagsFull(x.item)) { toast('Bags are full.'); return false; }
-    if (!G.addItem(x.item, x.n)) return false;
+    if (!G.addItem(x.item, x.n, 'back')) return false;
     P.money -= x.price; P.buyback.splice(i, 1);
     sys(`Bought back ${x.item.name}${x.n > 1 ? ' x' + x.n : ''} for ${G.moneyText(x.price)}.`); emit('change'); return true;
   };
@@ -1656,16 +1657,27 @@
   // what fits a class (issue #13): quest rewards and dungeon bonuses read the same table, class only (not role or talents)
   G.CLASS_AFFIX = { warrior: 'of the Bear', rogue: 'of the Monkey', mage: 'of the Owl', priest: 'of the Whale', paladin: 'of the Bear', warlock: 'of the Eagle', hunter: 'of the Monkey', druid: 'of the Owl', shaman: 'of the Tiger', bard: 'of the Whale' };
   G.classAffix = (cls) => D.AFFIXES.find((a) => a.name === G.CLASS_AFFIX[cls]) || null;
-  // a fitted piece: a slot the class can use, its armour type, one of its weapon types and its stat affix
-  G.fittedGear = function (L, q, cls) {
+  // the stat affix for a class played in a role: the class's own when it suits the role, else the two-stat affix the
+  // role weighs most (a healer Paladin or Shaman gets Owl, a Bear-form Druid gets Bear)
+  G.roleAffix = function (cls, role) {
+    const own = G.classAffix(cls);
+    role = role || D.CLASSES[cls].role; if (own && G.suitsRole({ slot: 'chest', stats: own.stats }, cls, role)) return own;
+    const two = D.AFFIXES.filter((a) => /^of the /.test(a.name)), sc = (a) => G.itemScore({ stats: a.stats }, cls, role);
+    return two.slice().sort((a, b) => sc(b) - sc(a))[0] || own;
+  };
+  // a fitted piece: a slot the class can use, its armour type, one of its weapon types and the stat affix for its role
+  // (your current role when it is your class; a class's own role otherwise)
+  G.fittedGear = function (L, q, cls, role) {
     const C = D.CLASSES[cls], slots = D.GEAR_SLOTS.filter((sl) => sl !== 'offhand' && (sl !== 'ranged' || C.ranged || C.instrument));
-    const slot = pick(slots), aff = G.classAffix(cls);
+    role = role || (G.S && G.S.player && G.S.player.cls === cls ? G.role() : null);
+    const slot = pick(slots), aff = G.roleAffix(cls, role);
     const opts = Object.assign(slot === 'weapon' ? { wtype: pick(C.weapons) } : slot === 'ranged' ? (C.instrument ? { wtype: 'instrument' } : {}) : { atype: C.armorType }, aff ? { affix: aff } : {});
     return G.genGear(slot, L, q, opts);
   };
-  // a dungeon's boss blues this class can use; none, then a fitted blue
+  // a dungeon's boss blues this class can use and that suit its role (your current role when it is your class); none, then a fitted blue
   G.fittedBossBlue = function (Dg, L, cls) {
-    const blues = []; for (const pl of Dg.pulls) for (const k of pl.mobs) for (const id of (D.MOBS[k].loot || [])) if (!blues.includes(id) && D.ITEMS[id] && G.canUseItem(D.ITEMS[id], cls)) blues.push(id);
+    const role = (G.S && G.S.player && G.S.player.cls === cls ? G.role() : null) || D.CLASSES[cls].role;
+    const blues = []; for (const pl of Dg.pulls) for (const k of pl.mobs) for (const id of (D.MOBS[k].loot || [])) if (!blues.includes(id) && D.ITEMS[id] && G.canUseItem(D.ITEMS[id], cls) && G.suitsRole(D.ITEMS[id], cls, role)) blues.push(id);
     return blues.length ? G.copyItem(pick(blues)) : G.fittedGear(L, 3, cls);
   };
   // purples before 60 (#141): from level 30, a dungeon's final boss has a 2% chance and a levelling rare 5% of a purple
@@ -2334,16 +2346,16 @@
   };
   G.bankWithdraw = function (idx) {
     const P = G.S.player, b = (P.bank || [])[idx]; if (!b) return;
-    if (G.isQuestItem(b.item.id)) { G.addItem(b.item, b.n); P.bank.splice(idx, 1); return emit('change'); } // kept with the quests, no slot needed (an old save's)
+    if (G.isQuestItem(b.item.id)) { G.addItem(b.item, b.n, 'back'); P.bank.splice(idx, 1); return emit('change'); } // kept with the quests, no slot needed (an old save's)
     // a full stack (20) is no room, and the bank lets go only of what reached the bags (#163: a stack was deleted)
     if (G.stackable(b.item)) { // as many as fit, in stacks of 20 (#440); the rest stays in the bank
       const fit = P.bags.reduce((a, x) => a + (x.item.id === b.item.id && x.n < STACK ? STACK - x.n : 0), 0) + G.bagFree(b.item) * STACK;
       const k = Math.min(b.n, fit); if (!k) return toast('Bags are full.');
-      G.addItem(k === b.n ? b.item : Object.assign({}, b.item), k); b.n -= k; if (!b.n) P.bank.splice(idx, 1);
+      G.addItem(k === b.n ? b.item : Object.assign({}, b.item), k, 'back'); b.n -= k; if (!b.n) P.bank.splice(idx, 1);
       return emit('change');
     }
     if (G.bagsFull(b.item)) return toast('Bags are full.');
-    if (G.addItem(b.item, b.n)) P.bank.splice(idx, 1);
+    if (G.addItem(b.item, b.n, 'back')) P.bank.splice(idx, 1);
     emit('change');
   };
   // The account bank (#286, docs/plans/2026-11-09-account-bank-design.md): every character on the account shares it. The
@@ -2475,7 +2487,7 @@
   G.ahCancel = function (i) {
     const S = G.S, a = S.ah.mine[i]; if (!a) return;
     if (G.slotsShort([[a.item, a.n || 1]])) return toast('Bags are full.');
-    S.ah.mine.splice(i, 1); G.addItem(a.item, a.n || 1); sys(`You cancelled your auction of ${a.item.name}.${a.deposit ? ` The deposit of ${G.moneyText(a.deposit)} is kept by the house.` : ''}`); emit('change');
+    S.ah.mine.splice(i, 1); G.addItem(a.item, a.n || 1, 'back'); sys(`You cancelled your auction of ${a.item.name}.${a.deposit ? ` The deposit of ${G.moneyText(a.deposit)} is kept by the house.` : ''}`); emit('change');
   };
   const ahTick = G.ahTick = function () {
     const S = G.S; if (!S.ah || !S.ah.mine.length) return;
@@ -2530,7 +2542,8 @@
   };
   G.mailTake = function (id) {
     const m = G.mail().find((x) => x.id === id), why = G.mailTakeWhy(m); if (why) return toast(why);
-    G.addItem(m.item, m.n || 1); m.taken = true; m.read = true;
+    const back = m.kind === 'expired' || G.finestSeason(new Date(m.at || 0)) !== G.finestSeason(); /* an auction come back, or mail from before this season: never a blind find */
+    G.addItem(m.item, m.n || 1, back ? 'back' : undefined); m.taken = true; m.read = true;
     emit('info', `Taken: ${m.item.name}`); emit('change'); emit('mail');
     return null;
   };
@@ -3239,11 +3252,15 @@
       // Season's Finest pieces (a boss's `finest` list, #593) drop only through the season roll, so they never set or move a
       // ceiling above. A family no other level-57+ boss drop has (the level-60 instrument) takes its Best piece as the ceiling
       const seen = new Set(); for (const dk in D.DUNGEONS) for (const x of lootOf(dk)) if ((x.lvl || 0) >= U.minLvl) seen.add(upKey(x));
-      const fin = {}; for (const dk in D.DUNGEONS) for (const p of D.DUNGEONS[dk].pulls) for (const m of p.mobs) for (const id of (D.MOBS[m].finest || [])) {
-        const x = D.ITEMS[id], k = x && upKey(x); if (x && x.q === 4 && !x.effect && !seen.has(k) && (!fin[k] || G.itemPoints(x) > G.itemPoints(fin[k]))) fin[k] = x; }
+      /* a family whose level-57+ drops are all effect items (the non-caster ring) has no ceiling of its own, so its pieces
+         measure against their own power raised by the lead and never read 100%: there a season piece measures against the
+         family's strongest Best piece instead, and nothing else moves */
+      const fin = {}, finOwn = upRef['*finOwn'] = {}; for (const dk in D.DUNGEONS) for (const p of D.DUNGEONS[dk].pulls) for (const m of p.mobs) for (const id of (D.MOBS[m].finest || [])) {
+        const x = D.ITEMS[id], k = x && upKey(x); if (!x || x.q !== 4 || x.effect) continue;
+        if (!seen.has(k)) { if (!fin[k] || G.itemPoints(x) > G.itemPoints(fin[k])) fin[k] = x; } else if (!upRef[k] && G.itemPoints(x) > (finOwn[k] || 0)) finOwn[k] = G.itemPoints(x); }
       for (const k in fin) { upRef[k] = G.itemPoints(fin[k]); if (fin[k].armor) upRef['*armor'][k] = fin[k].armor; if (fin[k].dmg && fin[k].speed) upRef['*dps'][k] = (fin[k].dmg[0] + fin[k].dmg[1]) / 2 / fin[k].speed; }
     }
-    const base = upRef[upKey(it)] || G.itemPoints(it.base || it) * upRef['*lead']; // a family seen nowhere: its own power, raised by the lead
+    const base = upRef[upKey(it)] || (it.finest && upRef['*finOwn'][upKey(it)]) || G.itemPoints(it.base || it) * upRef['*lead']; // a family seen nowhere: its own power, raised by the lead
     if (!(it.effect && D.EFFECTS && D.EFFECTS[it.effect])) return base;
     // an effect item's ceiling pays the same share as its drop did, and it is never below where its drop sits for a plain
     // drop of its quality: a family with no plain item near it (Cinderhide Bracers started at 130%) still has room (#22)
@@ -3333,13 +3350,16 @@
     const cur = rfAt(r.where); if (!cur || cur.id !== r.old.id) { G.save(); return false; } // the item moved: keep what it has
     rfPut(r.where, r.old); sys(`${r.old.name}: back to how it was.`); emit('change'); G.save(); return true;
   };
+  // power as a share of the ceiling. Stats are whole points, so an item within half a point of a fractional ceiling (and
+  // within 1.5%) is at the ceiling: 100%, not 99% or 101%
+  const upPct = (x, ref) => (Math.abs(x - ref) <= 0.5 && Math.abs(x / ref - 1) < 0.015 ? 100 : Math.round((x / ref) * 100));
   const upInfo = function (it) {
     const U = D.UPGRADE, none = { ok: false, room: false, cost: 0 };
     if (!it || it.heirloom || !D.GEAR_SLOTS.includes(it.slot) || !U.cap[it.q] || (it.lvl || 0) < U.minLvl) return none;
     const ref = G.upgradeRef(it), p0 = G.itemPoints(upBase(it)); if (p0 <= 0) return none;
     const capPts = U.cap[it.q] * ref, pts = it.pw || p0, st = U.step * ref, room = capPts - pts > 0.01;
     const next = capPts - (pts + st) < st / 2 ? capPts : pts + st; // less than half a step left: go straight to the ceiling
-    const pc = (x) => Math.round((x / ref) * 100);
+    const pc = (x) => upPct(x, ref);
     return { ok: true, room, pts, next, pct: pc(pts), nextPct: pc(next), capPct: Math.round(U.cap[it.q] * 100), cost: room ? Math.max(1, Math.round(((next - pts) / ref) * 100 * U.perPct)) : 0 };
   };
   // a step whose numbers all round to what the item has is merged with the next, and one that never changes them is
@@ -3353,7 +3373,7 @@
       if (next >= capPts - 1e-9) return Object.assign(inf, { room: false, next: inf.pts, nextPct: inf.pct, cost: 0 });
       next = capPts - (next + st) < st / 2 ? capPts : next + st;
     }
-    return Object.assign(inf, { next, nextPct: Math.round((next / ref) * 100), cost: Math.max(1, Math.round(((next - inf.pts) / ref) * 100 * U.perPct)) });
+    return Object.assign(inf, { next, nextPct: upPct(next, ref), cost: Math.max(1, Math.round(((next - inf.pts) / ref) * 100 * U.perPct)) });
   };
   // the item at a given power (stat points); its own power or less gives back the item as it dropped
   G.FX_SCALE_CAP = 1.5;
@@ -5008,6 +5028,7 @@
       r.choices[m.name] = { c, v: c === 'pass' ? 0 : rint(1, 100), at: now() + rnd(1500, 7000), m };
     }
     R.rolls.push(r);
+    G.finestSee(it); /* Season's Finest: a piece on a roll card is seen, whoever wins it */
     loot(`Loot: ${B.link(it.name, it.q)}. Choose Need, Greed or Pass.`);
     emit('roll', r);
   }
@@ -5257,6 +5278,7 @@
     emit('lootGain', { items: 1 });
   }
   G._runBonuses = runBonuses; // for tests: a run's end-of-run rewards on their own
+  G._addRoll = addRoll; // for tests: a drop put up for rolls
   const fmtClock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
   G.fmtClock = fmtClock;
   G.runReady = function () { const R = G.S.run; if (R && R.phase === 'rest') { if (G.role() === 'tank') G.runPull(); else R.restUntil = Math.min(R.restUntil, now()); } };
@@ -5727,13 +5749,14 @@
     st.seen[itemId] = 1; G.save(); return true;
   };
   // the character got the item: found, and Found blind on every row of its class when no Hint or Reveal touched the
-  // piece. how: 'scan' (the load scan: held from before, quiet) and 'moved' (out of the Account bank) count as found but
+  // piece. how: 'scan' (the load scan: held from before, quiet), 'moved' (out of the Account bank) and 'back' (mail, buyback,
+  // the character's bank, a cancelled auction: it was held before) count as found but
   // never blind; only a piece obtained during the season (loot, quest, purchase, craft, trade) can be (#593)
   G.finestGot = function (it, how) {
     const id = it && (typeof it === 'object' ? it.id : it), s = G.S && id && G.finestSeason(); if (!s) return false;
     const rows = finRowsOf(s, G.S.player.cls, id); if (!rows.length) return false;
     const st = finState(s); if (st.found[id]) return false;
-    st.found[id] = 1;
+    st.found[id] = 1; st.seen[id] = 1; /* found is seen too */
     const quiet = how === true || how === 'scan';
     if (!how && !finSpoiled(st, rows)) for (const r of rows) st.blind[finKey(r.role, r.slot, r.tier)] = 1;
     finRecord(s, st, quiet);
