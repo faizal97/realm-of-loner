@@ -1204,17 +1204,20 @@
       const W = G.S.world[P.place]; const n = W ? W.nodes.n : 4;
       b.append(h('button', { class: 'chip gold', 'data-collect': '', disabled: !n, onclick: () => G.gather() }, 'Collect ' + place.gather.label, h('small', null, n ? n + ' nearby' : 'More soon')));
     }
-    const nodes = G.placeNodes(true);
-    if (nodes.length) {
-      const row = h('div', { class: 'chips' });
-      for (const nd of nodes) { const p = G.profs()[nd.N.prof];
-        if (!p) { row.append(h('button', { class: 'chip', onclick: () => G.gatherNode(nd.i) }, img(art('icon', nd.N.item)), ' ', `${D.PROFESSIONS[nd.N.prof].verb} ${nd.N.name}`, h('small', { style: { color: 'var(--muted)' } }, `Needs ${D.PROFESSIONS[nd.N.prof].name}`))); continue; } // tap: why, and where to learn it (#76)
-        const col = G.skillColor(p.skill, G.nodeSk(nd.N));
-        row.append(h('button', { class: 'chip gold', disabled: col < 0, onclick: () => G.gatherNode(nd.i) }, img(art('icon', nd.N.item)), ' ', `${D.PROFESSIONS[nd.N.prof].verb} ${nd.N.name}`, h('small', { style: { color: SKILL_COL[col + 1] } }, col < 0 ? `needs ${nd.N.skill}` : `skill ${p.skill}`))); }
-      b.append(row);
-    }
-    fishChip(b);
-    if (!mobs.length) { b.append(h('div', { class: 'people' }, place.safe ? 'No creatures in town. See People for quests and vendors.' : 'Nothing to fight here right now.')); return; }
+    // gathering and fishing come after the fights (play-test at 375 px: two rows of chips pushed the fights below the fold)
+    const gatherRows = () => {
+      const nodes = G.placeNodes(true);
+      if (nodes.length) {
+        const row = h('div', { class: 'chips' });
+        for (const nd of nodes) { const p = G.profs()[nd.N.prof];
+          if (!p) { row.append(h('button', { class: 'chip', onclick: () => G.gatherNode(nd.i) }, img(art('icon', nd.N.item)), ' ', `${D.PROFESSIONS[nd.N.prof].verb} ${nd.N.name}`, h('small', { style: { color: 'var(--muted)' } }, `Needs ${D.PROFESSIONS[nd.N.prof].name}`))); continue; } // tap: why, and where to learn it (#76)
+          const col = G.skillColor(p.skill, G.nodeSk(nd.N));
+          row.append(h('button', { class: 'chip gold', disabled: col < 0, onclick: () => G.gatherNode(nd.i) }, img(art('icon', nd.N.item)), ' ', `${D.PROFESSIONS[nd.N.prof].verb} ${nd.N.name}`, h('small', { style: { color: SKILL_COL[col + 1] } }, col < 0 ? `needs ${nd.N.skill}` : `skill ${p.skill}`))); }
+        b.append(row);
+      }
+      fishChip(b);
+    };
+    if (!mobs.length) { gatherRows(); b.append(h('div', { class: 'people' }, place.safe ? 'No creatures in town. See People for quests and vendors.' : 'Nothing to fight here right now.')); return; }
     const needKeys = questMobKeys();
     const grid = h('div', { class: 'mgrid', id: 'mob-list' });
     const foe = G.intruderHere();
@@ -1235,6 +1238,7 @@
       grid.append(h('div', { class: 'mcard-pack' }, card, h('button', { class: 'pack-btn', 'data-pack': m.id, 'aria-label': `Pull the group: ${pack.length} ${M.name}`, onclick: () => G.engage(m.id, null, true) }, h('small', null, 'Pull'), h('b', { class: 'tnum' }, pack.length))));
     }
     b.append(grid);
+    gatherRows();
     // a rare hunt that isn't up here (#43): what it is and when it was last seen, never when it's next due
     for (const r of (G.huntRares ? G.huntRares() : [])) if (r.place === G.S.player.place && !G.huntUp(r.key, Date.now())) {
       const M = D.MOBS[r.key], ago = Date.now() - G.huntLastSeen(r.key, Date.now()), agoT = ago < 3600e3 ? `${Math.max(1, Math.round(ago / 60000))} min ago` : `${Math.round(ago / 3600e3)} h ago`;
