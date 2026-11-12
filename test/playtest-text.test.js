@@ -46,3 +46,14 @@ test('a title from one faction\'s dungeon belongs to that faction: the Lorebound
   assert.ok(!G.titlesForMe().some((t) => t.id === 'sunken_archive'));
   assert.ok(G.titlesForMe().some((t) => t.id === 'shalzua'));
 });
+
+test('a Go to an NPC finds the nearest place they stand, in your own faction\'s towns: the debt clerk and the class tutor', () => {
+  for (const race of ['human', 'orc']) {
+    const { P } = character(60, 'warrior', race); P.place = race === 'orc' ? 'hammerfall' : 'refuge_pointe'; /* a town of your own, not its capital */
+    const c = G.nearestNpc('note_clerk');
+    assert.ok(c && D.PLACES[c.place].npcs.includes('note_clerk') && !G.enemyTown(c.place), race + ': ' + JSON.stringify(c));
+    const t = G.nearestNpc(D.QUESTS[D.ABILITIES[D.PREPATCH_ABILITIES.warrior].learn].giver);
+    assert.strictEqual(t && t.place, 'rumhook_bay');
+    P.place = c.place; assert.strictEqual(G.nearestNpc('note_clerk').secs, 0);
+  }
+});

@@ -76,7 +76,7 @@
       ],
       steps: [
         { text: 'Beat a debt collector for a torn debt note', check: ['debt_notes', 1], go: 'map' },
-        { text: 'Trade 40 torn debt notes for the title the Debt-Breaker', check: ['debt_breaker'] },
+        { text: 'Trade 40 torn debt notes for the title the Debt-Breaker', check: ['debt_breaker'], go: 'debtclerk' },
         { text: 'At 60: finish The Drowned Crown or clear a raid to open the campaign', check: ['prepatch_open'], go: 'lfg:raid' },
         { text: "Learn your class's new ability from Tutor Ione Calder in Rumhook Bay", check: ['prepatch_ability'], go: 'prepatch:tutor' },
         { text: 'Finish the campaign: Coronation Day', check: ['prepatch_campaign'], go: 'prepatch:campaign' },

@@ -1374,6 +1374,13 @@
     for (const p in dist) if (G.isHub(p) && !G.enemyTown(p) && G.bounties(p).length && (!best || dist[p] < best.secs)) best = { place: p, secs: Math.round(dist[p]) };
     return best;
   };
+  // the nearest place (by road time) where an NPC stands, never an enemy town: { place, secs } or null
+  G.nearestNpc = function (npc, from) {
+    from = from || G.S.player.place;
+    const dist = G.travelTimes(from); let best = null;
+    for (const p in dist) if ((D.PLACES[p].npcs || []).includes(npc) && !G.enemyTown(p) && (!best || dist[p] < best.secs)) best = { place: p, secs: Math.round(dist[p]) };
+    return best;
+  };
   function routeSearch(from, to, throughFoes) {
     const dist = { [from]: 0 }, prev = {}, done = new Set();
     const open = [from];

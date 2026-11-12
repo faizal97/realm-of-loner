@@ -2916,13 +2916,13 @@
     if (!bl) return `There's no way to ${pl.name} from here.`;
     return `The road to ${pl.name} runs through ${D.PLACES[bl.town].name}, an enemy town.` + (bl.act ? ' Join it through the Group Finder.' : '');
   }
-  function routeDialog(to) {
+  function routeDialog(to, npc) { // npc: whom you go to see there, named on the route
     const P = G.S.player, pl = D.PLACES[to];
     if (P.travel) return toast('You are already on the road.');
     const r = G.route(P.place, to);
     if (!r) return showDialog([h('h3', null, pl.name), h('p', null, G.enemyTown(to) ? `${pl.name} is an enemy town. The guards would kill you on sight.` : noRouteWhy(to)), h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', onclick: closeDialog }, 'OK'))], true);
     const steps = r.path.slice(1).map((p, i) => { const a = r.path[i]; const via = (D.PLACES[a].via || {})[p]; return h('div', { class: 'obj' }, `${i + 1}. ${D.PLACES[p].name}`, h('small', { style: { color: 'var(--muted)' } }, ` · ${D.PLACES[p].zone}${via ? ' · ' + via : ''} · ${G.travelSecs(a, p)} s`)); });
-    showDialog([h('h3', null, 'Route to ' + pl.name), h('p', null, `${pl.zone} · levels ${pl.lvl[0]}–${pl.lvl[1]} · ${r.path.length - 1} stop${r.path.length > 2 ? 's' : ''}, about ${r.secs} s`), ...steps,
+    showDialog([h('h3', null, 'Route to ' + pl.name), npc && D.NPCS[npc] ? h('p', null, `Find: ${D.NPCS[npc].name}`) : null, h('p', null, `${pl.zone} · levels ${pl.lvl[0]}–${pl.lvl[1]} · ${r.path.length - 1} stop${r.path.length > 2 ? 's' : ''}, about ${r.secs} s`), ...steps,
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { closeDialog(); closeSheet(); G.travelRoute(to); } }, 'Go'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Cancel'))], true);
   }
   // the world: every zone, where it sits, and how the zones connect
@@ -3824,6 +3824,7 @@
     finest: () => openFinest(), // #593
     'prepatch:campaign': () => weekGoQuest((Q) => Q.arc === 'The Notes Come Due' && !Q.cls), // #598: the campaign's next step, not an empty log
     'prepatch:tutor': () => weekGoQuest((Q) => Q.prepatch && Q.cls === G.S.player.cls), // #598: the class quest that teaches the new ability
+    debtclerk: () => goToNpc('note_clerk'), /* the nearest debt clerk, for the notes trade */
   };
   // a This week step that leads to quests: the Quest Log when one of them is taken, else a route to the giver of the
   // next one; before they open, why not
@@ -3832,10 +3833,16 @@
     if (ids.some((q) => P.quests[q])) return openQuests();
     const next = ids.find((q) => G.questState(q) === 'available');
     if (!next) return toast(G.prepatchLocked() || 'Nothing to take here right now.');
-    const npc = D.QUESTS[next].giver, at = Object.keys(D.PLACES).find((p) => D.PLACES[p].npcs.includes(npc));
-    if (!at) return openQuests();
-    if (P.place === at) { closeSheet(); return toast(`${D.NPCS[npc].name} is here.`); }
-    routeDialog(at);
+    const npc = D.QUESTS[next].giver;
+    if (!G.nearestNpc(npc)) return openQuests();
+    goToNpc(npc);
+  }
+  // to an NPC: here, a toast; else the route to the nearest place they stand, with their name on it
+  function goToNpc(npc) {
+    const n = G.nearestNpc(npc), name = D.NPCS[npc].name;
+    if (!n) return toast(`No road to ${name}.`);
+    if (n.place === G.S.player.place) { closeSheet(); return toast(`${name} is here.`); }
+    routeDialog(n.place, npc);
   }
   const WEEK_KEY = 'azsolo.weekSeen'; // this device: the banner ids already shown (the button's dot, the once-a-week opening)
   const weekSeen = () => { try { return new Set(JSON.parse(localStorage.getItem(WEEK_KEY) || '[]')); } catch (e) { return new Set(); } };
@@ -4378,7 +4385,8 @@
         for (const id of D.CLASSES[P.cls].abilities) {
           const ab = D.ABILITIES[id]; const t = abilityText(id);
           if (ab.lvl > P.level) { later.push(ab); continue; }
-          if (!G.learned(id)) { const lq = D.QUESTS[ab.learn], gv = lq && D.NPCS[lq.giver]; abl.append(h('div', { class: 'row dim' }, h('div', { class: 'ic' }, img(abIcon(id))), h('div', { class: 't' }, h('b', null, ab.name), h('small', { style: { whiteSpace: 'normal' } }, gv ? `Learn from ${gv.name}` : 'Learn from a quest')), h('div', { class: 'r' }, 'Not learned'))); continue; }
+          if (!G.learned(id)) { const lq = D.QUESTS[ab.learn], gv = lq && D.NPCS[lq.giver], at = gv && G.nearestNpc(lq.giver); // a tap goes to the teacher (the route, named)
+            abl.append(h(at ? 'button' : 'div', { class: 'row dim' + (at ? ' nav' : ''), onclick: at ? () => goToNpc(lq.giver) : null }, h('div', { class: 'ic' }, img(abIcon(id))), h('div', { class: 't' }, h('b', null, ab.name), h('small', { style: { whiteSpace: 'normal' } }, gv ? `Learn from ${gv.name}${at ? ' · ' + D.PLACES[at.place].name : ''}` : 'Learn from a quest')), h('div', { class: 'r' }, at ? h('span', { class: 'chip gold' }, 'Go') : 'Not learned'))); continue; }
           abl.append(h('div', { class: 'row' }, h('div', { class: 'ic' }, img(abIcon(id))), h('div', { class: 't' }, h('b', null, ab.name), h('small', { style: { whiteSpace: 'normal' } }, t.d)), h('div', { class: 'r' }, t.cost)));
         }
         b.append(abl);
