@@ -4178,7 +4178,7 @@
         h('span', { class: 'fin-plate-crest' }, finCrest('best')),
         h('div', { class: 'fin-plate-t' }, h('small', null, `${ROLE_NAME[role] || role} title`), h('b', null, tName), h('small', null, F.titleEarned ? 'Earned' : F.lost ? 'Missed on this character' : `Found blind: ${F.blind.best}/${tb} Best`)),
         h('button', { class: 'sec-i', 'aria-label': 'About the title', onclick: () => toast(F.lost && !F.titleEarned /* #593: say why it can't be earned here */
-          ? `Missed: a Best piece of ${D.CLASSES[P.cls].name} ${rn} was hinted, revealed or held from before the season. Another character or class can still earn ${tName}.`
+          ? `Missed: a Best piece of ${D.CLASSES[P.cls].name} ${rn} was hinted, revealed, held from before the season or taken from the Account bank. Another character or class can still earn ${tName}.`
           : `Found blind: got this season before any Hint or Reveal on that piece, on any role. Every Best piece of a ${rn} role found blind, on any class, earns ${tName}. Pieces from before the season or the Account bank are Found, not blind. Cosmetic.`, true) }, 'ⓘ')));
       /* the class tally (#593): every class role finished blind, on any character, a crest in its class colour */
       b.append(h('div', { class: 'ai-box fin-tally' }, h('div', { class: 'ai-row' }, h('span', null, 'Pathfinder', h('button', { class: 'sec-i', 'aria-label': 'About Pathfinder', onclick: () => toast('Class roles with every Best piece found blind, on any of your characters.', true) }, 'ⓘ')), h('b', { class: 'tnum' }, `${T.done.length}/${T.of}`)),
