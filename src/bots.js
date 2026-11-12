@@ -27,6 +27,16 @@
   // name the syllables can make and checks it against this and tools/rename_v10.json
   const NAME_BLOCK = new Set(['Mordor', 'Moria', 'Gondor', 'Rohan', 'Arwen', 'Elrond', 'Isildur', 'Elendil', 'Sauron', 'Morgoth', 'Gandalf', 'Gimli', 'Thorin', 'Erebor', 'Arnor', 'Lorien']);
   B.NAME_PARTS = { a: SYL_A, b: SYL_B, end: ['a', 'e', 'i'] }; B.NAME_BLOCK = NAME_BLOCK;
+  // two names one letter apart (one changed, added or dropped, any case): Zanrim and Zanric read as the same person, so
+  // the group finder never seats them together
+  B.namesClose = function (a, b) {
+    a = String(a || '').toLowerCase(); b = String(b || '').toLowerCase();
+    if (a === b) return true;
+    if (Math.abs(a.length - b.length) > 1) return false;
+    let i = 0; while (i < a.length && i < b.length && a[i] === b[i]) i++;
+    let j = 0; while (j < a.length - i && j < b.length - i && a[a.length - 1 - j] === b[b.length - 1 - j]) j++;
+    return Math.max(a.length, b.length) - i - j <= 1;
+  };
   B.makeName = function (used) {
     for (let i = 0; i < 50; i++) {
       let n;
@@ -537,13 +547,15 @@
     () => 'the group finder is so good honestly',
     (c) => `wiped on ${c.boss} 3 times, still got it`,
   ];
+  // a line about fighting is said only where there is something to fight (a town with no creatures has none)
+  const fight = (t) => (c) => (c.mobName ? t : null);
   const SAY_NEAR = [
-    () => 'hey', () => 'o/', () => 'argh, respawn is so slow', () => 'u can have this one', () => 'lol', () => 'got it', () => 'brb', () => 'ok back',
-    () => 'my bags are full already', (c) => c.mobName && `watch out, ${c.mobName} packs here`, (c) => c.mobName && `${c.mobName} again...`, () => 'nice pull', () => 'oops sorry, thought that was mine',
-    () => 'these spawns are so fast lol', () => 'gl with the quest', () => 'phew, almost died there', () => 'just one more and im done', () => 'where did all the mobs go',
-    (c) => `this ${c.zone} music tho`, () => 'ow', () => 'rip', () => 'nice one', () => 'close call lol', () => 'ty!', () => 'np', () => 'ding!', () => 'gz',
-    (c) => c.mobName && `${c.mobName}s everywhere`, () => 'finally, the last one', () => 'omg that crit', () => 'who pulled that lol', () => 'sorry, tagged it by accident',
-    (c) => `anyone else doing ${c.zone} quests? so many`, () => 'oom, sitting', () => 'love this spot', () => 'run!!', (c) => `heading back to ${c.town} after this`,
+    () => 'hey', () => 'o/', fight('argh, respawn is so slow'), fight('u can have this one'), () => 'lol', () => 'got it', () => 'brb', () => 'ok back',
+    () => 'my bags are full already', (c) => c.mobName && `watch out, ${c.mobName} packs here`, (c) => c.mobName && `${c.mobName} again...`, fight('nice pull'), fight('oops sorry, thought that was mine'),
+    fight('these spawns are so fast lol'), () => 'gl with the quest', fight('phew, almost died there'), fight('just one more and im done'), fight('where did all the mobs go'),
+    (c) => `this ${c.zone} music tho`, fight('ow'), fight('rip'), () => 'nice one', fight('close call lol'), () => 'ty!', () => 'np', () => 'ding!', () => 'gz',
+    (c) => c.mobName && `${c.mobName}s everywhere`, fight('finally, the last one'), fight('omg that crit'), fight('who pulled that lol'), fight('sorry, tagged it by accident'),
+    (c) => `anyone else doing ${c.zone} quests? so many`, fight('oom, sitting'), () => 'love this spot', fight('run!!'), (c) => `heading back to ${c.town} after this`,
   ];
   // #580: a raiding, Trials or PvP guild talks about what it does too (the guild channel was the most repeated after #565)
   const GUILD_STYLE_LINES = {
@@ -776,6 +788,7 @@
   };
   B.lineFits = function (S, text, from, ch) {
     const G1 = root.G;
+    if (ch === 'lfg' && from && from.id != null && inParty(S, from.id)) return false; // someone in your group isn't looking for one
     if (G1 && G1.nameable && S.player && !G1.nameable(String(text), S.player.level)) return false;
     const b = from && (from.level != null ? from : S.bots && S.bots.find((x) => x.id === from.id));
     if (b && b.level != null && B.contentAbove(text, b.level)) return false;

@@ -1759,7 +1759,7 @@
   G.bookDrop = bookDrop;
   function onKill(mobKey) {
     const P = G.S.player;
-    P.kills++; P.lastKill = { mob: mobKey, place: P.place }; // what a passer-by may have seen you fight (#365)
+    P.kills++; if (!G.S.run) P.lastKill = { mob: mobKey, place: P.place }; // what a passer-by may have seen you fight (#365); not a kill inside a dungeon run, which nobody in town saw
     emit('kill', { mob: mobKey });
     bookDrop(mobKey);
     for (const qid in P.quests) D.QUESTS[qid].objs.forEach((o, i) => {
@@ -2392,7 +2392,7 @@
   G.ahTrade = (it) => !it.heirloom && !it.noSell && !it.lock && (D.GEAR_SLOTS.includes(it.slot) ? it.q >= 1 : ['mat', 'potion', 'elixir', 'stone', 'kit', 'bag', 'recipe'].includes(it.slot));
   // #596: who sells or buys an item on the auction house: someone who could use it (at or a little above its level),
   // never a level 1 with level 60 gear; failing that anyone at or above it, then anyone
-  const ahBot = (pool, it) => { const need = it.lvl || 1, near = pool.filter((b) => b.level >= need && b.level <= need + 12); return pick(near.length ? near : pool.filter((b) => b.level >= need).length ? pool.filter((b) => b.level >= need) : pool.length ? pool : G.S.bots); };
+  const ahBot = (pool, it) => { const need = (D.BAG_TIER && D.BAG_TIER[it.id]) || it.lvl || (root.SOC ? root.SOC.itemLvl(it) : 1) /* a bag: its tier (its own level is 1); a material has none: the level of the crafts that use it */, near = pool.filter((b) => b.level >= need && b.level <= need + 12); return pick(near.length ? near : pool.filter((b) => b.level >= need).length ? pool.filter((b) => b.level >= need) : pool.length ? pool : G.S.bots); };
   // Listings from other players, refreshed now and then, around your level.
   function ahRefresh(force) {
     const S = G.S, P = S.player, t = now();
@@ -4555,6 +4555,8 @@
     const want = role === 'tank' ? ['warrior', 'warrior', 'paladin'].concat(lvl >= 10 ? ['druid'] : []) : role === 'healer' ? ['priest', 'priest', 'paladin', 'druid', 'shaman', 'bard'] : ['mage', 'rogue', 'rogue', 'mage', 'warrior', 'warlock', 'warlock', 'hunter', 'hunter', 'druid', 'shaman', 'priest', 'bard'];
     const myF = (D.RACES[S.player.race] || {}).faction || 'alliance';
     let pool = S.bots.filter((b) => B.isOnline(b, date) && B.factionOf(b) === myF && want.includes(b.cls) && (exact ? b.level === lvl : b.level >= lvl - 1 && b.level <= lvl + 3) && !used.has(b.id));
+    const taken = [S.player.name].concat(used.names || [], S.bots.filter((x) => used.has(x.id)).map((x) => x.name));
+    pool = pool.filter((x) => !taken.some((n) => B.namesClose(n, x.name))); /* never two names one letter apart in a group: with nobody else here, someone from another realm */
     // prefer classes the group does not have yet
     if (guild != null && guild >= 0) { const mates = pool.filter((b) => b.guild === guild); if (mates.length) pool = mates; }
     { const mains = pool.filter((b) => G.mainRole(b) === role); if (mains.length) pool = mains; } // asked for the role they play (#388)
@@ -4562,13 +4564,14 @@
     let b;
     if (pool.length) b = JSON.parse(JSON.stringify(pick(pool)));
     else {
-      const nb = B.makeBot(S.nextBotId++, new Set(S.bots.map((x) => x.name)), { level: exact ? lvl : clamp(lvl + rint(-1, 1), 8, D.LEVEL_CAP) });
+      const names = new Set(S.bots.map((x) => x.name)), nb = B.makeBot(S.nextBotId++, names, { level: exact ? lvl : clamp(lvl + rint(-1, 1), 8, D.LEVEL_CAP) });
+      for (let k = 0; k < 8 && taken.some((n) => B.namesClose(n, nb.name)); k++) nb.name = B.makeName(names);
       const freshCls = usedCls ? want.filter((c) => !usedCls.has(c)) : want;
       nb.cls = pick(freshCls.length ? freshCls : want); nb.realm = pick(OTHER_REALMS);
       nb.race = myF === 'horde' ? pick(['orc', 'troll', 'tauren', 'undead']) : pick(['human', 'dwarf', 'gnome', 'nightelf']);
       b = nb;
     }
-    used.add(b.id); if (usedCls) usedCls.add(b.cls);
+    used.add(b.id); (used.names = used.names || []).push(b.name); if (usedCls) usedCls.add(b.cls);
     b.role = role;
     b.level = clamp(Math.max(b.level, lvl - 1), 1, D.LEVEL_CAP);
     return b;
@@ -4593,11 +4596,13 @@
   // the quality its skill earns (Rare above 0.72 skill 60% of the time, else Uncommon). Before, a bot had 5 pieces, often
   // Common with no stats, and never spell power, so a level-60 bot tank had about half a geared player's health
   const BOT_CASTER = { mage: 1, warlock: 1, priest: 1, druid: 1, shaman: 1, bard: 1 }; // their damage is spells (shaman and bard too)
-  const BOT_EAGLE = { mage: 1, shaman: 1 }; // a damage caster whose class stats miss stamina (Owl) or intellect (Tiger)
+  // a damage caster whose class stats have no stamina (mage and druid: Owl; shaman: Tiger) wears Eagle, read from the class
+  // table: a druid dps bot wore Owl with no stamina, about 40% of a shaman's health at the same level
   function botAffix(cls, role) {
     if (role === 'tank') return D.AFFIXES.find((a) => a.name === (cls === 'druid' ? 'of the Monkey' : 'of the Bear'));
     if (role === 'healer') return D.AFFIXES.find((a) => a.name === 'of the Eagle'); // stamina and intellect: a healer stands in the splash too
-    return BOT_EAGLE[cls] ? D.AFFIXES.find((a) => a.name === 'of the Eagle') : G.classAffix(cls) || undefined;
+    const own = G.classAffix(cls);
+    return BOT_CASTER[cls] && !(own && own.stats.sta) ? D.AFFIXES.find((a) => a.name === 'of the Eagle') : own || undefined;
   }
   function rollBotChar(b) {
     const C = D.CLASSES[b.cls], role = b.role || C.role || 'dps';
@@ -5116,7 +5121,7 @@
         sys(`Looking for a new ${m.role === 'tank' ? 'tank' : m.role === 'healer' ? 'healer' : 'damage dealer'}...`);
       }
       for (const m of S.group.members.filter((x) => x.gone && x.replacing && t >= x.replacing)) {
-        const used = new Set(S.group.members.map((x) => x.bot.id));
+        const used = new Set(S.group.members.map((x) => x.bot.id)); used.names = S.group.members.map((x) => x.bot.name);
         const rb = Object.assign(recruit(m.role, G.syncLevel(R.act), used, new Set(S.group.members.filter((x) => !x.gone).map((x) => x.cls).concat([P.cls])), null, !!R.trial), { gearFloor: G.gearFloor(R.act, R.hard) });
         if (R.trial && !R.hard) rb.skill = clamp(TR().botSkill(G.trialRating()) + rnd(-0.08, 0.05), 0.3, 0.95); // drawn from your Trial rating, like the first group
         if (R.hard) rb.skill = clamp(TR().botSkill(G.trialRating()) + 0.05 + rnd(-0.06, 0.05), 0.3, 0.95); // a Hard group refills with skilled players too
