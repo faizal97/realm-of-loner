@@ -537,13 +537,15 @@
     () => 'the group finder is so good honestly',
     (c) => `wiped on ${c.boss} 3 times, still got it`,
   ];
+  // a line about fighting is said only where there is something to fight (a town with no creatures has none)
+  const fight = (t) => (c) => (c.mobName ? t : null);
   const SAY_NEAR = [
-    () => 'hey', () => 'o/', () => 'argh, respawn is so slow', () => 'u can have this one', () => 'lol', () => 'got it', () => 'brb', () => 'ok back',
-    () => 'my bags are full already', (c) => c.mobName && `watch out, ${c.mobName} packs here`, (c) => c.mobName && `${c.mobName} again...`, () => 'nice pull', () => 'oops sorry, thought that was mine',
-    () => 'these spawns are so fast lol', () => 'gl with the quest', () => 'phew, almost died there', () => 'just one more and im done', () => 'where did all the mobs go',
-    (c) => `this ${c.zone} music tho`, () => 'ow', () => 'rip', () => 'nice one', () => 'close call lol', () => 'ty!', () => 'np', () => 'ding!', () => 'gz',
-    (c) => c.mobName && `${c.mobName}s everywhere`, () => 'finally, the last one', () => 'omg that crit', () => 'who pulled that lol', () => 'sorry, tagged it by accident',
-    (c) => `anyone else doing ${c.zone} quests? so many`, () => 'oom, sitting', () => 'love this spot', () => 'run!!', (c) => `heading back to ${c.town} after this`,
+    () => 'hey', () => 'o/', fight('argh, respawn is so slow'), fight('u can have this one'), () => 'lol', () => 'got it', () => 'brb', () => 'ok back',
+    () => 'my bags are full already', (c) => c.mobName && `watch out, ${c.mobName} packs here`, (c) => c.mobName && `${c.mobName} again...`, fight('nice pull'), fight('oops sorry, thought that was mine'),
+    fight('these spawns are so fast lol'), () => 'gl with the quest', fight('phew, almost died there'), fight('just one more and im done'), fight('where did all the mobs go'),
+    (c) => `this ${c.zone} music tho`, fight('ow'), fight('rip'), () => 'nice one', fight('close call lol'), () => 'ty!', () => 'np', () => 'ding!', () => 'gz',
+    (c) => c.mobName && `${c.mobName}s everywhere`, fight('finally, the last one'), fight('omg that crit'), fight('who pulled that lol'), fight('sorry, tagged it by accident'),
+    (c) => `anyone else doing ${c.zone} quests? so many`, fight('oom, sitting'), () => 'love this spot', fight('run!!'), (c) => `heading back to ${c.town} after this`,
   ];
   // #580: a raiding, Trials or PvP guild talks about what it does too (the guild channel was the most repeated after #565)
   const GUILD_STYLE_LINES = {
