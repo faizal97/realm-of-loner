@@ -34,7 +34,10 @@ Each row is the share of runs with at least one wipe. Under each table, the prof
   - **Fitted:** blue gear fitted at level, skill 0.85, and, once #179 ships, answering telegraphs about 80% of the time.
   - **Masher:** one damaging ability, or one heal for a healer, and no answers.
   - **Undergeared:** one quality tier under the content: whites below 60, greens at 60, dungeon blues for raids.
-  - **Bad draw:** every bot teammate at skill 0.2.
+  - **Bad draw:** careless teammates at skill 0.2, in the gear they would wear. A dungeon group: every bot teammate. A raid:
+    3 of the 9, at random, any role, the rest an ordinary group-finder draw (since 2026-11-13, #586: nine careless
+    teammates is the worst raid there is, not a bad draw; measured that way, raid bad draws sat about 48 points above
+    fitted, and no raid number could put both in their bands).
 - **Ordering rule:** fitted < bad draw < undergeared ≈ masher. Good play and good gear shrink bad luck but never remove it.
 - **No run should feel hopeless when fitted:** a fitted player clears every Normal in at most 3 wipes in 95% of runs.
 

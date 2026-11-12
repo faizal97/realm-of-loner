@@ -10,8 +10,8 @@
 //   RATING=0|400|800 sets the Trial rating, which picks a Hard group's bot skill (0.6-0.7 at 0, 0.85-0.95 at 800);
 //   PROFILE=fitted|masher|undergeared|baddraw (docs/design-mindset.md section 7): fitted = level-60-grade blue gear in every slot and
 //   bot AI skill 0.85; masher = the player presses ONE button (the class's first damaging ability, or its first heal for a healer)
-//   and nothing else; undergeared = white gear ten levels below the activity; baddraw = every bot in the group at skill 0.2 (gear
-//   unchanged). Default: today's player (bot gear, skill 0.7). All four are done in the sim, with no engine hook.
+//   and nothing else; undergeared = white gear ten levels below the activity; baddraw = careless bots at skill 0.2 in the gear
+//   they would wear: every bot in a dungeon group, BADN (default 3) of the nine in a raid. Default: today's player (bot gear, skill 0.7). All four are done in the sim, with no engine hook.
 //   TELE=whirl switches on the telegraphs of that kind of mechanic (#179); TELE=* all of them.
 //   SCALE=1.2,1.2 multiplies the Normal trash and boss damage (and hp: SCALE=td,bd,th,bh) of the activities in ACTS.
 //   ONLY=golemagg fights only the pull with that mob, so one boss's mechanic is measured without the rest of the run's luck.
@@ -87,8 +87,12 @@ function clear(act, cls) {
   S.flags.warModeAsked = true; P.place = A.where;
   if (HARD) P.codex = { [act]: { clears: 1, flawless: 0, speed: 0, best: null } };
   G.queueFor(act, HARD ? { hard: true } : undefined); if (!S.queue) return null; G.acceptPop(); if (!S.run) return null;
-  // a bad draw: every bot at skill 0.2, in the gear a player that careless wears (#582: gear follows skill)
-  if (PROFILE === 'baddraw') for (const m of S.group.members) if (m.bot && !m.legend) { m.bot.skill = 0.2; if (G.gearFloor) m.equip = G.botChar(Object.assign({}, m.bot, { role: m.role, gearFloor: G.gearFloor(act, HARD) })).equip; m.hp = null; m.res = null; }
+  // a bad draw: careless bots at skill 0.2, in the gear a player that careless wears (#582: gear follows skill). A dungeon
+  // group: every bot. A raid: BADN (default 3) of its bots, picked at random, any role, the rest an ordinary group-finder
+  // draw: nine careless teammates is the worst raid there is, not the weaker teammates groups fairly often get (#586)
+  const bots = S.group.members.filter((m) => m.bot && !m.legend);
+  const careless = PROFILE !== 'baddraw' ? [] : bots.length > 4 ? bots.slice().sort(() => Math.random() - 0.5).slice(0, +(process.env.BADN || 3)) : bots;
+  for (const m of careless) { m.bot.skill = 0.2; if (G.gearFloor) m.equip = G.botChar(Object.assign({}, m.bot, { role: m.role, gearFloor: G.gearFloor(act, HARD) })).equip; m.hp = null; m.res = null; }
   const R = S.run, atts = []; let last = null, att = null, g = 0;
   if (process.env.ONLY) { R.pulls = R.pulls.filter((p) => p.mobs.includes(process.env.ONLY)); if (!R.pulls.length) return null; } // one boss's pull alone (#179)
   const sample = (C) => {
