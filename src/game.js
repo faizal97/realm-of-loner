@@ -2392,7 +2392,7 @@
   G.ahTrade = (it) => !it.heirloom && !it.noSell && !it.lock && (D.GEAR_SLOTS.includes(it.slot) ? it.q >= 1 : ['mat', 'potion', 'elixir', 'stone', 'kit', 'bag', 'recipe'].includes(it.slot));
   // #596: who sells or buys an item on the auction house: someone who could use it (at or a little above its level),
   // never a level 1 with level 60 gear; failing that anyone at or above it, then anyone
-  const ahBot = (pool, it) => { const need = it.lvl || 1, near = pool.filter((b) => b.level >= need && b.level <= need + 12); return pick(near.length ? near : pool.filter((b) => b.level >= need).length ? pool.filter((b) => b.level >= need) : pool.length ? pool : G.S.bots); };
+  const ahBot = (pool, it) => { const need = (D.BAG_TIER && D.BAG_TIER[it.id]) || it.lvl || (root.SOC ? root.SOC.itemLvl(it) : 1) /* a bag: its tier (its own level is 1); a material has none: the level of the crafts that use it */, near = pool.filter((b) => b.level >= need && b.level <= need + 12); return pick(near.length ? near : pool.filter((b) => b.level >= need).length ? pool.filter((b) => b.level >= need) : pool.length ? pool : G.S.bots); };
   // Listings from other players, refreshed now and then, around your level.
   function ahRefresh(force) {
     const S = G.S, P = S.player, t = now();
