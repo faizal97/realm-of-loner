@@ -56,7 +56,8 @@
       dungeons: ['Tank and healer spots always open.', 'This week: full clears only, no speedruns.', 'Sign up for guild nights in guild chat.', 'Bring potions to guild runs.'],
       raiding: ['Raid prep: bring resist gear.', 'Attendance matters. Sign up early.', 'New recruits: shadow a raid first.', 'Consumables are on the guild.'],
       pvp: ['For the glory. War Mode on.', 'Never roam alone out there.', 'Honor is earned, not given.', 'Watch the contested zones this week.'],
-      social: ['Tell us about your day!', 'Screenshot contest this week.', 'Fishing party at the lake, everyone welcome.', 'Be kind, stay weird.'] }[info.style];
+      trials: ['Trials every night. Beat the clock, not the gear.', 'Post your best time in guild chat.', 'Learn the route before you push.', 'New affixes on Monday, plan your runs.'],
+      social: ['Tell us about your day!', 'Screenshot contest this week.', 'Fishing party at the lake, everyone welcome.', 'Be kind, stay weird.'] }[info.style] || ['Welcome to the guild.']; /* any new style still has a line (#596) */
     return lines[(day + g) % lines.length];
   };
 
@@ -125,6 +126,7 @@
   SOC.addStanding = addStanding;
   SOC.GROUP_LEVELS = 3; // a sim player who asks you to group is at most this many levels from yours
   SOC.makeWhisper = () => makeWhisper(); // for tests
+  SOC.makeRecruit = () => makeRecruit(); // for tests (#596)
   // an online member speaks for the guild; nobody online, nobody: never a stranger from the realm (#592)
   const guildOfficer = () => { const P = G.S.player; const info = SOC.guildInfo(P.guild); return info.officer || onlineMate() || null; };
   const onlineMate = (not) => { const S = G.S, d = new Date(); const m = S.bots.filter((b) => b.guild === S.player.guild && B.isOnline(b, d) && b.id !== not); return m.length ? pick(m) : null; };
@@ -187,7 +189,7 @@
     const soc = state();
     if (soc.applied && soc.applied.until > now()) return G.toast(`You already applied to <${B.GUILDS[soc.applied.g]}>. Wait for an answer.`);
     soc.applied = { g, until: now() + 5 * 60000 };
-    G.sys(`You applied to <${info.name}>.`);
+    G.sys(info.officer ? `You applied to <${info.name}>.` : `You applied to <${info.name}>. Nobody from it is online; a member answers when one is.`);
     answerApply(g);
     G.emitChange();
   };
@@ -195,7 +197,10 @@
   // the officer's answer; queued again after a reload, which drops chat still to come (#417)
   function answerApply(g) {
     const S = G.S, P = S.player, info = SOC.guildInfo(g);
-    const off = info.officer || pick(myBots()) || pick(S.bots); // someone online answers (#390)
+    const off = info.officer; // a member online answers (#390); with none online the application waits for one (#596)
+    const a0 = state().applied;
+    if (!off) { if (a0 && a0.g === g) { a0.waiting = true; a0.until = Math.max(a0.until, now() + 24 * 3600000); } return; }
+    if (a0 && a0.g === g) a0.waiting = false;
     const yes = P.level >= info.min;
     S.pending.push({ at: now() + rnd(15000, 45000), bot: off.id, ch: 'whisper',
       text: voice(off, yes ? pick([`hey, saw your application to <${info.name}>. welcome aboard!`, `accepted! welcome to <${info.name}>`, 'welcome in, sending the invite now', `you're in! say hi in guild chat`]) : pick([`sorry, <${info.name}> is ${info.min}+ only. come back later!`, `thanks for applying but we need level ${info.min}+`, `not yet, ${info.min}+ for us. good luck out there`])),
@@ -203,6 +208,8 @@
       onPost: () => { state().applied = null; if (yes && G.S.player.guild < 0) G.joinGuild(g); } });
   }
   SOC.resumeApply = function () { const a = state().applied; if (!a) return; if (G.S.player.guild >= 0 || a.until <= now()) state().applied = null; else answerApply(a.g); };
+  // a waiting application is answered once a member of that guild comes online (#596)
+  function checkWaitingApply() { const a = state().applied; if (!a || !a.waiting) return; if (G.S.player.guild >= 0 || a.until <= now()) { state().applied = null; return; } if (SOC.guildInfo(a.g).officer) answerApply(a.g); }
 
   // ------------------------------------------------------------ friends: bots you helped remember you
   function befriend(bot, where) {
@@ -338,6 +345,7 @@
         if (a.state === 'open') startGuildEvent(m); else { a.started = true; G.sys('The guild run started without you.'); }
       }
     }
+    checkWaitingApply();
     if (G.fight || S.run) return;
     if (P.level >= 8 && due('lfg', 45, 100) && openActs((a) => a.kind === 'lfg').length < 2) makeLfg();
     if (P.level >= D.LEVEL_CAP && due('trial_lfg', 150, 320) && !openActs((a) => a.kind === 'trial_lfg').length) makeTrialLfg();
@@ -371,7 +379,7 @@
     if (!acts.length) return;
     const k = pick(acts), A = D.ACTIVITIES[k];
     const bots = guild ? G.S.bots.filter((b) => b.guild === P.guild && B.isOnline(b, new Date())) : myBots();
-    const free = bots.filter((b) => !B.lfRecent(G.S, b)), near = free.filter((b) => b.level >= A.minLvl - 2 && b.level <= (A.maxLvl || D.LEVEL_CAP) + 5); // #70: not a bot already looking for another group; #364: of the dungeon's levels, not a level 60 in a level 20 dungeon
+    const free = bots.filter((b) => !B.lfBusy(G.S, b)), near = free.filter((b) => b.level >= A.minLvl - 2 && b.level <= (A.maxLvl || D.LEVEL_CAP) + 5); // #70: not a bot already looking for another group; #364: of the dungeon's levels, not a level 60 in a level 20 dungeon
     const lead = pick(near.length ? near : free.filter((b) => b.level >= A.minLvl - 2)); // #73: never a bot below the dungeon's level (no fallback to anyone free)
     if (!lead) return;
     const role = pick(G.roles());
@@ -392,7 +400,7 @@
     const T = root.TRIALS; if (!T || !T.open(T.season(new Date()))) return;
     const acts = G.trialPicks().filter((k) => !G.trialBlock(k)); if (!acts.length) return;
     const k = pick(acts), max = G.trialMax(k), lvl = rint(Math.max(1, max - 3), max);
-    const lead = pick(myBots().filter((b) => b.level >= D.LEVEL_CAP && !B.lfRecent(G.S, b))); if (!lead) return;
+    const lead = pick(myBots().filter((b) => b.level >= D.LEVEL_CAP && !B.lfBusy(G.S, b))); if (!lead) return;
     const role = pick(G.roles()), c = { role: roleWord(role), name: D.ACTIVITIES[k].name, lvl, have: rint(2, 4) };
     post('lfg', lead, pickT('tlf', TRIAL_LFG_TEXT)(c), { kind: 'trial_lfg', act: k, lvl, role, leader: lead.id, until: now() + 4 * 60000 });
   }
@@ -441,7 +449,7 @@
         `buying ${link(it)} x${n}, ${coin(price)}, better than the vendor`, `can i buy ${n} of ur ${link(it)}? ${coin(price)}`,
         `do u have spare ${link(it)}? ${n} for ${coin(price)}`, `paying ${coin(price)} for ${n} ${link(it)}, vendor gives way less`, `levelling my profession, need ${n} ${link(it)}. ${coin(price)}?`]), { kind: 'wtb', item: it.id, n, price });
     } else if (kind === 'wts') {
-      const it = offerItem(); if (!it) return; const price = Math.round((it.sell || 10) * rnd(4, 6));
+      const it = offerItem(); if (!it) return; const price = chatPrice(it);
       W(pickT('s320', [`wts ${link(it)} ${coin(price)}, good for a ${D.CLASSES[P.cls].name.toLowerCase()} ur level`, `hey, want ${link(it)}? ${coin(price)} and its yours`, `got a ${link(it)} i cant use, ${coin(price)}?`,
         `${link(it)} dropped for me but its ur armor type. ${coin(price)}?`, `selling ${link(it)} cheap, ${coin(price)}, looks like an upgrade for u`,
         `hey, ${link(it)} is yours for ${coin(price)} if u want it`, `no one in my group can use ${link(it)}, ${coin(price)}?`, `${link(it)} for ${coin(price)}? figured id ask u first`]), { kind: 'wts', itemData: it, price });
@@ -477,8 +485,8 @@
   function makeTrade() {
     const b = pick(myBots().filter((x) => SOC.gearFits(x, G.S.player.level + 1))); if (!b) return; // #73: its own level's gear
     const it = offerItem(); if (!it) return;
-    const price = Math.round((it.sell || 10) * rnd(4.5, 7));
-    post('general', b, pickT('s356', [`WTS ${link(it)} ${coin(price)} pst`, `selling ${link(it)}, ${coin(price)}`, `${link(it)} for ${coin(price)}, anyone?`, `cleaning my bags: ${link(it)} ${coin(price)}`, `${link(it)}, ${coin(price)} or best offer`, `${link(it)}, ${coin(price)}, whisper me`, `anyone need ${link(it)}? ${coin(price)}`, `${link(it)} for sale, ${coin(price)}, cheaper than the AH`]), { kind: 'wts', bot: b.id, itemData: it, price, until: now() + 6 * 60000 });
+    const price = chatPrice(it);
+    post('general', b, pickT('s356', [`WTS ${link(it)} ${coin(price)} pst`, `selling ${link(it)}, ${coin(price)}`, `${link(it)} for ${coin(price)}, anyone?`, `cleaning my bags: ${link(it)} ${coin(price)}`, `${link(it)}, ${coin(price)} or best offer`, `${link(it)}, ${coin(price)}, whisper me`, `anyone need ${link(it)}? ${coin(price)}`, `${link(it)} for sale, ${coin(price)}, fair price`]), { kind: 'wts', bot: b.id, itemData: it, price, until: now() + 6 * 60000 });
   }
   function makeRare() {
     const r = rareTarget(); if (!r) return;
@@ -503,7 +511,8 @@
   function makeRecruit() {
     const all = SOC.myGuilds().filter((x) => x.members > 0); if (!all.length) return;
     const fit = all.filter((x) => (x.min || 0) <= G.S.player.level), gs = fit.length ? fit : all; // guilds you can join first (#361)
-    const g = pick(gs); const who = g.officer || pick(myBots()); if (!who) return;
+    const on = gs.filter((x) => x.officer); if (!on.length) return; /* only a member online recruits for a guild (#596) */
+    const g = pick(on), who = g.officer;
     post('general', who, pickT('s381', [`<${g.name}> is recruiting! ${g.style} guild, level ${g.min}+, pst`, `<${g.name}> ${g.blurb.toLowerCase()} whisper me for an invite`, `looking for more people for <${g.name}>, ${g.min}+ welcome`,
       `<${g.name}>: ${g.style} guild, friendly officers, ${g.min}+. apply any time`, `<${g.name}> ${g.style} guild looking for members, ${g.min}+. whisper me`, `join <${g.name}>! ${g.blurb.toLowerCase()}`]), { kind: 'guild_apply', bot: who.id, g: g.g, until: now() + 8 * 60000 });
   }
@@ -575,6 +584,10 @@
     }
     const e = (state().friends || {})[b.id]; if (e) e.last = now(); // the saved entry: SOC.friends() hands out copies (#389)
   }
+  // #596: a chat sale costs 1.0–1.2x the auction house's usual price (0.8–0.96x after a good haggle). Relisting sells
+  // for sure only at 0.8x less the 5% cut (0.76x), so a bought item can't be flipped for a sure profit; the AH's own
+  // buyouts run 0.85–1.45x, so chat stays a decent deal (it was 4.5–7x vendor: a blue, worth 9x, was a free 30%+)
+  const chatPrice = (it) => Math.max(1, Math.round(G.ahValue(it) * rnd(1, 1.2)));
   function offerItem() {
     const P = G.S.player;
     if (chance(0.2) && D.ITEMS.small_pouch) return G.copyItem(P.level >= 20 && D.ITEMS.linen_bag ? 'linen_bag' : 'small_pouch');
@@ -584,7 +597,7 @@
   }
   function whereQuestion(asker) {
     const P = G.S.player, top = Math.min(P.level + 6, asker ? asker.level + 3 : Infinity); // nowhere above the asker's own level + 3 (the chat gate's rule)
-    const places = Object.keys(D.PLACES).filter((k) => { const p = D.PLACES[k]; return p.lvl && p.lvl[0] <= top && p.lvl[1] >= P.level - 12 && p.zone && !G.enemyTown(k); });
+    const places = Object.keys(D.PLACES).filter((k) => { const p = D.PLACES[k]; return p.lvl && p.lvl[0] <= top && p.lvl[1] >= P.level - 12 && p.zone && p.zone.toLowerCase() !== p.name.toLowerCase() && !G.enemyTown(k); }); /* a place named as its zone answers itself (#596) */
     if (!places.length) return null;
     const k = pick(places), p = D.PLACES[k];
     const zones = [...new Set(Object.values(D.PLACES).map((x) => x.zone).filter((z) => z && z !== p.zone))];

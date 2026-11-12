@@ -442,12 +442,11 @@
   // c: ctx() plus c.me, the bot talking.
   const GENERAL_ANY = [
     (c) => `where is ${c.namedMob}?`,
-    (c) => `anyone know where ${c.questNpc} is`,
     () => 'is there a way to reset talents',
     () => 'what level can i ride a mount',
     () => 'server feels packed tonight',
     () => 'server is so quiet today, love it',
-    (c) => `${c.mobName} drop rate is a joke`,
+    (c) => c.mobName && `${c.mobName} drop rate is a joke`,
     (c) => `who is camping ${c.namedMob}, i've been waiting 20 min`,
     (c) => `died to ${c.namedMob} again. third time today`,
     (c) => `gz to whoever just took down ${c.namedMob}`,
@@ -472,7 +471,7 @@
     () => 'anyone from indo here?',
     () => 'lag?',
     (c) => `${c.classA} or ${c.classB} for my next alt?`,
-    (c) => `every ${c.mobName} in this zone hates me personally`,
+    (c) => c.mobName && `every ${c.mobName} in this zone hates me personally`,
     () => 'just repaired, 3 gold. pain',
     () => 'the theater replay of the story is so good',
     () => 'finally beat a par time, feels great',
@@ -526,7 +525,6 @@
     (c) => `gg ${c.act}, that was fast`,
     (c) => `${c.act} done, 0 wipes, love this group`,
     (c) => `is ${c.act} worth it at ${c.me.level}?`,
-    (c) => `does ${c.boss} drop anything good for ${c.me.cls}s?`,
     (c) => `our tank pulled half of ${c.act} lol`,
     () => 'found a group, ty',
     () => 'nvm group full',
@@ -541,10 +539,10 @@
   ];
   const SAY_NEAR = [
     () => 'hey', () => 'o/', () => 'argh, respawn is so slow', () => 'u can have this one', () => 'lol', () => 'got it', () => 'brb', () => 'ok back',
-    () => 'my bags are full already', (c) => `watch out, ${c.mobName} packs here`, (c) => `${c.mobName} again...`, () => 'nice pull', () => 'oops sorry, thought that was mine',
+    () => 'my bags are full already', (c) => c.mobName && `watch out, ${c.mobName} packs here`, (c) => c.mobName && `${c.mobName} again...`, () => 'nice pull', () => 'oops sorry, thought that was mine',
     () => 'these spawns are so fast lol', () => 'gl with the quest', () => 'phew, almost died there', () => 'just one more and im done', () => 'where did all the mobs go',
     (c) => `this ${c.zone} music tho`, () => 'ow', () => 'rip', () => 'nice one', () => 'close call lol', () => 'ty!', () => 'np', () => 'ding!', () => 'gz',
-    (c) => `${c.mobName}s everywhere`, () => 'finally, the last one', () => 'omg that crit', () => 'who pulled that lol', () => 'sorry, tagged it by accident',
+    (c) => c.mobName && `${c.mobName}s everywhere`, () => 'finally, the last one', () => 'omg that crit', () => 'who pulled that lol', () => 'sorry, tagged it by accident',
     (c) => `anyone else doing ${c.zone} quests? so many`, () => 'oom, sitting', () => 'love this spot', () => 'run!!', (c) => `heading back to ${c.town} after this`,
   ];
   // #580: a raiding, Trials or PvP guild talks about what it does too (the guild channel was the most repeated after #565)
@@ -568,10 +566,12 @@
     () => 'just spent an hour on the auction house, worth it', () => 'brb, food', () => 'this guild chat is the best part of my day',
     () => 'trying a new talent build, wish me luck', () => 'ok who keeps winning all the rolls', () => 'fishing is weirdly relaxing', () => 'quick break, back in 10',
     () => 'how is everyone doing', () => 'my repair bill says no more dungeons', () => 'tried cooking, burnt everything', (c) => `questing in ${c.zone}, so peaceful`,
-    (c) => `the ${c.mobName}s in ${c.zone} are out of control`, () => 'leveled my profession a bit, slow going', () => 'had the best pug ever just now',
+    (c) => c.mobName && `the ${c.mobName}s in ${c.zone} are out of control`, () => 'leveled my profession a bit, slow going', () => 'had the best pug ever just now',
     () => 'had the worst pug ever just now lol', () => 'sold all my junk, feels good', () => 'whoever is on, hi', () => 'so many alts so little time',
     (c) => (c.act ? `${c.act} with you lot is always fun` : 'runs with you lot are always fun'), () => 'chilling in town for a bit', () => 'gz to everyone who dinged today',
   ];
+  // a guild line that speaks to a crowd or answers someone else's news: not said by the only guildmate online (#596)
+  const GUILD_CROWD = /\b(all|everyone|everybody|you lot|you all|guild|whoever|grats|gz|ty for|thanks for|what did i miss|who'?s|who else|who keeps|morning guild|evening all)\b/i;
   const WHISPER = [
     () => 'nice gear lol',
     () => 'r u a bot?',
@@ -741,7 +741,7 @@
     return {
       zone: P.zone || 'the wilds', town: inns.length ? cpick(inns).name : 'the', band: L < 15 ? 0 : L < 30 ? 1 : L < 45 ? 2 : 3,
       act: A.name, boss: bossKey && D.MOBS[bossKey] ? D.MOBS[bossKey].name : 'the last boss', classA: cpick(clsNames), classB: cpick(clsNames),
-      mobName: mobs.length ? D.MOBS[cpick(mobs)].name : 'Kobold', namedMob: D.MOBS[cpick(namedAll)].name, questNpc: npc,
+      mobName: mobs.length ? D.MOBS[cpick(mobs)].name : null, /* a town with no mobs has no mob lines (#596) */ namedMob: D.MOBS[cpick(namedAll)].name, questNpc: npc,
       hogger: S.player.level >= 8,
       fought: S.player.lastKill && S.player.lastKill.place === S.player.place && D.MOBS[S.player.lastKill.mob] ? D.MOBS[S.player.lastKill.mob].name : null,
     };
@@ -807,11 +807,15 @@
       if (!inGroup && !(SOC1 && SOC1.isFriend && SOC1.isFriend(from.id))) return false;
     }
     // a bot that posted a group in LFG in the last 10 minutes doesn't post another, or say it found a group (B.lfRecent)
-    if (ch === 'lfg' && from && B.lfRecent(S, from, t) && (LF_RE.test(s) || /\b(already (?:in|got)|full group|grouped|in a run|found a group)\b/.test(s))) return false;
+    if (ch === 'lfg' && from && from.id != null && B.lfBusy(S, from, t) && (LF_RE.test(s) || /\b(already (?:in|got)|full group|grouped|in a run|found a group)\b/.test(s))) return false;
     return true;
   };
   const LF_RE = /\b(lf\d?m|lfg|wanted|missing|need)\b/;
   B.lfRecent = (S, b, t) => ((S.lfAt || {})[b.id] || 0) > (t || Date.now()) - 600000;
+  // #596: a bot already in a group doesn't advertise for a new one: in your party, leading or posting a group still open
+  // in chat (an LFG, Trial or guild run post), or a Help Wanted still up; or one that posted a group in the last 10 minutes
+  const GROUP_ACTS = ['lfg', 'trial_lfg', 'help_wanted'];
+  B.lfBusy = (S, b, t) => { const at = t || Date.now(); return B.lfRecent(S, b, at) || inParty(S, b.id) || (S.chat || []).some((m) => m.act && m.act.state === 'open' && GROUP_ACTS.includes(m.act.kind) && (m.act.leader === b.id || m.act.bot === b.id)) || (S.helpWanted || []).some((r) => r.poster === b.id && r.expires > at); };
   // how full the server is: 'busy' with half of it or more online (an evening peak), 'quiet' with 25% or less (night or
   // morning), else null. From the schedules alone, so a server that grows or shrinks over the week stays honest.
   B.serverMood = function (S, t) {
@@ -949,7 +953,9 @@
     }
     if (S.player.guild != null && S.player.guild >= 0 && due('guild', 60, 140, GUILD.length)) {
       const mates = S.bots.filter((b) => b.guild === S.player.guild && B.isOnline(b, date));
-      if (mates.length) { const b = cpick(mates), st = root.SOC && SOC.guildStyle ? SOC.guildStyle(S.player.guild) : null, text = line(b, 'guild', [keyed('gu', GUILD), B.hasStory(b) ? keyed('hs', HIST) : [], keyed('gs' + st, (GUILD_STYLE_LINES[st] || []).map((t) => () => t))]); if (text) B.thread(S, b, 'guild', text, now, date); } // #73
+      // #596: one guildmate online talks much less, and never to a crowd or about a ding or drop nobody had
+      const alone = mates.length === 1, solo = (L) => (alone ? L.map(([k, f]) => [k, (cc) => { const x = f(cc); return x && GUILD_CROWD.test(x) ? null : x; }]) : L);
+      if (mates.length && (!alone || cchance(0.3))) { const b = cpick(mates), st = root.SOC && SOC.guildStyle ? SOC.guildStyle(S.player.guild) : null, text = line(b, 'guild', [solo(keyed('gu', GUILD)), B.hasStory(b) ? keyed('hs', HIST) : [], solo(keyed('gs' + st, (GUILD_STYLE_LINES[st] || []).map((t) => () => t)))]); if (text) B.thread(S, b, 'guild', text, now, date); } // #73
     }
     if (due('whisper', 400, 960)) { const w = onl(); if (w) line(w, 'whisper', [keyed('wh', WHISPER)]); } // #73: in their own voice too (a gold seller's ad keeps its words, B.voiced)
   };
