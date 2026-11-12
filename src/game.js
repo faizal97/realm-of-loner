@@ -2738,7 +2738,7 @@
   G.removeMat = (id, n) => takeMat(id, n); // bags first, then the bank: what chat requests take (#550)
   G.craftable = function (rid) { const r = D.RECIPES[rid]; let n = 99; for (const m in r.mats) n = Math.min(n, Math.floor(G.matCount(m) / r.mats[m])); return n; };
   // how many of a recipe you could make that also fit your bags, the materials they use making room (#598: Create all
-  // counted materials only, so a batch stopped on the first full bag)
+  // counted materials only, so a batch stopped on the first full bag); each craft in turn, as the batch makes them
   G.craftFit = function (rid) {
     const r = D.RECIPES[rid], it = D.ITEMS[r.makes], P = G.S.player;
     const fits = (k) => {
@@ -2746,8 +2746,9 @@
       try { for (const m in r.mats) G.removeItem(m, Math.min(r.mats[m] * k, G.countItem(m))); return G.isQuestItem(it.id) || (G.stackable(it) ? stackSlots(P.bags, it, r.n * k) <= G.bagFree(it) : G.bagFree(it) >= r.n * k); }
       finally { P.bags = bags; if (q) P.qitems = q; else delete P.qitems; }
     };
-    for (let k = G.craftable(rid); k > 0; k--) if (fits(k)) return k;
-    return 0;
+    let n = 0; /* made one at a time, so every craft of the batch must fit when it is made, not only the last (the last of the materials freeing a slot comes too late) */
+    for (const most = G.craftable(rid); n < most && fits(n + 1);) n++;
+    return n;
   };
   G.craft = function (rid, count) {
     const S = G.S, P = S.player, r = D.RECIPES[rid], p = G.profs()[r.prof];
