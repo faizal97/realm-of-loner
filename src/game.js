@@ -3242,11 +3242,15 @@
       // Season's Finest pieces (a boss's `finest` list, #593) drop only through the season roll, so they never set or move a
       // ceiling above. A family no other level-57+ boss drop has (the level-60 instrument) takes its Best piece as the ceiling
       const seen = new Set(); for (const dk in D.DUNGEONS) for (const x of lootOf(dk)) if ((x.lvl || 0) >= U.minLvl) seen.add(upKey(x));
-      const fin = {}; for (const dk in D.DUNGEONS) for (const p of D.DUNGEONS[dk].pulls) for (const m of p.mobs) for (const id of (D.MOBS[m].finest || [])) {
-        const x = D.ITEMS[id], k = x && upKey(x); if (x && x.q === 4 && !x.effect && !seen.has(k) && (!fin[k] || G.itemPoints(x) > G.itemPoints(fin[k]))) fin[k] = x; }
+      /* a family whose level-57+ drops are all effect items (the non-caster ring) has no ceiling of its own, so its pieces
+         measure against their own power raised by the lead and never read 100%: there a season piece measures against the
+         family's strongest Best piece instead, and nothing else moves */
+      const fin = {}, finOwn = upRef['*finOwn'] = {}; for (const dk in D.DUNGEONS) for (const p of D.DUNGEONS[dk].pulls) for (const m of p.mobs) for (const id of (D.MOBS[m].finest || [])) {
+        const x = D.ITEMS[id], k = x && upKey(x); if (!x || x.q !== 4 || x.effect) continue;
+        if (!seen.has(k)) { if (!fin[k] || G.itemPoints(x) > G.itemPoints(fin[k])) fin[k] = x; } else if (!upRef[k] && G.itemPoints(x) > (finOwn[k] || 0)) finOwn[k] = G.itemPoints(x); }
       for (const k in fin) { upRef[k] = G.itemPoints(fin[k]); if (fin[k].armor) upRef['*armor'][k] = fin[k].armor; if (fin[k].dmg && fin[k].speed) upRef['*dps'][k] = (fin[k].dmg[0] + fin[k].dmg[1]) / 2 / fin[k].speed; }
     }
-    const base = upRef[upKey(it)] || G.itemPoints(it.base || it) * upRef['*lead']; // a family seen nowhere: its own power, raised by the lead
+    const base = upRef[upKey(it)] || (it.finest && upRef['*finOwn'][upKey(it)]) || G.itemPoints(it.base || it) * upRef['*lead']; // a family seen nowhere: its own power, raised by the lead
     if (!(it.effect && D.EFFECTS && D.EFFECTS[it.effect])) return base;
     // an effect item's ceiling pays the same share as its drop did, and it is never below where its drop sits for a plain
     // drop of its quality: a family with no plain item near it (Cinderhide Bracers started at 130%) still has room (#22)
@@ -3336,13 +3340,16 @@
     const cur = rfAt(r.where); if (!cur || cur.id !== r.old.id) { G.save(); return false; } // the item moved: keep what it has
     rfPut(r.where, r.old); sys(`${r.old.name}: back to how it was.`); emit('change'); G.save(); return true;
   };
+  // power as a share of the ceiling. Stats are whole points, so an item within half a point of a fractional ceiling (and
+  // within 1.5%) is at the ceiling: 100%, not 99% or 101%
+  const upPct = (x, ref) => (Math.abs(x - ref) <= 0.5 && Math.abs(x / ref - 1) < 0.015 ? 100 : Math.round((x / ref) * 100));
   const upInfo = function (it) {
     const U = D.UPGRADE, none = { ok: false, room: false, cost: 0 };
     if (!it || it.heirloom || !D.GEAR_SLOTS.includes(it.slot) || !U.cap[it.q] || (it.lvl || 0) < U.minLvl) return none;
     const ref = G.upgradeRef(it), p0 = G.itemPoints(upBase(it)); if (p0 <= 0) return none;
     const capPts = U.cap[it.q] * ref, pts = it.pw || p0, st = U.step * ref, room = capPts - pts > 0.01;
     const next = capPts - (pts + st) < st / 2 ? capPts : pts + st; // less than half a step left: go straight to the ceiling
-    const pc = (x) => Math.round((x / ref) * 100);
+    const pc = (x) => upPct(x, ref);
     return { ok: true, room, pts, next, pct: pc(pts), nextPct: pc(next), capPct: Math.round(U.cap[it.q] * 100), cost: room ? Math.max(1, Math.round(((next - pts) / ref) * 100 * U.perPct)) : 0 };
   };
   // a step whose numbers all round to what the item has is merged with the next, and one that never changes them is
@@ -3356,7 +3363,7 @@
       if (next >= capPts - 1e-9) return Object.assign(inf, { room: false, next: inf.pts, nextPct: inf.pct, cost: 0 });
       next = capPts - (next + st) < st / 2 ? capPts : next + st;
     }
-    return Object.assign(inf, { next, nextPct: Math.round((next / ref) * 100), cost: Math.max(1, Math.round(((next - inf.pts) / ref) * 100 * U.perPct)) });
+    return Object.assign(inf, { next, nextPct: upPct(next, ref), cost: Math.max(1, Math.round(((next - inf.pts) / ref) * 100 * U.perPct)) });
   };
   // the item at a given power (stat points); its own power or less gives back the item as it dropped
   G.FX_SCALE_CAP = 1.5;

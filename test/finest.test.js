@@ -281,7 +281,7 @@ test('season pieces never sit in a boss table, and never move an older item\'s M
 test('a Best season piece sits at its newest-raid ceiling; a Next best one at its place\'s share, below it', () => {
   for (const id in D.ITEMS) { const it = D.ITEMS[id]; if (!it.finest) continue;
     const pts = G.itemPoints(it), ref = G.upgradeRef(it);
-    if (it.tier === 'best') { assert.strictEqual(it.q, 4, id); if (it.slot !== 'finger') assert.ok(Math.abs(pts - ref) <= 0.5, `${id}: ${pts} vs ceiling ${ref}`); }
+    if (it.tier === 'best') { assert.strictEqual(it.q, 4, id); assert.ok(Math.abs(pts - ref) <= 0.5, `${id}: ${pts} vs ceiling ${ref}`); assert.strictEqual(G.upgradeInfo(it).pct, 100, `${id}: shown power`); }
     else assert.ok(pts < ref * 0.95, `${id}: a Next best piece starts below its ceiling`);
   }
 });
