@@ -4592,11 +4592,13 @@
   // the quality its skill earns (Rare above 0.72 skill 60% of the time, else Uncommon). Before, a bot had 5 pieces, often
   // Common with no stats, and never spell power, so a level-60 bot tank had about half a geared player's health
   const BOT_CASTER = { mage: 1, warlock: 1, priest: 1, druid: 1, shaman: 1, bard: 1 }; // their damage is spells (shaman and bard too)
-  const BOT_EAGLE = { mage: 1, shaman: 1 }; // a damage caster whose class stats miss stamina (Owl) or intellect (Tiger)
+  // a damage caster whose class stats have no stamina (mage and druid: Owl; shaman: Tiger) wears Eagle, read from the class
+  // table: a druid dps bot wore Owl with no stamina, about 40% of a shaman's health at the same level
   function botAffix(cls, role) {
     if (role === 'tank') return D.AFFIXES.find((a) => a.name === (cls === 'druid' ? 'of the Monkey' : 'of the Bear'));
     if (role === 'healer') return D.AFFIXES.find((a) => a.name === 'of the Eagle'); // stamina and intellect: a healer stands in the splash too
-    return BOT_EAGLE[cls] ? D.AFFIXES.find((a) => a.name === 'of the Eagle') : G.classAffix(cls) || undefined;
+    const own = G.classAffix(cls);
+    return BOT_CASTER[cls] && !(own && own.stats.sta) ? D.AFFIXES.find((a) => a.name === 'of the Eagle') : own || undefined;
   }
   function rollBotChar(b) {
     const C = D.CLASSES[b.cls], role = b.role || C.role || 'dps';
