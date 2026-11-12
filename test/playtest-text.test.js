@@ -57,3 +57,14 @@ test('a Go to an NPC finds the nearest place they stand, in your own faction\'s 
     P.place = c.place; assert.strictEqual(G.nearestNpc('note_clerk').secs, 0);
   }
 });
+
+test('the Season\'s Finest banner starts with the season, and keeps a Go to its page once its step is done', () => {
+  const b = D.WEEK.find((x) => /^seasons_finest_/.test(x.id));
+  assert.strictEqual(b.from, D.FINEST_SEASONS[0].from);
+  character(60, 'warrior', 'human');
+  const goes = () => b.steps.filter((st) => st.go === 'finest' && G.weekStepDone(st) !== true); /* as ui.js shows a Go */
+  assert.ok(goes().length);
+  const done = b.steps.find((st) => st.check && st.check[0] === 'finest'), was = G.weekStepDone;
+  G.weekStepDone = (st) => (st === done ? true : was(st));
+  try { assert.ok(goes().length, 'a Go stays after the find'); } finally { G.weekStepDone = was; }
+});

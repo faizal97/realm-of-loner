@@ -108,7 +108,7 @@
       ],
     },
     {
-      id: 'seasons_finest_2026_11_14', kind: 'new', from: '2026-11-14', to: '2026-11-20',
+      id: 'seasons_finest_2026_11_14', kind: 'new', from: '2026-11-12', to: '2026-11-20', /* from the season's start (D.FINEST_SEASONS) */
       art: ['banner', 'raid_tidecrown_citadel'], artHorde: ['banner', 'raid_tidecrown_citadel_h'],
       title: "Season's Finest begins",
       text: [
@@ -117,6 +117,7 @@
       ],
       steps: [
         { text: 'Find a piece of Season’s Finest', check: ['finest', 1], go: 'finest' },
+        { text: 'Your Best and Next best pieces: Hero → Journey → Season’s Finest', go: 'finest' },
       ],
     },
     {
