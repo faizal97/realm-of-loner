@@ -941,6 +941,14 @@
     const other = G.talentRival(char, info.t, info.tree); if (other) return `You chose ${other.name}: one per tree`;
     return null;
   };
+  // a talent that improves abilities you don't have yet (#598: Improved Lay on Hands at 10, Lay on Hands at 14): a line
+  // naming when they come, or null
+  G.talentAbilityNote = function (char, t) {
+    const ab = new Set(); for (const x of t.fx || []) for (const a of x.ab || []) if (a !== '*' && D.ABILITIES[a]) ab.add(a);
+    const later = [...ab].filter((a) => (D.ABILITIES[a].lvl || 1) > char.level || !G.learned(a));
+    if (!later.length || later.length < ab.size) return null; /* at least one it improves is already yours */
+    return later.map((a) => { const A = D.ABILITIES[a]; return `${A.name}: ${A.learn && (A.lvl || 1) <= char.level ? `learned from a quest` : `learned at level ${A.lvl || 1}`}`; }).join(' · ');
+  };
   G.learnTalent = function (id) {
     const P = G.S.player, why = G.canLearnTalent(P, id);
     if (why) return toast(why);

@@ -4745,7 +4745,7 @@
             h('div', { class: 'ic' }, img(abIcon(t.icon))),
             h('div', { class: 't' }, h('b', null, t.name),
               h('small', { style: { whiteSpace: 'normal' } }, r ? talentText(t, r) : talentText(t, 1)),
-              r && r < t.ranks ? h('small', { class: 'next', style: { whiteSpace: 'normal' } }, 'Next rank: ' + talentText(t, r + 1)) : null),
+              r && r < t.ranks ? h('small', { class: 'next', style: { whiteSpace: 'normal' } }, 'Next rank: ' + talentText(t, r + 1)) : null, (() => { const n = G.talentAbilityNote(P, t); return n ? h('small', { class: 'lock', style: { whiteSpace: 'normal' } }, n) : null; })()),
             h('div', { class: 'r tnum rank' }, `${r}/${t.ranks}`)));
         }
         b.append(list);
@@ -4771,7 +4771,7 @@
           h('div', { class: 't' }, h('b', null, t.name),
             h('small', { style: { whiteSpace: 'normal' } }, r ? talentText(t, r) : talentText(t, 1)),
             r && r < t.ranks ? h('small', { class: 'next', style: { whiteSpace: 'normal' } }, 'Next rank: ' + talentText(t, r + 1)) : null,
-            note ? h('small', { class: 'lock', style: { whiteSpace: 'normal' } }, note) : null),
+            note ? h('small', { class: 'lock', style: { whiteSpace: 'normal' } }, note) : null, (() => { const n = G.talentAbilityNote(P, t); return n ? h('small', { class: 'lock', style: { whiteSpace: 'normal' } }, n) : null; })()),
           h('div', { class: 'r tnum rank' }, `${r}/${t.ranks}`)));
       }
       b.append(list);
