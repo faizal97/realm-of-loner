@@ -2350,6 +2350,9 @@
   G.ahValue = (it) => it.slot === 'bag' && D.BAG_TIER && D.BAG_TIER[it.id] ? Math.round(0.75 * it.bag * (it.matBag ? 0.6 : 1) * G.questMoney(D.BAG_TIER[it.id]) / 100) * 100 /* a materials-only slot is worth less */ : (G.ahTrade(it) && !D.GEAR_SLOTS.includes(it.slot) ? Math.max(4, Math.round((it.sell || 2) * (it.slot === 'recipe' ? 8 : 5))) : Math.max(10, Math.round((it.sell || 5) * [2, 3, 6, 9, 14, 0][it.q || 1])));
   // what can go on the auction house: gear, trade goods and anything a profession makes
   G.ahTrade = (it) => !it.heirloom && !it.noSell && !it.lock && (D.GEAR_SLOTS.includes(it.slot) ? it.q >= 1 : ['mat', 'potion', 'elixir', 'stone', 'kit', 'bag', 'recipe'].includes(it.slot));
+  // #596: who sells or buys an item on the auction house: someone who could use it (at or a little above its level),
+  // never a level 1 with level 60 gear; failing that anyone at or above it, then anyone
+  const ahBot = (pool, it) => { const need = it.lvl || 1, near = pool.filter((b) => b.level >= need && b.level <= need + 12); return pick(near.length ? near : pool.filter((b) => b.level >= need).length ? pool.filter((b) => b.level >= need) : pool.length ? pool : G.S.bots); };
   // Listings from other players, refreshed now and then, around your level.
   function ahRefresh(force) {
     const S = G.S, P = S.player, t = now();
@@ -2365,28 +2368,28 @@
     const bagsOk = (D.BAG_AH || []).filter((k) => D.ITEMS[k] && D.BAG_TIER[k] <= L0);
     if (bagsOk.length && !S.ah.listings.some((l) => bagsOk.includes(l.item.id))) {
       const k = bagsOk.length > 1 && Math.random() < 0.3 ? bagsOk[bagsOk.length - 2] : bagsOk[bagsOk.length - 1], it = G.copyItem(k);
-      S.ah.listings.push({ id: 'ah' + t + '_b' + S.ah.listings.length + '_' + rint(0, 9999), item: it, n: 1, price: Math.round(G.ahValue(it) * (1.05 + Math.random() * 0.25)) /* never under its value, so it can't be flipped (sim/auction.js) */, seller: pick(sellers).name, expires: t + rnd(6, 24) * 3600000 });
+      S.ah.listings.push({ id: 'ah' + t + '_b' + S.ah.listings.length + '_' + rint(0, 9999), item: it, n: 1, price: Math.round(G.ahValue(it) * (1.05 + Math.random() * 0.25)) /* never under its value, so it can't be flipped (sim/auction.js) */, seller: ahBot(sellers, it).name, expires: t + rnd(6, 24) * 3600000 });
     }
     { // now and then a materials bag for your level (beta.3), priced like the other bags
       const mk = (D.BAG_MATS_AH || []).filter((k) => D.ITEMS[k] && D.BAG_TIER[k] <= L0).pop();
-      if (mk && Math.random() < 0.35 && !S.ah.listings.some((l) => l.item.id === mk)) { const it = G.copyItem(mk); S.ah.listings.push({ id: 'ah' + t + '_m' + S.ah.listings.length + '_' + rint(0, 9999), item: it, n: 1, price: Math.round(G.ahValue(it) * (1.05 + Math.random() * 0.25)), seller: pick(sellers).name, expires: t + rnd(6, 24) * 3600000 }); }
+      if (mk && Math.random() < 0.35 && !S.ah.listings.some((l) => l.item.id === mk)) { const it = G.copyItem(mk); S.ah.listings.push({ id: 'ah' + t + '_m' + S.ah.listings.length + '_' + rint(0, 9999), item: it, n: 1, price: Math.round(G.ahValue(it) * (1.05 + Math.random() * 0.25)), seller: ahBot(sellers, it).name, expires: t + rnd(6, 24) * 3600000 }); }
     }
     // the basic materials your crafts use at your skill are always on sale (#560): a crafter whose gathering doesn't feed
     // the craft can still level it. Priced like the bags, never under value, so a listing can't be bought and resold
     for (const id of G.craftMatsNeeded()) if (!S.ah.listings.some((l) => l.item.id === id)) {
       const it = G.copyItem(id), n = rint(2, 4) * 5;
-      S.ah.listings.push({ id: 'ah' + t + '_c' + S.ah.listings.length + '_' + rint(0, 9999), item: it, n, price: Math.round(G.ahValue(it) * n * (1.05 + Math.random() * 0.25)), seller: pick(sellers).name, expires: t + rnd(6, 24) * 3600000 });
+      S.ah.listings.push({ id: 'ah' + t + '_c' + S.ah.listings.length + '_' + rint(0, 9999), item: it, n, price: Math.round(G.ahValue(it) * n * (1.05 + Math.random() * 0.25)), seller: ahBot(sellers, it).name, expires: t + rnd(6, 24) * 3600000 });
     }
     while (S.ah.listings.filter((l) => !D.GEAR_SLOTS.includes(l.item.slot)).length < 8) {
       const it = G.copyItem(pick(goods)), n = G.stackable(it) ? rint(1, 4) * 5 : 1;
       const price = Math.round(G.ahValue(it) * n * (0.8 + Math.random() * 0.6));
-      S.ah.listings.push({ id: 'ah' + t + '_g' + S.ah.listings.length + '_' + rint(0, 9999), item: it, n, price, seller: pick(sellers).name, expires: t + rnd(6, 24) * 3600000 });
+      S.ah.listings.push({ id: 'ah' + t + '_g' + S.ah.listings.length + '_' + rint(0, 9999), item: it, n, price, seller: ahBot(sellers, it).name, expires: t + rnd(6, 24) * 3600000 });
     }
     while (S.ah.listings.length < 26) {
       const L = clamp(P.level + rint(-3, 2), 2, D.LEVEL_CAP), q = Math.random() < 0.12 ? 3 : 2;
       const it = G.genGear(pick(D.GEAR_SLOTS.filter((x) => x !== 'ranged' || Math.random() < 0.4)), L, q);
       const price = Math.round(G.ahValue(it) * (0.85 + Math.random() * 0.6));
-      S.ah.listings.push({ id: 'ah' + t + '_' + S.ah.listings.length + '_' + rint(0, 9999), item: it, price, seller: pick(sellers).name, expires: t + rnd(6, 24) * 3600000 });
+      S.ah.listings.push({ id: 'ah' + t + '_' + S.ah.listings.length + '_' + rint(0, 9999), item: it, price, seller: ahBot(sellers, it).name, expires: t + rnd(6, 24) * 3600000 });
     }
   }
   G.ahListings = function () { ahRefresh(false); return G.S.ah.listings.slice().sort((a, b) => (b.item.lvl || 0) - (a.item.lvl || 0)); };
@@ -2432,7 +2435,7 @@
       if (a.sellAt && t >= a.sellAt) {
         const got = Math.round(a.price * (1 - AH_CUT)), dep = a.deposit || 0;
         P.money += got + dep; S.ah.mine = S.ah.mine.filter((x) => x !== a);
-        const buyer = pick(S.bots); loot(`Auction sold: ${B.link(a.item.name, a.item.q)} to ${buyer.name}, ${G.moneyText(got)} after the 5% cut${dep ? ` (+${G.moneyText(dep)} deposit)` : ''}.`);
+        const buyer = ahBot(S.bots.filter((b) => B.factionOf(b) === G.myFaction()), a.item); loot(`Auction sold: ${B.link(a.item.name, a.item.q)} to ${buyer.name}, ${G.moneyText(got)} after the 5% cut${dep ? ` (+${G.moneyText(dep)} deposit)` : ''}.`);
         G.mailSend({ kind: 'sold', at: Math.min(t, a.sellAt), item: a.item, n: a.n || 1, buyer: buyer.name, got, dep }); // a receipt (#258): the gold is already here
         sold.push({ name: a.item.name, got: got + dep });
         emit('lootGain', { money: got });
