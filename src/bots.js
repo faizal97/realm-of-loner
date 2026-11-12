@@ -778,6 +778,7 @@
   };
   B.lineFits = function (S, text, from, ch) {
     const G1 = root.G;
+    if (ch === 'lfg' && from && from.id != null && inParty(S, from.id)) return false; // someone in your group isn't looking for one
     if (G1 && G1.nameable && S.player && !G1.nameable(String(text), S.player.level)) return false;
     const b = from && (from.level != null ? from : S.bots && S.bots.find((x) => x.id === from.id));
     if (b && b.level != null && B.contentAbove(text, b.level)) return false;
