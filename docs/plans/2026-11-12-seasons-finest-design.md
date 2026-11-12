@@ -15,8 +15,18 @@ role a reason to run old raids and dungeons. Each season is planned by hand.
   always hold the same number of pieces (`tools/validate.js` fails otherwise). **Best**: some of the newest raid for every
   class role, the rest spread over older raids and dungeons, at the newest raid's power. **Next best**: old raids (need
   Mentor Marks for full power) and old dungeons, a wide pool.
-- **Add, never move.** A season never changes where an existing item drops. A new season adds new Best pieces; last
-  season's Best becomes this season's Next best.
+- **Sources change only at a season's start.** Within a season nothing moves. A new season adds new Best pieces; last
+  season's Best becomes this season's Next best; every change is listed in that season's notes, and nothing is ever
+  removed from the game.
+- **Retiring (from Season 3, decided 2026-11-12).** A piece no live list names any more (normally two seasons after it
+  was Best) retires into its boss's normal loot table, one in, one out: a normal item of the same slot and armour type
+  leaves that table and is sold for Mentor Marks at a vendor. So a table's size never grows, a level-60 boss's normal
+  loot refreshes each season, and no item becomes unobtainable. Only level-60 bosses swap (content below 60 keeps its
+  loot, so levelling never changes); items keep their level to wear, and Marks come from level-60 content, so the
+  vendor gives a levelling character no early power. Why not leave retired pieces in the season roll: their share
+  thins with every season (the same dilution the roll exists to avoid); why not a vendor only: old bosses' loot would
+  never change, and refreshing old content is this feature's purpose. Until then (Seasons 1-2) the `retired` share
+  below stands in.
 - **Season 1 adds pieces to fill every list** (52, stats only, no effects; first planned for later seasons, brought
   forward because existing items left each role 5-9 of its 9-10 slots, and left a warrior's tank and damage lists, and a
   priest's healer and damage lists, the same). The picks Season 1 had stay unless a role-fit Best piece beats one for
