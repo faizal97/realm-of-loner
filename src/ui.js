@@ -1391,8 +1391,7 @@
     roads.append(h('button', { class: 'chip ' + (hs > 0 || home ? 'why' : 'gold'), onclick: () => G.hearth(), disabled: hs > 0 || home }, 'Waystone', h('small', null, hs > 0 ? Math.ceil(hs / 60000) + 'm' : home ? "You're home" : D.PLACES[P.bind].name)));
     b.append(roads, h('button', { class: 'btn alt wide', onclick: () => openMap() }, 'Open map'));
   }
-  // the titles this character can have: its own faction's, and an event's only while it runs or once earned (#526)
-  const titlesForMe = () => D.TITLES.filter((t) => (!t.faction || t.faction === G.myFaction()) && (!t.prepatch || D.PREPATCH.live || G.titleUnlocked(t)));
+  const titlesForMe = () => G.titlesForMe(); // its own faction's (a faction's dungeon included), an event's while it runs or once earned
   function rankMob(m) {
     const r = { alive: 0, fight: 1, tapped: 2, dead: 3 }[m.state] || 4;
     return r * 10 + (questMobKeys().has(m.key) ? 0 : (D.MOBS[m.key] || {}).collector ? 1 : 2); // a collector before the normal creatures, so the 12 cards always show it (pre-patch)

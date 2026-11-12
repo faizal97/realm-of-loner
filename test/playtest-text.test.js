@@ -35,3 +35,14 @@ test('a quest hint names a named creature once, never as a plural ("Bruk the Mau
   const plain = Object.keys(D.MOBS).find((k) => !D.MOBS[k].named && !D.MOBS[k].boss && (D.MOBS[k].qdrops || []).length);
   assert.ok(G.mobUnique && !G.mobUnique(plain) && G.mobUnique('ursal_the_mauler'));
 });
+
+test('a title from one faction\'s dungeon belongs to that faction: the Lorebound is the Accord\'s, the Spirit-Breaker the Krugar\'s', () => {
+  const T = (id) => D.TITLES.find((t) => t.id === id);
+  assert.strictEqual(G.titleFaction(T('sunken_archive')), 'alliance');
+  assert.strictEqual(G.titleFaction(T('shalzua')), 'horde');
+  assert.strictEqual(G.titleFaction(T('deadmines')), null);
+  assert.strictEqual(G.titleFaction(T('notes_due_h')), 'horde');
+  character(60, 'warrior', 'orc');
+  assert.ok(!G.titlesForMe().some((t) => t.id === 'sunken_archive'));
+  assert.ok(G.titlesForMe().some((t) => t.id === 'shalzua'));
+});

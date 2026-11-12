@@ -3452,6 +3452,17 @@
   // every title unlock says so, once (#598: Reader of Notes came silently, Tidebreaker with a message). P.titlesSeen holds
   // the ids already announced; a save without it takes what is unlocked now, quietly. Run on each save, at most every 2 s.
   const titleLine = (t) => sys(`New title: ${G.titleName(t, G.S.player.name)}. Wear it: Hero → Journey → Titles.`);
+  // the faction a title belongs to: its own, else its quest's, else the faction of the place its dungeon is entered from
+  // (the Sunken Archive is the Accord's, so a Krugar never sees "the Lorebound"); null for both
+  G.titleFaction = function (t) {
+    if (t.faction) return t.faction;
+    const n = t.need || {}, Q = n.quest && D.QUESTS[n.quest]; if (Q && Q.faction) return Q.faction;
+    const dg = n.clear || n.hard; if (!dg) return null;
+    const A = Object.values(D.ACTIVITIES).find((a) => a.dungeon === dg && a.where);
+    return (A && D.PLACES[A.where] && D.PLACES[A.where].faction) || null;
+  };
+  // the titles this character can have: its own faction's, and an event's only while it runs or once earned (#526)
+  G.titlesForMe = () => D.TITLES.filter((t) => { const f = G.titleFaction(t); return (!f || f === G.myFaction()) && (!t.prepatch || D.PREPATCH.live || G.titleUnlocked(t)); });
   G.titleAnnounced = function (id) { const P = G.S && G.S.player; if (P && P.titlesSeen && !P.titlesSeen.includes(id)) P.titlesSeen.push(id); };
   let titleAt = 0;
   G.titleCheck = function (force) {
@@ -3459,7 +3470,7 @@
     if (!force && P.titlesSeen && now() - titleAt < 2000) return; titleAt = now();
     const first = !P.titlesSeen; if (first) P.titlesSeen = [];
     for (const t of D.TITLES) {
-      if (P.titlesSeen.includes(t.id) || (t.faction && t.faction !== G.myFaction())) continue;
+      if (P.titlesSeen.includes(t.id) || (G.titleFaction(t) && G.titleFaction(t) !== G.myFaction())) continue;
       let ok = false; try { ok = G.titleUnlocked(t); } catch (e) { ok = false; }
       if (!ok) continue;
       P.titlesSeen.push(t.id); if (!first) titleLine(t);
