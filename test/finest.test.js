@@ -5,7 +5,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 const { G, D, character, setNow } = require('./world');
 
-const IN_SEASON = new Date(2026, 10, 15, 12).getTime(), BEFORE = new Date(2026, 10, 13, 12).getTime();
+const IN_SEASON = new Date(2026, 10, 15, 12).getTime(), BEFORE = new Date(2026, 10, 11, 12).getTime();
 const S1 = () => D.FINEST_SEASONS.find((s) => s.id === 1);
 const ROW_KEYS = ['slot', 'tier', 'id', 'state', 'hinted', 'revealed', 'blind', 'where', 'boss', 'chance'].sort();
 const fresh = (cls) => { setNow(IN_SEASON); return character(60, cls || 'mage'); };
