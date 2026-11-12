@@ -127,6 +127,7 @@
   SOC.GROUP_LEVELS = 3; // a sim player who asks you to group is at most this many levels from yours
   SOC.makeWhisper = () => makeWhisper(); // for tests
   SOC.makeRecruit = () => makeRecruit(); // for tests (#596)
+  SOC.makeGuildRequest = () => makeGuildRequest(); // for tests
   // an online member speaks for the guild; nobody online, nobody: never a stranger from the realm (#592)
   const guildOfficer = () => { const P = G.S.player; const info = SOC.guildInfo(P.guild); return info.officer || onlineMate() || null; };
   const onlineMate = (not) => { const S = G.S, d = new Date(); const m = S.bots.filter((b) => b.guild === S.player.guild && B.isOnline(b, d) && b.id !== not); return m.length ? pick(m) : null; };
@@ -529,7 +530,7 @@
       if (!it) return;
       const n = rint(5, 15), ml = SOC.itemLvl(it); // #73: asked by a guildmate at that material's level
       const who = SOC.gearFits(mate, ml) ? mate : pick(G.S.bots.filter((x) => x.guild === P.guild && B.isOnline(x, new Date()) && SOC.gearFits(x, ml))); if (!who) return;
-      post('guild', who, pickT('s396', [`can anyone spare ${n} ${link(it)}? need them for crafting`, `looking for ${n} ${link(it)}, will pay back`, `anyone got ${n} ${link(it)} lying around?`, `guild bank is out of ${link(it)}, anyone? ${n} would do`, `short on ${link(it)} for guild crafting, need ${n}`, `${n} ${link(it)} from anyone who can spare them? will pay`]), { kind: 'g_mats', guild: true, bot: who.id, item: it.id, n, pay: Math.round((it.sell || 1) * n * 3), until: now() + 12 * 60000 });
+      post('guild', who, pickT('s396', [`can anyone spare ${n} ${link(it)}? need them for crafting`, `looking for ${n} ${link(it)}, will pay back`, `anyone got ${n} ${link(it)} lying around?`, `guild bank is out of ${link(it)}, anyone? ${n} would do`, `short on ${link(it)} for guild crafting, need ${n}`, `${n} ${link(it)} from anyone who can spare them? will pay`]), { kind: 'g_mats', guild: true, bot: who.id, item: it.id, n, pay: Math.round(G.ahValue(it) * 0.8) * n /* what the cheapest auction listing of them costs, so it is worth giving and never a profit to buy and hand in */, until: now() + 12 * 60000 });
       return;
     }
     if (kind === 'g_help') {
