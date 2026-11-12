@@ -1877,14 +1877,15 @@
     const P = G.S.player;
     if (l.money) { l.money = Math.round(l.money * (1 + racialPassive('lootMoneyPct') / 100) * G.warBonus()); P.money += l.money; loot(`You loot ${G.moneyText(l.money)}.`); }
     let got = 0; const gotItems = [];
-    // full bags (#164): green or better goes to the bank and says so; grey and white that don't fit are named, once a kill
+    // full bags (#164): green or better goes to the bank and says so; grey and white that don't fit are lost, and named
+    // as lost once a kill (#598: "left behind" read as if they waited somewhere)
     const left = [];
     for (const it of l.items) {
       if ((it.q || 0) >= 2) { const to = G.giveReward(it, 'Loot'); if (to === 'bank') { toast(`Bags full: ${it.name} sent to your bank`); continue; } }
       else if (!G.addItem(it, 1)) { left.push(it); continue; }
       got++; gotItems.push(it); loot(`You receive loot: ${B.link(it.name, it.q)}.`);
     }
-    if (left.length) sys(`Bags full: left behind ${left.map((it) => B.link(it.name, it.q)).join(', ')}`);
+    if (left.length) sys(`Bags full. Lost: ${left.map((it) => B.link(it.name, it.q)).join(', ')}.`); /* #598: gone, not waiting anywhere */
     if (l.money || got) emit('lootGain', { money: l.money, items: got, got: gotItems });
     questCheck();
   }
@@ -2652,7 +2653,7 @@
     const n = rint(N.n[0], N.n[1]);
     const got = Math.min(n, G.bagRoom(D.ITEMS[N.item])); // what fits goes in, and the rest is named (#474)
     if (got > 0 && G.addItem(G.copyItem(N.item), got)) loot(`You receive item: ${B.link(D.ITEMS[N.item].name, D.ITEMS[N.item].q)}${got > 1 ? ' x' + got : ''}.`);
-    if (got < n) info(`Bags full: ${n - got} ${D.ITEMS[N.item].name} left behind.`);
+    if (got < n) info(`Bags full. Lost: ${D.ITEMS[N.item].name} x${n - got}.`);
     if (N.extra && Math.random() < N.extra[1] && G.addItem(G.copyItem(N.extra[0]), 1)) loot(`You receive item: ${B.link(D.ITEMS[N.extra[0]].name)}.`);
     skillUp(N.prof, G.skillColor(p.skill, G.nodeSk(N)));
     emit('lootGain', { items: 1, got: [D.ITEMS[N.item]] });
