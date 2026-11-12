@@ -3272,7 +3272,7 @@
       const ls = ui.lastSale;
       // in the sheet's fixed header, under the money row, so it stays in sight while you tap the bag slots below
       t.querySelectorAll('.last-sale').forEach((x) => x.remove());
-      t.append(h('div', { class: 'last-sale' }, !ls ? '' : ['Sold ', ls.item ? h('b', { class: 'q' + (ls.item.q || 0) }, ls.item.name) : `${ls.many} ${ls.grey ? 'grey ' : ''}item${ls.many > 1 ? 's' : ''}`, ls.item && ls.n > 1 ? ` ×${ls.n}` : '', h('span', { html: ' for ' + moneyHtml(ls.money) })]));
+      t.append(saleLine(ls));
       const stock = G.vendorStock(npc);
       const list = h('div', { class: 'list' });
       // #598: a purchase you can't afford says so on the row you tapped, not in a toast far from it
@@ -3404,12 +3404,15 @@
       h('p', null, b.item.slot === 'quest' ? 'It is gone for good. If a quest still needs it, you will have to find another.' : 'It is gone for good.'),
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { closeDialog(); go(); } }, 'Throw away'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Keep'))], true);
   }
+  // the last sale in one line (#168), in the header of the screen it was made on: the vendor's, or the Backpack's Sell all grey
+  function saleLine(ls) { return h('div', { class: 'last-sale' }, !ls ? '' : ['Sold ', ls.item ? h('b', { class: 'q' + (ls.item.q || 0) }, ls.item.name) : `${ls.many} ${ls.grey ? 'grey ' : ''}item${ls.many > 1 ? 's' : ''}`, ls.item && ls.n > 1 ? ` ×${ls.n}` : '', h('span', { html: ' for ' + moneyHtml(ls.money) })]); }
   function openBags() {
     ui.bagSel = null; ui.sellPick = null; ui.invTab = 'all'; G.seenBags(); renderNavDots(); // seen: the dot clears (issues #11, #23)
     openSheet('bags', 'Backpack', null, (b, t) => {
       const P = G.S.player;
       const bd = G.bagBadge(); // "2 free" or "Full" beside the count, in the badge's colour, so the badge explains itself (#90)
       t.innerHTML = ''; t.append('Bags', h('small', { html: `${P.bags.length}/${G.bagCap()}${bd ? ` <span class="bag-free${bd.full ? ' full' : ''}">${bd.full ? 'Full' : bd.n + ' free'}</span>` : ''} · ` + moneyHtml(P.money) }));
+      if (ui.lastSale && Date.now() - (ui.saleAt || 0) < 8000) t.append(saleLine(ui.lastSale)); /* a sale made here shows here, not only in the chat under the sheet (play-test) */
       // Sort (#133) in the header row before ×, styled as the header's Back; the header outlives a redraw, so the old one
       // goes first. Not while picking items to sell, where it would move the picks. The toast tells the order.
       const hd = t.parentNode, oldSort = hd && hd.querySelector('.bag-sort'); if (oldSort) oldSort.remove();
