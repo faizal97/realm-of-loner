@@ -71,12 +71,12 @@
       art: ['banner', 'notes_come_due'],
       title: 'The Notes Come Due',
       text: [
-        'Debt collectors walk every zone, at every level. Each one you beat leaves a torn debt note; a debt clerk in any town with trainers trades them for Mentor Marks or a title.',
+        'Debt collectors walk every zone, at every level. Each one you beat leaves a torn debt note, unless it is grey to you; a debt clerk in any town with trainers trades them for Mentor Marks or a title.',
         'At 60, after The Drowned Crown or a raid, the campaign opens and every class learns a new ability.',
       ],
       steps: [
-        { text: 'Beat a debt collector for a torn debt note', check: ['debt_notes', 1], go: 'map' },
-        { text: 'Trade 40 torn debt notes for the title the Debt-Breaker', check: ['debt_breaker'] },
+        { text: 'Beat a debt collector (not grey) for a torn debt note', check: ['debt_notes', 1], go: 'map' },
+        { text: 'Trade 40 torn debt notes for the title the Debt-Breaker', check: ['debt_breaker'], go: 'debtclerk' },
         { text: 'At 60: finish The Drowned Crown or clear a raid to open the campaign', check: ['prepatch_open'], go: 'lfg:raid' },
         { text: "Learn your class's new ability from Tutor Ione Calder in Rumhook Bay", check: ['prepatch_ability'], go: 'prepatch:tutor' },
         { text: 'Finish the campaign: Coronation Day', check: ['prepatch_campaign'], go: 'prepatch:campaign' },
@@ -108,15 +108,16 @@
       ],
     },
     {
-      id: 'seasons_finest_2026_11_14', kind: 'new', from: '2026-11-14', to: '2026-11-20',
+      id: 'seasons_finest_2026_11_14', kind: 'new', from: '2026-11-12', to: '2026-11-20', /* from the season's start (D.FINEST_SEASONS) */
       art: ['banner', 'raid_tidecrown_citadel'], artHorde: ['banner', 'raid_tidecrown_citadel_h'],
       title: "Season's Finest begins",
       text: [
-        'The best piece for each slot of your class and role this season: Best from the newest raid and dungeons, Next best from older ones.',
-        'Find every Best piece of a role without a Hint or Reveal for its title: the Tideward, the Tidemender or the Tidebreaker. Pathfinder counts each class role you finish. Hero → Journey → Season’s Finest.',
+        'The best piece for each slot of your class and role this season: Best from the newest raid and from older raids and dungeons, Next best from old raids and dungeons.',
+        'Find every Best piece of a role without a Hint or Reveal for its title: the Tideward, the Tidemender or the Tidebreaker. Pathfinder counts each class role you finish blind. Hero → Journey → Season’s Finest.',
       ],
       steps: [
         { text: 'Find a piece of Season’s Finest', check: ['finest', 1], go: 'finest' },
+        { text: 'Your Best and Next best pieces: Hero → Journey → Season’s Finest', go: 'finest' },
       ],
     },
     {

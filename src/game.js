@@ -1106,7 +1106,7 @@
     if (t.minLevel && P.level < t.minLevel) { toast(`Marks trade: level ${t.minLevel} only.`); return false; }
     if ((P.debtNotes || 0) < t.cost) { toast(`Need ${t.cost} torn debt notes (you have ${P.debtNotes || 0}).`); return false; }
     P.debtNotes -= t.cost;
-    if (t.kind === 'title') { const a = G.account(); a.debtBreaker = 1; G.saveAccount(a); loot('Title: the Debt-Breaker. Wear it: Hero → Journey → Titles.'); }
+    if (t.kind === 'title') { const a = G.account(); a.debtBreaker = 1; G.saveAccount(a); sys('Title: the Debt-Breaker. Wear it: Hero → Journey → Titles.'); }
     if (t.kind === 'marks') G.addMarks(t.marks, 'torn debt notes');
     emit('change'); G.save(); return true;
   };
@@ -1374,6 +1374,13 @@
     for (const p in dist) if (G.isHub(p) && !G.enemyTown(p) && G.bounties(p).length && (!best || dist[p] < best.secs)) best = { place: p, secs: Math.round(dist[p]) };
     return best;
   };
+  // the nearest place (by road time) where an NPC stands, never an enemy town: { place, secs } or null
+  G.nearestNpc = function (npc, from) {
+    from = from || G.S.player.place;
+    const dist = G.travelTimes(from); let best = null;
+    for (const p in dist) if ((D.PLACES[p].npcs || []).includes(npc) && !G.enemyTown(p) && (!best || dist[p] < best.secs)) best = { place: p, secs: Math.round(dist[p]) };
+    return best;
+  };
   function routeSearch(from, to, throughFoes) {
     const dist = { [from]: 0 }, prev = {}, done = new Set();
     const open = [from];
@@ -1585,13 +1592,15 @@
     const mobs = Object.keys(D.MOBS).filter((k) => (D.MOBS[k].qdrops || []).concat(D.MOBS[k].drops || []).some((d) => d[0] === item)); // the sources validate.js checks
     return mobs.length ? { mobs } : null;
   };
+  // a creature there is only one of: a named one, a boss, or a place's named rare
+  G.mobUnique = (k) => { const M = D.MOBS[k] || {}; return !!(M.named || M.boss || M.unique) || Object.values(D.PLACES).some((p) => p.named && p.named[k]); };
   // the objective's second line: "Collect them here" (you can act on it now), "Collect them in Halden Vineyards" or
   // "Dropped by Grey Hood Thugs"
   G.objHint = function (o) {
     if (o.type !== 'collect') return null;
     const s = G.objSource(o.item); if (!s) return null;
     if (s.gather) return s.gather.includes(G.S.player.place) ? 'Collect them here' : `Collect them in ${s.gather.map((k) => D.PLACES[k].name).join(' or ')}`;
-    const names = s.mobs.slice(0, 2).map((k) => E.plural(k));
+    const names = s.mobs.slice(0, 2).map((k) => (G.mobUnique(k) ? D.MOBS[k].name : E.plural(k))); // one of a kind stays singular: "Bruk the Mauler", never "Maulers"
     return `Dropped by ${names.join(' and ')}${s.mobs.length > 2 ? ' and others' : ''}`;
   };
   G.questComplete = function (qid) { return G.questProgress(qid).every((p) => p.have >= p.n); };
@@ -1719,7 +1728,7 @@
     const m = Math.round(((Q.reward.money || 0) + G.questMoney(Q.lvl)) * (1 + (racialPassive('questMoneyPct') + ((root.SOC && SOC.perk('gold')) || 0)) / 100) * G.warBonus());
     P.money += m;
     sys(`Received ${G.moneyText(m)}.`);
-    { const ta = Object.keys(D.ABILITIES).find((k) => D.ABILITIES[k].learn === qid && D.ABILITIES[k].cls === P.cls); if (ta) { loot(`You have learned a new ability: ${D.ABILITIES[ta].name}.`); } } // a class quest teaches its ability
+    { const ta = Object.keys(D.ABILITIES).find((k) => D.ABILITIES[k].learn === qid && D.ABILITIES[k].cls === P.cls); if (ta) { sys(`You have learned a new ability: ${D.ABILITIES[ta].name}.`); } } // a class quest teaches its ability, said where level-up abilities are (system: the default chat shows it, loot it hides)
     G.titleCheck(true); /* a quest's title says so as it unlocks (#598) */
     if (it) { G.addItem(JSON.parse(JSON.stringify(it)), 1); loot(`You receive item: ${B.link(it.name, it.q)}.`); }
     G.gainXp(G.questXpFor(Q), false);
@@ -3429,6 +3438,12 @@
     const r = G.records();
     return Object.keys(D.DUNGEONS).some((k) => D.DUNGEONS[k].raid && r.clears[k] && r.clears[k].clears);
   };
+  // why the campaign isn't open yet, as This week's Go says it (null once it is): below 60 the level comes first; at 60
+  // only the story or a raid is left, so "Opens at 60" would be wrong
+  G.prepatchLocked = function () {
+    if (G.prepatchOpen()) return null;
+    return G.S.player.level < 60 ? 'Opens at 60, after The Drowned Crown or a raid.' : 'Opens after The Drowned Crown or a raid.';
+  };
   // Crestbearer (#565): the newest raid cleared on Hard while it is the newest. Kept once earned (P.crest, by activity);
   // a Hard clear from before this existed counts while that raid is still the newest. record: write a new one down
   G.crests = function (record) {
@@ -3444,7 +3459,18 @@
   };
   // every title unlock says so, once (#598: Reader of Notes came silently, Tidebreaker with a message). P.titlesSeen holds
   // the ids already announced; a save without it takes what is unlocked now, quietly. Run on each save, at most every 2 s.
-  const titleLine = (t) => loot(`New title: ${G.titleName(t, G.S.player.name)}. Wear it: Hero → Journey → Titles.`);
+  const titleLine = (t) => sys(`New title: ${G.titleName(t, G.S.player.name)}. Wear it: Hero → Journey → Titles.`);
+  // the faction a title belongs to: its own, else its quest's, else the faction of the place its dungeon is entered from
+  // (the Sunken Archive is the Accord's, so a Krugar never sees "the Lorebound"); null for both
+  G.titleFaction = function (t) {
+    if (t.faction) return t.faction;
+    const n = t.need || {}, Q = n.quest && D.QUESTS[n.quest]; if (Q && Q.faction) return Q.faction;
+    const dg = n.clear || n.hard; if (!dg) return null;
+    const A = Object.values(D.ACTIVITIES).find((a) => a.dungeon === dg && a.where);
+    return (A && D.PLACES[A.where] && D.PLACES[A.where].faction) || null;
+  };
+  // the titles this character can have: its own faction's, and an event's only while it runs or once earned (#526)
+  G.titlesForMe = () => D.TITLES.filter((t) => { const f = G.titleFaction(t); return (!f || f === G.myFaction()) && (!t.prepatch || D.PREPATCH.live || G.titleUnlocked(t)); });
   G.titleAnnounced = function (id) { const P = G.S && G.S.player; if (P && P.titlesSeen && !P.titlesSeen.includes(id)) P.titlesSeen.push(id); };
   let titleAt = 0;
   G.titleCheck = function (force) {
@@ -3452,7 +3478,7 @@
     if (!force && P.titlesSeen && now() - titleAt < 2000) return; titleAt = now();
     const first = !P.titlesSeen; if (first) P.titlesSeen = [];
     for (const t of D.TITLES) {
-      if (P.titlesSeen.includes(t.id) || (t.faction && t.faction !== G.myFaction())) continue;
+      if (P.titlesSeen.includes(t.id) || (G.titleFaction(t) && G.titleFaction(t) !== G.myFaction())) continue;
       let ok = false; try { ok = G.titleUnlocked(t); } catch (e) { ok = false; }
       if (!ok) continue;
       P.titlesSeen.push(t.id); if (!first) titleLine(t);

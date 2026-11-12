@@ -1395,8 +1395,7 @@
     roads.append(h('button', { class: 'chip ' + (hs > 0 || home ? 'why' : 'gold'), onclick: () => G.hearth(), disabled: hs > 0 || home }, 'Waystone', h('small', null, hs > 0 ? Math.ceil(hs / 60000) + 'm' : home ? "You're home" : D.PLACES[P.bind].name)));
     b.append(roads, h('button', { class: 'btn alt wide', onclick: () => openMap() }, 'Open map'));
   }
-  // the titles this character can have: its own faction's, and an event's only while it runs or once earned (#526)
-  const titlesForMe = () => D.TITLES.filter((t) => (!t.faction || t.faction === G.myFaction()) && (!t.prepatch || D.PREPATCH.live || G.titleUnlocked(t)));
+  const titlesForMe = () => G.titlesForMe(); // its own faction's (a faction's dungeon included), an event's while it runs or once earned
   function rankMob(m) {
     const r = { alive: 0, fight: 1, tapped: 2, dead: 3 }[m.state] || 4;
     return r * 10 + (questMobKeys().has(m.key) ? 0 : (D.MOBS[m.key] || {}).collector ? 1 : 2); // a collector before the normal creatures, so the 12 cards always show it (pre-patch)
@@ -2923,13 +2922,13 @@
     if (!bl) return `There's no way to ${pl.name} from here.`;
     return `The road to ${pl.name} runs through ${D.PLACES[bl.town].name}, an enemy town.` + (bl.act ? ' Join it through the Group Finder.' : '');
   }
-  function routeDialog(to) {
+  function routeDialog(to, npc) { // npc: whom you go to see there, named on the route
     const P = G.S.player, pl = D.PLACES[to];
     if (P.travel) return toast('You are already on the road.');
     const r = G.route(P.place, to);
     if (!r) return showDialog([h('h3', null, pl.name), h('p', null, G.enemyTown(to) ? `${pl.name} is an enemy town. The guards would kill you on sight.` : noRouteWhy(to)), h('div', { class: 'btn-row' }, h('button', { class: 'btn alt', onclick: closeDialog }, 'OK'))], true);
     const steps = r.path.slice(1).map((p, i) => { const a = r.path[i]; const via = (D.PLACES[a].via || {})[p]; return h('div', { class: 'obj' }, `${i + 1}. ${D.PLACES[p].name}`, h('small', { style: { color: 'var(--muted)' } }, ` · ${D.PLACES[p].zone}${via ? ' · ' + via : ''} · ${G.travelSecs(a, p)} s`)); });
-    showDialog([h('h3', null, 'Route to ' + pl.name), h('p', null, `${pl.zone} · levels ${pl.lvl[0]}–${pl.lvl[1]} · ${r.path.length - 1} stop${r.path.length > 2 ? 's' : ''}, about ${r.secs} s`), ...steps,
+    showDialog([h('h3', null, 'Route to ' + pl.name), npc && D.NPCS[npc] ? h('p', null, `Find: ${D.NPCS[npc].name}`) : null, h('p', null, `${pl.zone} · levels ${pl.lvl[0]}–${pl.lvl[1]} · ${r.path.length - 1} stop${r.path.length > 2 ? 's' : ''}, about ${r.secs} s`), ...steps,
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { closeDialog(); closeSheet(); G.travelRoute(to); } }, 'Go'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Cancel'))], true);
   }
   // the world: every zone, where it sits, and how the zones connect
@@ -3188,7 +3187,7 @@
       sarvis: 'You are free now. Free of the Hollow Host. Use that freedom well.', arren: 'The dead do not rest here. Not all of them, at least.', saltain: 'We need supplies. Everything is useful to the Reclaimed.',
       kien: 'Food? For you? Yes... I suppose you still eat.', sevren: 'Mossgate serves the Pale Queen. As will you.', renee: 'Welcome to the Gallows\' End Tavern.',
       dillinger: 'The Order of the Pyre grows bolder every day.', johaan: 'Ah, a test subject. I mean, a volunteer.', gerard: 'Blades for the Reclaimed.', norman: 'The Gravenhold welcomes you.', abigail: 'Sharp things. For sharp minds.',
-      gornek: 'Lok\'tar, young one. Prove your strength in the Blooding Grounds.', kaltunk: 'Watch for the scorpions, they sting hard.',
+      gornek: 'Blood and dust, young one. Prove your strength in the Blooding Grounds.', kaltunk: 'Watch for the scorpions, they sting hard.',
       galgar: 'Hungry? Bring me cactus apples and I\'ll cook you something.', zureetha: 'The Hollow Eye taints this valley. Help me cleanse it.',
       duokna: 'Food and water for the road, friend.', garthok: 'Bonewall stands ready. The humans at Saltwall are a thorn in our side.',
       grosk: 'Well met, blood-kin! Rest your bones by the fire.', orgnil: 'The spirits whisper of storms over Rumblestone Ridge.', kaplak: 'Axes, blades, hammers. Orc steel.',
@@ -3201,7 +3200,7 @@
       gryan: 'Welcome to Warrick\'s Rise. Longfield is ours again, one farm at a time.', danuvin: 'Keep your blade drawn. The Grey Hood are never far.',
       galiaan: 'The mirelings on the Saltstrand get bolder every tide.', heather: 'Sit down and eat, love. Stew is hot.', lewis: 'Militia steel. Plain, but it does not break.',
       furlbrow: 'We lost the farm to the Grey Hood. Lost everything.', verna: 'Poor Old Clover has not eaten in days.', saldean: 'We stayed when everyone else ran. Stubborn, I suppose.',
-      salma: 'Mind the pie, it is hot!', thork: 'Lok\'tar. Dustfort needs every blade it can get.', sergra: 'The Scrublands test every hunter. Most fail.',
+      salma: 'Mind the pie, it is hot!', thork: 'Blood and dust. Dustfort needs every blade it can get.', sergra: 'The Scrublands test every hunter. Most fail.',
       helbrim: 'Samples, samples. The Scrublands are full of interesting poisons.', zargh: 'Hungry? Everything here is edible if you cook it long enough.',
       boorand: 'Rest your feet, traveller. The Scrublands are wide.', nargal: 'Need a weapon? The centaurs will not ask before they charge.', kargal: 'Hollow Tower sees everything that comes out of the Scrublands.',
       allison: 'Welcome to the White Hart. Kingsmere\'s finest beds.', thurman: 'Kingsmere steel. The best the Accord can buy.',
@@ -3213,7 +3212,7 @@
       verner: 'Blades and mail, forged by the lake.', thelwater: 'Kingsmere Gaol is in chaos. Every prisoner we ever caught is loose in there.',
       ebonlocke: 'Lanternby stands, no thanks to Kingsmere. We watch the woods every night.', althea: 'The Lamplighters takes anyone who can hold a sword. Can you?', abercrombie: 'Heh heh. A visitor. Come in, come in. Mind the smell.',
       madame_eva: 'The cards told me you would come. They did not say whether you would leave.', sirra: 'The history of Wraithwood is written in blood and moonlight.', trelayne: 'Welcome to the Pyre Raven. Keep the door shut, the wolves are out.', gavin: 'Silver edges bite werewolves best. Take a look.',
-      darthalia: 'The Pale Queen wants Greymead. We will give it to her, one farm at a time.', lydon: 'Every plague needs a test. And every test needs subjects.', krusk: 'Lok\'tar. Mourncross needs blades, not talk.', dalar: 'Cairn made those werewolves. He must answer for it.',
+      darthalia: 'The Pale Queen wants Greymead. We will give it to her, one farm at a time.', lydon: 'Every plague needs a test. And every test needs subjects.', krusk: 'Blood and dust. Mourncross needs blades, not talk.', dalar: 'Cairn made those werewolves. He must answer for it.',
       marla: 'Rest in Mourncross. The dead do not sleep, but you still may.', dogran: 'Orc steel, Reclaimed edge.',
       noggenfogger: 'Welcome to Coppergulch, where everything has a price and the water costs extra.', bilgewhizzle: 'Bandits, pirates, bugs. My water towers have more enemies than friends.', sprinkle: 'Water is life out here. Help me keep it flowing.', fizzledowser: 'Fascinating desert! Dangerous, but fascinating.', innkeeper_fizzgrimble: 'Rooms, drinks, sand in everything. Welcome.', blizrik: 'Guns, blades and bombs. No refunds.',
       shandris: 'Starfeather holds the coast. The moon gives us strength.', latronicus: 'The forest is vast and old. So are its dangers.', innkeeper_shyria: 'Rest under the moon, friend.', vivianna: 'Moonsteel blades, light and deadly.',
@@ -3696,7 +3695,7 @@
         h('div', { class: 't' }, h('b', null, t.kind === 'title' ? 'the Debt-Breaker' : `${t.marks} Mentor Marks`), h('small', null, t.kind === 'title' ? 'Title · account-wide' : t.minLevel ? `Level ${t.minLevel} · shared by all your characters` : 'Shared by all your characters')), h('div', { class: 'r' }, right)));
     }
     b.append(h('div', { class: 'sec-h' }, 'Trade', h('small', null, `Torn debt notes: ${G.debtNotesText()}`)), list,
-      h('p', { class: 'ai-note' }, 'Every levelling zone has debt collectors at the zone\'s own level. Grey ones carry no notes. The trade lasts until The Ruinfall Saga begins.'));
+      h('p', { class: 'ai-note' }, 'Every levelling zone has debt collectors at the zone\'s own level. Grey ones carry no notes. The trade lasts until Chapter 1 of The Ruinfall Saga.'));
   }
   function lwKeeperBlock(b) {
     const st = G.lw();
@@ -3834,6 +3833,7 @@
     finest: () => openFinest(), // #593
     'prepatch:campaign': () => weekGoQuest((Q) => Q.arc === 'The Notes Come Due' && !Q.cls), // #598: the campaign's next step, not an empty log
     'prepatch:tutor': () => weekGoQuest((Q) => Q.prepatch && Q.cls === G.S.player.cls), // #598: the class quest that teaches the new ability
+    debtclerk: () => goToNpc('note_clerk'), /* the nearest debt clerk, for the notes trade */
   };
   // a This week step that leads to quests: the Quest Log when one of them is taken, else a route to the giver of the
   // next one; before they open, why not
@@ -3841,11 +3841,17 @@
     const P = G.S.player, ids = Object.keys(D.QUESTS).filter((q) => pick(D.QUESTS[q]) && (!D.QUESTS[q].faction || D.QUESTS[q].faction === G.myFaction()));
     if (ids.some((q) => P.quests[q])) return openQuests();
     const next = ids.find((q) => G.questState(q) === 'available');
-    if (!next) return toast(G.prepatchOpen() ? 'Nothing to take here right now.' : 'Opens at 60, after The Drowned Crown or a raid.');
-    const npc = D.QUESTS[next].giver, at = Object.keys(D.PLACES).find((p) => D.PLACES[p].npcs.includes(npc));
-    if (!at) return openQuests();
-    if (P.place === at) { closeSheet(); return toast(`${D.NPCS[npc].name} is here.`); }
-    routeDialog(at);
+    if (!next) return toast(G.prepatchLocked() || 'Nothing to take here right now.');
+    const npc = D.QUESTS[next].giver;
+    if (!G.nearestNpc(npc)) return openQuests();
+    goToNpc(npc);
+  }
+  // to an NPC: here, a toast; else the route to the nearest place they stand, with their name on it
+  function goToNpc(npc) {
+    const n = G.nearestNpc(npc), name = D.NPCS[npc].name;
+    if (!n) return toast(`No road to ${name}.`);
+    if (n.place === G.S.player.place) { closeSheet(); return toast(`${name} is here.`); }
+    routeDialog(n.place, npc);
   }
   const WEEK_KEY = 'azsolo.weekSeen'; // this device: the banner ids already shown (the button's dot, the once-a-week opening)
   const weekSeen = () => { try { return new Set(JSON.parse(localStorage.getItem(WEEK_KEY) || '[]')); } catch (e) { return new Set(); } };
@@ -4388,7 +4394,8 @@
         for (const id of D.CLASSES[P.cls].abilities) {
           const ab = D.ABILITIES[id]; const t = abilityText(id);
           if (ab.lvl > P.level) { later.push(ab); continue; }
-          if (!G.learned(id)) { const lq = D.QUESTS[ab.learn], gv = lq && D.NPCS[lq.giver]; abl.append(h('div', { class: 'row dim' }, h('div', { class: 'ic' }, img(abIcon(id))), h('div', { class: 't' }, h('b', null, ab.name), h('small', { style: { whiteSpace: 'normal' } }, gv ? `Learn from ${gv.name}` : 'Learn from a quest')), h('div', { class: 'r' }, 'Not learned'))); continue; }
+          if (!G.learned(id)) { const lq = D.QUESTS[ab.learn], gv = lq && D.NPCS[lq.giver], at = gv && G.nearestNpc(lq.giver); // a tap goes to the teacher (the route, named)
+            abl.append(h(at ? 'button' : 'div', { class: 'row dim' + (at ? ' nav' : ''), onclick: at ? () => goToNpc(lq.giver) : null }, h('div', { class: 'ic' }, img(abIcon(id))), h('div', { class: 't' }, h('b', null, ab.name), h('small', { style: { whiteSpace: 'normal' } }, gv ? `Learn from ${gv.name}${at ? ' · ' + D.PLACES[at.place].name : ''}` : 'Learn from a quest')), h('div', { class: 'r' }, at ? h('span', { class: 'chip gold' }, 'Go') : 'Not learned'))); continue; }
           abl.append(h('div', { class: 'row' }, h('div', { class: 'ic' }, img(abIcon(id))), h('div', { class: 't' }, h('b', null, ab.name), h('small', { style: { whiteSpace: 'normal' } }, t.d)), h('div', { class: 'r' }, t.cost)));
         }
         b.append(abl);

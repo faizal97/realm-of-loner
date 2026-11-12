@@ -168,7 +168,15 @@ try {
     for (const w of old.split(/[\s,:()"!?.-]+/).map(stripPoss)) if (w.length >= 5 && /^[A-Z]/.test(w) && !newWords.has(w) && ![w, w.replace(/s$/, ''), w.replace(/es$/, '')].some((x) => dict.has(x.toLowerCase())) && !RETIRED.has(w)) RETIRED.set(w, `${old} → ${v.new}`);
 } catch (e) { }
 if (SELF) add('selftest retired', 1, 'Welcome to Coldridge, lad.');
+// forbidden words: a name or phrase the rename map marks "forbid" (Warcraft's own words with no new name, such as Warchief
+// and the orcish "Lok'tar"), anywhere a player reads, greetings and chat included. Grukk's greeting said "Lok'tar" and
+// passed: the old checks only knew renamed places and people. Short ones ("WoW") match by case, the rest in any case
+const FORBID = [];
+try { const RM = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/rename_v10.json'), 'utf8'));
+  for (const [n, v] of Object.entries(RM)) if (v.status === 'forbid') FORBID.push([n, new RegExp(`(?<![A-Za-z])${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![A-Za-z])`, n.length > 3 ? 'i' : '')]); } catch (e) { }
+if (SELF) add('selftest forbid', 1, "Lok'tar, young one.", { greeting: true });
 for (const t of texts) {
+  for (const [n, re] of FORBID) if (re.test(t.text)) problems.push(`FORBID   ${t.src} uses "${t.text.match(re)[0]}", a word the game never uses (${n} is marked forbid in tools/rename_v10.json)`);
   if (!t.spoilerOnly) for (const w of t.text.split(/[^A-Za-z']+/)) { const s = stripPoss(w); if (RETIRED.has(s)) problems.push(`RETIRED  ${t.src} uses "${s}", a pre-v10 name (${RETIRED.get(s)})`); }
   // spoilers
   for (const r of REVEALS) if (t.lvl < r.lvl && r.re.test(t.text) && !allowed(r, t.src)) problems.push(`SPOILER  ${t.src} (level ${t.lvl}) names "${t.text.match(r.re)[0]}" before level ${r.lvl}: ${r.what}`);
@@ -214,7 +222,7 @@ for (const [w, srcs] of unknown) {
 
 if (SELF) {
   const all = problems.concat(warnings).join('\n');
-  const want = [['spoiler', /SPOILER  selftest spoiler /], ['trophy plaque', /SPOILER  selftest trophy /], ['codex source', /SPOILER  selftest codex /], ['chat line', /SPOILER  selftest chat /], ['mob aggro line', /SPOILER  selftest aggro /], ['titles screen', /SPOILER  selftest titles /], ['reveals copy', /REVEALS  src\/data\/reveals\.js differs/], ['hale', /SPOILER  selftest spoiler2/], ['faction', /FACTION  selftest/], ['typo Blackwell', /"Blackwel".*did you mean "Blackwell"/], ['typo Carrow', /"Carow".*did you mean "Carrow"/], ['unknown name', /"Zorbulax"/], ['retired name', /RETIRED  selftest retired uses "Coldridge"/], ['hooded stranger', /SPOILER  selftest hood/]];
+  const want = [['spoiler', /SPOILER  selftest spoiler /], ['trophy plaque', /SPOILER  selftest trophy /], ['codex source', /SPOILER  selftest codex /], ['chat line', /SPOILER  selftest chat /], ['mob aggro line', /SPOILER  selftest aggro /], ['titles screen', /SPOILER  selftest titles /], ['reveals copy', /REVEALS  src\/data\/reveals\.js differs/], ['hale', /SPOILER  selftest spoiler2/], ['faction', /FACTION  selftest/], ['typo Blackwell', /"Blackwel".*did you mean "Blackwell"/], ['typo Carrow', /"Carow".*did you mean "Carrow"/], ['unknown name', /"Zorbulax"/], ['retired name', /RETIRED  selftest retired uses "Coldridge"/], ['hooded stranger', /SPOILER  selftest hood/], ['forbidden word', /FORBID   selftest forbid uses "Lok'tar"/]];
   let bad = 0; for (const [k, re] of want) { const ok = re.test(all); if (!ok) bad++; console.log(`${ok ? 'caught' : 'MISSED'}  ${k}`); }
   process.exit(bad ? 1 : 0);
 }
