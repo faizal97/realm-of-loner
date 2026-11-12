@@ -2290,7 +2290,7 @@
     // action bar cooldowns
     if (els.abs) {
       const teleIds = new Set(); // the answers to a red bar now (#179): those buttons glow
-      if (C && G.pUnit && !G.pUnit.dead) for (const x of E.teleFor(C, G.pUnit)) for (const id of E.answersOf(G.pUnit, x.ans)) teleIds.add(id);
+      if (C && G.pUnit && !G.pUnit.dead) for (const x of E.teleFor(C, G.pUnit)) for (const id of E.answersOf(G.pUnit, x.ans)) if (E.formOk(G.pUnit, id)) teleIds.add(id); /* only buttons usable in the form glow */
       for (const id in els.abs) {
         const btn = els.abs[id];
         let p = 1, left = 0, nores = false, on = false;
@@ -5959,7 +5959,8 @@
   function teleIconId(ans) {
     const u = G.pUnit, C = G.fight, have = u ? E.answersOf(u, ans === 'kick' ? 'cut' : ans) : [];
     const left = (id) => Math.max(0, ((u.cds || {})[id] || 0) - (C ? C.t : 0));
-    const best = have.slice().sort((a, b) => left(a) - left(b) || (D.ABILITIES[a].cd || 0) - (D.ABILITIES[b].cd || 0))[0];
+    const off = (id) => (u && E.formOk && !E.formOk(u, id) ? 1 : 0); /* one the form can use first: a bear is never shown a heal it can't cast */
+    const best = have.slice().sort((a, b) => off(a) - off(b) || left(a) - left(b) || (D.ABILITIES[a].cd || 0) - (D.ABILITIES[b].cd || 0))[0];
     return best || (ans === 'step' ? 'step_back' : ans === 'cut' || ans === 'kick' ? D.INTERRUPTS[G.S.player.cls] : 'shield_wall');
   }
   function paintTele(bar, C, u) {

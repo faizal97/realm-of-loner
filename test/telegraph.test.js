@@ -195,6 +195,22 @@ test('a healer\'s shield on the tank during the bar takes 1x off the slam, and t
   m.tele.until = C.t; // land it now, before the shield's absorb is counted in: the size is what matters here
 });
 
+// a Druid in Bear Form can't cast a heal: the slam asks it for a kick it can use in the form (Thornlash, Bash), not a mend
+test('a slam on the tank asks a Druid in Bear Form for an answer the form can use, first', () => {
+  const { C, u } = slamFight('druid', 40);
+  E.shiftIn(C, u, 'bear');
+  startOf(C);
+  const first = E.teleFor(C, u)[0];
+  assert.strictEqual(first.ans, 'kick', 'a heal is not first');
+  assert.ok(E.answersOf(u, 'cut').some((id) => E.canUse(C, u, id, C.enemies[0], true) !== 'Not while in Bear Form'));
+  assert.strictEqual(E.formOk(u, 'rejuvenation'), false);
+  assert.strictEqual(E.formOk(u, 'thornlash'), true);
+  assert.strictEqual(E.formOk(u, 'bash'), true);
+  E.shiftOut(C, u);
+  assert.deepStrictEqual(E.teleFor(C, u).map((x) => x.ans), ['mend', 'kick'], 'out of the form, the heal first as before');
+  assert.strictEqual(E.formOk(u, 'bash'), false, 'Bash needs the form');
+});
+
 test('a kick weakens the slam but does not cancel it, once per player', () => {
   const { C, u, m } = slamFight('mage', 20);
   const t = startOf(C);

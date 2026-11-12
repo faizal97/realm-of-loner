@@ -1299,8 +1299,11 @@
         if (!t.kicks.has(u.uid) && t.kicks.size < E.teleNum(t, 'kickCap') && E.answersOf(u, 'cut').length) out.push({ m, t, ans: 'kick' });
       } else if (t.who === 'cast' || t.who === 'all' || t.victim === u.uid) out.push({ m, t, ans: E.teleAnswer(t) });
     }
+    if (u.form) { const now = (x) => (E.answersOf(u, x.ans === 'kick' ? 'cut' : x.ans).some((id) => E.formOk(u, id)) ? 0 : 1); out.sort((a, b) => now(a) - now(b)); } /* in a form: an answer the form can use first, never a heal a bear can't cast */
     return out;
   };
+  // can the unit use this ability in its form now (Bear Form: the bear's own, the shapeshift and anyForm ones; out of a form: all but the bear's)
+  E.formOk = (u, id) => { const a = D.ABILITIES[id]; return !!a && (u.form ? a.form === u.form || !!a.shapeshift || !!a.anyForm : !a.form); };
   function teleTick(C, m) {
     const t = m.tele;
     if (m.dead) { m.tele = null; return; }

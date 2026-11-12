@@ -88,3 +88,14 @@ test('the red bar shows the answer that is ready: the shorter cooldown first, el
   u.cds.divine_protection = 250;
   assert.strictEqual(teleIconId('guard'), 'holy_shield', 'neither ready: the one ready soonest');
 });
+
+test('the red bar\'s icon, in Bear Form: an answer the form can use, never a heal it cannot cast', () => {
+  const D = { ABILITIES: { rejuvenation: { cd: 0 }, thornlash: { cd: 12 }, bash: { cd: 60 } }, INTERRUPTS: { druid: 'thornlash' } };
+  const usable = { rejuvenation: false, thornlash: true, bash: true };
+  const E = { answersOf: (u, ans) => (ans === 'mend' ? ['rejuvenation'] : ['bash', 'thornlash']), formOk: (u, id) => (u.form ? usable[id] : id !== 'bash') };
+  const u = { cds: {}, form: 'bear' }, G = { pUnit: u, fight: { t: 100 }, S: { player: { cls: 'druid' } } };
+  const teleIconId = new Function('G', 'E', 'D', fnSrc('teleIconId') + '; return teleIconId;')(G, E, D);
+  assert.strictEqual(teleIconId('kick'), 'thornlash', 'the shorter cooldown of the two the bear can use');
+  u.cds.thornlash = 105; assert.strictEqual(teleIconId('kick'), 'bash', 'Thornlash cooling down: Bash');
+  u.form = null; assert.strictEqual(teleIconId('kick'), 'thornlash', 'out of the form, Bash is not an answer');
+});
