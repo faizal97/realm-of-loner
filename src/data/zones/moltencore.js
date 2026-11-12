@@ -116,4 +116,31 @@
   Object.assign(D.ACTIVITIES, {
     molten_core: { name: 'The Magma Throne', dungeon: 'molten_core', where: 'molten_core_gate', size: 10, minLvl: 60, maxLvl: 60, desc: 'Raid beneath Cinderpeak. 10 players. Both factions.' },
   });
+  // Season's Finest, Season 1 (#593): pieces made for the season's lists. They drop only through the season roll
+  // (G.finestRoll: one extra roll per boss kill), never from the boss's own table, so its drop chances stay as they
+  // were. A Best piece (tier: 'best') is at its family's newest-raid ceiling; a Next best one at this place's own share.
+  D.item('slagplate_sabatons', { name: 'Slagplate Sabatons', slot: 'feet', q: 4, atype: 'mail', lvl: 60, armor: 408, stats: { sta: 22, str: 14 }, icon: 'boots', sell: 18000, finest: 1, tier: 'best' });
+  D.item('stonecore_band', { name: 'Stonecore Bulwark Band', slot: 'finger', q: 4, lvl: 60, stats: { sta: 19, str: 12 }, icon: 'ring', sell: 18000, finest: 1, tier: 'best' });
+  D.item('cinderstride_sabatons', { name: 'Cinderstride Sabatons', slot: 'feet', q: 4, atype: 'mail', lvl: 60, armor: 408, stats: { str: 22, sta: 14 }, icon: 'boots', sell: 18000, finest: 1, tier: 'best' });
+  D.item('burning_lake_bracers', { name: 'Bracers of the Burning Lake', slot: 'wrist', q: 4, atype: 'mail', lvl: 60, armor: 260, stats: { str: 19, sta: 12 }, icon: 'bracers', sell: 18000, finest: 1, tier: 'best' });
+  D.item('ashfall_spellcord', { name: 'Ashfall Spellcord', slot: 'waist', q: 4, atype: 'cloth', lvl: 60, armor: 74, stats: { int: 19, spi: 9 }, sp: 22, icon: 'belt', sell: 18000, finest: 1, tier: 'best' });
+  D.item('harbinger_mending_sash', { name: "Harbinger's Mending Sash", slot: 'waist', q: 4, atype: 'cloth', lvl: 60, armor: 74, stats: { int: 17, spi: 13 }, sp: 20, icon: 'belt', sell: 18000, finest: 1, tier: 'best' });
+  D.item('emberlight_mace', { name: "Steward's Emberlight Mace", slot: 'weapon', q: 4, wtype: 'mace', lvl: 60, dmg: [89, 148], speed: 2.8, stats: { int: 35, spi: 26 }, sp: 41, icon: 'mace', sell: 18000, finest: 1, tier: 'best' });
+  D.item('houndhide_boots', { name: 'Houndhide Boots', slot: 'feet', q: 4, atype: 'leather', lvl: 60, armor: 167, stats: { agi: 19, sta: 13 }, icon: 'boots', sell: 16200, finest: 1, tier: 'until' });
+  D.item('firesworn_signet', { name: 'Firesworn Signet', slot: 'finger', q: 4, lvl: 60, stats: { agi: 14, str: 14 }, icon: 'ring', sell: 16200, finest: 1, tier: 'until' });
+  D.item('ashfall_handwraps', { name: 'Ashfall Handwraps', slot: 'hands', q: 4, atype: 'cloth', lvl: 60, armor: 71, stats: { int: 17, spi: 8 }, sp: 21, icon: 'gloves', sell: 16200, finest: 1, tier: 'until' });
+  D.item('slagfist_gauntlets', { name: 'Slagfist Gauntlets', slot: 'hands', q: 4, atype: 'mail', lvl: 60, armor: 333, stats: { sta: 20, str: 13 }, icon: 'gloves', sell: 16200, finest: 1, tier: 'until' });
+  D.item('brimstone_mender_cuffs', { name: "Brimstone Mender's Cuffs", slot: 'wrist', q: 4, atype: 'cloth', lvl: 60, armor: 50, stats: { int: 13, spi: 9 }, sp: 15, icon: 'bracers', sell: 16200, finest: 1, tier: 'until' });
+  D.item('ember_shawl', { name: "Steward's Ember Shawl", slot: 'back', q: 4, lvl: 60, armor: 85, stats: { int: 14, spi: 11 }, sp: 17, icon: 'cloak', sell: 16200, finest: 1, tier: 'until' });
+  D.item('emberhide_drum', { name: 'Emberhide Drum', slot: 'ranged', q: 4, wtype: 'instrument', lvl: 60, speed: 2, stats: { int: 12, spi: 13 }, sp: 16, icon: 'reedsong_lute', sell: 16200, finest: 1, tier: 'until' });
+  D.item('burning_lake_staff', { name: 'Staff of the Burning Lake', slot: 'weapon', q: 4, wtype: 'staff', lvl: 60, dmg: [95, 159], speed: 3, stats: { int: 39, spi: 17 }, sp: 46, icon: 'staff', sell: 18000, finest: 1, tier: 'best' });
+  D.item('firesworn_cuffs', { name: 'Firesworn Cuffs', slot: 'wrist', q: 4, atype: 'cloth', lvl: 60, armor: 50, stats: { int: 14, spi: 6 }, sp: 17, icon: 'bracers', sell: 16200, finest: 1, tier: 'until' });
+  D.item('cinderstep_slippers', { name: 'Cinderstep Slippers', slot: 'feet', q: 4, atype: 'cloth', lvl: 60, armor: 76, stats: { int: 19, spi: 8 }, sp: 23, icon: 'boots', sell: 16200, finest: 1, tier: 'until' });
+  D.MOBS.golemagg.finest = ['slagplate_sabatons', 'slagfist_gauntlets'];
+  D.MOBS.garr.finest = ['stonecore_band', 'firesworn_signet', 'firesworn_cuffs'];
+  D.MOBS.magmadar.finest = ['cinderstride_sabatons', 'houndhide_boots'];
+  D.MOBS.ragnaros.finest = ['burning_lake_bracers', 'emberhide_drum', 'burning_lake_staff'];
+  D.MOBS.baron_geddon.finest = ['ashfall_spellcord', 'ashfall_handwraps'];
+  D.MOBS.sulfuron_harbinger.finest = ['harbinger_mending_sash', 'brimstone_mender_cuffs', 'cinderstep_slippers'];
+  D.MOBS.majordomo_executus.finest = ['emberlight_mace', 'ember_shawl'];
 })(typeof window !== 'undefined' ? window : globalThis);

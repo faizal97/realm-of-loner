@@ -65,4 +65,25 @@
   Object.assign(D.ACTIVITIES, {
     scholomance: { name: 'The Blackcloister', dungeon: 'scholomance', where: 'caer_darrow', size: 5, minLvl: 57, maxLvl: 60, desc: 'Dungeon in West Rotmoor. 5 players. Both factions.' },
   });
+  // Season's Finest, Season 1 (#593): pieces made for the season's lists. They drop only through the season roll
+  // (G.finestRoll: one extra roll per boss kill), never from the boss's own table, so its drop chances stay as they
+  // were. A Best piece (tier: 'best') is at its family's newest-raid ceiling; a Next best one at this place's own share.
+  D.item('bonewarden_wristguards', { name: 'Bonewarden Wristguards', slot: 'wrist', q: 4, atype: 'mail', lvl: 60, armor: 260, stats: { sta: 19, str: 12 }, icon: 'bracers', sell: 18000, finest: 1, tier: 'best' });
+  D.item('frostmend_gloves', { name: 'Frostmend Gloves', slot: 'hands', q: 4, atype: 'cloth', lvl: 60, armor: 79, stats: { int: 17, spi: 14 }, sp: 20, icon: 'gloves', sell: 18000, finest: 1, tier: 'best' });
+  D.item('varga_scholar_leggings', { name: "Varga Scholar's Leggings", slot: 'legs', q: 4, atype: 'leather', lvl: 60, armor: 220, stats: { int: 22, spi: 18 }, icon: 'legs', sell: 18000, finest: 1, tier: 'best' });
+  D.item('cloister_warden_sabatons', { name: 'Cloister Warden Sabatons', slot: 'feet', q: 3, atype: 'mail', lvl: 60, armor: 367, stats: { sta: 17, str: 11 }, icon: 'boots', sell: 12500, finest: 1, tier: 'until' });
+  D.item('herald_hunting_belt', { name: "Herald's Hunting Belt", slot: 'waist', q: 3, atype: 'leather', lvl: 60, armor: 134, stats: { agi: 16, sta: 12 }, icon: 'belt', sell: 12500, finest: 1, tier: 'until' });
+  D.item('rimewalker_slippers', { name: 'Rimewalker Slippers', slot: 'feet', q: 4, atype: 'cloth', lvl: 60, armor: 84, stats: { int: 21, spi: 9 }, sp: 25, icon: 'boots', sell: 18000, finest: 1, tier: 'best' });
+  D.item('headmaster_signet', { name: "Headmaster's Signet", slot: 'finger', q: 4, lvl: 60, stats: { int: 17, spi: 8 }, sp: 21, icon: 'ring', sell: 18000, finest: 1, tier: 'best' });
+  D.item('cloisterguard_blade', { name: 'Cloisterguard Blade', slot: 'weapon', q: 4, wtype: 'sword', lvl: 60, dmg: [92, 153], speed: 3, stats: { sta: 27, str: 18 }, icon: 'sword', sell: 18000, finest: 1, tier: 'best' });
+  D.item('varga_guard_girdle', { name: "Varga Guard's Girdle", slot: 'waist', q: 4, atype: 'mail', lvl: 60, armor: 400, stats: { sta: 25, str: 16 }, icon: 'belt', sell: 18000, finest: 1, tier: 'best' });
+  D.item('nightstalker_boots', { name: 'Nightstalker Boots', slot: 'feet', q: 4, atype: 'leather', lvl: 60, armor: 186, stats: { agi: 23, sta: 12 }, icon: 'boots', sell: 18000, finest: 1, tier: 'best' });
+  D.item('varga_hunting_bracers', { name: 'Varga Hunting Bracers', slot: 'wrist', q: 4, atype: 'leather', lvl: 60, armor: 130, stats: { agi: 21, sta: 11 }, icon: 'bracers', sell: 18000, finest: 1, tier: 'best' });
+  D.MOBS.rattlegore.finest = ['bonewarden_wristguards', 'cloisterguard_blade'];
+  D.MOBS.ras_frostwhisper.finest = ['frostmend_gloves', 'rimewalker_slippers'];
+  D.MOBS.jandice_barov.finest = ['varga_scholar_leggings', 'varga_guard_girdle'];
+  D.MOBS.kirtonos_the_herald.finest = ['herald_hunting_belt'];
+  D.MOBS.instructor_malicia.finest = ['nightstalker_boots'];
+  D.MOBS.lord_alexei_barov.finest = ['varga_hunting_bracers'];
+  D.MOBS.darkmaster_gandling.finest = ['cloister_warden_sabatons', 'headmaster_signet'];
 })(typeof window !== 'undefined' ? window : globalThis);

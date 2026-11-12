@@ -231,12 +231,12 @@ for (const q of [2, 3, 4]) for (let L = 1; L < D.LEVEL_CAP; L++)
 // until never share an item for a role and slot; the season's title exists
 {
   const drops = new Set();
-  for (const dk in D.DUNGEONS) for (const p of D.DUNGEONS[dk].pulls) for (const m of p.mobs) { const M = D.MOBS[m]; if (!M) continue; for (const id of M.loot || []) drops.add(id); for (const [id] of M.drops || []) drops.add(id); }
+  for (const dk in D.DUNGEONS) for (const p of D.DUNGEONS[dk].pulls) for (const m of p.mobs) { const M = D.MOBS[m]; if (!M) continue; for (const id of (M.loot || []).concat(M.finest || [])) drops.add(id); for (const [id] of M.drops || []) drops.add(id); }
   // the factions that can enter a dungeon dropping each item, by its entrance (G.placeFaction's rule; null: any faction)
   const placeFac = (pk) => { const p = D.PLACES[pk]; if (!p) return null; if (p.faction) return p.faction; const f = (D.REGIONS[p.region] || {}).faction; return (p.safe || p.city) && f && f !== 'contested' ? f : null; }, dropFac = {};
   for (const act in D.ACTIVITIES) { const A = D.ACTIVITIES[act], Dg = A.dungeon && D.DUNGEONS[A.dungeon]; if (!Dg || A.worldBoss || A.event) continue;
     const f = A.where ? placeFac(A.where) : null;
-    for (const p of Dg.pulls) for (const m of p.mobs) { const M = D.MOBS[m]; if (!M) continue; for (const id of (M.loot || []).concat((M.drops || []).map((d) => d[0]))) (dropFac[id] = dropFac[id] || []).push(f); } }
+    for (const p of Dg.pulls) for (const m of p.mobs) { const M = D.MOBS[m]; if (!M) continue; for (const id of (M.loot || []).concat(M.finest || [], (M.drops || []).map((d) => d[0]))) (dropFac[id] = dropFac[id] || []).push(f); } }
   const sids = new Set(), AR = { cloth: 0, leather: 1, mail: 2 };
   // G.canUseItem's rules (game.js is not loaded here)
   const canUse = (it, C) => it.slot === 'weapon' ? C.weapons.includes(it.wtype) : it.slot === 'ranged' ? (it.wtype === 'instrument' ? !!C.instrument : !!C.ranged) : it.atype ? (AR[it.atype] || 0) <= (AR[C.armorType] || 0) : true;
@@ -268,7 +268,30 @@ for (const q of [2, 3, 4]) for (let L = 1; L < D.LEVEL_CAP; L++)
       }
       }
     }
+    // full lists (#593): for each faction, every class role has a Best and a Next best piece in every slot its class uses
+    // (ranged only with a bow or an instrument), so both tiers hold the same number of pieces
+    for (const fac of split(s.best) ? ['alliance', 'horde'] : [null]) for (const cls in D.CLASSES) { const C = D.CLASSES[cls];
+      const need = D.GEAR_SLOTS.filter((sl) => sl !== 'ranged' || C.ranged || C.instrument);
+      for (const role of C.roles || [C.role]) for (const tier of ['best', 'until']) {
+        const L = ((fac ? (s[tier] || {})[fac] : s[tier]) || {})[cls + ':' + role] || {}, miss = need.filter((sl) => !L[sl]);
+        if (miss.length) err(`${w} ${tier}${fac ? ' ' + fac : ''} ${cls}:${role}: not full, missing ${miss.join(', ')} (#593)`); } }
   }
+  // the season roll's pieces (#593): a boss's `finest` list is gear for the season roll only, so never in its own table
+  // (the table's chances stay), and every item made for a season (it.finest) drops from one
+  const finAt = new Set();
+  for (const dk in D.DUNGEONS) for (const p of D.DUNGEONS[dk].pulls) p.mobs.forEach((m, i) => { const M = D.MOBS[m]; if (!M || !M.finest) return;
+    if (!p.boss || i) err(`mob ${m}: a 'finest' list belongs on a boss pull's first mob, whose loot drops (#593)`);
+    for (const id of M.finest) { const it = D.ITEMS[id]; finAt.add(id);
+      if (!it) { err(`mob ${m} finest: unknown item '${id}'`); continue; }
+      if (!D.GEAR_SLOTS.includes(it.slot) || !(it.q >= 3)) err(`mob ${m} finest: ${id} is not a blue or purple gear piece`);
+      if ((M.loot || []).includes(id)) err(`mob ${m} finest: ${id} is in its loot table too; season pieces drop only through the season roll`);
+      if (it.effect) err(`mob ${m} finest: ${id} has an effect; season pieces are stats only (#593)`); } });
+  for (const id in D.ITEMS) { const it = D.ITEMS[id]; if (!it.finest) continue;
+    if (!D.FINEST_SEASONS.some((s) => s.id === it.finest)) err(`item ${id}: finest season ${it.finest} does not exist`);
+    if (!['best', 'until'].includes(it.tier)) err(`item ${id}: a season piece needs tier 'best' or 'until'`);
+    if (!finAt.has(id)) err(`item ${id}: made for Season's Finest but no boss's 'finest' list drops it`); }
+  const R = D.FINEST_ROLL || {};
+  for (const k of ['dungeon', 'raid', 'retired']) if (!(R[k] >= 0 && R[k] <= 1)) err(`D.FINEST_ROLL.${k} must be a chance from 0 to 1 (#593)`);
 }
 
 if (errors.length) { errors.forEach((e) => console.error('  ERROR:', e)); console.error(`${errors.length} data error(s); build stopped.`); process.exit(1); }

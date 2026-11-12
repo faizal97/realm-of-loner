@@ -64,4 +64,25 @@
   Object.assign(D.ACTIVITIES, {
     stratholme: { name: 'Graymouth', dungeon: 'stratholme', where: 'stratholme_gate', size: 5, minLvl: 58, maxLvl: 60, desc: 'Dungeon in East Rotmoor. 5 players. Both factions.' },
   });
+  // Season's Finest, Season 1 (#593): pieces made for the season's lists. They drop only through the season roll
+  // (G.finestRoll: one extra roll per boss kill), never from the boss's own table, so its drop chances stay as they
+  // were. A Best piece (tier: 'best') is at its family's newest-raid ceiling; a Next best one at this place's own share.
+  D.item('mortvale_grasp', { name: "Mortvale's Grasp", slot: 'hands', q: 4, atype: 'mail', lvl: 60, armor: 370, stats: { str: 22, sta: 15 }, icon: 'gloves', sell: 18000, finest: 1, tier: 'best' });
+  D.item('mourning_lute', { name: "Baroness's Mourning Lute", slot: 'ranged', q: 4, wtype: 'instrument', lvl: 60, speed: 2, stats: { int: 14, spi: 14 }, sp: 18, icon: 'reedsong_lute', sell: 18000, finest: 1, tier: 'best' });
+  D.item('cruel_iron_treads', { name: 'Iron Treads of the Cruel', slot: 'feet', q: 3, atype: 'mail', lvl: 60, armor: 367, stats: { str: 17, sta: 11 }, icon: 'boots', sell: 12500, finest: 1, tier: 'until' });
+  D.item('cruel_hide_leggings', { name: 'Cruel Hide Leggings', slot: 'legs', q: 3, atype: 'leather', lvl: 60, armor: 198, stats: { agi: 19, sta: 13 }, icon: 'legs', sell: 12500, finest: 1, tier: 'until' });
+  D.item('archivist_felt_boots', { name: "Archivist's Felt Boots", slot: 'feet', q: 3, atype: 'leather', lvl: 60, armor: 167, stats: { int: 15, spi: 13 }, icon: 'boots', sell: 12500, finest: 1, tier: 'until' });
+  D.item('demonbinder_sash', { name: "Demonbinder's Sash", slot: 'waist', q: 3, atype: 'leather', lvl: 60, armor: 134, stats: { int: 15, spi: 13 }, icon: 'belt', sell: 12500, finest: 1, tier: 'until' });
+  D.item('gorger_chain_grips', { name: "Gorger's Chain Grips", slot: 'hands', q: 3, atype: 'mail', lvl: 60, armor: 333, stats: { str: 17, sta: 12 }, icon: 'gloves', sell: 12500, finest: 1, tier: 'until' });
+  D.item('pactbound_cuffs', { name: 'Pactbound Cuffs', slot: 'wrist', q: 4, atype: 'cloth', lvl: 60, armor: 56, stats: { int: 16, spi: 7 }, sp: 18, icon: 'bracers', sell: 18000, finest: 1, tier: 'best' });
+  D.item('mortvale_shroud', { name: "Mortvale's Shroud", slot: 'back', q: 4, lvl: 60, armor: 94, stats: { int: 18, spi: 8 }, sp: 21, icon: 'cloak', sell: 18000, finest: 1, tier: 'best' });
+  D.item('gorger_bulwark_hauberk', { name: "Gorger's Bulwark Hauberk", slot: 'chest', q: 4, atype: 'mail', lvl: 60, armor: 580, stats: { sta: 32, str: 22 }, icon: 'chest_mail', sell: 18000, finest: 1, tier: 'best' });
+  D.item('baroness_riding_belt', { name: "Baroness's Riding Belt", slot: 'waist', q: 4, atype: 'leather', lvl: 60, armor: 149, stats: { agi: 23, sta: 12 }, icon: 'belt', sell: 18000, finest: 1, tier: 'best' });
+  D.item('penrose_mending_seal', { name: "Penrose's Seal of Mending", slot: 'finger', q: 4, lvl: 60, stats: { int: 16, spi: 12 }, sp: 18, icon: 'ring', sell: 18000, finest: 1, tier: 'best' });
+  D.MOBS.baron_rivendare.finest = ['mortvale_grasp', 'mortvale_shroud'];
+  D.MOBS.baroness_anastari.finest = ['mourning_lute', 'baroness_riding_belt'];
+  D.MOBS.timmy_the_cruel.finest = ['cruel_iron_treads', 'cruel_hide_leggings'];
+  D.MOBS.archivist_galford.finest = ['archivist_felt_boots', 'penrose_mending_seal'];
+  D.MOBS.balnazzar.finest = ['demonbinder_sash', 'pactbound_cuffs'];
+  D.MOBS.ramstein_the_gorger.finest = ['gorger_chain_grips', 'gorger_bulwark_hauberk'];
 })(typeof window !== 'undefined' ? window : globalThis);

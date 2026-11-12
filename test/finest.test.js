@@ -43,9 +43,10 @@ test('unknown, then hint, then reveal exposes only what each step names', () => 
   r = row('mage', 'dps', slot, 'best');
   assert.strictEqual(r.revealed, true); assert.strictEqual(r.id, id); assert.ok(r.boss);
   assert.ok(r.chance > 0 && r.chance <= 1);
-  // the chance is the real one: a boss drops 2 of its table each kill
-  const M = Object.values(D.MOBS).find((m) => m.name === r.boss && (m.loot || []).includes(id));
-  assert.strictEqual(r.chance, Math.min(1, 2 / M.loot.length));
+  // the chance is the real one: a boss drops 2 of its table each kill, and the season roll one piece of its pool
+  const mk = Object.keys(D.MOBS).find((k) => D.MOBS[k].name === r.boss && (D.MOBS[k].loot || []).concat(D.MOBS[k].finest || []).includes(id)), M = D.MOBS[mk];
+  const raid = Object.values(D.DUNGEONS).some((Dg) => Dg.raid && Dg.pulls.some((p) => p.mobs[0] === mk)), a = (M.loot || []).includes(id) ? Math.min(1, 2 / M.loot.length) : 0;
+  assert.ok(Math.abs(r.chance - (1 - (1 - a) * (1 - G.finestRollOdds(mk, raid, id)))) < 1e-9);
 });
 
 test('reveal alone implies hint', () => {
@@ -163,7 +164,7 @@ test('before the season starts: empty results, nothing thrown', () => {
 // where an item drops: the factions whose characters can enter one of its dungeons (null: any faction) (#593)
 const dropFactions = (id) => { const out = new Set();
   for (const act in D.ACTIVITIES) { const A = D.ACTIVITIES[act], Dg = A.dungeon && D.DUNGEONS[A.dungeon]; if (!Dg || A.worldBoss || A.event) continue;
-    for (const p of Dg.pulls) for (const m of p.mobs) { const M = D.MOBS[m] || {}; if ((M.loot || []).includes(id) || (M.drops || []).some((d) => d[0] === id)) out.add(A.where ? G.placeFaction(A.where) || null : null); } }
+    for (const p of Dg.pulls) for (const m of p.mobs) { const M = D.MOBS[m] || {}; if ((M.loot || []).concat(M.finest || []).includes(id) || (M.drops || []).some((d) => d[0] === id)) out.add(A.where ? G.placeFaction(A.where) || null : null); } }
   return out; };
 
 test('picks are per faction: every piece drops where that faction can go, and a Hint names only such a place', () => {
@@ -239,4 +240,84 @@ test('a veteran: pieces held before the season count as Found on load, never Fou
   G.giveLoot({ money: 0, items: [G.copyItem(BEST('mage:dps').chest)] });
   assert.strictEqual(row('mage', 'dps', 'chest', 'best').blind, true);
   assert.strictEqual(G.finest('mage', 'dps').lost, false);
+});
+
+// ---- full lists and the season roll (#593)
+const slotsOf = (cls) => D.GEAR_SLOTS.filter((s) => s !== 'ranged' || D.CLASSES[cls].ranged || D.CLASSES[cls].instrument);
+const bossOf = (dk) => D.DUNGEONS[dk].pulls.filter((p) => p.boss).map((p) => p.mobs[0]);
+
+test('every list is full: each class role, each faction, a Best and a Next best piece in every slot the class uses', () => {
+  const s = S1();
+  for (const f of ['alliance', 'horde']) for (const cls in D.CLASSES) for (const role of D.CLASSES[cls].roles || [D.CLASSES[cls].role]) {
+    const key = cls + ':' + role, b = s.best[f][key] || {}, u = s.until[f][key] || {};
+    assert.deepStrictEqual(Object.keys(b).sort(), slotsOf(cls).sort(), `${f} best ${key}`);
+    assert.deepStrictEqual(Object.keys(u).sort(), slotsOf(cls).sort(), `${f} until ${key}`);
+    for (const sl in b) assert.notStrictEqual(b[sl], u[sl], `${f} ${key} ${sl}: one piece in both tiers`);
+  }
+});
+
+test('Best keeps some of the newest raid for every class role, and spreads the rest over older content', () => {
+  const s = S1(), tc = new Set(bossOf('tidecrown_citadel').flatMap((m) => (D.MOBS[m].loot || []).concat(D.MOBS[m].finest || [])));
+  let all = 0, inTc = 0;
+  for (const f of ['alliance', 'horde']) for (const key in s.best[f]) {
+    const ids = Object.values(s.best[f][key]), n = ids.filter((id) => tc.has(id)).length;
+    assert.ok(n >= 1, `${f} ${key}: no Best piece from The Tidecrown Citadel`);
+    all += ids.length; inTc += n;
+  }
+  assert.ok(inTc / all < 0.6, `the newest raid is ${Math.round((inTc / all) * 100)}% of Best`);
+});
+
+test('season pieces never sit in a boss table, and never move an older item\'s Mentor Mark ceiling', () => {
+  for (const k in D.MOBS) for (const id of D.MOBS[k].loot || []) assert.ok(!(D.ITEMS[id] || {}).finest, `${k} table holds season piece ${id}`);
+  const old = Object.keys(D.ITEMS).filter((id) => { const it = D.ITEMS[id]; return !it.finest && D.GEAR_SLOTS.includes(it.slot) && it.lvl >= 57 && it.q >= 3; });
+  G.upgradeRef.reset(); const withS = old.map((id) => G.upgradeRef(D.ITEMS[id]));
+  const kept = {}; for (const k in D.MOBS) if (D.MOBS[k].finest) { kept[k] = D.MOBS[k].finest; delete D.MOBS[k].finest; }
+  G.upgradeRef.reset(); const without = old.map((id) => G.upgradeRef(D.ITEMS[id]));
+  for (const k in kept) D.MOBS[k].finest = kept[k];
+  G.upgradeRef.reset();
+  assert.deepStrictEqual(withS, without);
+});
+
+test('a Best season piece sits at its newest-raid ceiling; a Next best one at its place\'s share, below it', () => {
+  for (const id in D.ITEMS) { const it = D.ITEMS[id]; if (!it.finest) continue;
+    const pts = G.itemPoints(it), ref = G.upgradeRef(it);
+    if (it.tier === 'best') { assert.strictEqual(it.q, 4, id); if (it.slot !== 'finger') assert.ok(Math.abs(pts - ref) <= 0.5, `${id}: ${pts} vs ceiling ${ref}`); }
+    else assert.ok(pts < ref * 0.95, `${id}: a Next best piece starts below its ceiling`);
+  }
+});
+
+test('the season roll draws only the live season\'s pieces, plus past-season pieces at the retired share', () => {
+  setNow(IN_SEASON);
+  const s = S1(), named = new Set(); for (const t of ['best', 'until']) for (const f in s[t]) for (const k in s[t][f]) Object.values(s[t][f][k]).forEach((id) => named.add(id));
+  for (const dk in D.DUNGEONS) for (const mk of bossOf(dk)) {
+    const P = G.finestPool(mk), raid = !!D.DUNGEONS[dk].raid;
+    for (const id of P.now) assert.ok(named.has(id) && (D.MOBS[mk].loot || []).concat(D.MOBS[mk].finest || []).includes(id), `${mk}: ${id}`);
+    assert.deepStrictEqual(P.old, [], `${mk}: nothing is retired in Season 1`);
+    const sum = P.now.reduce((a, id) => a + G.finestRollOdds(mk, raid, id), 0);
+    assert.ok(Math.abs(sum - (P.now.length ? D.FINEST_ROLL[raid ? 'raid' : 'dungeon'] : 0)) < 1e-9, `${mk}: the pool shares the roll`);
+  }
+  // before the season starts there is no pool, and no random number is drawn
+  assert.deepStrictEqual(G.finestPool('golemagg', new Date(BEFORE)), { now: [], old: [] });
+  let drawn = 0; setNow(BEFORE);
+  assert.strictEqual(G.finestRoll('golemagg', true, () => { drawn++; return 0; }), null); assert.strictEqual(drawn, 0);
+  setNow(IN_SEASON);
+  assert.ok(G.finestPool('golemagg').now.includes(G.finestRoll('golemagg', true, () => 0)));
+  // a past season's piece no list names: in the roll at the retired share only
+  D.ITEMS.test_retired = { id: 'test_retired', name: 'Test Retired', slot: 'feet', q: 4, atype: 'mail', lvl: 60, stats: { sta: 10 }, finest: 1, tier: 'best' };
+  D.MOBS.golemagg.finest.push('test_retired');
+  const P = G.finestPool('golemagg'); assert.deepStrictEqual(P.old, ['test_retired']);
+  let x = 7; const rnd = () => { x = (x * 16807) % 2147483647; return x / 2147483647; };
+  const got = {}; for (let i = 0; i < 20000; i++) { const id = G.finestRoll('golemagg', true, rnd); if (id) got[id] = (got[id] || 0) + 1; }
+  const share = (got.test_retired || 0) / 20000;
+  assert.ok(Math.abs(share - D.FINEST_ROLL.retired * D.FINEST_ROLL.raid) < 0.01, `retired share ${share}`);
+  for (const id in got) assert.ok(id === 'test_retired' || P.now.includes(id));
+  assert.ok(Math.abs(G.finestRollOdds('golemagg', true, 'test_retired') - D.FINEST_ROLL.retired * D.FINEST_ROLL.raid) < 1e-9);
+  D.MOBS.golemagg.finest.pop();
+  // a boss with only past pieces keeps only the retired share: they never become common there
+  D.MOBS.the_inkbound_horror.finest = ['test_retired'];
+  assert.deepStrictEqual(G.finestPool('the_inkbound_horror'), { now: [], old: ['test_retired'] });
+  assert.ok(Math.abs(G.finestRollOdds('the_inkbound_horror', false, 'test_retired') - D.FINEST_ROLL.retired * D.FINEST_ROLL.dungeon) < 1e-9);
+  let n = 0; for (let i = 0; i < 20000; i++) if (G.finestRoll('the_inkbound_horror', false, rnd)) n++;
+  assert.ok(Math.abs(n / 20000 - D.FINEST_ROLL.retired * D.FINEST_ROLL.dungeon) < 0.01, `alone: ${n / 20000}`);
+  delete D.MOBS.the_inkbound_horror.finest; delete D.ITEMS.test_retired;
 });
