@@ -5499,18 +5499,19 @@
     const begun = (id) => (D.FINEST_SEASONS || []).some((s) => s.id === D.ITEMS[id].finest && wkDay(s.from) <= d); /* a season not begun yet drops nothing */
     return { now: at.filter((id) => named.has(id)), old: (M.finest || []).filter((id) => D.ITEMS[id] && !named.has(id) && begun(id)) };
   };
-  const finRollOn = (P) => P.now.length && P.old.length ? [[P.now, 1 - D.FINEST_ROLL.retired], [P.old, D.FINEST_ROLL.retired]] : [[P.now.length ? P.now : P.old, 1]];
+  // the roll's results: the live pieces, and the past ones at the retired share (alone, they keep only that share)
+  const finRollOn = (P) => { const r = D.FINEST_ROLL.retired, out = []; if (P.now.length) out.push([P.now, P.old.length ? 1 - r : 1]); if (P.old.length) out.push([P.old, r]); return out; };
   // the piece the roll gives for a kill of this boss, or null; raid: the boss is in a raid
   G.finestRoll = function (mk, raid, rnd) {
     const P = G.finestPool(mk); if (!P.now.length && !P.old.length) return null;
     rnd = rnd || Math.random; if (!(rnd() < D.FINEST_ROLL[raid ? 'raid' : 'dungeon'])) return null;
-    const on = finRollOn(P), L = on.length > 1 && rnd() >= on[0][1] ? on[1][0] : on[0][0];
-    return L[Math.floor(rnd() * L.length)];
+    const on = finRollOn(P); let L = on[0][0];
+    if (on.length > 1 || on[0][1] < 1) { const x = rnd(); L = x < on[0][1] ? on[0][0] : on.length > 1 && x < on[0][1] + on[1][1] ? on[1][0] : null; }
+    return L ? L[Math.floor(rnd() * L.length)] : null;
   };
   // one piece's chance per kill from the season roll alone
   G.finestRollOdds = function (mk, raid, id, date) {
-    const P = G.finestPool(mk, date); let p = 0;
-    for (const [L, share] of P.now.length || P.old.length ? finRollOn(P) : []) if (L.includes(id)) p += share / L.length;
+    let p = 0; for (const [L, share] of finRollOn(G.finestPool(mk, date))) if (L.includes(id)) p += share / L.length;
     return p * D.FINEST_ROLL[raid ? 'raid' : 'dungeon'];
   };
   // where an item drops, from the real loot rules: a boss drops 2 of its table each kill, and the season roll may add one

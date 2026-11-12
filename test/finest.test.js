@@ -312,5 +312,12 @@ test('the season roll draws only the live season\'s pieces, plus past-season pie
   assert.ok(Math.abs(share - D.FINEST_ROLL.retired * D.FINEST_ROLL.raid) < 0.01, `retired share ${share}`);
   for (const id in got) assert.ok(id === 'test_retired' || P.now.includes(id));
   assert.ok(Math.abs(G.finestRollOdds('golemagg', true, 'test_retired') - D.FINEST_ROLL.retired * D.FINEST_ROLL.raid) < 1e-9);
-  D.MOBS.golemagg.finest.pop(); delete D.ITEMS.test_retired;
+  D.MOBS.golemagg.finest.pop();
+  // a boss with only past pieces keeps only the retired share: they never become common there
+  D.MOBS.the_inkbound_horror.finest = ['test_retired'];
+  assert.deepStrictEqual(G.finestPool('the_inkbound_horror'), { now: [], old: ['test_retired'] });
+  assert.ok(Math.abs(G.finestRollOdds('the_inkbound_horror', false, 'test_retired') - D.FINEST_ROLL.retired * D.FINEST_ROLL.dungeon) < 1e-9);
+  let n = 0; for (let i = 0; i < 20000; i++) if (G.finestRoll('the_inkbound_horror', false, rnd)) n++;
+  assert.ok(Math.abs(n / 20000 - D.FINEST_ROLL.retired * D.FINEST_ROLL.dungeon) < 0.01, `alone: ${n / 20000}`);
+  delete D.MOBS.the_inkbound_horror.finest; delete D.ITEMS.test_retired;
 });
