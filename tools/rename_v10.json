@@ -16984,5 +16984,23 @@
   "region": "",
   "status": "forbid",
   "new": null
+ },
+ "Lok'tar": {
+  "kind": "lore",
+  "region": "",
+  "status": "forbid",
+  "new": null
+ },
+ "Zug zug": {
+  "kind": "lore",
+  "region": "",
+  "status": "forbid",
+  "new": null
+ },
+ "Throm-ka": {
+  "kind": "lore",
+  "region": "",
+  "status": "forbid",
+  "new": null
  }
 }
