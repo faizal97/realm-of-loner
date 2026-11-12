@@ -2413,6 +2413,8 @@
       R.self || R.deaths.some((d) => d.name === G.S.player.name) ? gearLine() : null, // you died: in a group too (#551)
       h('div', { class: 'btn-row' }, fightLogButton(), h('button', { class: 'btn', onclick: closeDialog }, 'Close'))], true);
   }
+  // an item's tooltip with a Close button, as Bags → Inspect has (#598: quest rewards, vendors and lists had none)
+  function showItem(it) { showDialog([itemTip(it), h('button', { class: 'btn alt wide', onclick: closeDialog }, 'Close')], true); }
   // dismissable: true closes on a tap outside; a function runs instead (a card opened from the group pop goes back to it, #325)
   // a dialog that asks something (an invite) says what happens if another dialog replaces it unanswered (#353)
   function showDialog(content, dismissable) {
@@ -2987,7 +2989,7 @@
       questXpLine(Q, money),
       ...(() => { const ti = D.TITLES.find((t) => t.need && t.need.quest === qid), ta = Object.keys(D.ABILITIES).find((k) => D.ABILITIES[k].learn === qid); // a title or an ability is a reward too (#526)
         return [ti ? h('div', { class: 'obj' }, 'Title: ' + G.titleName(ti, G.S.player.name)) : null, ta ? h('div', { class: 'obj' }, 'Ability: ' + D.ABILITIES[ta].name) : null]; })());
-    const rewardRow = (reward, i) => h('button', { class: 'row', style: { background: 'rgba(60,40,15,.15)', borderColor: '#b08a4a' }, onclick: () => showDialog(itemTip(reward), true) },
+    const rewardRow = (reward, i) => h('button', { class: 'row', style: { background: 'rgba(60,40,15,.15)', borderColor: '#b08a4a' }, onclick: () => showItem(reward) },
       itemIcon(reward), h('div', { class: 't' }, h('b', { class: 'q' + reward.q, style: { textShadow: '0 1px 0 #000' } }, reward.name), h('small', { style: { color: blockReason(reward) ? '#a01010' : '#5a3a0c' } }, blockReason(reward) ? blockReason(reward).text : 'Tap to inspect')),
       rewards.length > 1 ? h('span', { class: 'chip rw-pick' + (i === chosen ? ' gold' : ''), 'data-rw': i, onclick: (e) => { e.stopPropagation(); chosen = i; box.querySelectorAll('[data-rw]').forEach((c) => { const on = +c.dataset.rw === chosen; c.classList.toggle('gold', on); c.textContent = on ? 'Chosen ✓' : 'Choose'; }); } }, i === chosen ? 'Chosen ✓' : 'Choose') : h('div'));
     if (rewards.length > 1) box.append(h('small', { class: 'rw-note' }, 'Choose one of these:'));
@@ -3236,8 +3238,8 @@
         const cost = it.cost || it.sell * 4;
         const stack = G.stackable(it);
         list.append(h('div', { class: 'row', style: { gridTemplateColumns: '34px 1fr auto' } },
-          h('button', { style: { padding: 0 }, onclick: () => showDialog(itemTip(it), true) }, itemIcon(it)),
-          h('button', { class: 't', style: { textAlign: 'left' }, onclick: () => showDialog(itemTip(it), true) }, h('b', { class: 'q' + it.q }, it.name), h('small', null, h('span', { html: moneyHtml(cost, false, cost > 0) + (stack ? ' each' : '') }), gearTag(it))),
+          h('button', { style: { padding: 0 }, onclick: () => showItem(it) }, itemIcon(it)),
+          h('button', { class: 't', style: { textAlign: 'left' }, onclick: () => showItem(it) }, h('b', { class: 'q' + it.q }, it.name), h('small', null, h('span', { html: moneyHtml(cost, false, cost > 0) + (stack ? ' each' : '') }), gearTag(it))),
           h('div', { class: 'btn-row', style: { flexWrap: 'nowrap' } },
             h('button', { class: 'chip', onclick: () => { G.buy(it, 1); ui.sheetFn(); } }, 'Buy'),
             stack ? h('button', { class: 'chip', onclick: () => { G.buy(it, 5); ui.sheetFn(); } }, '×5') : null)));
@@ -4297,7 +4299,7 @@
           const list = h('div', { class: 'list' }); // full-width rows: an effect's rule is a sentence, not a name
           for (const k of keys) {
             const F = D.EFFECTS[k], e = fx[k], on = D.GEAR_SLOTS.map((sl) => P.equip[sl]).filter((x) => x && x.effect === k), src = on.find((x) => x.name === e.item) || on[0];
-            list.append(h('button', { class: 'row', onclick: () => src && showDialog(itemTip(src), true) },
+            list.append(h('button', { class: 'row', onclick: () => src && showItem(src) },
               h('div', { class: 'ic' }, img(art('icon', F.icon))),
               h('div', { class: 't' }, h('b', { class: 'eff' }, F.name), h('small', { style: { whiteSpace: 'normal' } }, F.desc(e.lvl, e.f)), h('small', { style: { whiteSpace: 'normal' } }, on.length > 1 ? `From ${e.item} · on ${on.length} items, it counts once` : `From ${e.item}`)), h('div', { class: 'r' }, h('span', { class: 'nav-arr' }, '›'))));
           }
@@ -5286,7 +5288,7 @@
         if (D.TRIAL_FIND && D.TRIAL_FIND[act]) { const fid = G.trialFindFor(act), fit = fid && G.copyItem(fid), F = fit && G.effectOf(fit), odds = `1 in ${Math.round(1 / D.TRIAL_FIND_CHANCE)}`;
           if (!fit) row('Beat it in time', `${odds} chance of ${5 + lvl} more Mentor Marks: you have every Trial find you can use this season`);
           else {
-            rows.push(h('button', { class: 'ai-row', style: { textAlign: 'left', width: '100%' }, onclick: () => showDialog(itemTip(fit), true) }, h('span', null, 'Beat it in time'),
+            rows.push(h('button', { class: 'ai-row', style: { textAlign: 'left', width: '100%' }, onclick: () => showItem(fit) }, h('span', null, 'Beat it in time'),
               h('b', null, `${odds} chance of `, h('span', { class: 'q' + fit.q }, fit.name))));
             if (F) rows.push(h('div', { class: 'eff', style: { fontSize: '13px' } }, `Effect: ${F.name}. ${F.desc(fit.lvl || 1, D.fxGrow(fit.fxScale, fit.effect))}`));
             const own = D.ITEMS[D.TRIAL_FIND[act]], fromAct = Object.keys(D.TRIAL_FIND).find((a) => D.TRIAL_FIND[a] === fid), from = fromAct ? D.ACTIVITIES[fromAct].name : fit.name;
@@ -5389,7 +5391,7 @@
       if (drops && drops.length) {
         b.append(h('div', { class: 'sec-h' }, 'Drops', h('small', null, `${drops.length <= 2 ? 'both drop' : `2 of ${drops.length} drop`} per kill · tap one`)));
         b.append(h('div', { class: 'list' }, ...drops.flatMap((id) => { const it = hard && G.hardBonusLeft(act, keys[0]) ? G.hardCopy(id) : G.copyItem(id), F = G.effectOf(it);
-          return [itemRow(it, 1, '', () => showDialog(itemTip(it), true)), F ? h('div', { class: 'eff', style: { fontSize: '12px', margin: '-2px 4px 6px' } }, `Effect: ${F.name}. ${F.desc(it.lvl || 1, D.fxGrow(it.fxScale, it.effect))}`) : null]; }))); // the Effect line, to plan before a run (#23)
+          return [itemRow(it, 1, '', () => showItem(it)), F ? h('div', { class: 'eff', style: { fontSize: '12px', margin: '-2px 4px 6px' } }, `Effect: ${F.name}. ${F.desc(it.lvl || 1, D.fxGrow(it.fxScale, it.effect))}`) : null]; }))); // the Effect line, to plan before a run (#23)
       }
     });
   }
