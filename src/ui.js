@@ -3731,10 +3731,11 @@
         drag.moved = true; const r = app.getBoundingClientRect(); btn.style.left = (e.clientX - r.left - 28) + 'px'; btn.style.right = 'auto'; btn.style.top = (e.clientY - r.top - 28) + 'px';
       });
       btn.addEventListener('pointerup', (e) => {
-        if (!drag) return; const moved = drag.moved; drag = null;
-        if (!moved) return openThisWeek();
+        if (!drag) return; const moved = drag.moved; drag = null; btn.dragged = moved;
+        if (!moved) return; /* a tap opens it on click (below): opened on pointerup, the page lands under the finger and the tap's click hits a banner (#595) */
         const r = app.getBoundingClientRect(), p = lwPrefs(); p.side = e.clientX - r.left < r.width / 2 ? 'l' : 'r'; p.y = (e.clientY - r.top) / r.height; lwSavePrefs(p); placeEvLantern();
       });
+      btn.addEventListener('click', () => { if (btn.dragged) { btn.dragged = false; return; } openThisWeek(); }); /* a drag never opens it (#595) */
       ui.evBtn = btn; app.append(btn);
     }
     ui.evBtn.innerHTML = '';
