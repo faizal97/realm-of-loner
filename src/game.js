@@ -1106,7 +1106,7 @@
     if (t.minLevel && P.level < t.minLevel) { toast(`Marks trade: level ${t.minLevel} only.`); return false; }
     if ((P.debtNotes || 0) < t.cost) { toast(`Need ${t.cost} torn debt notes (you have ${P.debtNotes || 0}).`); return false; }
     P.debtNotes -= t.cost;
-    if (t.kind === 'title') { const a = G.account(); a.debtBreaker = 1; G.saveAccount(a); loot('Title: the Debt-Breaker. Wear it: Hero → Journey → Titles.'); }
+    if (t.kind === 'title') { const a = G.account(); a.debtBreaker = 1; G.saveAccount(a); sys('Title: the Debt-Breaker. Wear it: Hero → Journey → Titles.'); }
     if (t.kind === 'marks') G.addMarks(t.marks, 'torn debt notes');
     emit('change'); G.save(); return true;
   };
@@ -1719,7 +1719,7 @@
     const m = Math.round(((Q.reward.money || 0) + G.questMoney(Q.lvl)) * (1 + (racialPassive('questMoneyPct') + ((root.SOC && SOC.perk('gold')) || 0)) / 100) * G.warBonus());
     P.money += m;
     sys(`Received ${G.moneyText(m)}.`);
-    { const ta = Object.keys(D.ABILITIES).find((k) => D.ABILITIES[k].learn === qid && D.ABILITIES[k].cls === P.cls); if (ta) { loot(`You have learned a new ability: ${D.ABILITIES[ta].name}.`); } } // a class quest teaches its ability
+    { const ta = Object.keys(D.ABILITIES).find((k) => D.ABILITIES[k].learn === qid && D.ABILITIES[k].cls === P.cls); if (ta) { sys(`You have learned a new ability: ${D.ABILITIES[ta].name}.`); } } // a class quest teaches its ability, said where level-up abilities are (system: the default chat shows it, loot it hides)
     G.titleCheck(true); /* a quest's title says so as it unlocks (#598) */
     if (it) { G.addItem(JSON.parse(JSON.stringify(it)), 1); loot(`You receive item: ${B.link(it.name, it.q)}.`); }
     G.gainXp(G.questXpFor(Q), false);
@@ -3443,7 +3443,7 @@
   };
   // every title unlock says so, once (#598: Reader of Notes came silently, Tidebreaker with a message). P.titlesSeen holds
   // the ids already announced; a save without it takes what is unlocked now, quietly. Run on each save, at most every 2 s.
-  const titleLine = (t) => loot(`New title: ${G.titleName(t, G.S.player.name)}. Wear it: Hero → Journey → Titles.`);
+  const titleLine = (t) => sys(`New title: ${G.titleName(t, G.S.player.name)}. Wear it: Hero → Journey → Titles.`);
   G.titleAnnounced = function (id) { const P = G.S && G.S.player; if (P && P.titlesSeen && !P.titlesSeen.includes(id)) P.titlesSeen.push(id); };
   let titleAt = 0;
   G.titleCheck = function (force) {
