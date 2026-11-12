@@ -3797,7 +3797,21 @@
     worldboss: () => { const wb = G.worldBoss(); if (wb) openBriefing(wb, false); },
     brawl: () => { closeSheet(); if (G.S.player.place !== G.BRAWL.place) routeDialog(G.BRAWL.place); },
     finest: () => openFinest(), // #593
+    'prepatch:campaign': () => weekGoQuest((Q) => Q.arc === 'The Notes Come Due' && !Q.cls), // #598: the campaign's next step, not an empty log
+    'prepatch:tutor': () => weekGoQuest((Q) => Q.prepatch && Q.cls === G.S.player.cls), // #598: the class quest that teaches the new ability
   };
+  // a This week step that leads to quests: the Quest Log when one of them is taken, else a route to the giver of the
+  // next one; before they open, why not
+  function weekGoQuest(pick) {
+    const P = G.S.player, ids = Object.keys(D.QUESTS).filter((q) => pick(D.QUESTS[q]) && (!D.QUESTS[q].faction || D.QUESTS[q].faction === G.myFaction()));
+    if (ids.some((q) => P.quests[q])) return openQuests();
+    const next = ids.find((q) => G.questState(q) === 'available');
+    if (!next) return toast(G.prepatchOpen() ? 'Nothing to take here right now.' : 'Opens at 60, after The Drowned Crown or a raid.');
+    const npc = D.QUESTS[next].giver, at = Object.keys(D.PLACES).find((p) => D.PLACES[p].npcs.includes(npc));
+    if (!at) return openQuests();
+    if (P.place === at) { closeSheet(); return toast(`${D.NPCS[npc].name} is here.`); }
+    routeDialog(at);
+  }
   const WEEK_KEY = 'azsolo.weekSeen'; // this device: the banner ids already shown (the button's dot, the once-a-week opening)
   const weekSeen = () => { try { return new Set(JSON.parse(localStorage.getItem(WEEK_KEY) || '[]')); } catch (e) { return new Set(); } };
   const weekMarkSeen = (list) => { try { const s = weekSeen(); for (const b of list) s.add(b.id); localStorage.setItem(WEEK_KEY, JSON.stringify([...s].slice(-60))); } catch (e) { } };
