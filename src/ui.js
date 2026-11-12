@@ -128,6 +128,10 @@
   const barAb = (id) => (D.ABILITIES[id] && D.ABILITIES[id].instrument && G.instrumentAb ? G.instrumentAb() : id);
   const abIcon = (id) => art('icon', (D.ABILITIES[id] && D.ABILITIES[id].icon) || id);
   const potionIcon = () => { const b = G.potionNext(); return (b && b.item.icon) || 'potion_red'; }; // the potion a tap drinks (#279)
+  // how many of what a tap drinks (#597): the picked potion, or on Auto health or mana potions, never the two summed
+  const potionCount = () => { const b = G.potionNext(); if (!b) return 0; const pick = G.potionChoice(), k = b.item.heal ? 'heal' : 'mana';
+    return G.S.player.bags.filter((x) => (pick ? x.item.id === b.item.id : x.item.slot === 'potion' && !!x.item[k] && (x.item.lvl || 1) <= G.S.player.level)).reduce((a, x) => a + x.n, 0); };
+  const potionName = () => { const b = G.potionNext(); return b ? (b.item.heal ? 'Health potion' : 'Mana potion') : 'Potion'; };
   const barIcon = (id) => abIcon(barAb(id)); // on the action bar only: elsewhere each instrument shows its own
   // ---------- buffs and debuffs with time left, for any unit (or the player out of combat)
   const AURA_ALIAS = { momentum: 'rapid_fire', weakened_soul: 'pw_shield', seal: 'seal_righteousness', stoneskin: 'stoneskin_totem', rockbiter: 'rockbiter_weapon', chilled: 'frost_armor', bear: 'bear_form', fireball_burn: 'fireball', stun: 'hammer_justice', searing_totem: 'searing_totem' };
@@ -1620,6 +1624,14 @@
     // the three paces side by side as facts, read from G.PACE (#38, design mindset §1: every fact, never the answer)
     const PN = { careful: 'Careful', normal: 'Normal', fast: 'Fast' }, pct = (x) => Math.round(x * 100) + '%';
     const paceFact = (k) => { const Q = G.PACE[k]; return `rests at least ${(6.5 * Q.rest).toFixed(1)} sec, then pulls once everyone has ${pct(Q.hp)} health and ${pct(Q.mana)} mana (${pct(Math.max(Q.hp, Q.bossHp))} of both before a boss) · ${Q.chain != null ? `pulls the next group too about 1 time in ${Math.round(1 / Q.chain)}` : Q.extra ? 'sometimes pulls the next group too, less with a skilled tank' : 'never pulls the next group too'}`; };
+    // the boss plan first (#597): the pace's three fact rows pushed its buttons below the fold of a phone's run panel
+    const pull = R.pulls[R.idx];
+    if (part === 'plan' && pull) {
+      const bp = R.bossPlan;
+      if (!pull.boss) p.append(h('div', { class: 'sec-h' }, 'Boss plan', h('small', null, 'for the next boss')), h('p', { class: 'ai-note', style: { margin: 0 } }, `Next: ${pull.label}. No boss.`));
+      else p.append(h('div', { class: 'sec-h' }, 'Boss plan', h('small', null, bp === 'boss' ? 'Burn the boss' : bp === 'adds' ? 'Adds first' : 'Not set: the group improvises')),
+        h('div', { class: 'chips' }, chip('Burn the boss', bp === 'boss', () => G.setBossPlan('boss')), chip('Adds first', bp === 'adds', () => G.setBossPlan('adds'))));
+    }
     if (part === 'plan') p.append(h('div', { class: 'sec-h' }, 'Pace', h('small', null, PN[pace])),
       ...[h('div', { class: 'chips' }, chip('Careful', pace === 'careful', () => G.setPace('careful')), chip('Normal', pace === 'normal', () => G.setPace('normal')), chip('Fast', pace === 'fast', () => G.setPace('fast'))),
         // 'row nav': no icon, so the text takes the first column (a plain .row puts it in the 34 px icon column, one word wide)
@@ -1627,13 +1639,7 @@
     const ko = R.killOrder || 'focus';
     if (false) p.append(...foldSec('run.killorder', 'Kill order', // hidden (v10.4): in the sims it changed almost nothing, and a choice that does not matter is not a choice ko === 'spread' ? 'Spread · each on a different enemy, more area attacks' : 'One at a time · everyone on the marked target',
       [h('div', { class: 'chips' }, chip('One at a time', ko === 'focus', () => G.setKillOrder('focus')), chip('Spread', ko === 'spread', () => G.setKillOrder('spread')))]));
-    const pull = R.pulls[R.idx]; if (!pull) return;
-    if (part === 'plan') {
-      if (!pull.boss) return p.append(h('div', { class: 'sec-h' }, 'Boss plan', h('small', null, 'for the next boss')), h('p', { class: 'ai-note', style: { margin: 0 } }, `Next: ${pull.label}. No boss.`));
-      const bp = R.bossPlan;
-      return p.append(h('div', { class: 'sec-h' }, 'Boss plan', h('small', null, bp === 'boss' ? 'Burn the boss' : bp === 'adds' ? 'Adds first' : 'Not set: the group improvises')),
-        h('div', { class: 'chips' }, chip('Burn the boss', bp === 'boss', () => G.setBossPlan('boss')), chip('Adds first', bp === 'adds', () => G.setBossPlan('adds'))));
-    }
+    if (!pull || part === 'plan') return;
     const marks = (R.marks && R.marks[R.idx]) || {};
     const next = h('div', { class: 'chips' });
     const fk = (R.omens || []).find((x) => x === 'warded' || x === 'vengeful' || x === 'sheltered'), fi = fk && pull.mobs.length >= 2 ? pull.mobs.length - 1 : -1; // Tier 3 Omen focus
@@ -1651,16 +1657,23 @@
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: go }, 'Leave'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Stay'))], true);
   }
   // the run panel's tab (#591): a pick holds for the rest or the fight it was made in; each fight, each run and each
-  // character opens on the default (Next pull; in a fight Enemies, or Party for a healer); a finished run on Party
-  function runTabNow(R, C, healer) {
+  // character opens on the default (Next pull; in a fight Enemies, or Party for a healer); a finished run on Party.
+  // A healer is the role you queued as, not a class that has a heal: a Paladin, Druid or Shaman tank or damage dealer opens on Enemies (#597)
+  function runTabNow(R, C) {
     const at = C || R; if (ui.runTabAt !== at) { ui.runTab = null; ui.runTabAt = at; }
-    return R.phase === 'done' ? 'party' : ui.runTab || (C && healer ? 'party' : 'next');
+    return R.phase === 'done' ? 'party' : ui.runTab || (C && G.role() === 'healer' ? 'party' : 'next');
+  }
+  // a finished run says what it was (#597): a raid is not a dungeon
+  function doneText(A) {
+    if (!A) return 'Complete.';
+    return A.worldBoss ? 'World boss defeated.' : A.event ? 'Run complete.' : { raid: 'Raid complete.', wanted: 'Wanted target defeated.' }[actKind(A)] || 'Dungeon complete.';
   }
   function runPanel(p) {
     const S = G.S, R = S.run, C = G.fight;
     const dots = h('div', { class: 'progress-dots' });
     R.pulls.forEach((pl, i) => dots.append(h('i', { class: (pl.boss ? 'boss ' : '') + (i < R.idx ? 'done' : i === R.idx ? 'now' : '') })));
-    const status = R.phase === 'fight' ? 'Fighting: ' + R.pulls[R.idx].label : R.phase === 'rest' && S.group.members.some((m) => m.gone) ? 'Looking for replacements...' : R.phase === 'rest' ? (G.role() === 'tank' ? 'You are the tank. Pull when ready.' : 'Resting. The tank will pull soon.') : R.phase === 'wipe' ? 'Running back...' : 'Dungeon complete.';
+    const dead = !!(C && G.pUnit && G.pUnit.dead); // dead in a group fight: the group fights on, the recap one tap away (#597)
+    const status = dead ? 'You are dead. The group fights on.' : R.phase === 'fight' ? 'Fighting: ' + R.pulls[R.idx].label : R.phase === 'rest' && S.group.members.some((m) => m.gone) ? 'Looking for replacements...' : R.phase === 'rest' ? (G.role() === 'tank' ? 'You are the tank. Pull when ready.' : 'Resting. The tank will pull soon.') : R.phase === 'wipe' ? 'Running back...' : doneText(D.ACTIVITIES[R.act]);
     // the run's name, progress and status come after the party and the decisions (#65: decisions first)
     const resting = R.phase === 'rest' && !C; // between pulls the status line sits above Ready/Pull instead (#159)
     const head = [h('div', { class: 'sec-h' }, R.name, h('small', null, `Pull: ${Math.min(R.idx + (R.phase === 'done' ? 0 : 1), R.pulls.length)}/${R.pulls.length}${R.wipes ? ' · Wipes: ' + R.wipes : ''}`)), dots, resting ? null : h('div', { style: { color: 'var(--muted)', fontSize: '13px' } }, status)].filter(Boolean);
@@ -1686,7 +1699,7 @@
     // tabs (#564): the run's name, progress, the clock and Ready / Pull stay on top; Party, Next pull (Enemies in a fight)
     // and Plan sit under them, so a raid's ten rows never push a decision out of sight
     const done = R.phase === 'done', healer = G.healsAllies(), pull = R.pulls[R.idx];
-    const tab = runTabNow(R, C, healer);
+    const tab = runTabNow(R, C);
     const party = [healer ? h('div', { class: 'sec-h' }, 'Party', h('small', { class: 'heal-to' }, ...healLine())) : null, pf].filter(Boolean); // where heals go (#156)
     let list = null;
     if (C) {
@@ -1700,6 +1713,7 @@
           h('div', { class: 'buffs rowbuffs', 'data-au': u.uid })));
       }
       joiningRow(C, list);
+      if (dead && C.recap && C.recap.deaths.length) actions.append(h('div', { class: 'rest-line' }, h('button', { class: 'chip recap-chip', onclick: () => recapDialog({ deaths: C.recap.deaths }) }, `Deaths (${C.recap.deaths.length})`), h('small', null, ' tap for who died and why')));
     } else {
       const row = h('div', { class: 'btn-row' });
       if (R.phase === 'rest') {
@@ -1867,8 +1881,9 @@
       if (keysShown() && slotKey(i)) btn.append(h('span', { class: 'ab-key' }, slotKey(i))); // its key, once a key was used (#561)
       if (ab.song) btn.append(h('div', { class: 'song' }, h('i', { class: 'beatz' }), h('i', { class: 'str' })), h('div', { class: 'verses' })); // a bard's song (#252)
       if (id === 'eat' || id === 'drink' || id === 'potion') {
-        const n = G.S.player.bags.filter((b) => b.item.slot === (id === 'eat' ? 'food' : id === 'potion' ? 'potion' : 'drink')).reduce((a, b) => a + b.n, 0);
+        const n = id === 'potion' ? potionCount() : G.S.player.bags.filter((b) => b.item.slot === (id === 'eat' ? 'food' : 'drink')).reduce((a, b) => a + b.n, 0);
         btn.append(h('span', { class: 'cnt tnum' }, n));
+        if (id === 'potion') btn.setAttribute('aria-label', potionName());
       }
       let pressT = null, long = false;
       btn.addEventListener('pointerdown', () => { long = false; pressT = setTimeout(() => { long = true; if (id === 'potion') openPotionPicker(); else abilityTip(id); }, 450); }); // the Potion's long-press picks what it drinks (#296)
@@ -2284,6 +2299,7 @@
         if (id === 'potion') {
           const lp = ((P.potionAt || 0) - now()) / 1000; if (lp > 0) { p = 1 - lp / 120; left = lp; }
           const ic = potionIcon(); if (btn.dataset.ic !== ic) { btn.dataset.ic = ic; const im = btn.querySelector('img'); if (im) im.src = art('icon', ic); } // follows your health in a fight
+          { const pc = String(potionCount()), ce = btn.querySelector('.cnt'); if (ce && ce.textContent !== pc) { ce.textContent = pc; btn.setAttribute('aria-label', potionName()); } } /* the count follows it too (#597) */
           nores = !P.bags.some((b) => b.item.slot === 'potion'); // none left: dimmed, showing 0 (#591)
         }
         else if (C && G.pUnit && id !== 'eat' && id !== 'drink') {
@@ -2410,8 +2426,8 @@
     const c = G.gearCondition(); if (G.S.player.level < 10 || c.low >= 100) return null;
     return h('p', { class: 'recap-gear' }, c.broken ? `Broken: ${c.broken} (no stats) · ` : `Gear: ${c.low}% · `, h('span', { html: 'Repair all: ' + moneyHtml(c.cost, false, true) }));
   }
-  function recapDialog() {
-    const R = G.recap; if (!R) return;
+  function recapDialog(of) { // of: a fight's deaths so far (you died while the group fights on, #597); else the last wipe's
+    const R = of || G.recap; if (!R) return;
     document.querySelectorAll('.tip-card.fight-tip').forEach((e) => e.remove()); // a fight's teaching card never covers the recap (#556)
     const shown = R.deaths.slice(0, 5), more = R.deaths.length - shown.length;
     showDialog([h('h3', null, R.self ? 'You died' : `Deaths (${R.deaths.length})`),
@@ -5843,7 +5859,7 @@
   }
   function showPop(q) {
     const A = D.ACTIVITIES[q.act], ms = q.group ? q.group.members : [];
-    const n = (r) => ms.filter((m) => m.role === r).length, P = G.S.player;
+    const n = (r) => ms.filter((m) => m.role === r).length + (G.role() === r ? 1 : 0), P = G.S.player; // the count includes you (#597)
     const knownOnly = ms.filter((m) => SOC.isFriend(m.bot.id) || (P.guild >= 0 && m.bot.guild === P.guild));
     const who = !ms.length ? null : ms.length <= 4 ? h('div', { class: 'pop-group' }, ...ms.map(popMember))
       : h('div', { class: 'pop-group' }, h('p', { class: 'pop-count' }, [[n('tank'), 'tank'], [n('healer'), 'healer'], [n('dps'), 'damage']].filter((x) => x[0]).map(([k, w]) => `${k} ${w}${k > 1 && w !== 'damage' ? 's' : ''}`).join(' · ')), ...knownOnly.map(popMember));
@@ -5940,19 +5956,22 @@
   // own interrupt or defensive, or Step Back); the bar fills as the cast runs, and lands when it is full
   // a slam on the tank (#179) also shows who has answered: a shield for a raid tank's brace, a plus for the mend, a diamond for each kick that counts (1-3, by the boss's style); a steel bar once the tank's defensive is up
   function teleBar(cls) { return h('div', { class: 'tbar' + (cls ? ' ' + cls : ''), hidden: true }, h('span', { class: 'tb-ic' }), h('i'), h('b'), h('span', { class: 'tb-pips', hidden: true }, h('i', { class: 'pg', hidden: true }), h('i', { class: 'pm' }), h('i', { class: 'pk' }), h('i', { class: 'pk' }), h('i', { class: 'pk' }))); }
+  // of your answers, the one that is ready (two ready: the shorter cooldown, so a Paladin sees Holy Shield before Divine
+  // Protection), else the one ready soonest (#597)
   function teleIconId(ans) {
-    const u = G.pUnit, have = u ? E.answersOf(u, ans === 'kick' ? 'cut' : ans) : [];
-    return have[0] || (ans === 'step' ? 'step_back' : ans === 'cut' || ans === 'kick' ? D.INTERRUPTS[G.S.player.cls] : 'shield_wall');
+    const u = G.pUnit, C = G.fight, have = u ? E.answersOf(u, ans === 'kick' ? 'cut' : ans) : [];
+    const left = (id) => Math.max(0, ((u.cds || {})[id] || 0) - (C ? C.t : 0));
+    const best = have.slice().sort((a, b) => left(a) - left(b) || (D.ABILITIES[a].cd || 0) - (D.ABILITIES[b].cd || 0))[0];
+    return best || (ans === 'step' ? 'step_back' : ans === 'cut' || ans === 'kick' ? D.INTERRUPTS[G.S.player.cls] : 'shield_wall');
   }
   function paintTele(bar, C, u) {
     if (!bar) return;
     const t = u && !u.dead && u.tele;
     if (!t) { if (!bar.hidden) { bar.hidden = true; bar.dataset.id = ''; } return; }
-    if (bar.dataset.id != t.id) {
-      bar.dataset.id = t.id; bar.hidden = false; bar.dataset.sz = ''; bar.classList.remove('drop'); // a new telegraph starts at its full size
-      const mine = G.pUnit && E.teleFor(C, G.pUnit).find((x) => x.m === u); // your own answer's icon: a slam on the tank asks a healer for a mend, the others for a kick
-      const ic = bar.querySelector('.tb-ic'); ic.innerHTML = ''; ic.append(img(abIcon(teleIconId(mine ? mine.ans : E.teleAnswer(t)))));
-    }
+    if (bar.dataset.id != t.id) { bar.dataset.id = t.id; bar.hidden = false; bar.dataset.sz = ''; bar.classList.remove('drop'); } // a new telegraph starts at its full size
+    { const mine = G.pUnit && E.teleFor(C, G.pUnit).find((x) => x.m === u); /* your own answer's icon: a slam on the tank asks a healer for a mend, the others for a kick */
+      const id = teleIconId(mine ? mine.ans : E.teleAnswer(t)); /* recomputed while the bar is up: the one ready now (#597) */
+      if (bar.dataset.ic !== id) { bar.dataset.ic = id; const ic = bar.querySelector('.tb-ic'); ic.innerHTML = ''; ic.append(img(abIcon(id))); } }
     const team = t.who === 'target', blocked = team && E.teleBlocked(C, t), size = team ? E.teleSize(t) : 0;
     const name = blocked ? `${t.name}: blocked` : team ? `${t.name} ${size}x` : t.name; // a slam shrinks as the team answers it
     const nb = bar.querySelector('b');

@@ -284,6 +284,13 @@
       if (Array.isArray(S.chat)) S.chat = S.chat.filter((m) => m.act && m.act.state === 'open');
       S.flags.v10names = true;
     }
+    // an item renamed in the data (#597: Icy Tomb Spaulders, a wrist piece, became Icy Tomb Bracers): a save's copies take the new name
+    if (!S.flags.names597) {
+      const ids = new Set(['ras_wand']), seen = new Set();
+      const walk = (o, depth) => { if (!o || typeof o !== 'object' || depth > 8 || seen.has(o)) return; seen.add(o); if (typeof o.id === 'string' && o.slot && ids.has(o.id) && D.ITEMS[o.id]) o.name = D.ITEMS[o.id].name; for (const k in o) walk(o[k], depth + 1); };
+      for (const o of [S.player, S.mail, S.ah && S.ah.mine, S.reforge]) walk(o, 0);
+      S.flags.names597 = 1;
+    }
     // a replaced item effect (#40: Lifeline became Lavish Mend): the owner keeps the item, which now carries the new
     // effect and the stats the data gives it now; an upgraded item keeps the growth it bought. Any copy, anywhere in the save
     if (D.EFFECT_RENAMED) {
@@ -4571,7 +4578,8 @@
     if (!(p > 0) || Math.random() >= p) return null; // a chance of 0 rolls nothing, so a sim that turns it off keeps its random numbers
     const C = D.CLASSES[b.cls], roles = BOT_FX_ROLES[b.role || C.role] || BOT_FX_ROLES.dps;
     const ids = Object.keys(D.ITEMS).filter((id) => { const it = D.ITEMS[id], F = it.effect && D.EFFECTS[it.effect], L = it.lvl || 1;
-      return F && roles.includes(F.role) && ['chest', 'legs', 'feet', 'hands'].includes(it.slot) && (!it.atype || it.atype === C.armorType) && G.canUseItem(it, b.cls) && L <= b.level && L >= b.level - 10; });
+      return F && roles.includes(F.role) && ['chest', 'legs', 'feet', 'hands'].includes(it.slot) && (!it.atype || it.atype === C.armorType) && G.canUseItem(it, b.cls) && L <= b.level && L >= b.level - 10
+        && (!b.gearFloor || ((it.q || 1) >= b.gearFloor && L >= b.level)); }); /* a raid's floor (#597): its quality, at the bot's own level, as every other piece it wears there */
     return ids.length ? G.copyItem(pick(ids)) : null;
   };
   // #582: a bot wears gear that fits its level: every slot, stats for its role, spell power for a healer or caster, and
@@ -4622,7 +4630,7 @@
   function seatLead(grp, bot) {
     const r = G.mainRole(bot); let i = grp.members.findIndex((m) => m.role === r && !m.legend);
     if (i < 0) i = grp.members.findIndex((m) => m.role === 'dps' && !m.legend); if (i < 0) return;
-    const c = G.botChar(Object.assign({}, bot, { role: grp.members[i].role, gearFloor: G.gearFloor(grp.act) })); /* a raid's gear floor, as the finder's picks (#590) */ c.syncLevel = grp.members[i].syncLevel; grp.members[i] = c;
+    const c = G.botChar(Object.assign({}, bot, { role: grp.members[i].role, gearFloor: G.gearFloor(grp.act, grp.hard) })); /* a raid's gear floor, as the finder's picks (#590), Hard's too (#597) */ c.syncLevel = grp.members[i].syncLevel; grp.members[i] = c;
   }
   G.botChar = function (b) {
     if (!(b && b.id >= 0)) return rollBotChar(b);
@@ -4723,12 +4731,12 @@
       lc.role = i >= 0 ? members[i].role : L.role; lc.syncLevel = cap; lc.cameo = key === guest;
       if (i >= 0) members[i] = lc; else members.push(lc);
     }
-    return { act, members, cap };
+    return { act, members, cap, hard: !!(opts && opts.hard) };
   }
   function formGroup(act, opts, picked) {
     const g = picked || pickGroup(act, opts);
     G.S.player.syncLevel = g.cap;
-    G.S.group = { act, members: g.members };
+    G.S.group = Object.assign({ act, members: g.members }, g.hard ? { hard: true } : null); /* seatLead's gear floor reads it (#597) */
     return G.S.group;
   }
   G.acceptPop = function () {
@@ -5081,7 +5089,7 @@
     if (!R || R.phase === 'fight') return;
     const t = now();
     if (G.paused) { R.restUntil = Math.max(R.restUntil, t + 4000); return; }
-    if (G.looking) R.restUntil = Math.max(R.restUntil, t + 2000); // a player card is open: the pull waits (#323), the rest goes on
+    if (G.looking && R.phase === 'rest') R.restUntil = Math.max(R.restUntil, t + 2000); // a player card is open: the pull waits (#323), the rest goes on; the run back after a wipe never waits on it (#597)
     // regen during rest
     const v = G.vitals();
     const P = S.player;
