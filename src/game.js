@@ -4976,6 +4976,7 @@
       r.choices[m.name] = { c, v: c === 'pass' ? 0 : rint(1, 100), at: now() + rnd(1500, 7000), m };
     }
     R.rolls.push(r);
+    G.finestSee(it); /* Season's Finest: a piece on a roll card is seen, whoever wins it */
     loot(`Loot: ${B.link(it.name, it.q)}. Choose Need, Greed or Pass.`);
     emit('roll', r);
   }
@@ -5225,6 +5226,7 @@
     emit('lootGain', { items: 1 });
   }
   G._runBonuses = runBonuses; // for tests: a run's end-of-run rewards on their own
+  G._addRoll = addRoll; // for tests: a drop put up for rolls
   const fmtClock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
   G.fmtClock = fmtClock;
   G.runReady = function () { const R = G.S.run; if (R && R.phase === 'rest') { if (G.role() === 'tank') G.runPull(); else R.restUntil = Math.min(R.restUntil, now()); } };
@@ -5701,7 +5703,7 @@
     const id = it && (typeof it === 'object' ? it.id : it), s = G.S && id && G.finestSeason(); if (!s) return false;
     const rows = finRowsOf(s, G.S.player.cls, id); if (!rows.length) return false;
     const st = finState(s); if (st.found[id]) return false;
-    st.found[id] = 1;
+    st.found[id] = 1; st.seen[id] = 1; /* found is seen too */
     const quiet = how === true || how === 'scan';
     if (!how && !finSpoiled(st, rows)) for (const r of rows) st.blind[finKey(r.role, r.slot, r.tier)] = 1;
     finRecord(s, st, quiet);
