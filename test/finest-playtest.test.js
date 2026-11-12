@@ -56,3 +56,16 @@ test('dungeon reward gear fits the role you play, not only the class', () => {
     for (const dk in D.DUNGEONS) { const Dg = D.DUNGEONS[dk]; if (Dg.raid) continue; const it = G.fittedBossBlue(Dg, 50, cls); assert.ok(G.suitsRole(it, cls, role), `${cls} ${role} ${dk}: ${it.name} ${JSON.stringify(it.stats)}`); }
   }
 });
+
+test('Stamina is a tank\'s stat: a Stamina-heavy ring or cloak suits tanks only, so other roles Greed it', () => {
+  character(60, 'warrior', 'human');
+  const cloak = { slot: 'back', q: 3, lvl: 60, stats: { sta: 14 } }, ring = { slot: 'finger', q: 3, lvl: 60, stats: { sta: 12, int: 4 } };
+  for (const [cls, role] of [['mage', 'dps'], ['priest', 'healer'], ['rogue', 'dps'], ['warrior', 'dps'], ['paladin', 'healer'], ['druid', 'healer']]) {
+    assert.strictEqual(G.suitsRole(cloak, cls, role), false, `${cls} ${role}: Stamina cloak`);
+    assert.strictEqual(G.suitsRole(ring, cls, role), false, `${cls} ${role}: Stamina ring`);
+  }
+  for (const cls of ['warrior', 'paladin', 'druid']) assert.strictEqual(G.suitsRole(cloak, cls, 'tank'), true, `${cls} tank`);
+  /* a two-stat affix with Stamina still suits the role of its other stat */
+  assert.strictEqual(G.suitsRole({ slot: 'chest', stats: { sta: 8, int: 8 } }, 'warlock', 'dps'), true);
+  assert.strictEqual(G.suitsRole({ slot: 'chest', stats: { agi: 8, sta: 8 } }, 'rogue', 'dps'), true);
+});

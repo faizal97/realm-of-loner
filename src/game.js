@@ -530,10 +530,10 @@
   G.suitsRole = function (it, cls, role) {
     if (!it) return false;
     const w = (ROLE_W[cls] && ROLE_W[cls][role]) || W[cls]; if (!w) return true;
-    const keys = ['str', 'agi', 'sta', 'int', 'spi'];
-    const top = Math.max.apply(null, keys.map((k) => w[k] || 0).concat([w.sp || 0]));
+    const keys = ['str', 'agi', 'sta', 'int', 'spi'], wk = (k) => (k === 'sta' && role !== 'tank' ? 0 : w[k] || 0); /* Stamina is a tank's stat: every role weighs it, so a Stamina ring otherwise suited every role */
+    const top = Math.max.apply(null, keys.map(wk).concat([w.sp || 0]));
     let num = 0, tot = 0;
-    for (const k of keys) { const v = (it.stats || {})[k] || 0; num += (w[k] || 0) * v; tot += v; }
+    for (const k of keys) { const v = (it.stats || {})[k] || 0; num += wk(k) * v; tot += v; }
     if (it.sp) { num += (w.sp || 0) * it.sp; tot += it.sp; }
     if (!tot) return it.slot === 'weapon' ? (w.dps || 0) >= 1 : it.slot === 'ranged' ? (w.rdps || 0) >= 1 || it.wtype === 'instrument' : true;
     return num / (top * tot) >= 0.4;
