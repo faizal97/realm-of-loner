@@ -3771,7 +3771,7 @@
     'lfg:raid': () => { ui.gfTab = 'raid'; openSocial('group'); },
     'lfg:trials': () => { ui.gfTab = 'trials'; openSocial('group'); },
     'lfg:you': () => { ui.gfTab = 'you'; openSocial('group'); },
-    bounty: () => { if (G.isHub(G.S.player.place)) openBountyBoard(); else toast('Bounty Boards stand in towns with an inn.'); },
+    bounty: () => { if (G.isHub(G.S.player.place)) return openBountyBoard(); const nb = G.nearestBoard(); if (!nb) return toast('Bounty Boards stand in towns with an inn.'); closeSheet(); routeDialog(nb.place); }, /* from a capital: the route to the nearest board (#596) */
     worldboss: () => { const wb = G.worldBoss(); if (wb) openBriefing(wb, false); },
     brawl: () => { closeSheet(); if (G.S.player.place !== G.BRAWL.place) routeDialog(G.BRAWL.place); },
     finest: () => openFinest(), // #593
@@ -4472,7 +4472,7 @@
             h('button', { class: 'btn alt wide', onclick: closeDialog }, 'Cancel')], true), `Vendor pays ${G.moneyText((x.item.sell || 1) * x.n)}`)); });
         if (!list.children.length) list.append(h('div', { class: 'people' }, 'Nothing in your bags to sell. Gear, trade goods, potions and bags can go up for auction.'));
       } else {
-        ((S.ah && S.ah.mine) || []).forEach((a, i) => list.append(itemRow(a.item, a.n || 1, G.moneyText(a.price), () => showDialog([h('h3', null, `Cancel your auction of ${a.item.name}?`), h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { closeDialog(); G.ahCancel(i); ui.sheetFn(); } }, 'Cancel auction'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Keep'))], true), `Posted ${Math.max(1, Math.round((Date.now() - a.postedAt) / 60000))} min ago · ${Math.max(0, Math.round((a.expires - Date.now()) / 3600000))}h left`)));
+        ((S.ah && S.ah.mine) || []).forEach((a, i) => list.append(itemRow(a.item, a.n || 1, G.moneyText(a.price), () => showDialog([h('h3', null, `Cancel your auction of ${a.item.name}?`), a.deposit ? h('p', null, `The house keeps the deposit: ${G.moneyText(a.deposit)}.`) : null, h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { closeDialog(); G.ahCancel(i); ui.sheetFn(); } }, 'Cancel auction'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Keep'))], true), `Posted ${Math.max(1, Math.round((Date.now() - a.postedAt) / 60000))} min ago · ${Math.max(0, Math.round((a.expires - Date.now()) / 3600000))}h left`)));
         if (!list.children.length) list.append(h('div', { class: 'people' }, 'You have no auctions. Post gear from the Sell tab; it sells while you play or while you are away.'));
       }
       b.append(list);

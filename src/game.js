@@ -1337,6 +1337,13 @@
     for (const p of places) if (dist[p] != null && !G.enemyTown(p) && (!best || dist[p] < best.secs)) best = { place: p, npc, secs: Math.round(dist[p]) };
     return best;
   };
+  // the nearest Bounty Board you can reach (#596: This week's Go from a capital, where none stands): { place, secs }
+  G.nearestBoard = function (from) {
+    from = from || G.S.player.place;
+    const dist = G.travelTimes(from); let best = null;
+    for (const p in dist) if (G.isHub(p) && !G.enemyTown(p) && G.bounties(p).length && (!best || dist[p] < best.secs)) best = { place: p, secs: Math.round(dist[p]) };
+    return best;
+  };
   function routeSearch(from, to, throughFoes) {
     const dist = { [from]: 0 }, prev = {}, done = new Set();
     const open = [from];
