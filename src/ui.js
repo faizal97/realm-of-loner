@@ -1314,8 +1314,16 @@
     return h('span', null, ' · Lv ', num(lo), lo === hi ? null : '–', lo === hi ? null : num(hi));
   }
   // ---------- where quest things happen: the map, the quest page, the tracker and the leads all ask here
+  // for a quest, only the places in its own region (its giver's or its hand-in's) when it has any there (#598: a dwarf's
+  // Tough Wolf Meat listed Halden Abbey, the human start, because wolves drop it there too)
+  function objPlaces(o, qid) {
+    const all = objPlacesAll(o), Q = qid && D.QUESTS[qid]; if (!Q || all.length < 2) return all;
+    const regs = new Set([Q.giver, Q.turnin].map((n) => n && npcPlace(n)).filter(Boolean).map((p) => D.PLACES[p].region));
+    const near = all.filter((p) => regs.has(D.PLACES[p].region));
+    return near.length ? near : all;
+  }
   // the places an objective is done in: a visit's place, where its mob lives or its item drops, where it is gathered
-  function objPlaces(o) {
+  function objPlacesAll(o) {
     if (o.type === 'visit') return [o.place];
     const col = (k) => (D.MOBS[k] || {}).collector, L = G.S.player.level, tt = G.travelTimes(G.S.player.place); // collectors are spawned, not listed: every place that has them, not grey to you
     if (col(o.mob) || (o.item && Object.keys(D.MOBS).some((k) => col(k) && (D.MOBS[k].qdrops || []).some((d) => d[0] === o.item)))) return Object.keys(D.PLACES).filter((p) => { const pl = D.PLACES[p]; return G.collectorsHere(pl) && pl.lvl[0] >= 30 && L - pl.lvl[0] < 6 && tt[p] != null; }); /* only where every collector pays a note, and only where you can go now (not behind the storm) */
@@ -2821,7 +2829,7 @@
       for (const qid in P.quests) {
         const st = G.questState(qid), main = D.QUESTS[qid].main;
         if (st === 'complete') { const npc = D.QUESTS[qid].turnin; for (const p in D.PLACES) if (D.PLACES[p].npcs.includes(npc)) { qPlaces.set(p, 'ready'); if (main) qMain.add(p); } continue; }
-        for (const o of D.QUESTS[qid].objs) objPlaces(o).forEach((p) => { mark(p); if (main && qPlaces.get(p) === 'new') qMain.add(p); });
+        for (const o of D.QUESTS[qid].objs) objPlaces(o, qid).forEach((p) => { mark(p); if (main && qPlaces.get(p) === 'new') qMain.add(p); });
       }
       const trainAt = new Set(D.PROF_TRAINERS['crafts_' + G.myFaction()] || []), trainIc = art('icon', 'prof_blacksmithing'); // your profession trainers (#76)
       const huntUpAt = new Map(); for (const r of (G.huntRares ? G.huntRares() : [])) if (MAP[r.place] && G.huntUp(r.key, Date.now())) huntUpAt.set(r.place, r.key); // a rare hunt that's up (#43)
@@ -2979,7 +2987,7 @@
       questStory(qid),
       h('h4', null, 'Objectives'),
       ...pr.map((p) => { const hint = p.have < p.n ? G.objHint(p.o) : null, pick = hint && /^Collect/.test(hint); // a pick-up names its place in the hint (#173)
-        const where = p.have < p.n && p.o.type !== 'visit' && !pick ? byNearness(objPlaces(p.o)) : [];
+        const where = p.have < p.n && p.o.type !== 'visit' && !pick ? byNearness(objPlaces(p.o, qid)) : [];
         return h('div', { class: 'obj tnum' + (p.have >= p.n ? ' done' : '') }, `${p.label}: ${p.have}/${p.n}`, where.length ? h('small', { class: 'obj-where' }, ' · ' + placeNames(where)) : null,
           hint ? h('small', { class: 'obj-src' }, hint) : null); }),
       turninLine(Q, st === 'complete'),
