@@ -3714,7 +3714,7 @@
     // not during a run or a battleground (#368): its text fills the screen at 375 px, and the lantern's buttons can't be used there
     // since #541 it is the This week button: on whenever This week has a banner; a festival keeps its icon and ring
     const wk = G.S ? G.weekBanners() : [];
-    const live = G.S && wk.length && !lwPrefs().off && !app.querySelector('.create') && !G.S.run && !G.bgBusy();
+    const live = G.S && wk.length && !lwPrefs().weekOff && !app.querySelector('.create') && !G.S.run && !G.bgBusy();
     if (!live) { if (ui.evBtn) { ui.evBtn.remove(); ui.evBtn = null; } return; }
     const fk = festNow(), isLn = fk === 'longnight';
     let frac, open;
@@ -4346,8 +4346,8 @@
         { const on = buzzOn(); b.append(...foldSec('set.buzz', 'Buzz', on ? 'On' : 'Off', [h('div', { class: 'btn-row' },
           h('button', { class: 'btn alt', onclick: () => { try { localStorage.setItem('azsolo.buzz', on ? 'off' : 'on'); } catch (e) { } if (!on) buzz(30); ui.sheetFn(); } }, 'Buzz: ' + (on ? 'On' : 'Off'))),
           h('p', { class: 'ai-note', style: { margin: 0 } }, 'Phones only. A short buzz on each ability, a double buzz for a red bar.')])); }
-        { const off = !!lwPrefs().off; b.append(...foldSec('set.evl', 'This week button', off ? 'Hidden' : 'Shown', [h('div', { class: 'btn-row' },
-          h('button', { class: 'btn alt', onclick: () => { const p = lwPrefs(); p.off = !off; lwSavePrefs(p); evLantern(); ui.sheetFn(); } }, 'This week button: ' + (off ? 'Hidden' : 'Shown'))),
+        { const off = !!lwPrefs().weekOff; b.append(...foldSec('set.evl', 'This week button', off ? 'Hidden' : 'Shown', [h('div', { class: 'btn-row' },
+          h('button', { class: 'btn alt', onclick: () => { const p = lwPrefs(); p.weekOff = !off; lwSavePrefs(p); evLantern(); ui.sheetFn(); } }, 'This week button: ' + (off ? 'Hidden' : 'Shown'))),
           h('p', { class: 'ai-note', style: { margin: 0 } }, 'A button floats over every screen and opens This week: what\'s on and what to do. During a festival it\'s the festival\'s lantern. Drag it to move it. This week stays in Hero → Journey either way.')])); }
         if (window.SND) {
           // #120: a volume slider per channel (0-100%, steps of 5) under the On/Off buttons, which mute and keep the value.
