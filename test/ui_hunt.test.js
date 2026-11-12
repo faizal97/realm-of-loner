@@ -121,8 +121,11 @@ test('drinking the last potion does not move the other buttons under different k
   assert.deepStrictEqual(barSlotsWith(base, { potion: false, fight: true }), barSlotsWith(base, { potion: true, fight: true }));
 });
 
-test('a Potion last on the bar still hides at 0 potions, since that moves no key', () => {
-  assert.deepStrictEqual(barSlotsWith(['a', 'b', 'potion'], { potion: false }), ['a', 'b']);
+// the Potion stays, dimmed at 0, even when it is the last button (beta.7 notes): a button that comes and goes is not one
+// the player can find, and a low-level bar often ends on it
+test('a Potion last on the bar stays at 0 potions, as it does anywhere else on the bar', () => {
+  assert.deepStrictEqual(barSlotsWith(['a', 'b', 'potion'], { potion: false }), ['a', 'b', 'potion']);
+  assert.deepStrictEqual(barSlotsWith(['a', 'b', 'potion'], { potion: false, fight: true }), ['a', 'b', 'potion']);
   assert.deepStrictEqual(barSlotsWith(['a', 'b', 'potion'], { potion: true }), ['a', 'b', 'potion']);
 });
 
