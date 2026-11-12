@@ -593,7 +593,7 @@
   }
   function whereQuestion(asker) {
     const P = G.S.player, top = Math.min(P.level + 6, asker ? asker.level + 3 : Infinity); // nowhere above the asker's own level + 3 (the chat gate's rule)
-    const places = Object.keys(D.PLACES).filter((k) => { const p = D.PLACES[k]; return p.lvl && p.lvl[0] <= top && p.lvl[1] >= P.level - 12 && p.zone && !G.enemyTown(k); });
+    const places = Object.keys(D.PLACES).filter((k) => { const p = D.PLACES[k]; return p.lvl && p.lvl[0] <= top && p.lvl[1] >= P.level - 12 && p.zone && p.zone.toLowerCase() !== p.name.toLowerCase() && !G.enemyTown(k); }); /* a place named as its zone answers itself (#596) */
     if (!places.length) return null;
     const k = pick(places), p = D.PLACES[k];
     const zones = [...new Set(Object.values(D.PLACES).map((x) => x.zone).filter((z) => z && z !== p.zone))];
