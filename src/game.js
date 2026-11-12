@@ -659,7 +659,8 @@
       b.n = STACK;
     }
   }
-  G.addItem = function (it, n) {
+  // how: passed to G.finestGot, 'back' for an item that comes back to you (mail, buyback, bank, a cancelled auction)
+  G.addItem = function (it, n, how) {
     const P = G.S.player;
     n = n || 1;
     if (G.isQuestItem(it.id)) { P.qitems = P.qitems || {}; P.qitems[it.id] = (P.qitems[it.id] || 0) + n; return true; } // kept with the quests, no slot (#144)
@@ -672,7 +673,7 @@
     } else if (G.bagsFull(it)) { toast('Bags are full.'); return false; }
     else P.bags.push({ item: it, n });
     if (G.collectLook) G.collectLook(it); // the wardrobe (v10.3)
-    G.finestGot(it); // Season's Finest: every way an item reaches the bags passes here (#593)
+    G.finestGot(it, how); // Season's Finest: every way an item reaches the bags passes here (#593)
     if (G.isUpgrade(it)) P.bagUpgrade = true; // the Bags button's dot until Bags is opened (v10.9, issue #11)
     if (G.effectOf(it)) { emit('effectItem', { item: it }); if (G.canUseItem(it)) { it.fxNew = 1; P.bagUpgrade = true; } } // the one-time card; a new effect item you can use lights the dot like an upgrade (#23)
     return true;
@@ -781,7 +782,7 @@
     const P = G.S.player, x = (P.buyback || [])[i]; if (!x) return false;
     if (P.money < x.price) { toast('Not enough money.'); return false; }
     if (G.stackable(x.item) ? G.bagRoom(x.item) < x.n : G.bagsFull(x.item)) { toast('Bags are full.'); return false; }
-    if (!G.addItem(x.item, x.n)) return false;
+    if (!G.addItem(x.item, x.n, 'back')) return false;
     P.money -= x.price; P.buyback.splice(i, 1);
     sys(`Bought back ${x.item.name}${x.n > 1 ? ' x' + x.n : ''} for ${G.moneyText(x.price)}.`); emit('change'); return true;
   };
@@ -2325,16 +2326,16 @@
   };
   G.bankWithdraw = function (idx) {
     const P = G.S.player, b = (P.bank || [])[idx]; if (!b) return;
-    if (G.isQuestItem(b.item.id)) { G.addItem(b.item, b.n); P.bank.splice(idx, 1); return emit('change'); } // kept with the quests, no slot needed (an old save's)
+    if (G.isQuestItem(b.item.id)) { G.addItem(b.item, b.n, 'back'); P.bank.splice(idx, 1); return emit('change'); } // kept with the quests, no slot needed (an old save's)
     // a full stack (20) is no room, and the bank lets go only of what reached the bags (#163: a stack was deleted)
     if (G.stackable(b.item)) { // as many as fit, in stacks of 20 (#440); the rest stays in the bank
       const fit = P.bags.reduce((a, x) => a + (x.item.id === b.item.id && x.n < STACK ? STACK - x.n : 0), 0) + G.bagFree(b.item) * STACK;
       const k = Math.min(b.n, fit); if (!k) return toast('Bags are full.');
-      G.addItem(k === b.n ? b.item : Object.assign({}, b.item), k); b.n -= k; if (!b.n) P.bank.splice(idx, 1);
+      G.addItem(k === b.n ? b.item : Object.assign({}, b.item), k, 'back'); b.n -= k; if (!b.n) P.bank.splice(idx, 1);
       return emit('change');
     }
     if (G.bagsFull(b.item)) return toast('Bags are full.');
-    if (G.addItem(b.item, b.n)) P.bank.splice(idx, 1);
+    if (G.addItem(b.item, b.n, 'back')) P.bank.splice(idx, 1);
     emit('change');
   };
   // The account bank (#286, docs/plans/2026-11-09-account-bank-design.md): every character on the account shares it. The
@@ -2466,7 +2467,7 @@
   G.ahCancel = function (i) {
     const S = G.S, a = S.ah.mine[i]; if (!a) return;
     if (G.slotsShort([[a.item, a.n || 1]])) return toast('Bags are full.');
-    S.ah.mine.splice(i, 1); G.addItem(a.item, a.n || 1); sys(`You cancelled your auction of ${a.item.name}.${a.deposit ? ` The deposit of ${G.moneyText(a.deposit)} is kept by the house.` : ''}`); emit('change');
+    S.ah.mine.splice(i, 1); G.addItem(a.item, a.n || 1, 'back'); sys(`You cancelled your auction of ${a.item.name}.${a.deposit ? ` The deposit of ${G.moneyText(a.deposit)} is kept by the house.` : ''}`); emit('change');
   };
   const ahTick = G.ahTick = function () {
     const S = G.S; if (!S.ah || !S.ah.mine.length) return;
@@ -2521,7 +2522,8 @@
   };
   G.mailTake = function (id) {
     const m = G.mail().find((x) => x.id === id), why = G.mailTakeWhy(m); if (why) return toast(why);
-    G.addItem(m.item, m.n || 1); m.taken = true; m.read = true;
+    const back = m.kind === 'expired' || G.finestSeason(new Date(m.at || 0)) !== G.finestSeason(); /* an auction come back, or mail from before this season: never a blind find */
+    G.addItem(m.item, m.n || 1, back ? 'back' : undefined); m.taken = true; m.read = true;
     emit('info', `Taken: ${m.item.name}`); emit('change'); emit('mail');
     return null;
   };
@@ -5697,7 +5699,8 @@
     st.seen[itemId] = 1; G.save(); return true;
   };
   // the character got the item: found, and Found blind on every row of its class when no Hint or Reveal touched the
-  // piece. how: 'scan' (the load scan: held from before, quiet) and 'moved' (out of the Account bank) count as found but
+  // piece. how: 'scan' (the load scan: held from before, quiet), 'moved' (out of the Account bank) and 'back' (mail, buyback,
+  // the character's bank, a cancelled auction: it was held before) count as found but
   // never blind; only a piece obtained during the season (loot, quest, purchase, craft, trade) can be (#593)
   G.finestGot = function (it, how) {
     const id = it && (typeof it === 'object' ? it.id : it), s = G.S && id && G.finestSeason(); if (!s) return false;
