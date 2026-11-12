@@ -3428,6 +3428,12 @@
     const r = G.records();
     return Object.keys(D.DUNGEONS).some((k) => D.DUNGEONS[k].raid && r.clears[k] && r.clears[k].clears);
   };
+  // why the campaign isn't open yet, as This week's Go says it (null once it is): below 60 the level comes first; at 60
+  // only the story or a raid is left, so "Opens at 60" would be wrong
+  G.prepatchLocked = function () {
+    if (G.prepatchOpen()) return null;
+    return G.S.player.level < 60 ? 'Opens at 60, after The Drowned Crown or a raid.' : 'Opens after The Drowned Crown or a raid.';
+  };
   // Crestbearer (#565): the newest raid cleared on Hard while it is the newest. Kept once earned (P.crest, by activity);
   // a Hard clear from before this existed counts while that raid is still the newest. record: write a new one down
   G.crests = function (record) {

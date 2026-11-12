@@ -3832,7 +3832,7 @@
     const P = G.S.player, ids = Object.keys(D.QUESTS).filter((q) => pick(D.QUESTS[q]) && (!D.QUESTS[q].faction || D.QUESTS[q].faction === G.myFaction()));
     if (ids.some((q) => P.quests[q])) return openQuests();
     const next = ids.find((q) => G.questState(q) === 'available');
-    if (!next) return toast(G.prepatchOpen() ? 'Nothing to take here right now.' : 'Opens at 60, after The Drowned Crown or a raid.');
+    if (!next) return toast(G.prepatchLocked() || 'Nothing to take here right now.');
     const npc = D.QUESTS[next].giver, at = Object.keys(D.PLACES).find((p) => D.PLACES[p].npcs.includes(npc));
     if (!at) return openQuests();
     if (P.place === at) { closeSheet(); return toast(`${D.NPCS[npc].name} is here.`); }

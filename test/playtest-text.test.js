@@ -17,3 +17,12 @@ test('a new title and a quest-taught ability are said in the system channel, whe
   const tl = S.chat.slice(c1).find((m) => /^New title: /.test(m.text));
   assert.ok(tl, 'the title line is said'); assert.strictEqual(tl.ch, 'system');
 });
+
+test('before the campaign opens, the reason fits the level: "Opens at 60" below it, never at 60', () => {
+  const { P } = character(59, 'warrior', 'human');
+  assert.match(G.prepatchLocked(), /^Opens at 60/);
+  P.level = 60;
+  assert.ok(G.prepatchLocked() && !/at 60/.test(G.prepatchLocked()), G.prepatchLocked());
+  P.done.tc_crown_a = true;
+  assert.strictEqual(G.prepatchLocked(), null);
+});
