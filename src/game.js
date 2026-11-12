@@ -884,7 +884,7 @@
     const P = G.S.player;
     n = n || 1;
     const cost = (it.cost || it.sell * 4) * n;
-    if (P.money < cost) return toast('You don\'t have enough money.');
+    if (P.money < cost) return toast('Not enough money.');
     const copy = JSON.parse(JSON.stringify(it));
     if (!G.addItem(copy, n)) return;
     P.money -= cost;

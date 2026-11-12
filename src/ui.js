@@ -272,7 +272,7 @@
     if (noZero || c > 0) parts = parts.filter(([, v]) => v); // no "0c" after other coins (#463)
     if (compact) parts = parts.slice(0, 2);
     const word = { g: 'gold', s: 'silver', c: 'copper' };
-    return `<span class="money tnum" aria-label="${parts.map(([k, v]) => v + ' ' + word[k]).join(' ')}">${parts.map(([k, v]) => `<span class="${k}">${v}<i class="coin ${k}"></i></span>`).join(' ')}</span>`;
+    return `<span class="money tnum" aria-label="${parts.map(([k, v]) => v + ' ' + word[k]).join(' ')}">${parts.map(([k, v]) => `<span class="${k}">${v}${k}<i class="coin ${k}"></i></span>`).join(' ')}</span>`; /* #598: the letter too (25s, 25c), as in the log, so silver and copper differ by more than the coin's colour */
   }
   // folding sections: the header is a button with a one-line summary; open or closed is remembered on this device
   function foldOpen(key, def) { try { const m = JSON.parse(localStorage.getItem('azsolo.folds') || '{}'); return key in m ? !!m[key] : def; } catch (e) { return def; } }
@@ -3242,15 +3242,24 @@
       t.append(h('div', { class: 'last-sale' }, !ls ? '' : ['Sold ', ls.item ? h('b', { class: 'q' + (ls.item.q || 0) }, ls.item.name) : `${ls.many} ${ls.grey ? 'grey ' : ''}item${ls.many > 1 ? 's' : ''}`, ls.item && ls.n > 1 ? ` ×${ls.n}` : '', h('span', { html: ' for ' + moneyHtml(ls.money) })]));
       const stock = G.vendorStock(npc);
       const list = h('div', { class: 'list' });
+      // #598: a purchase you can't afford says so on the row you tapped, not in a toast far from it
+      const msg = ui.vendorMsg && Date.now() - ui.vendorMsg.at < 5000 ? ui.vendorMsg : null;
+      const buyHere = (it, n, cost) => {
+        const have = G.S.player.money; ui.vendorMsg = null;
+        if (have < cost * n) ui.vendorMsg = { id: it.id, at: Date.now(), text: `Need ${G.moneyText(cost * n)} (you have ${G.moneyText(have)}).` };
+        else G.buy(it, n);
+        ui.sheetFn();
+      };
       for (const it of stock) {
         const cost = it.cost || it.sell * 4;
         const stack = G.stackable(it);
         list.append(h('div', { class: 'row', style: { gridTemplateColumns: '34px 1fr auto' } },
           h('button', { style: { padding: 0 }, onclick: () => showItem(it) }, itemIcon(it)),
-          h('button', { class: 't', style: { textAlign: 'left' }, onclick: () => showItem(it) }, h('b', { class: 'q' + it.q }, it.name), h('small', null, h('span', { html: moneyHtml(cost, false, cost > 0) + (stack ? ' each' : '') }), gearTag(it))),
+          h('button', { class: 't', style: { textAlign: 'left' }, onclick: () => showItem(it) }, h('b', { class: 'q' + it.q }, it.name), h('small', null, h('span', { html: moneyHtml(cost, false, cost > 0) + (stack ? ' each' : '') }), gearTag(it)),
+            msg && msg.id === it.id ? h('small', { class: 'red', style: { display: 'block', whiteSpace: 'normal' } }, msg.text) : null),
           h('div', { class: 'btn-row', style: { flexWrap: 'nowrap' } },
-            h('button', { class: 'chip', onclick: () => { G.buy(it, 1); ui.sheetFn(); } }, 'Buy'),
-            stack ? h('button', { class: 'chip', onclick: () => { G.buy(it, 5); ui.sheetFn(); } }, '×5') : null)));
+            h('button', { class: 'chip', onclick: () => buyHere(it, 1, cost) }, 'Buy'),
+            stack ? h('button', { class: 'chip', onclick: () => buyHere(it, 5, cost) }, '×5') : null)));
       }
       b.append(list);
       const rep = G.repairAllCost(); // #502
