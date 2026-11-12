@@ -5010,7 +5010,7 @@
     if (!R || R.phase === 'fight') return;
     const t = now();
     if (G.paused) { R.restUntil = Math.max(R.restUntil, t + 4000); return; }
-    if (G.looking) R.restUntil = Math.max(R.restUntil, t + 2000); // a player card is open: the pull waits (#323), the rest goes on
+    if (G.looking && R.phase === 'rest') R.restUntil = Math.max(R.restUntil, t + 2000); // a player card is open: the pull waits (#323), the rest goes on; the run back after a wipe never waits on it (#597)
     // regen during rest
     const v = G.vitals();
     const P = S.player;

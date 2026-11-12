@@ -16,6 +16,19 @@ test('a fight opens on Party only for a player in the healer role, not for a cla
   }
 });
 
+test('a player card open after a wipe: the run back goes on; while resting, only the pull waits', () => {
+  const { G, character, advance, now } = require('./world');
+  const { S } = character(35, 'mage', 'human');
+  G.startRoulette(); const R = S.run;
+  R.phase = 'wipe'; R.restUntil = now() + 1000; G.looking = true;
+  advance(3);
+  assert.strictEqual(R.phase, 'rest', 'ran back with the card open');
+  const until = R.restUntil; advance(3);
+  assert.strictEqual(R.phase, 'rest', 'the pull still waits for the card');
+  assert.ok(R.restUntil > until);
+  G.looking = false;
+});
+
 test('the red bar shows the answer that is ready: the shorter cooldown first, else the one ready soonest', () => {
   const D = { ABILITIES: { divine_protection: { cd: 300 }, holy_shield: { cd: 10 } }, INTERRUPTS: {} };
   const E = { answersOf: () => ['divine_protection', 'holy_shield'] }; // the class's order: the 5 min one first
