@@ -232,6 +232,11 @@ for (const q of [2, 3, 4]) for (let L = 1; L < D.LEVEL_CAP; L++)
 {
   const drops = new Set();
   for (const dk in D.DUNGEONS) for (const p of D.DUNGEONS[dk].pulls) for (const m of p.mobs) { const M = D.MOBS[m]; if (!M) continue; for (const id of M.loot || []) drops.add(id); for (const [id] of M.drops || []) drops.add(id); }
+  // the factions that can enter a dungeon dropping each item, by its entrance (G.placeFaction's rule; null: any faction)
+  const placeFac = (pk) => { const p = D.PLACES[pk]; if (!p) return null; if (p.faction) return p.faction; const f = (D.REGIONS[p.region] || {}).faction; return (p.safe || p.city) && f && f !== 'contested' ? f : null; }, dropFac = {};
+  for (const act in D.ACTIVITIES) { const A = D.ACTIVITIES[act], Dg = A.dungeon && D.DUNGEONS[A.dungeon]; if (!Dg || A.worldBoss || A.event) continue;
+    const f = A.where ? placeFac(A.where) : null;
+    for (const p of Dg.pulls) for (const m of p.mobs) { const M = D.MOBS[m]; if (!M) continue; for (const id of (M.loot || []).concat((M.drops || []).map((d) => d[0]))) (dropFac[id] = dropFac[id] || []).push(f); } }
   const sids = new Set(), AR = { cloth: 0, leather: 1, mail: 2 };
   // G.canUseItem's rules (game.js is not loaded here)
   const canUse = (it, C) => it.slot === 'weapon' ? C.weapons.includes(it.wtype) : it.slot === 'ranged' ? (it.wtype === 'instrument' ? !!C.instrument : !!C.ranged) : it.atype ? (AR[it.atype] || 0) <= (AR[C.armorType] || 0) : true;
@@ -241,17 +246,26 @@ for (const q of [2, 3, 4]) for (let L = 1; L < D.LEVEL_CAP; L++)
     if (!/^\d{4}-\d{2}-\d{2}$/.test(s.from) || (s.to != null && (!/^\d{4}-\d{2}-\d{2}$/.test(s.to) || s.to < s.from))) err(`${w}: from/to must be YYYY-MM-DD (to may be null), from first`);
     if (!s.name) err(`${w}: needs a name`);
     for (const r of ['tank', 'healer', 'dps']) if (!D.TITLES.some((t) => t.id === (s.titles || {})[r])) err(`${w}: no ${r} title in D.TITLES (#593)`);
-    for (const tier of ['best', 'until']) for (const key in s[tier] || {}) {
+    // a tier is one list per faction ({ alliance, horde }) or one shared list; each faction's picks must drop in a
+    // dungeon that faction can enter (#593: Temple of Shal'zua is the Krugar's, The Sunken Archive the Accord's)
+    const split = (t) => Object.keys(t || {}).some((k) => k.indexOf(':') < 0);
+    const lists = (tier) => split(s[tier]) ? Object.keys(s[tier]).map((f) => [f, s[tier][f]]) : [[null, s[tier] || {}]];
+    for (const tier of ['best', 'until']) for (const [fac, L] of lists(tier)) {
+      if (fac && !['alliance', 'horde'].includes(fac)) { err(`${w} ${tier}: '${fac}' is not a faction`); continue; }
+      const bestL = fac ? ((s.best || {})[fac] || {}) : (s.best || {});
+      for (const key in L) {
       const [cls, role] = key.split(':'), C = D.CLASSES[cls];
       if (!C || !(C.roles || [C.role]).includes(role)) { err(`${w} ${tier}: '${key}' is not a class and one of its roles`); continue; }
-      for (const slot in s[tier][key]) {
-        const id = s[tier][key][slot], it = D.ITEMS[id], at = `${w} ${tier} ${key} ${slot}`;
+      for (const slot in L[key]) {
+        const id = L[key][slot], it = D.ITEMS[id], at = `${w} ${tier}${fac ? ' ' + fac : ''} ${key} ${slot}`;
         if (!D.GEAR_SLOTS.includes(slot)) err(`${at}: unknown slot`);
         if (!it) { err(`${at}: unknown item '${id}'`); continue; }
         if (it.slot !== slot) err(`${at}: ${id} is a ${it.slot} item`);
         if (!canUse(it, C)) err(`${at}: a ${cls} can't use ${id}`);
         if (!drops.has(id)) err(`${at}: ${id} drops nowhere`);
-        if (tier === 'until' && ((s.best || {})[key] || {})[slot] === id) err(`${at}: ${id} is also its Best`);
+        else if (fac && !(dropFac[id] || []).some((f) => !f || f === fac)) err(`${at}: ${id} drops only where ${fac} can't go`);
+        if (tier === 'until' && (bestL[key] || {})[slot] === id) err(`${at}: ${id} is also its Best`);
+      }
       }
     }
   }
