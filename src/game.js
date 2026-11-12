@@ -195,6 +195,7 @@
   G.save = function () {
     if (!G.S) return;
     G.S.lastSeen = now();
+    G.titleCheck();
     if (G.fight && G.pUnit) E.writeBack(G.fight, G.pUnit, now(), true); // the fight goes on: don't shift it out (#217)
     const ok = ls.set(CHAR_KEY(G.S.id), JSON.stringify(G.S, ROSTER_ONLY)); if (!ok) cantSave();
     saveRoster(G.S);
@@ -1705,6 +1706,7 @@
     P.money += m;
     sys(`Received ${G.moneyText(m)}.`);
     { const ta = Object.keys(D.ABILITIES).find((k) => D.ABILITIES[k].learn === qid && D.ABILITIES[k].cls === P.cls); if (ta) { loot(`You have learned a new ability: ${D.ABILITIES[ta].name}.`); } } // a class quest teaches its ability
+    G.titleCheck(true); /* a quest's title says so as it unlocks (#598) */
     if (it) { G.addItem(JSON.parse(JSON.stringify(it)), 1); loot(`You receive item: ${B.link(it.name, it.q)}.`); }
     G.gainXp(G.questXpFor(Q), false);
     G.lwEarn(D.EVENTS.lanternwake.earn.quest, 'a quest');
@@ -3414,6 +3416,22 @@
     let flawless = 0, speed = 0; for (const k in cx) { flawless += cx[k].flawless || 0; speed += cx[k].speed || 0; }
     const craft = Math.max(0, ...Object.entries(P.prof || {}).filter(([k]) => D.PROFESSIONS[k] && D.PROFESSIONS[k].kind === 'craft').map(([, p]) => p.skill));
     return { mentor: P.mentorRuns || 0, flawless, speed, honor: pv.honor, kills: pv.kills, clears: cx, craft, riding: P.riding ? 1 : 0, brawl: (P.brawl || {}).champs || 0, trophies: G.trophyCount() };
+  };
+  // every title unlock says so, once (#598: Reader of Notes came silently, Tidebreaker with a message). P.titlesSeen holds
+  // the ids already announced; a save without it takes what is unlocked now, quietly. Run on each save, at most every 2 s.
+  const titleLine = (t) => loot(`New title: ${G.titleName(t, G.S.player.name)}. Wear it: Hero → Journey → Titles.`);
+  G.titleAnnounced = function (id) { const P = G.S && G.S.player; if (P && P.titlesSeen && !P.titlesSeen.includes(id)) P.titlesSeen.push(id); };
+  let titleAt = 0;
+  G.titleCheck = function (force) {
+    const P = G.S && G.S.player; if (!P || !D.TITLES) return;
+    if (!force && P.titlesSeen && now() - titleAt < 2000) return; titleAt = now();
+    const first = !P.titlesSeen; if (first) P.titlesSeen = [];
+    for (const t of D.TITLES) {
+      if (P.titlesSeen.includes(t.id) || (t.faction && t.faction !== G.myFaction())) continue;
+      let ok = false; try { ok = G.titleUnlocked(t); } catch (e) { ok = false; }
+      if (!ok) continue;
+      P.titlesSeen.push(t.id); if (!first) titleLine(t);
+    }
   };
   G.titleUnlocked = function (t) {
     const r = G.records(), n = t.need;
@@ -5540,7 +5558,7 @@
     for (const r of finRoles(s, cls)) { const k = cls + ':' + r; if (rec[k] || !finDone(s, st, cls, r)) continue;
       const had = Object.keys(rec).some((x) => rec[x] && x.split(':')[1] === r); rec[k] = 1; changed = true;
       const t = D.TITLES.find((x) => x.id === (s.titles || {})[r]);
-      if (!had && t) loot(`New title: ${G.titleName(t, G.S.player.name)}. Wear it: Hero → Journey → Titles.`);
+      if (!had && t) G.titleAnnounced(t.id), loot(`New title: ${G.titleName(t, G.S.player.name)}. Wear it: Hero → Journey → Titles.`);
       else if (!quiet) loot(`Season's Finest: every Best piece found blind as ${D.CLASSES[cls].name} ${ROLE_WORD[r] || r}.`); }
     if (changed) G.saveAccount(a);
     return changed;
@@ -5865,7 +5883,7 @@
       const R = LN().ranks[st.rank]; st.rank++;
       sys(`Hearth rank ${st.rank}: ${R.name}.`);
       if (R.reward.item) { if (G.addItem(G.copyItem(R.reward.item), R.reward.n || 1)) loot(`Received ${B.link(D.ITEMS[R.reward.item].name, 1)} x${R.reward.n || 1}.`); else sys('Bags are full: the reward waits at the Hearthwarden.'), st.owed = (st.owed || []).concat([R.reward]); }
-      if (R.reward.title) { lnOwn(R.reward.title); loot(`New title: ${G.titleName(D.TITLES.find((t) => t.id === R.reward.title), G.S.player.name)}. Wear it: Hero → Journey → Titles.`); }
+      if (R.reward.title) { lnOwn(R.reward.title); G.titleAnnounced(R.reward.title); loot(`New title: ${G.titleName(D.TITLES.find((t) => t.id === R.reward.title), G.S.player.name)}. Wear it: Hero → Journey → Titles.`); }
       emit('lnRank', { rank: st.rank });
     }
     emit('kindling', { n, why });
@@ -6120,7 +6138,7 @@
     const guest = R.act === Ev.guest, season = G.eventSeason('longnight');
     // each step reads the account fresh: a step before it may have saved it (a title, a rank)
     { const a = G.lnAccount(), r = lnRec(a); if (!r.keepsakes.includes(season) && !/^test/.test(season)) { r.keepsakes.push(season); G.saveAccount(a); loot(`Keepsake earned: Longnight ${season}.`); } }
-    if (guest && !G.lnOwned('ln_door_title')) { lnOwn('ln_door_title'); loot(`New title: ${G.titleName(D.TITLES.find((t) => t.id === 'ln_door_title'), G.S.player.name)}. Wear it: Hero → Journey → Titles.`); emit('lnGuestFirst'); }
+    if (guest && !G.lnOwned('ln_door_title')) { lnOwn('ln_door_title'); G.titleAnnounced('ln_door_title'); loot(`New title: ${G.titleName(D.TITLES.find((t) => t.id === 'ln_door_title'), G.S.player.name)}. Wear it: Hero → Journey → Titles.`); emit('lnGuestFirst'); }
     const dayK = guest ? (R.hard ? 'guestHardDay' : 'guestDay') : (R.hard ? 'hardDay' : 'lootDay');
     if (st[dayK] === d) return sys(`${R.hard ? 'Hard loot' : 'Daily loot'} already taken today.`);
     st[dayK] = d;
