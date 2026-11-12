@@ -1653,7 +1653,8 @@
     const S = G.S, R = S.run, C = G.fight;
     const dots = h('div', { class: 'progress-dots' });
     R.pulls.forEach((pl, i) => dots.append(h('i', { class: (pl.boss ? 'boss ' : '') + (i < R.idx ? 'done' : i === R.idx ? 'now' : '') })));
-    const status = R.phase === 'fight' ? 'Fighting: ' + R.pulls[R.idx].label : R.phase === 'rest' && S.group.members.some((m) => m.gone) ? 'Looking for replacements...' : R.phase === 'rest' ? (G.role() === 'tank' ? 'You are the tank. Pull when ready.' : 'Resting. The tank will pull soon.') : R.phase === 'wipe' ? 'Running back...' : 'Dungeon complete.';
+    const dead = !!(C && G.pUnit && G.pUnit.dead); // dead in a group fight: the group fights on, the recap one tap away (#597)
+    const status = dead ? 'You are dead. The group fights on.' : R.phase === 'fight' ? 'Fighting: ' + R.pulls[R.idx].label : R.phase === 'rest' && S.group.members.some((m) => m.gone) ? 'Looking for replacements...' : R.phase === 'rest' ? (G.role() === 'tank' ? 'You are the tank. Pull when ready.' : 'Resting. The tank will pull soon.') : R.phase === 'wipe' ? 'Running back...' : 'Dungeon complete.';
     // the run's name, progress and status come after the party and the decisions (#65: decisions first)
     const resting = R.phase === 'rest' && !C; // between pulls the status line sits above Ready/Pull instead (#159)
     const head = [h('div', { class: 'sec-h' }, R.name, h('small', null, `Pull: ${Math.min(R.idx + (R.phase === 'done' ? 0 : 1), R.pulls.length)}/${R.pulls.length}${R.wipes ? ' · Wipes: ' + R.wipes : ''}`)), dots, resting ? null : h('div', { style: { color: 'var(--muted)', fontSize: '13px' } }, status)].filter(Boolean);
@@ -1693,6 +1694,7 @@
           h('div', { class: 'buffs rowbuffs', 'data-au': u.uid })));
       }
       joiningRow(C, list);
+      if (dead && C.recap && C.recap.deaths.length) actions.append(h('div', { class: 'rest-line' }, h('button', { class: 'chip recap-chip', onclick: () => recapDialog({ deaths: C.recap.deaths }) }, `Deaths (${C.recap.deaths.length})`), h('small', null, ' tap for who died and why')));
     } else {
       const row = h('div', { class: 'btn-row' });
       if (R.phase === 'rest') {
@@ -2403,8 +2405,8 @@
     const c = G.gearCondition(); if (G.S.player.level < 10 || c.low >= 100) return null;
     return h('p', { class: 'recap-gear' }, c.broken ? `Broken: ${c.broken} (no stats) · ` : `Gear: ${c.low}% · `, h('span', { html: 'Repair all: ' + moneyHtml(c.cost, false, true) }));
   }
-  function recapDialog() {
-    const R = G.recap; if (!R) return;
+  function recapDialog(of) { // of: a fight's deaths so far (you died while the group fights on, #597); else the last wipe's
+    const R = of || G.recap; if (!R) return;
     document.querySelectorAll('.tip-card.fight-tip').forEach((e) => e.remove()); // a fight's teaching card never covers the recap (#556)
     const shown = R.deaths.slice(0, 5), more = R.deaths.length - shown.length;
     showDialog([h('h3', null, R.self ? 'You died' : `Deaths (${R.deaths.length})`),
