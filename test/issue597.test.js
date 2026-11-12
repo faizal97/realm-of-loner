@@ -62,6 +62,21 @@ test('Icy Tomb Bracers: a wrist piece with a wrist name, and a saved copy takes 
   assert.ok(G.S.player.bags.some((b) => b.item.id === 'ras_wand' && b.item.name === 'Icy Tomb Bracers'));
 });
 
+test("a raid bot's effect item keeps the raid's gear floor and the bot's level", () => {
+  const { G, D } = require('./world');
+  const was = G.BOT_FX.at60; G.BOT_FX.at60 = 4; // every bot rolls one, where any fits
+  try {
+    let fx = 0;
+    for (const floor of [3, 4]) for (const cls of ['warrior', 'paladin', 'rogue', 'druid', 'priest', 'shaman', 'hunter']) for (const role of ['tank', 'healer', 'dps']) for (let i = 0; i < 6; i++) {
+      const c = G.botChar({ name: 'x', cls, race: 'human', level: 60, skill: 0.9, role, gearFloor: floor });
+      for (const s in c.equip) { const it = c.equip[s]; if (!it.effect) continue; fx++;
+        assert.ok(it.q >= floor, `${it.name} (q${it.q}) on a floor of ${floor}`); assert.ok((it.lvl || 1) >= 60, `${it.name} is level ${it.lvl}`); }
+    }
+    assert.ok(fx > 0, 'some bots wore one');
+    assert.strictEqual(G.gearFloor('molten_core', true), 4);
+  } finally { G.BOT_FX.at60 = was; }
+});
+
 test('the red bar shows the answer that is ready: the shorter cooldown first, else the one ready soonest', () => {
   const D = { ABILITIES: { divine_protection: { cd: 300 }, holy_shield: { cd: 10 } }, INTERRUPTS: {} };
   const E = { answersOf: () => ['divine_protection', 'holy_shield'] }; // the class's order: the 5 min one first
