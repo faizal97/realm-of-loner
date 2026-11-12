@@ -92,12 +92,12 @@ ok(Math.ceil(15 / G.clearMarks('stratholme')) <= 5, 'a step takes at most 5 dung
   G.seenBags(); ok(!G.bagDot() && !P.bags.some((b) => b.item.fxNew), 'opening Bags clears it, and the item is no longer new');
 }
 // dungeon bonus gear fits the class (v10.9, issue #13): 2,000 rolls per class for each bonus are all wearable, the made
-// pieces carry the class's affix; a reward with full bags goes to the bank with a chat line
+// pieces carry the affix for the class in the role it plays; a reward with full bags goes to the bank with a chat line
 {
   const dg = D.DUNGEONS[D.ACTIVITIES.deadmines.dungeon];
   for (const cls of Object.keys(D.CLASSES)) {
     G.newGame({ name: 'F', cls, race: 'human' }); G.S.player.level = 20;
-    const aff = G.classAffix(cls), keys = Object.keys(aff.stats);
+    const aff = G.roleAffix(cls, G.role()), keys = Object.keys(aff.stats); /* the affix for the role you play (2c089d0): a damage Paladin's pieces are not of the Bear */
     let wear = 0, affix = 0, made = 0, blue = 0; const N = 2000;
     for (let i = 0; i < N; i++) {
       const g = G.fittedGear(20, 2, cls); if (G.canUseItem(g, cls)) wear++; if (g.stats) { made++; if (Object.keys(g.stats).every((k) => keys.includes(k))) affix++; }
