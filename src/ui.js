@@ -1616,6 +1616,14 @@
     // the three paces side by side as facts, read from G.PACE (#38, design mindset §1: every fact, never the answer)
     const PN = { careful: 'Careful', normal: 'Normal', fast: 'Fast' }, pct = (x) => Math.round(x * 100) + '%';
     const paceFact = (k) => { const Q = G.PACE[k]; return `rests at least ${(6.5 * Q.rest).toFixed(1)} sec, then pulls once everyone has ${pct(Q.hp)} health and ${pct(Q.mana)} mana (${pct(Math.max(Q.hp, Q.bossHp))} of both before a boss) · ${Q.chain != null ? `pulls the next group too about 1 time in ${Math.round(1 / Q.chain)}` : Q.extra ? 'sometimes pulls the next group too, less with a skilled tank' : 'never pulls the next group too'}`; };
+    // the boss plan first (#597): the pace's three fact rows pushed its buttons below the fold of a phone's run panel
+    const pull = R.pulls[R.idx];
+    if (part === 'plan' && pull) {
+      const bp = R.bossPlan;
+      if (!pull.boss) p.append(h('div', { class: 'sec-h' }, 'Boss plan', h('small', null, 'for the next boss')), h('p', { class: 'ai-note', style: { margin: 0 } }, `Next: ${pull.label}. No boss.`));
+      else p.append(h('div', { class: 'sec-h' }, 'Boss plan', h('small', null, bp === 'boss' ? 'Burn the boss' : bp === 'adds' ? 'Adds first' : 'Not set: the group improvises')),
+        h('div', { class: 'chips' }, chip('Burn the boss', bp === 'boss', () => G.setBossPlan('boss')), chip('Adds first', bp === 'adds', () => G.setBossPlan('adds'))));
+    }
     if (part === 'plan') p.append(h('div', { class: 'sec-h' }, 'Pace', h('small', null, PN[pace])),
       ...[h('div', { class: 'chips' }, chip('Careful', pace === 'careful', () => G.setPace('careful')), chip('Normal', pace === 'normal', () => G.setPace('normal')), chip('Fast', pace === 'fast', () => G.setPace('fast'))),
         // 'row nav': no icon, so the text takes the first column (a plain .row puts it in the 34 px icon column, one word wide)
@@ -1623,13 +1631,7 @@
     const ko = R.killOrder || 'focus';
     if (false) p.append(...foldSec('run.killorder', 'Kill order', // hidden (v10.4): in the sims it changed almost nothing, and a choice that does not matter is not a choice ko === 'spread' ? 'Spread · each on a different enemy, more area attacks' : 'One at a time · everyone on the marked target',
       [h('div', { class: 'chips' }, chip('One at a time', ko === 'focus', () => G.setKillOrder('focus')), chip('Spread', ko === 'spread', () => G.setKillOrder('spread')))]));
-    const pull = R.pulls[R.idx]; if (!pull) return;
-    if (part === 'plan') {
-      if (!pull.boss) return p.append(h('div', { class: 'sec-h' }, 'Boss plan', h('small', null, 'for the next boss')), h('p', { class: 'ai-note', style: { margin: 0 } }, `Next: ${pull.label}. No boss.`));
-      const bp = R.bossPlan;
-      return p.append(h('div', { class: 'sec-h' }, 'Boss plan', h('small', null, bp === 'boss' ? 'Burn the boss' : bp === 'adds' ? 'Adds first' : 'Not set: the group improvises')),
-        h('div', { class: 'chips' }, chip('Burn the boss', bp === 'boss', () => G.setBossPlan('boss')), chip('Adds first', bp === 'adds', () => G.setBossPlan('adds'))));
-    }
+    if (!pull || part === 'plan') return;
     const marks = (R.marks && R.marks[R.idx]) || {};
     const next = h('div', { class: 'chips' });
     const fk = (R.omens || []).find((x) => x === 'warded' || x === 'vengeful' || x === 'sheltered'), fi = fk && pull.mobs.length >= 2 ? pull.mobs.length - 1 : -1; // Tier 3 Omen focus
