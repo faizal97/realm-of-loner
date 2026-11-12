@@ -82,7 +82,10 @@ function clear(act, cls) {
   P.equip = G.botChar({ name: 'x', cls, race: 'human', level: LV, skill: 0.6 }).equip;
   if (BLUE && LV >= 60) for (const slot of D.GEAR_SLOTS) P.equip[slot] = G.genGear(slot, 60, 3, D.CLASSES[cls].armorType === 'cloth' ? { atype: 'cloth' } : D.CLASSES[cls].armorType === 'leather' ? { atype: 'leather' } : D.CLASSES[cls].armorType === 'plate' ? { atype: 'plate' } : { atype: 'mail' });
   if (PROFILE === 'undergeared') for (const slot of D.GEAR_SLOTS) if (slot !== 'offhand' && (slot !== 'ranged' || D.CLASSES[cls].ranged)) P.equip[slot] = G.genGear(slot, Math.max(1, LV - 10), 1, slot === 'weapon' ? { wtype: D.CLASSES[cls].weapons[0] } : slot === 'ranged' ? {} : { atype: D.CLASSES[cls].armorType });
-  if (PROFILE === 'fitted') for (const slot of D.GEAR_SLOTS) if (slot !== 'offhand' && (slot !== 'ranged' || D.CLASSES[cls].ranged)) P.equip[slot] = G.genGear(slot, LV, EPIC ? 4 : 3, Object.assign({ affix: G.classAffix(cls) }, slot === 'weapon' ? { wtype: D.CLASSES[cls].weapons[0] } : slot === 'ranged' ? {} : { atype: D.CLASSES[cls].armorType }));
+  // fitted: the gear the game gives a careful player of the class's role (skill 0.85), every piece blue at level (Epic
+  // with GEAR=epic). Before this it was a blue of the class's own affix in every slot: a Mage's Owl (Intellect, Spirit)
+  // scored below today's green Eagle (Stamina, Intellect), so fitted casters died to raid hits today's survived (#586)
+  if (PROFILE === 'fitted') P.equip = G.botChar({ name: 'x', cls, race: 'human', level: LV, skill: 0.85, role: D.CLASSES[cls].role, gearFloor: EPIC ? 4 : 3 }).equip;
   P.talents = G.autoTalents(cls, D.CLASSES[cls].role === 'tank' ? 'tank' : D.CLASSES[cls].role === 'healer' ? 'healer' : 'dps', LV, 0); P.hp = null; P.res = null;
   S.flags.warModeAsked = true; P.place = A.where;
   if (HARD) P.codex = { [act]: { clears: 1, flawless: 0, speed: 0, best: null } };
