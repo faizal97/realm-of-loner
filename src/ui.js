@@ -5794,7 +5794,7 @@
   }
   function showPop(q) {
     const A = D.ACTIVITIES[q.act], ms = q.group ? q.group.members : [];
-    const n = (r) => ms.filter((m) => m.role === r).length, P = G.S.player;
+    const n = (r) => ms.filter((m) => m.role === r).length + (G.role() === r ? 1 : 0), P = G.S.player; // the count includes you (#597)
     const knownOnly = ms.filter((m) => SOC.isFriend(m.bot.id) || (P.guild >= 0 && m.bot.guild === P.guild));
     const who = !ms.length ? null : ms.length <= 4 ? h('div', { class: 'pop-group' }, ...ms.map(popMember))
       : h('div', { class: 'pop-group' }, h('p', { class: 'pop-count' }, [[n('tank'), 'tank'], [n('healer'), 'healer'], [n('dps'), 'damage']].filter((x) => x[0]).map(([k, w]) => `${k} ${w}${k > 1 && w !== 'damage' ? 's' : ''}`).join(' · ')), ...knownOnly.map(popMember));
