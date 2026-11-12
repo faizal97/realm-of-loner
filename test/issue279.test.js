@@ -20,8 +20,11 @@ test('both: health first out of a fight; in a fight mana while health is fine, h
   bags(P, ['mana_potion', heal()]);
   G.fight = null; G.pUnit = null;
   assert.ok(G.potionNext().item.heal, 'out of a fight: health');
-  G.pUnit = { hp: 900, maxHp: 1000 };
-  assert.strictEqual(G.potionNext().item.id, 'mana_potion', 'in a fight, healthy: mana');
+  G.pUnit = { hp: 900, maxHp: 1000, res: 300, maxRes: 1000 };
+  assert.strictEqual(G.potionNext().item.id, 'mana_potion', 'in a fight, healthy, low on mana: mana');
+  G.pUnit.res = 900; /* since #601 mana is offered only when mana is what's low: full mana, a mana potion would be wasted */
+  assert.ok(G.potionNext().item.heal, 'in a fight, healthy, mana fine: health');
+  G.pUnit.res = 300;
   G.pUnit.hp = 500;
   assert.ok(G.potionNext().item.heal, 'in a fight, hurt: health');
   G.pUnit = null;

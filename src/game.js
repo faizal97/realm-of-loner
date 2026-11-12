@@ -2893,7 +2893,7 @@
     return P.bags.filter((b) => b.item.slot === 'potion' && b.item[kind] && (b.item.lvl || 1) <= P.level).sort((a, c) => c.item[kind][1] - a.item[kind][1])[0];
   };
   // what a tap on the bar's Potion drinks (#279): in a fight, mana unless you're under 60% health or have none; else health first
-  G.potionKind = () => (G.pUnit ? (G.pUnit.hp / G.pUnit.maxHp < 0.6 || !G.bestPotion('mana') ? null : 'mana') : null);
+  G.potionKind = () => { const u = G.pUnit; if (!u || u.hp / u.maxHp < 0.6 || !G.bestPotion('mana')) return null; const inForm = u.resType && u.resType !== 'mana'; const mana = inForm ? (u.savedMana || 0) / (u.st && u.st.maxMana || 1) : u.res / (u.maxRes || 1); return mana < 0.6 ? 'mana' : null; }; /* mana only when mana is what's low; a form's rage or energy never counts as mana (#601) */
   // or the one potion the player picked for it (#296: long-press the button), saved per character; Auto when unset
   G.potionUsable = (it) => it.slot === 'potion' && (it.lvl || 1) <= G.S.player.level && (!!it.heal || D.CLASSES[G.S.player.cls].resource === 'mana');
   G.potionOptions = () => { const out = {}; for (const b of G.S.player.bags) if (G.potionUsable(b.item)) (out[b.item.id] ||= { item: b.item, n: 0 }).n += b.n; return Object.values(out); };
@@ -2908,7 +2908,7 @@
     const it = b.item, isHeal = !!it.heal, amt = rint((it.heal || it.mana)[0], (it.heal || it.mana)[1]);
     if (!isHeal && D.CLASSES[P.cls].resource !== 'mana') return toast('You have no mana to restore.');
     G.removeItem(it.id, 1); P.potionAt = now() + POTION_CD;
-    if (G.fight && G.pUnit) { const u = G.pUnit; if (isHeal) u.hp = Math.min(u.maxHp, u.hp + amt); else u.res = Math.min(u.maxRes, u.res + amt); }
+    if (G.fight && G.pUnit) { const u = G.pUnit; if (isHeal) u.hp = Math.min(u.maxHp, u.hp + amt); else if (u.resType && u.resType !== 'mana') u.savedMana = Math.min(u.st.maxMana, (u.savedMana || 0) + amt); else u.res = Math.min(u.maxRes, u.res + amt); } /* in a form, mana goes to the mana it keeps, never to its rage or energy (#601) */
     else { const v = G.vitals(); if (isHeal) P.hp = Math.min(v.maxHp, P.hp + amt); else P.res = Math.min(v.maxRes, P.res + amt); }
     emit(isHeal ? 'selfheal' : 'change', amt); sys(`${it.name}: +${amt} ${isHeal ? 'health' : 'mana'}.`);
     if (P.potionPick === it.id && !P.bags.some((x) => x.item.id === it.id)) { P.potionPick = null; toast(`Out of ${it.name}. Potion button: Auto.`); } // the picked one ran out (#296)
