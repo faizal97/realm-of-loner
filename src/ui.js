@@ -2434,7 +2434,7 @@
   }
   function recapDialog(of) { // of: a fight's deaths so far (you died while the group fights on, #597); else the last wipe's
     const R = of || G.recap; if (!R) return;
-    document.querySelectorAll('.tip-card.fight-tip').forEach((e) => e.remove()); // a fight's teaching card never covers the recap (#556)
+    document.querySelectorAll('.tip-card.fight-tip').forEach((e) => e.remove()); ui.cardQ = (ui.cardQ || []).filter((e) => !e.classList.contains('fight-tip')); // a fight's teaching card never covers the recap (#556)
     const shown = R.deaths.slice(0, 5), more = R.deaths.length - shown.length;
     showDialog([h('h3', null, R.self ? 'You died' : `Deaths (${R.deaths.length})`),
       h('div', { class: 'recap' }, ...shown.map((d) => { const x = G.recapText(d);
@@ -5958,7 +5958,7 @@
     const pic = C[2](); pic.classList.add('tip-pic');
     const el = h('div', { class: 'tip-card bard-card' }, h('div', { class: 'tip-row' }, pic, h('div', { class: 'tip-t' }, h('b', { style: { color: 'var(--gold)' } }, C[0] + ' '), C[1])),
       h('div', { class: 'tip-b' }, h('button', { class: 'chip', onclick: () => { el.remove(); openBardHow(); } }, 'How Bards play'), h('button', { class: 'chip gold', onclick: () => el.remove() }, 'Got it')));
-    (document.getElementById('app') || document.body).append(el);
+    putCard(el);
     setTimeout(() => el.remove(), 14000);
   }
   // telegraphs (#179): a boss's red bar over its head and in the target frame, with the answer's icon on its left (your
@@ -6005,7 +6005,7 @@
     const el = h('div', { class: 'tip-card fight-tip' }, h('div', { class: 'tip-row' }, pic, h('div', { class: 'tip-t' }, h('b', { style: { color: '#ff7a52' } }, team ? 'Slam on your tank! ' : 'Red bar! '),
       team ? 'Shield or heal the tank, or interrupt the boss, before the bar fills. Each answer makes the slam smaller.' : 'A red bar is an attack you can answer. Press the glowing button before it fills.')),
       h('div', { class: 'tip-b' }, h('button', { class: 'chip gold', onclick: () => el.remove() }, 'Got it')));
-    (document.getElementById('app') || document.body).append(el);
+    putCard(el);
     setTimeout(() => el.remove(), 14000);
   }
   function reactionCard(pr) {
@@ -6014,7 +6014,7 @@
     P.procSeen[key] = 1; G.save();
     const el = h('div', { class: 'tip-card fight-tip' }, h('div', { class: 'tip-t' }, h('b', { style: { color: 'var(--gold)' } }, 'New reaction! '), pr.teach),
       h('div', { class: 'tip-b' }, h('button', { class: 'chip gold', onclick: () => el.remove() }, 'Got it')));
-    (document.getElementById('app') || document.body).append(el);
+    putCard(el);
     setTimeout(() => el.remove(), 14000);
   }
   // finding crafting (#76): from level 5, once per character with no profession, shown even with tips off (a player who
@@ -6029,9 +6029,27 @@
       'Profession trainers teach gathering and crafting. You can learn two. ', here ? `One is here: ${N.name}.` : `The nearest: ${N.name} in ${D.PLACES[t.place].name} (about ${t.secs} s).`),
       h('div', { class: 'tip-b' }, h('button', { class: 'chip gold', onclick: () => { el.remove(); if (here) openNpc(t.npc); else routeDialog(t.place); } }, here ? 'Open trainer' : 'Show the way'),
         h('button', { class: 'chip', onclick: () => el.remove() }, 'Got it')));
-    (document.getElementById('app') || document.body).append(el);
+    putCard(el);
   }
   const profCardSoon = () => { const P = G.S && G.S.player; if (P && P.level >= 5 && !P.profTipSeen && !G.knownProfIds().length) whenCalm(profCard); };
+  // one teaching card on screen at a time (play-test: a level-10 tip, the Bard's and the professions card stacked on one
+  // spot over Talents): a card that comes while another shows waits its turn and shows when that one goes. A card closed
+  // before its turn (a fight banner's timer) never shows.
+  function putCard(el) {
+    const host = document.getElementById('app') || document.body;
+    el.remove = function () { this._dropped = true; Element.prototype.remove.call(this); };
+    ui.cardQ = ui.cardQ || [];
+    if (host.querySelector(':scope > .tip-card:not(.reh-card)')) { ui.cardQ.push(el); return; }
+    host.append(el);
+    if (!ui.cardMO && window.MutationObserver) {
+      ui.cardMO = new MutationObserver(() => {
+        if (host.querySelector(':scope > .tip-card:not(.reh-card)')) return;
+        let next; while ((next = (ui.cardQ || []).shift()) && next._dropped);
+        if (next) host.append(next);
+      });
+      ui.cardMO.observe(host, { childList: true });
+    }
+  }
   function tip(id) {
     const s = tipState(); if (s.off || s.seen.includes(id) || !TIPS[id]) return;
     s.seen.push(id); saveTips(s);
@@ -6052,12 +6070,12 @@
     let gone = false, el = null; const close = () => { if (gone) return; gone = true; el.remove(); ui.tipEl = null; setTimeout(nextTip, 400); };
     if (G.fight) { // in a fight: a banner that taps pass through (it never swallows an ability press), its × or a few seconds close it
       el = h('div', { class: 'tip-card banner' }, h('div', { class: 'tip-t' }, TIPS[id]), h('button', { class: 'tip-x', onclick: close, 'aria-label': 'Close' }, '×'));
-      ui.tipEl = el; (document.getElementById('app') || document.body).append(el); setTimeout(close, 7000); return;
+      ui.tipEl = el; putCard(el); setTimeout(close, 7000); return;
     }
     el = h('div', { class: 'tip-card' }, h('div', { class: 'tip-t' }, TIPS[id]),
       h('div', { class: 'tip-b' }, h('button', { class: 'chip gold', onclick: close }, 'Got it'),
         h('button', { class: 'chip', onclick: () => { const s = tipState(); s.off = true; saveTips(s); ui.tipQueue = []; el.remove(); ui.tipEl = null; toast('Tips off. Hero → Settings can turn them back on.', true); } }, 'Skip all tips')));
-    ui.tipEl = el; (document.getElementById('app') || document.body).append(el);
+    ui.tipEl = el; putCard(el);
   }
   // ---------- bug reports (src/report.js): a prefilled GitHub issue, or a copy for Discord
   function reportDialog(err) {
