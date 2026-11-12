@@ -1759,7 +1759,7 @@
   G.bookDrop = bookDrop;
   function onKill(mobKey) {
     const P = G.S.player;
-    P.kills++; P.lastKill = { mob: mobKey, place: P.place }; // what a passer-by may have seen you fight (#365)
+    P.kills++; if (!G.S.run) P.lastKill = { mob: mobKey, place: P.place }; // what a passer-by may have seen you fight (#365); not a kill inside a dungeon run, which nobody in town saw
     emit('kill', { mob: mobKey });
     bookDrop(mobKey);
     for (const qid in P.quests) D.QUESTS[qid].objs.forEach((o, i) => {
