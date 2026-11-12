@@ -2874,6 +2874,15 @@
     emit('change');
   };
   G.usable = (it) => ['potion', 'elixir', 'stone', 'kit', 'bag', 'recipe', 'event'].includes(it.slot);
+  // why a recipe can't be learned yet, or null (#598: the bag panel shows it under a disabled Learn)
+  G.learnBlock = function (it) {
+    const r = it && it.slot === 'recipe' && D.RECIPES[it.teaches]; if (!r) return null;
+    const p = G.profs()[r.prof], pn = D.PROFESSIONS[r.prof].name;
+    if (!p) return `Requires ${pn}`;
+    if (p.skill < r.sk[0]) return `Requires ${pn} ${r.sk[0]}`;
+    if ((p.known || []).includes(r.id)) return 'Already known';
+    return null;
+  };
   G.useItem = function (idx) {
     const S = G.S, P = S.player, b = P.bags[idx]; if (!b) return;
     const it = b.item, t = now();
@@ -2907,11 +2916,9 @@
         P.bagsEq[P.bagsEq.indexOf(small)] = it; P.bags[idx] = { item: small, n: 1 }; sys(`You swap your ${small.name} for the ${it.name}.`);
       }
     } else if (it.slot === 'recipe') {
-      const r = D.RECIPES[it.teaches], p = G.profs()[r.prof];
-      if (!p) return toast(`Requires ${D.PROFESSIONS[r.prof].name}.`);
-      if (p.skill < r.sk[0]) return toast(`Requires ${D.PROFESSIONS[r.prof].name} ${r.sk[0]}.`);
-      p.known = p.known || []; if (p.known.includes(r.id)) return toast('You already know that.');
-      p.known.push(r.id); G.removeItem(it.id, 1); loot(`You learn how to make ${B.link(D.ITEMS[r.makes].name, D.ITEMS[r.makes].q)}.`);
+      const r = D.RECIPES[it.teaches], p = G.profs()[r.prof], why = G.learnBlock(it);
+      if (why) return toast(why + '.');
+      p.known = p.known || []; p.known.push(r.id); G.removeItem(it.id, 1); loot(`You learn how to make ${B.link(D.ITEMS[r.makes].name, D.ITEMS[r.makes].q)}.`);
     }
     emit('change'); G.save();
   };

@@ -3399,7 +3399,9 @@
         if (canUpgrade(it)) acts.append(h('button', { class: 'btn alt', onclick: () => upgradeDialog({ bag: ui.bagSel }) }, 'Upgrade'));
         if (canReforge(it)) acts.append(h('button', { class: 'btn alt', onclick: () => reforgeDialog({ bag: ui.bagSel }) }, 'Reforge'));
         if (it.slot === 'food' || it.slot === 'drink') acts.append(h('button', { class: 'btn', onclick: () => { G.consume(it.slot); closeSheet(); } }, 'Use'));
-        if (G.usable(it)) acts.append(h('button', { class: 'btn', onclick: () => { G.useItem(ui.bagSel); ui.bagSel = null; ui.sheetFn(); } }, it.slot === 'bag' ? 'Equip bag' : it.slot === 'recipe' ? 'Learn' : 'Use'));
+        const learnWhy = G.learnBlock(it); /* #598: a recipe you can't learn yet says why under a disabled Learn */
+        if (G.usable(it)) acts.append(h('button', { class: 'btn', disabled: !!learnWhy, onclick: () => { G.useItem(ui.bagSel); ui.bagSel = null; ui.sheetFn(); } }, it.slot === 'bag' ? 'Equip bag' : it.slot === 'recipe' ? 'Learn' : 'Use'));
+        if (learnWhy) acts.append(h('div', { style: { color: 'var(--muted)', fontSize: '13px', alignSelf: 'center' } }, learnWhy));
         if (it.id === 'hearthstone') acts.append(h('button', { class: 'btn', onclick: () => { G.hearth(); closeSheet(); } }, 'Use'));
         const vendorHere = D.PLACES[P.place].vendor || D.PLACES[P.place].gearVendor;
         if (G.canLock(it)) acts.append(h('button', { class: 'btn alt', onclick: () => { const on = !it.lock; G.setLock('bag', ui.bagSel, on); toast(on ? 'Locked.' : 'Unlocked.'); ui.sheetFn(); } }, it.lock ? 'Unlock' : 'Lock'));
