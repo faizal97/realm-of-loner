@@ -26,3 +26,12 @@ test('before the campaign opens, the reason fits the level: "Opens at 60" below 
   P.done.tc_crown_a = true;
   assert.strictEqual(G.prepatchLocked(), null);
 });
+
+test('a quest hint names a named creature once, never as a plural ("Bruk the Mauler", not "Bruk the Maulers")', () => {
+  character(26, 'warrior', 'human');
+  const item = D.MOBS.ursal_the_mauler.qdrops[0][0];
+  const hint = G.objHint({ type: 'collect', item, n: 1 });
+  assert.match(hint, /Bruk the Mauler\b/); assert.doesNotMatch(hint, /Maulers/);
+  const plain = Object.keys(D.MOBS).find((k) => !D.MOBS[k].named && !D.MOBS[k].boss && (D.MOBS[k].qdrops || []).length);
+  assert.ok(G.mobUnique && !G.mobUnique(plain) && G.mobUnique('ursal_the_mauler'));
+});

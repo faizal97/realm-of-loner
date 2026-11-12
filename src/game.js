@@ -1585,13 +1585,15 @@
     const mobs = Object.keys(D.MOBS).filter((k) => (D.MOBS[k].qdrops || []).concat(D.MOBS[k].drops || []).some((d) => d[0] === item)); // the sources validate.js checks
     return mobs.length ? { mobs } : null;
   };
+  // a creature there is only one of: a named one, a boss, or a place's named rare
+  G.mobUnique = (k) => { const M = D.MOBS[k] || {}; return !!(M.named || M.boss || M.unique) || Object.values(D.PLACES).some((p) => p.named && p.named[k]); };
   // the objective's second line: "Collect them here" (you can act on it now), "Collect them in Halden Vineyards" or
   // "Dropped by Grey Hood Thugs"
   G.objHint = function (o) {
     if (o.type !== 'collect') return null;
     const s = G.objSource(o.item); if (!s) return null;
     if (s.gather) return s.gather.includes(G.S.player.place) ? 'Collect them here' : `Collect them in ${s.gather.map((k) => D.PLACES[k].name).join(' or ')}`;
-    const names = s.mobs.slice(0, 2).map((k) => E.plural(k));
+    const names = s.mobs.slice(0, 2).map((k) => (G.mobUnique(k) ? D.MOBS[k].name : E.plural(k))); // one of a kind stays singular: "Bruk the Mauler", never "Maulers"
     return `Dropped by ${names.join(' and ')}${s.mobs.length > 2 ? ' and others' : ''}`;
   };
   G.questComplete = function (qid) { return G.questProgress(qid).every((p) => p.have >= p.n); };
