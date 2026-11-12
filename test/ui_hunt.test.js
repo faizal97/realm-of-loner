@@ -136,8 +136,8 @@ test('a fight and its end keep every ability under the same key (Eat and Drink o
 // ---------- run panel tabs (#564, #591)
 function runTabs() {
   const fn = cut('  function runTabNow(', '  function runPanel(');
-  const ui = {}, now = new Function('ui', fn + '; return runTabNow;')(ui);
-  return { ui, tab: (R, C, healer) => now(R, C, !!healer) };
+  const ui = {}, G = { role: () => 'dps' }, now = new Function('ui', 'G', fn + '; return runTabNow;')(ui, G);
+  return { ui, tab: (R, C, healer) => { G.role = () => (healer ? 'healer' : 'dps'); return now(R, C); } }; // healer: the player's role (#597)
 }
 
 test('a run opens on Next pull, a fight on Enemies (Party for a healer), a finished run on Party', () => {
