@@ -516,6 +516,20 @@
     if (it.dmg) s += ((it.dmg[0] + it.dmg[1]) / 2 / it.speed) * (it.slot === 'ranged' ? (w.rdps || 0) : w.dps) + (it.slot === 'weapon' ? 1 : 0);
     return s;
   };
+  // Does an item suit a role (#598: a bot Needs only on these)? The share of its stats the role weighs at full value:
+  // a warlock's Agility ring or a holy paladin's Strength mail scores low and gets Greed. No stats: a weapon suits a role
+  // that swings it, stat-free armour suits anyone who can wear it.
+  G.suitsRole = function (it, cls, role) {
+    if (!it) return false;
+    const w = (ROLE_W[cls] && ROLE_W[cls][role]) || W[cls]; if (!w) return true;
+    const keys = ['str', 'agi', 'sta', 'int', 'spi'];
+    const top = Math.max.apply(null, keys.map((k) => w[k] || 0).concat([w.sp || 0]));
+    let num = 0, tot = 0;
+    for (const k of keys) { const v = (it.stats || {})[k] || 0; num += (w[k] || 0) * v; tot += v; }
+    if (it.sp) { num += (w.sp || 0) * it.sp; tot += it.sp; }
+    if (!tot) return it.slot === 'weapon' ? (w.dps || 0) >= 1 : it.slot === 'ranged' ? (w.rdps || 0) >= 1 || it.wtype === 'instrument' : true;
+    return num / (top * tot) >= 0.4;
+  };
   // Which named-gear looks a character shows. Saved item copies may predate looks, so fall back to the base item.
   const BOT_WEAPON_LOOKS = { warrior: ['cruel_barb', 'smites_hammer'], paladin: ['smites_hammer', 'cruel_barb'], rogue: ['thiefs_blade', 'buzzer_blade'],
     hunter: ['cruel_barb'], mage: ['emberstone_staff', 'cookies_rod'], warlock: ['emberstone_staff'], priest: ['cookies_rod', 'cookies_tenderizer'], druid: ['emberstone_staff', 'cookies_rod'], shaman: ['smites_hammer', 'cookies_tenderizer'] };
@@ -4884,7 +4898,7 @@
         && !(it.effect && Object.values(m.equip || {}).some((x) => x && x.effect === it.effect)); // an effect counts once (#56): no Need on one it already wears
       let c;
       if (m.bot.ninja) c = 'need';
-      else if (usable && Math.random() < 0.85) c = 'need';
+      else if (usable && G.suitsRole(it, m.cls, m.role || D.CLASSES[m.cls].role) && Math.random() < 0.85) c = 'need'; /* #598: Need only on what suits its role */
       else c = Math.random() < 0.75 ? 'greed' : 'pass';
       r.choices[m.name] = { c, v: c === 'pass' ? 0 : rint(1, 100), at: now() + rnd(1500, 7000), m };
     }
