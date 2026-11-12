@@ -4114,20 +4114,24 @@
       const tName = finTitleName(F.title), tb = F.total.best || 0, T = F.tally || { done: [], of: 0 }, rn = (ROLE_NAME[role] || role).toLowerCase();
       b.append(h('div', { class: 'fin-plate' + (F.titleEarned ? ' won' : '') },
         h('span', { class: 'fin-plate-crest' }, finCrest('best')),
-        h('div', { class: 'fin-plate-t' }, h('small', null, `${ROLE_NAME[role] || role} title`), h('b', null, tName), h('small', null, F.titleEarned ? 'Earned' : `Found blind: ${F.blind.best}/${tb} Best`)),
-        h('button', { class: 'sec-i', 'aria-label': 'About the title', onclick: () => toast(`Found blind: found before any Hint or Reveal on its slot. Every Best piece of a ${rn} role found blind, on any class, earns ${tName}. Cosmetic.`, true) }, 'ⓘ')));
+        h('div', { class: 'fin-plate-t' }, h('small', null, `${ROLE_NAME[role] || role} title`), h('b', null, tName), h('small', null, F.titleEarned ? 'Earned' : F.lost ? 'Missed on this character' : `Found blind: ${F.blind.best}/${tb} Best`)),
+        h('button', { class: 'sec-i', 'aria-label': 'About the title', onclick: () => toast(F.lost && !F.titleEarned /* #593: say why it can't be earned here */
+          ? `Missed: a Best piece of ${D.CLASSES[P.cls].name} ${rn} was hinted, revealed or held from before the season. Another character or class can still earn ${tName}.`
+          : `Found blind: got this season before any Hint or Reveal on that piece, on any role. Every Best piece of a ${rn} role found blind, on any class, earns ${tName}. Pieces from before the season or the Account bank are Found, not blind. Cosmetic.`, true) }, 'ⓘ')));
       /* the class tally (#593): every class role finished blind, on any character, a crest in its class colour */
       b.append(h('div', { class: 'ai-box fin-tally' }, h('div', { class: 'ai-row' }, h('span', null, 'Pathfinder', h('button', { class: 'sec-i', 'aria-label': 'About Pathfinder', onclick: () => toast('Class roles with every Best piece found blind, on any of your characters.', true) }, 'ⓘ')), h('b', { class: 'tnum' }, `${T.done.length}/${T.of}`)),
         T.done.length ? h('div', { class: 'fin-tally-row' }, ...T.done.map((k) => { const [c, r] = k.split(':'); return h('span', { class: 'fin-crest best', role: 'img', style: `color:${(D.CLASSES[c] || {}).color || ''}`, 'aria-label': `${(D.CLASSES[c] || {}).name || c} ${ROLE_NAME[r] || r}` }, '⛉'); })) : null));
-      b.append(h('div', { class: 'sec-h' }, h('span', null, 'Found', h('button', { class: 'sec-i', 'aria-label': 'About Best and Next best', onclick: () => toast('Best: this season\'s piece for the slot. Next best: a wider pool from older raids and dungeons.', true) }, 'ⓘ')), h('small', null, ROLE_NAME[role] || role)),
+      b.append(h('div', { class: 'sec-h' }, h('span', null, 'Found', h('button', { class: 'sec-i', 'aria-label': 'About Best and Next best', onclick: () => toast('Best: this season\'s top piece for the slot. Next best: the strongest one from older raids and dungeons.', true) }, 'ⓘ')), h('small', null, ROLE_NAME[role] || role)),
         h('div', { class: 'ai-box' }, h('div', { class: 'ai-row' }, h('span', null, finCrest('best'), ' Best'), h('b', { class: 'tnum' }, `${F.found.best}/${tb}`)),
           h('div', { class: 'ai-row' }, h('span', null, finCrest('until'), ' Next best'), h('b', { class: 'tnum' }, `${F.found.until}/${F.total.until || 0}`))));
-      // a Best hint while the title is still open to this role says what it costs first
-      const blindOpen = !F.titleEarned && F.blind.best === F.found.best;
+      // a Hint is on the piece (#593): it ends Found blind for every role of the class that lists it, so it asks first
+      // while any of those roles can still be finished blind on this character, and names each
       const hint = (r) => {
         const go = () => { closeDialog(); if (!G.finestHint(P.cls, role, r.slot, r.tier)) toast('Already hinted.'); ui.sheetFn(); };
-        if (r.tier !== 'best' || !blindOpen) return go();
-        showDialog([h('h3', null, `Hint: ${D.SLOT_LABEL[r.slot] || r.slot}, Best`), h('p', null, `Ends Found blind for this piece, and ${tName} for ${ROLE_NAME[role] || role}.`),
+        const cost = typeof G.finestHintCost === 'function' ? G.finestHintCost(P.cls, role, r.slot, r.tier) : [];
+        if (!cost.length) return go();
+        showDialog([h('h3', null, `Hint: ${D.SLOT_LABEL[r.slot] || r.slot}, ${FIN_TIER[r.tier]}`), h('p', null, 'Ends Found blind on this piece, for every role.'),
+          h('p', null, `Ends on this character: ${cost.map((x) => `${ROLE_NAME[x.role] || x.role} (${finTitleName(x.title)})`).join(', ')}.`),
           h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: go }, 'Hint'), h('button', { class: 'btn alt', onclick: closeDialog }, 'Cancel'))], true);
       };
       const reveal = (r) => { if (!G.finestReveal(P.cls, role, r.slot, r.tier)) toast('Already revealed.'); ui.sheetFn(); };
@@ -4136,7 +4140,7 @@
         const it = r.id && D.ITEMS[r.id], known = !!it && (r.state !== 'unknown' || r.revealed);
         const tier = h('span', { class: 'fin-tier ' + r.tier }, finCrest(r.tier), ' ' + FIN_TIER[r.tier]);
         const lines = [h('small', null, tier, r.where ? ` · ${r.where}` : '')];
-        if (known && r.boss) lines.push(h('small', null, `${r.boss}${r.chance != null ? ` · Drop: ${Math.max(1, Math.round(r.chance * 100))}%` : ''}`));
+        if (known && r.boss) lines.push(h('small', null, `${r.boss}${r.chance != null ? ` · ${Math.max(1, Math.round(r.chance * 100))}% per kill · group roll` : ''}`));
         let right = null;
         if (r.state === 'found') right = h('div', { class: 'fin-st found' }, '✓ Found', r.blind ? h('small', { class: 'fin-blind' }, 'Found blind') : null);
         else if (r.state === 'seen') right = h('div', { class: 'fin-st' }, 'Seen');
@@ -4146,7 +4150,7 @@
         const t = h('div', { class: 't' }, known ? h('b', { class: 'q' + it.q }, it.name) : h('b', { class: 'fin-unk' }, 'Unknown'), ...lines);
         return known ? h('button', { class: 'row fin-row ' + r.state, onclick: () => tip(it) }, ic, t, right) : h('div', { class: 'row fin-row unknown' }, ic, t, right);
       };
-      b.append(h('div', { class: 'sec-h' }, h('span', null, 'Pieces', h('button', { class: 'sec-i', 'aria-label': 'About Found, Seen and Unknown', onclick: () => toast('Found: you own it. Seen: shown to you in a tooltip. Hint names the place; Reveal names the item, boss and drop chance.', true) }, 'ⓘ')), h('small', null, 'tap a piece to inspect')));
+      b.append(h('div', { class: 'sec-h' }, h('span', null, 'Pieces', h('button', { class: 'sec-i', 'aria-label': 'About Found, Seen and Unknown', onclick: () => toast('Found: you had it this season, on this character. Seen: shown to you in a tooltip. Hint names the place; Reveal the item, boss and drop chance per kill, then the group rolls for it.', true) }, 'ⓘ')), h('small', null, 'tap a piece to inspect')));
       const slots = [...new Set(F.rows.map((r) => r.slot))];
       if (!slots.length) b.append(h('p', { class: 'ai-note' }, 'No pieces for this role this season.'));
       for (const sl of slots) {
