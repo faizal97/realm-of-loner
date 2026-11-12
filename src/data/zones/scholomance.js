@@ -14,7 +14,7 @@
   gear('rattlegore_legs', 'Bone Ring Leggings', 'legs', { atype: 'mail', lvl: 58, armor: 440, stats: { str: 20, sta: 17 }, icon: 'legs', sell: 11800 });
   gear('rattlegore_axe', 'Bonebreaker', 'weapon', { wtype: 'axe', lvl: 58, dmg: [74, 124], speed: 2.8, stats: { str: 19, sta: 12 }, icon: 'axe', sell: 12200 });
   gear('ras_boots', 'Hoarwind Boots', 'feet', { atype: 'leather', lvl: 58, armor: 140, stats: { agi: 15, sta: 14 }, icon: 'boots', sell: 11600 });
-  gear('ras_wand', 'Icy Tomb Spaulders', 'wrist', { atype: 'cloth', lvl: 58, armor: 50, stats: { int: 13, sta: 10 }, sp: 14, icon: 'bracers', sell: 11200 });
+  gear('ras_wand', 'Icy Tomb Bracers', 'wrist', /* a wrist piece, once misnamed Spaulders (#597) */ { atype: 'cloth', lvl: 58, armor: 50, stats: { int: 13, sta: 10 }, sp: 14, icon: 'bracers', sell: 11200 });
   gear('malicia_dagger', 'Necromantic Dagger', 'weapon', { wtype: 'dagger', lvl: 59, dmg: [48, 90], speed: 1.8, stats: { agi: 16, sta: 10 }, icon: 'dagger', sell: 12400 });
   gear('gandling_staff', 'Headmaster\'s Charge', 'weapon', { wtype: 'staff', lvl: 60, dmg: [90, 134], speed: 3, stats: { int: 24, spi: 18 }, sp: 40, icon: 'staff', sell: 13600 });
   gear('gandling_robe', 'Robe of the Headmaster', 'chest', { atype: 'cloth', lvl: 60, armor: 124, stats: { int: 23, spi: 17 }, sp: 30, icon: 'chest_cloth', sell: 13400 });

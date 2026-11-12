@@ -51,6 +51,17 @@ test('the Potion button counts what a tap drinks, not health and mana potions su
   pick = bags[1]; assert.strictEqual(potionCount(), 4, 'the picked one');
 });
 
+test('Icy Tomb Bracers: a wrist piece with a wrist name, and a saved copy takes it', () => {
+  const { G, D, character } = require('./world');
+  assert.strictEqual(D.ITEMS.ras_wand.slot, 'wrist');
+  assert.strictEqual(D.ITEMS.ras_wand.name, 'Icy Tomb Bracers');
+  const { S, P } = character(58, 'mage', 'human');
+  const old = Object.assign(G.copyItem('ras_wand'), { name: 'Icy Tomb Spaulders' });
+  P.bags.push({ item: old, n: 1 }); delete S.flags.names597;
+  const id = S.id; G.save(); G.logout(); G.load(id);
+  assert.ok(G.S.player.bags.some((b) => b.item.id === 'ras_wand' && b.item.name === 'Icy Tomb Bracers'));
+});
+
 test('the red bar shows the answer that is ready: the shorter cooldown first, else the one ready soonest', () => {
   const D = { ABILITIES: { divine_protection: { cd: 300 }, holy_shield: { cd: 10 } }, INTERRUPTS: {} };
   const E = { answersOf: () => ['divine_protection', 'holy_shield'] }; // the class's order: the 5 min one first

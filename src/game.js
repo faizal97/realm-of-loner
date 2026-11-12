@@ -283,6 +283,13 @@
       if (Array.isArray(S.chat)) S.chat = S.chat.filter((m) => m.act && m.act.state === 'open');
       S.flags.v10names = true;
     }
+    // an item renamed in the data (#597: Icy Tomb Spaulders, a wrist piece, became Icy Tomb Bracers): a save's copies take the new name
+    if (!S.flags.names597) {
+      const ids = new Set(['ras_wand']), seen = new Set();
+      const walk = (o, depth) => { if (!o || typeof o !== 'object' || depth > 8 || seen.has(o)) return; seen.add(o); if (typeof o.id === 'string' && o.slot && ids.has(o.id) && D.ITEMS[o.id]) o.name = D.ITEMS[o.id].name; for (const k in o) walk(o[k], depth + 1); };
+      for (const o of [S.player, S.mail, S.ah && S.ah.mine, S.reforge]) walk(o, 0);
+      S.flags.names597 = 1;
+    }
     // a replaced item effect (#40: Lifeline became Lavish Mend): the owner keeps the item, which now carries the new
     // effect and the stats the data gives it now; an upgraded item keeps the growth it bought. Any copy, anywhere in the save
     if (D.EFFECT_RENAMED) {
