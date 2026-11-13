@@ -19,7 +19,7 @@
   const D = root.D;
   D.WEEK = [
     {
-      id: 'prepatch_teaser', kind: 'soon', from: '2026-11-09', to: '2026-11-13', at: '2026-11-14',
+      id: 'prepatch_teaser', kind: 'soon', from: '2026-11-09', to: '2026-11-12', /* ends a day early: v10.19.0 went live on the 13th */ at: '2026-11-14',
       art: ['banner', 'notes_come_due'],
       title: 'The Notes Come Due',
       text: [
@@ -67,7 +67,7 @@
     },
     // ---- the week of 14 November: the pre-patch (v10.19.0)
     {
-      id: 'prepatch_2026_11_14', kind: 'now', from: '2026-11-14', to: '2026-11-20',
+      id: 'prepatch_2026_11_14', kind: 'now', from: '2026-11-13', /* the 13th: the day v10.19.0 went live */ to: '2026-11-20',
       art: ['banner', 'notes_come_due'],
       title: 'The Notes Come Due',
       text: [
@@ -94,7 +94,7 @@
       ],
     },
     {
-      id: 'account_bank', kind: 'new', from: '2026-11-14', to: '2026-11-20',
+      id: 'account_bank', kind: 'new', from: '2026-11-13', /* the 13th: the day v10.19.0 went live */ to: '2026-11-20',
       art: ['banner', 'account_bank'], artHorde: ['banner', 'account_bank_h'],
       title: 'The Account Bank',
       text: [

@@ -115,3 +115,11 @@ test("the pre-patch steps tick from the character's own progress (#543)", () => 
   G.S.player.done.pp_h_crown = 1; assert.strictEqual(C.prepatch_campaign(), true);
   assert.strictEqual(C.mat_bag(), false); G.S.player.bagsEq = [{ bag: 12, matBag: true }]; assert.strictEqual(C.mat_bag(), true);
 });
+
+test('on 13 November, the day v10.19.0 went live, the pre-patch and the Account bank show as on, not as coming', () => {
+  character(30);
+  const on = ids('2026-11-13');
+  for (const id of ['prepatch_2026_11_14', 'account_bank', 'seasons_finest_2026_11_14']) assert.ok(on.includes(id), id);
+  assert.ok(!on.includes('prepatch_teaser'), 'the teaser says it arrives tomorrow');
+  assert.ok(on.includes('featured_dungeons_2026_11_09') && !on.includes('featured_dungeons_2026_11_14'), 'the featured set keeps its Saturday turn');
+});
