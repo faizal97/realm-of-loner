@@ -2,7 +2,7 @@
 class: warlock
 by: official
 written: 10.11.0
-checked: 10.18.0
+checked: 10.19.0
 ---
 A Warlock deals damage, mostly with curses and burns that keep hurting while you cast the next spell, and fights with a demon at its side. It fills one role: damage. You wear cloth, use a staff, dagger or sword, and spend mana, which [[Life Tap]] refills from your health.
 
@@ -53,8 +53,10 @@ You get your first point at level 10 and 51 by level 60. The trees hold 17, 15 a
 - **Soulfire Rush** (**Soul Link**): [[Shadow Bolt]] can make [[Soul Fire]] ready and instant.
 - **Ruinous Flame** (**Ruin**): a [[Shadow Bolt]] or [[Incinerate]] crit readies a free [[Shadowburn]].
 - Boss cooldowns: [[Demonic Sacrifice]] (level 54) and [[Metamorphosis]] (level 58), 30 sec of spell power.
+- [[ability/blood_bargain|Blood Bargain]] (level 60, taught by [[Tutor Ione Calder]] in [[Rumhook Bay]]): for 10 sec, you and your target both take 20% more damage, from everyone. Free, 2 min cooldown.
 - Groups: [[Shadow Bolt Volley]] (level 48) and [[Shadowfury]] (level 44). Shadowfury hits within 8 m of you: with no enemy that close, you step in, cast and step back. Leave out [[Searing Pain]]: it draws threat.
 - A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[Choke Hex]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
+- You can answer a red bar partway through a cast: the answer stops the cast.
 
 ### When it goes wrong
 - [[Shadow Ward]] absorbs 540 damage of any kind. Cast it in a fight.

@@ -2,7 +2,7 @@
 class: shaman
 by: official
 written: 10.11.0
-checked: 10.18.0
+checked: 10.19.0
 ---
 A Shaman fights with spells and totems from range and can heal or deal damage; you choose the role each time you join a group. Shamans wear leather and use a mace, axe, staff or dagger. Your resource is mana.
 
@@ -47,11 +47,13 @@ Numbers at level 60 with no gear and no talents:
 - **Tidal Surge** (with the **Healing Way** talent): [[Healing Wave]] and [[Lesser Healing Wave]] can make your next [[Chain Heal]] instant and free.
 - [[Stoneskin Totem]] at the start of each pull: the armor helps your tank most.
 - A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[Storm Snap]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
+- You can answer a red bar partway through a cast: the answer stops the cast.
 - A red bar on a slam at the tank: [[Lesser Healing Wave]] (level 20) on the tank before it lands makes it smaller, and so does each interrupt.
 
 ### When it goes wrong
 - [[Earth Shield]] (level 44) absorbs damage on you only, not on the tank. It doesn't use the global cooldown; 30 sec cooldown.
 - [[Bloodlust]] (level 58): your party casts and attacks 30% faster for 20 sec. 5 min cooldown.
+- [[ability/kinship_totem|Kinship Totem]] (level 60, taught by [[Tutor Ione Calder]] in [[Rumhook Bay]]): every 2 sec for 8 sec, party members within 30 m of where you cast it move halfway to an even share of health. The healthy give to the hurt; no health is added. 2 min cooldown.
 - [[Wellspring Totem]] (level 38) adds Spirit to the party for 12 sec. It counts as a spell, so it gives mana only if you then stop casting for 5 sec.
 
 ### Talents
@@ -81,6 +83,7 @@ Reactions light up your spells:
 
 Against groups, [[Chain Lightning]] and [[Earthquake]] (level 52) land around your target, so they work from the back line. [[Elemental Mastery]] (level 48) adds spell power for 15 sec in a fight.
 - A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[Storm Snap]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
+- You can answer a red bar partway through a cast: the answer stops the cast.
 
 ### When it goes wrong
 - [[Frost Shock]] halves an enemy's attack speed for 8 sec.

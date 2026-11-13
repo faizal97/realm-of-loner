@@ -2,7 +2,7 @@
 class: warrior
 by: official
 written: 10.11.0
-checked: 10.18.0
+checked: 10.19.0
 ---
 A Warrior fights up close with a weapon, and in a group either takes the hits as the tank or deals damage. You choose the role each time you join a group; your gear stays the same. You wear mail (or leather and cloth), use a sword, axe or mace, and fight with rage.
 
@@ -64,6 +64,7 @@ As the tank, your damage makes 1.9 times the threat.
 
 - [[Taunt]] (level 10): match the top threat on an enemy; it attacks you for 3 sec. 10 sec cooldown.
 - [[Intercept]] (level 44): leap up to 25 m and stun for 3 sec, not bosses.
+- [[ability/intervene|Intervene]] (level 60, taught by [[Tutor Ione Calder]] in [[Rumhook Bay]]): for 6 sec, the next big hit meant for a party member lands on you: an ability, or a hit of 12% of their health or more. 10 rage, 20 sec cooldown, no global cooldown.
 - **Unyielding** (Protection talent): a dodge can make [[Shield Slam]] and [[Shield Block]] ready and free.
 - A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[Hilt Bash]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
 - A red bar on a slam at you: [[Shield Wall]] (level 32) avoids it in a dungeon; in a raid it takes 1.5 times off. Each shield, quick heal or interrupt from your group makes it smaller.
@@ -100,6 +101,7 @@ Protection first: it holds your threat and survival, and all 16 points fit by le
 - **Sweeping Blows** (the **Sweeping Strikes** talent): [[Cleave]] and [[Thunder Clap]] can make [[Whirlwind]] ready and free.
 - Boss cooldowns: [[Recklessness]] (level 48) and [[Berserker Rage]] (level 38) together; [[Bloodrage]] when you are short of rage.
 - A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[Hilt Bash]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
+- You can answer a red bar partway through a cast: the answer stops the cast.
 
 ### When it goes wrong
 - An enemy turns on you: the tank needs a moment to take it back. You have no way to drop threat.

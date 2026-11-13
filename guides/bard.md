@@ -2,7 +2,7 @@
 class: bard
 by: official
 written: 10.14.0
-checked: 10.18.0
+checked: 10.19.0
 ---
 A Bard heals or deals damage with songs that keep playing while you do other things, and chooses which each time it joins a group. Bards wear leather, use a dagger or staff, carry an instrument in the ranged slot, and run on mana.
 
@@ -69,9 +69,11 @@ At level 60 with no gear, on the Lute:
 - [[Crescendo]] (level 30) heals one friend for about 722, a 3 sec cast. [[Soothing Chord]] heals for about 377 in 1.8 sec.
 
 When only the tank is hurt, a healing song mostly heals people who don't need it. Keep the tank up with [[Counterpoint]], [[Verse of Mending]] and [[Soothing Chord]], and save the song's mana.
+- [[ability/duet|Duet]] (level 60, taught by [[Tutor Ione Calder]] in [[Rumhook Bay]]): for 15 sec, [[Song of Rest]] and [[Marching Song]] reach only this ally, twice as strong. Free, 1 min cooldown.
 
 Keep [[Marching Song]] (level 6) as your second song: your party attacks and casts about 8% faster, 12.5% at 3 verses. Its Finale gives three times that for 6 sec.
 - A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[Sour Note]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
+- You can answer a red bar partway through a cast: the answer stops the cast.
 - A red bar on a slam at the tank: [[Verse of Mending]] (level 14) or [[Counterpoint]] (level 22) on the tank before it lands makes it smaller, and so does each interrupt.
 
 ### When it goes wrong
@@ -108,6 +110,7 @@ Watch the beat while you cast: a 2.5 sec cast started just before the beat runs 
 
 Against groups: [[Ballad of Blades]] and [[Requiem]] (level 56, about 245 to every enemy near you, 10 sec cooldown).
 - A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[Sour Note]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
+- You can answer a red bar partway through a cast: the answer stops the cast.
 
 ### When it goes wrong
 - [[Stage Fright]] (level 36): one enemy (not a boss) runs from you for 6 sec. 30 sec cooldown.

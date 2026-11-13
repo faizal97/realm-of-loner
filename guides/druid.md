@@ -2,14 +2,14 @@
 class: druid
 by: official
 written: 10.11.0
-checked: 10.18.0
+checked: 10.19.0
 ---
 A Druid heals, tanks or deals damage, and chooses which each time it joins a group. You heal and cast in your own form and tank in [[Bear Form]] (level 10). Druids wear leather, use a staff, mace or dagger, and run on mana.
 
 ### At a glance
 - Good at: any role with the same gear; only the stats you look for change.
 - Good at: heals over time that stack on one target.
-- Watch out for: no spells in [[Bear Form]] apart from [[Barkskin]] and [[Frenzied Regeneration]].
+- Watch out for: no spells in [[Bear Form]] apart from [[Barkskin]], [[Frenzied Regeneration]] and [[ability/seed_of_renewal|Seed of Renewal]].
 - Watch out for: mana only refills once 5 sec have passed since your last spell.
 
 ### Leveling
@@ -43,9 +43,11 @@ Your first point comes at level 10 and you have 51 by level 60. Each tree holds 
 - [[Blossoming Life]] heals the most for its mana: about 5 health per mana over 7 sec.
 - [[Regrowth]] heals at once and then over 21 sec, about 3 health per mana.
 - [[Wild Growth]] (level 54) heals over 7 sec on a 6 sec cooldown. Keep it on whoever takes the most damage.
+- [[ability/seed_of_renewal|Seed of Renewal]] (level 60, taught by [[Tutor Ione Calder]] in [[Rumhook Bay]]): plant it on an ally and it blooms after 10 sec into about 630 healing. Use it again to bloom it early: 30% at first, growing to the full heal. A big hit on the ally crushes it. Free, 1 min cooldown.
 - Different heals over time stack on one target. The same one cast again restarts and loses the ticks it had left, so let it finish first.
 - [[Healing Touch]] is your slowest and least efficient heal (2.5 sec). Use it when **Clear Stream** makes it instant.
 - A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[ability/thornlash|Thornlash]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
+- You can answer a red bar partway through a cast: the answer stops the cast.
 - A red bar on a slam at the tank: [[Rejuvenation]] or [[Quick Mend]] (level 36) on the tank before it lands makes it smaller, and so does each interrupt.
 
 ### When it goes wrong
@@ -71,7 +73,7 @@ Restoration first: all 19 points fit. **Gift of Nature** and **Nature's Swiftnes
 
 ### How to play it
 - [[Bear Form]] costs 55 mana and only works in a fight. Rage starts at 0 each time.
-- [[Barkskin]] and [[Frenzied Regeneration]] work in [[Bear Form]]. Your other spells don't.
+- [[Barkskin]], [[Frenzied Regeneration]] and [[ability/seed_of_renewal|Seed of Renewal]] (level 60) work in [[Bear Form]]. Your other spells don't.
 - [[Maul]] and [[Swipe]] both add extra threat. Swipe hits every enemy near you.
 - [[Growl]] has a 10 sec cooldown and no global cooldown.
 - A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[ability/thornlash|Thornlash]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
@@ -107,6 +109,7 @@ Spells that glow:
 
 Against groups: [[Hurricane]] (level 26, slows), [[Falling Stars]] (level 52) and [[Typhoon]] (level 56, stuns for 2 sec). Falling Stars and Typhoon hit within 8 m of you: with no enemy that close, you step in, cast and step back.
 - A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[ability/thornlash|Thornlash]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
+- You can answer a red bar partway through a cast: the answer stops the cast.
 
 ### When it goes wrong
 - [[Entangling Roots]] holds a melee enemy in place while you cast.

@@ -2,7 +2,7 @@
 class: paladin
 by: official
 written: 10.11.0
-checked: 10.18.0
+checked: 10.19.0
 ---
 A Paladin fights in melee with holy spells on top, and in a group fills two roles: healer or tank. You choose the role each time you join a group; your gear stays the same. Paladins wear mail, use a mace, sword or axe, and run on mana.
 
@@ -57,7 +57,9 @@ Retribution suits leveling. **Vengeance** raises your Holy and physical damage a
 - [[Radiant Wrath]] adds 100 spell power for 20 sec. Use it for the hardest part of a fight.
 - [[Holy Shock]] (level 32) heals your heal target at once: 520 to 540 for 267 mana, 20 sec cooldown. When you aren't the healer, it hits your enemy instead.
 - **Radiance** (with **Divine Favor**): [[Holy Light]] can make [[Holy Shock]] ready and free.
+- [[ability/lantern_of_faith|Lantern of Faith]] (level 60, taught by [[Tutor Ione Calder]] in [[Rumhook Bay]]): for 20 sec, each of your heals lands half on its target and half on this ally. A heal on the ally itself, or with the ally beyond 40 m, lands whole. Free, 1 min cooldown.
 - A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[Stern Word]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
+- You can answer a red bar partway through a cast: the answer stops the cast.
 - A red bar on a slam at the tank: [[Holy Shock]] (level 32) on the tank before it lands makes it smaller, and so does each interrupt.
 
 ### When it goes wrong
@@ -90,6 +92,7 @@ Holy first: all 18 points fit. **Healing Light** makes [[Holy Light]] heal 20% m
 - [[Holy Shield]] and a priest's [[Word of Warding]] stack: each absorbs on its own.
 - **Bulwark** (with **Blessing of Sanctuary**): when you dodge, [[Holy Shield]] ([[Consecration]] before level 52) can be ready and free.
 - A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[Stern Word]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
+- You can answer a red bar partway through a cast: the answer stops the cast.
 - A red bar on a slam at you: [[Divine Protection]] or [[Holy Shield]] (level 52) avoids it in a dungeon; in a raid it takes 1.5 times off. Each shield, quick heal or interrupt from your group makes it smaller.
 
 ### When it goes wrong

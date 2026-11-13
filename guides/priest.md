@@ -2,7 +2,7 @@
 class: priest
 by: official
 written: 10.11.0
-checked: 10.18.0
+checked: 10.19.0
 ---
 A Priest heals or deals Shadow damage, and chooses the role each time it joins a group. On your own you fight with Holy and Shadow spells and heal yourself between hits. Priests wear cloth, use a mace or a staff, and cast with mana.
 
@@ -70,6 +70,7 @@ Tap a lit spell while it glows:
 
 Save [[Surge of Power]] (level 44) for the hardest part of a fight: spell power and 15% faster casting for 15 sec.
 - A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[Hush]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
+- You can answer a red bar partway through a cast: the answer stops the cast.
 - A red bar on a slam at the tank: [[Word of Warding]], [[Renew]] or [[Flash Heal]] (level 28) on the tank before it lands makes it smaller, and so does each interrupt.
 
 ### When it goes wrong
@@ -101,8 +102,10 @@ Holy first, all 19 points: **Spiritual Healing** and **Inspiration** raise your 
 
 - [[Shadowform]]: 73 spell power and 150 armor for 30 min, on yourself.
 - [[Vampiric Embrace]] (level 52) heals you over 20 sec.
+- [[ability/vow_of_atonement|Vow of Atonement]] (level 60, taught by [[Tutor Ione Calder]] in [[Rumhook Bay]]): for 10 sec, half the damage you deal heals your most hurt party member instead. Free, 1 min cooldown.
 - **Creeping Dark** needs the **Shadowform** talent.
 - A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[Hush]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
+- You can answer a red bar partway through a cast: the answer stops the cast.
 
 ### When it goes wrong
 - [[Fade]] (level 24): enemies lose all threat on you. 30 sec cooldown.

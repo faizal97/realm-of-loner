@@ -2,7 +2,7 @@
 class: mage
 by: official
 written: 10.11.0
-checked: 10.18.0
+checked: 10.19.0
 ---
 A Mage deals damage with Fire, Frost and Arcane spells from range, and has many ways to keep enemies off it. It fills one role: damage. Mages wear cloth, use a staff or a dagger, and run on mana.
 
@@ -49,6 +49,7 @@ You get your first point at level 10 and 51 by level 60. The Mage trees hold 51 
 - [[Arcane Power]] (level 36) and [[Combustion]] (level 48) add spell power for 15 sec and stack.
 - [[Frost Storm]] (level 26) hits around your target. [[Frost Nova]], [[Arcane Explosion]], [[Cone of Cold]], [[Blast Wave]] and [[Dragon's Breath]] only hit within 8 m of you: with no enemy that close, you step in, cast and step back.
 - A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[Spellbreak]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
+- You can answer a red bar partway through a cast: the answer stops the cast.
 
 ### When it goes wrong
 - Your shields stack: [[Mana Shield]], [[Fire Ward]] and [[Ice Barrier]] (level 44, the biggest) each absorb on their own. They only work in a fight.
@@ -56,6 +57,7 @@ You get your first point at level 10 and 51 by level 60. The Mage trees hold 51 
 - [[Dragon's Breath]] (level 54) stuns enemies within 8 m for 2 sec.
 - [[Ice Block]] (level 32): immune to damage for 8 sec, but you can't cast, move or attack. Use it again to break out early.
 - [[Mirror Image]] (level 58): drops all your threat.
+- [[ability/chronomark|Chronomark]] (level 60, taught by [[Tutor Ione Calder]] in [[Rumhook Bay]]): set a mark, and use it again within 8 sec to put your health and mana back where they were. Both go back, even if they are higher now. 90 sec cooldown.
 
 ### Talents
 Fire first while you level: [[Fireball]] is your main spell until 56, and **Fire Power** and **Improved Fireball** raise it. Then Arcane for [[Arcane Blast]], then Frost. At 60 every Mage talent fits.

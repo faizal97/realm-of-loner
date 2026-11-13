@@ -2,7 +2,7 @@
 class: hunter
 by: official
 written: 10.11.0
-checked: 10.18.0
+checked: 10.19.0
 ---
 A Hunter fights from range with a bow and a tamed beast at its side. It fills one role: damage. Hunters wear leather, use an axe, sword or dagger in melee, and run on mana.
 
@@ -57,10 +57,12 @@ You get your first talent point at level 10 and 51 by level 60. Beast Mastery ho
 - Burst: [[Rapid Fire]], [[Bestial Wrath]] and [[Rapid Killing]] stack.
 - Groups: [[Multi-Shot]], [[Volley]] and [[Explosive Trap]].
 - A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[Pinning Shot]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
+- You can answer a red bar partway through a cast: the answer stops the cast.
 
 ### When it goes wrong
 - [[Feign Death]] drops all your threat. With your pet out, enemies turn to it.
 - [[Scatter Shot]] stuns for 4 sec, [[Sleep Sting]] for 6 sec. Not on bosses.
+- [[ability/lure|Lure]] (level 60, taught by [[Tutor Ione Calder]] in [[Rumhook Bay]]): the next enemy to join the fight within 30 sec is held for 6 sec. Not a boss. Free, 45 sec cooldown.
 - [[Deterrence]]: 60% more dodge for 10 sec, against physical attacks.
 
 ### Talents

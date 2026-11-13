@@ -2,7 +2,7 @@
 class: rogue
 by: official
 written: 10.11.0
-checked: 10.18.0
+checked: 10.19.0
 ---
 A Rogue fights in melee: quick strikes build combo points, then a finisher spends them. You can only fill the damage role. Rogues wear leather and use one dagger or sword, and run on energy: 100 at most, full at the start of every fight, refilling 10 per second.
 
@@ -54,6 +54,7 @@ Reactions:
 - **Quiet Blade** (**Preparation**): a dodge can make [[Backstab]] free. Otherwise skip it.
 
 Stack [[Cold Blood]] (level 54) and [[Shadow Dance]] (level 58) with [[Killing Spree]] (level 56).
+- [[ability/set_up|Set Up]] (level 60, taught by [[Tutor Ione Calder]] in [[Rumhook Bay]]): a finisher with no damage of its own. For 8 sec, the next party member to hit the target adds about what your [[Eviscerate]] would deal, and takes its threat. 25 energy, 30 sec cooldown.
 - A **red bar** over a boss names its attack and its answer: [[Step Back]] for an attack on the group, [[Throat Jab]] for a heal or a spell. Missed, an attack hits 2.5 times as hard and a heal heals 1.5 times (more on a Hard raid).
 
 ### When it goes wrong
