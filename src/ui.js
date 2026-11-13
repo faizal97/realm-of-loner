@@ -3562,9 +3562,6 @@
     pr('Dungeons cleared', dAll.filter((k) => cx[k] && cx[k].clears).length, dAll.length);
     if (rAll.length) pr('Raids cleared', rAll.filter((k) => cx[k] && cx[k].clears).length, rAll.length);
     if (P.level >= cap) {
-      const up = D.GEAR_SLOTS.map((s) => P.equip[s]).filter((it) => it && G.upgradeInfo(it).ok);
-      const avgIP = up.length ? Math.round(up.reduce((s, it) => s + G.upgradeInfo(it).pct, 0) / up.length) : 0; /* worn level-57+ gear; the Tidecrown Citadel's epics are 100 */
-      if (up.length) prog.push(h('button', { class: 'ai-row', style: { width: '100%', textAlign: 'left' }, onclick: () => toast(ITEM_POWER_HELP, true) }, h('span', null, 'Average Item Power ⓘ'), h('b', { class: 'tnum' }, String(avgIP))));
       if (P.trials) pr('Best Trial beaten in time', P.trials.bestEver ? `Trial ${P.trials.bestEver}` : 'Not yet');
     }
     if (P.level >= cap || G.account().marks) prog.push(h('button', { class: 'ai-row', style: { width: '100%', textAlign: 'left' }, onclick: marksHelp }, h('span', null, 'Mentor Marks ⓘ'), h('b', { class: 'tnum' }, String(G.account().marks)))); // #598: tap for what they are
@@ -3819,7 +3816,8 @@
   // a banner opens its page: what it is and the steps, which tick themselves, each with Go to its screen
   // Item Power (IP): a level-57+ piece's power, where the Tidecrown Citadel's epics are 100 (G.upgradeInfo(it).pct). The
   // scale stays tied to the Tidecrown when a newer raid becomes the upgrade ceiling, so old gear keeps its number
-  const ITEM_POWER_HELP = 'Item Power is a piece’s strength: Tidecrown Citadel epics are 100. The average counts your worn level-57+ gear. Mentor Marks raise it.';
+  const avgItemPower = (P) => { const up = D.GEAR_SLOTS.map((k) => P.equip[k]).filter((it) => it && G.upgradeInfo(it).ok); return up.length ? Math.round(up.reduce((n, it) => n + G.upgradeInfo(it).pct, 0) / up.length) : null; }; // worn level-57+ gear; null with none
+  const ITEM_POWER_HELP = 'Item Power is a piece’s strength: Tidecrown Citadel epics are 100. Yours is the average of your worn level-57+ gear. Mentor Marks raise it.';
   const WEEK_GO = {
     'social:chat': () => openSocial('chat'),
     'social:guild': () => openSocial('guild'),
@@ -4346,6 +4344,7 @@
               .map(([k, val]) => h('div', null, h('span', null, k), h('b', { class: 'tnum' }, val))))));
         b.append(h('div', { class: 'stats' },
           h('div', null, h('span', null, 'Experience'), h('b', { class: 'tnum' }, P.level >= D.LEVEL_CAP ? 'Max level' : `${P.xp}/${need}`)),
+          avgItemPower(P) != null ? h('div', { role: 'button', tabindex: '0', style: { cursor: 'pointer' }, 'aria-label': 'About Item Power', onclick: () => toast(ITEM_POWER_HELP, true) }, h('span', null, 'Item Power ⓘ'), h('b', { class: 'tnum' }, String(avgItemPower(P)))) : null, /* the average of worn level-57+ gear */
           h('div', null, h('span', null, 'Rested'), h('b', { class: 'tnum' }, P.level >= D.LEVEL_CAP ? '-' : Math.round(P.rested))),
           h('div', null, h('span', null, 'Money'), h('b', { html: moneyHtml(P.money) })),
           D.PREPATCH && D.PREPATCH.live ? h('div', null, h('span', null, 'Torn debt notes'), h('b', { class: 'tnum' }, G.debtNotesText())) : null,
