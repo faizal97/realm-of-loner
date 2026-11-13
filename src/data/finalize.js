@@ -26,5 +26,15 @@
     let given = 0; for (const s of share) { const v = Math.floor(s.x); it.stats[s.k] += v; given += v; }
     share.sort((a, b) => (b.x % 1) - (a.x % 1)); for (let i = 0; given < add; i++, given++) it.stats[share[i % share.length].k]++;
   }
+  // A Wanted elite's group run (#586): the elite and its camp hit harder in a group of 3 than alone in the open world, by a
+  // step that follows its level, straight lines between the points and flat past the ends. At x1 no group ever lost
+  // (sim/difficulty.js); one flat step was too hard at level 8 (a short kit) and too easy from 40 up (a full one). A run
+  // that sets its own numbers keeps them; the open-world mob is unchanged.
+  D.WANTED_STEP = [[8, 2.2], [25, 3], [40, 3.6]];
+  D.wantedStep = (lvl) => { const p = D.WANTED_STEP; if (lvl <= p[0][0]) return p[0][1]; for (let i = 1; i < p.length; i++) if (lvl <= p[i][0]) return Math.round((p[i - 1][1] + (p[i][1] - p[i - 1][1]) * (lvl - p[i - 1][0]) / (p[i][0] - p[i - 1][0])) * 100) / 100; return p[p.length - 1][1]; };
+  for (const k in D.ACTIVITIES) {
+    const A = D.ACTIVITIES[k]; if (A.dungeon || A.event || A.needQuest || A.worldBoss || !A.boss || !(A.pulls || []).length || A.trashMult || A.bossMult) continue;
+    const x = D.wantedStep(A.minLvl || 1); A.trashMult = { hp: 1, dmg: x }; A.bossMult = { hp: 1, dmg: x };
+  }
   delete D.item; delete D.zone; // authoring helpers only
 })(typeof window !== 'undefined' ? window : globalThis);
