@@ -89,6 +89,7 @@ function clear(act, cls) {
   P.talents = G.autoTalents(cls, D.CLASSES[cls].role === 'tank' ? 'tank' : D.CLASSES[cls].role === 'healer' ? 'healer' : 'dps', LV, 0); P.hp = null; P.res = null;
   S.flags.warModeAsked = true; P.place = A.where;
   if (HARD) P.codex = { [act]: { clears: 1, flawless: 0, speed: 0, best: null } };
+  if (A.needQuest) P.quests[A.needQuest] = { prog: D.QUESTS[A.needQuest].objs.map(() => 0), at: Date.now() }; // a Legend's story fight queues only while you're on its quest; without this its runs were skipped silently
   G.queueFor(act, HARD ? { hard: true } : undefined); if (!S.queue) return null; G.acceptPop(); if (!S.run) return null;
   // a bad draw: careless bots at skill 0.2, in the gear a player that careless wears (#582: gear follows skill). A dungeon
   // group: every bot. A raid: BADN (default 3) of its bots, picked at random, any role, the rest an ordinary group-finder
