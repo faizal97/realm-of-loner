@@ -4,6 +4,9 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -175,6 +178,18 @@ class MainActivity : FlutterActivity() {
                     if (call.argument<Boolean>("on") == true) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                     else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                     result.success(true)
+                }
+                // a buzz (#562): the WebView's navigator.vibrate does nothing, so the page asks here. p: on/off/on… in ms
+                "buzz" -> {
+                    val p = (call.argument<List<Int>>("p") ?: emptyList()).map { it.coerceIn(0, 1000).toLong() }
+                    if (p.isEmpty() || p.all { it == 0L }) { result.success(false) } else {
+                        @Suppress("DEPRECATION")
+                        val v = if (Build.VERSION.SDK_INT >= 31) (getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator else getSystemService(VIBRATOR_SERVICE) as Vibrator
+                        val wave = longArrayOf(0L) + p.toLongArray()
+                        @Suppress("DEPRECATION")
+                        if (Build.VERSION.SDK_INT >= 26) v.vibrate(VibrationEffect.createWaveform(wave, -1)) else v.vibrate(wave, -1)
+                        result.success(true)
+                    }
                 }
                 else -> result.notImplemented()
             }

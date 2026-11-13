@@ -774,7 +774,9 @@
   const fxOn = () => { try { return localStorage.getItem('azsolo.fx') !== 'off'; } catch (e) { return true; } };
   // a phone's buzz (#562): ability presses, red bars and dragging on the bar; Settings → Buzz turns it off on this device
   const buzzOn = () => { try { return localStorage.getItem('azsolo.buzz') !== 'off'; } catch (e) { return true; } };
-  const buzz = (p) => { if (!buzzOn()) return; try { navigator.vibrate && navigator.vibrate(p); } catch (e) { } };
+  // in the Android app the WebView's navigator.vibrate returns true and does nothing, so the app buzzes for it (MainActivity
+  // "buzz"); a browser uses navigator.vibrate. p: one length in ms, or on/off/on… as navigator.vibrate takes it
+  const buzz = (p) => { if (!buzzOn()) return; try { if (window.AzView && window.AzView.postMessage) viewCall('buzz', { p: [].concat(p) }); else if (navigator.vibrate) navigator.vibrate(p); } catch (e) { } };
   const BOSS_FX = { slam: 'crack', hogger: 'crack', whirl: 'sweep', molten: 'splash', shadow_bolt: 'splash', firebolt: 'bolt' };
   function fxAt(uid, yf) {
     const el = ui.spriteEls[uid], sc = els.scene; if (!el || !sc) return null;
