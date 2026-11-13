@@ -2499,7 +2499,7 @@
     if (it.hard) t.append(h('div', { class: 'st', style: { color: '#ff8a5a' } }, `Dropped on Hard: ${G.HARD_STEPS} upgrade steps up`));
     if (it.trial60) t.append(h('div', { class: 'st', style: { color: 'var(--gold)' } }, 'Trial find: level 60'));
     if (upi && upi.ok) { // #284: says what 100% is, and how it rises
-      t.append(h('div', { class: 'st', style: { color: '#7fd4ff' } }, `Power: ${upi.pct}% of newest raid gear${upi.room ? (upi.capPct < 100 ? ` · max ${upi.capPct}%` : '') : ' (max)'}`));
+      t.append(h('div', { class: 'st', style: { color: '#7fd4ff' } }, `Item Power: ${upi.pct}${upi.room ? ` · max ${upi.capPct}` : ' (max)'}`));
       if (upi.room) t.append(h('div', { class: 'st', style: { color: '#7fd4ff', opacity: 0.75 } }, 'Mentor Marks raise it, up to the max.'));
     }
     const why = who ? null : blockReason(it);
@@ -3369,7 +3369,7 @@
       const pa = a.split(re), pb = b.split(re); if (pa.length !== pb.length || pa.some((x, i) => i % 2 === 0 && x !== pb[i])) return `${a} After: ${b}`;
       return pa.map((x, i) => (i % 2 && x !== pb[i] ? `${x} → ${pb[i]}` : x)).join(''); })() : null;
     showDialog([h('h3', null, `Upgrade ${it.name}?`),
-      h('p', null, `From ${inf.pct}% to ${inf.nextPct}% of newest raid gear: ${diff.join(', ') || (F ? 'the stats round to the same numbers' : 'a little stronger')}.`),
+      h('p', null, `Item Power ${inf.pct} → ${inf.nextPct}: ${diff.join(', ') || (F ? 'the stats round to the same numbers' : 'a little stronger')}.`),
       fxLine ? h('p', { class: 'eff' }, `Effect: ${F.name}. ${fxLine}`) : null,
       F ? h('p', { class: 'eff', style: { margin: '-4px 0 0' } }, `Effect strength ${fxPct(it)} → ${fxPct(next)}`) : null, // one rule for every effect, so a growth the rounding hides still shows (#42)
       h('p', null, `Costs ${inf.cost} Mentor Marks. You have ${marks}. Its look stays the same.`),
@@ -3563,7 +3563,8 @@
     if (rAll.length) pr('Raids cleared', rAll.filter((k) => cx[k] && cx[k].clears).length, rAll.length);
     if (P.level >= cap) {
       const up = D.GEAR_SLOTS.map((s) => P.equip[s]).filter((it) => it && G.upgradeInfo(it).ok);
-      if (up.length) pr('Worn gear power', `${Math.round(up.reduce((s, it) => s + G.upgradeInfo(it).pct, 0) / up.length)}% of newest raid gear`);
+      const avgIP = up.length ? Math.round(up.reduce((s, it) => s + G.upgradeInfo(it).pct, 0) / up.length) : 0; /* worn level-57+ gear; the Tidecrown Citadel's epics are 100 */
+      if (up.length) prog.push(h('button', { class: 'ai-row', style: { width: '100%', textAlign: 'left' }, onclick: () => toast(ITEM_POWER_HELP, true) }, h('span', null, 'Average Item Power ⓘ'), h('b', { class: 'tnum' }, String(avgIP))));
       if (P.trials) pr('Best Trial beaten in time', P.trials.bestEver ? `Trial ${P.trials.bestEver}` : 'Not yet');
     }
     if (P.level >= cap || G.account().marks) prog.push(h('button', { class: 'ai-row', style: { width: '100%', textAlign: 'left' }, onclick: marksHelp }, h('span', null, 'Mentor Marks ⓘ'), h('b', { class: 'tnum' }, String(G.account().marks)))); // #598: tap for what they are
@@ -3816,6 +3817,9 @@
   }
   // ---- This week (#541): a column of banners, one per thing that's on (D.WEEK, a live festival, else the next one);
   // a banner opens its page: what it is and the steps, which tick themselves, each with Go to its screen
+  // Item Power (IP): a level-57+ piece's power, where the Tidecrown Citadel's epics are 100 (G.upgradeInfo(it).pct). The
+  // scale stays tied to the Tidecrown when a newer raid becomes the upgrade ceiling, so old gear keeps its number
+  const ITEM_POWER_HELP = 'Item Power is a piece’s strength: Tidecrown Citadel epics are 100. The average counts your worn level-57+ gear. Mentor Marks raise it.';
   const WEEK_GO = {
     'social:chat': () => openSocial('chat'),
     'social:guild': () => openSocial('guild'),
@@ -5395,7 +5399,7 @@
         }
         if (hard) {
           row('Hard', 'stronger enemies and one extra mechanic per boss');
-          row('Hard loot', `the first kill of each boss each week drops its items ${G.HARD_STEPS} upgrade steps up (+${G.HARD_STEPS * Math.round(D.UPGRADE.step * 100)}% power toward the ceiling); after that, Normal items until Monday`);
+          row('Hard loot', `the first kill of each boss each week drops its items ${G.HARD_STEPS} upgrade steps up (+${G.HARD_STEPS * Math.round(D.UPGRADE.step * 100)} Item Power); after that, Normal items until Monday`);
         }
         const why = G.activityBlock(act); if (why && why !== 'hidden') row('Now', why);
       }
