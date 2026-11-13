@@ -48,7 +48,7 @@
       desc: (L, f) => `Every ${n(D.EFFECTS.steady_fuse.icd / (f || 1))} sec in combat, your next hit is a sure critical hit.`, // an upgrade shortens the wait (#37)
     },
     glass_heart: {
-      name: 'Glass Heart', role: 'damage', fires: 'always on', icon: 'blood_fury', dmg: 0.027, taken: 0.1, cost: 0, /* 2.5% -> 2.7%: its wins case fell to +1.9% (#582) */ // no stat cost: the downside is the cost
+      name: 'Glass Heart', role: 'damage', fires: 'always on', icon: 'blood_fury', dmg: 0.028, taken: 0.1, cost: 0, /* 2.5% -> 2.7%: its wins case fell to +1.9% (#582); 2.7% -> 2.8%: groups cut casts now (1b10ae7), its wins case fell to +1.98% (#586) */ // no stat cost: the downside is the cost
       desc: (L, f) => `You deal ${Math.round(D.EFFECTS.glass_heart.dmg * (f || 1) * 1000) / 10}% more damage, and take ${n(D.EFFECTS.glass_heart.taken * 100)}% more.`, // an upgrade grows the bonus, never the downside (#37)
     },
     // healing
