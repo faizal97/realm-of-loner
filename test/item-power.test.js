@@ -16,3 +16,20 @@ test('a Tidecrown epic without upgrades reads Item Power 100', () => {
   assert.ok(ids.length > 0, 'no epic at the ceiling found');
   for (const id of ids) assert.strictEqual(G.upgradeInfo(G.copyItem(id)).pct, 100, id);
 });
+
+test('every worn piece has an Item Power: greens count, a piece with no stats is 0', () => {
+  const green = G.genGear('chest', 60, 2, { atype: 'mail' }), bare = Object.assign(G.genGear('legs', 60, 1, { atype: 'mail' }), { stats: {} });
+  delete bare.sp;
+  assert.ok(G.itemPower(green) > 0, 'a level-60 green has an Item Power');
+  assert.strictEqual(G.itemPower(bare), 0);
+  assert.strictEqual(G.avgItemPower({ chest: green, legs: bare }), Math.round(G.itemPower(green) / 2));
+  assert.strictEqual(G.avgItemPower({}), null);
+});
+
+test('Recommended Item Power: raids ask more on Hard; levelling content has none', () => {
+  const n = G.recItemPower('tidecrown_citadel', false), hd = G.recItemPower('tidecrown_citadel', true);
+  assert.ok(n >= 85 && n <= 110 && n % 5 === 0, `Normal ${n}`);
+  assert.ok(hd > n, `Hard ${hd} above Normal ${n}`);
+  const low = Object.keys(D.ACTIVITIES).find((k) => (D.ACTIVITIES[k].maxLvl || 0) > 0 && D.ACTIVITIES[k].maxLvl < 50);
+  assert.strictEqual(G.recItemPower(low, false), null, low);
+});

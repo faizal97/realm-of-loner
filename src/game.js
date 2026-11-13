@@ -3375,6 +3375,33 @@
     }
     return Object.assign(inf, { next, nextPct: upPct(next, ref), cost: Math.max(1, Math.round(((next - inf.pts) / ref) * 100 * U.perPct)) });
   };
+  // Item Power (IP) of any worn piece: its stat points against the Tidecrown Citadel's piece of its kind, so its epics are
+  // 100. An upgradeable piece reads its upgrade figure (same number); any other piece (greens, low levels, no stats: 0)
+  // reads its points the same way. Null for no piece or a kind with no reference
+  G.itemPower = function (it) {
+    if (!it || !D.GEAR_SLOTS.includes(it.slot)) return null;
+    const u = G.upgradeInfo(it); if (u.ok) return u.pct;
+    const ref = G.upgradeRef(it); return ref > 0 ? Math.round((G.itemPoints(it) / ref) * 100) : null;
+  };
+  // the average of what someone wears (the player's equip or a bot's), empty slots left out; null with nothing to count
+  G.avgItemPower = function (equip) {
+    const v = D.GEAR_SLOTS.map((k) => G.itemPower(equip && equip[k])).filter((x) => x != null);
+    return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : null;
+  };
+  // Recommended Item Power for an activity: the average a careful group-finder player brings there (skill 0.85, the
+  // activity's gear floor), over 24 fixed people, rounded to 5. Only where Item Power means something: level 57+ content
+  const recIP = {};
+  G.recItemPower = function (act, hard) {
+    const A = D.ACTIVITIES[act]; if (!A || (A.maxLvl || A.minLvl || 0) < D.UPGRADE.minLvl) return null;
+    const L = Math.min(D.LEVEL_CAP, A.maxLvl || A.minLvl), floor = G.gearFloor(act, hard), key = L + '|' + floor;
+    if (recIP[key] == null) {
+      const cls = ['warrior', 'paladin', 'priest', 'mage', 'rogue', 'warlock', 'hunter', 'druid'], v = [];
+      for (let i = 0; i < 24; i++) { const c = cls[i % cls.length], role = ['tank', 'healer', 'dps'][i % 3];
+        const ch = G.botChar({ id: 900000 + i, cls: c, level: L, skill: 0.85, role, gearFloor: floor, name: 'x' }); const a = G.avgItemPower(ch.equip); if (a != null) v.push(a); }
+      recIP[key] = v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length / 5) * 5 : 0;
+    }
+    return recIP[key] || null;
+  };
   // the item at a given power (stat points); its own power or less gives back the item as it dropped
   G.FX_SCALE_CAP = 1.5;
   // an item as it should be today (#581): an upgraded one rebuilt from its drop at the power it bought, a Hard copy at its

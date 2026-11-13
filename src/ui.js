@@ -1528,7 +1528,8 @@
       list.append(h('button', { class: 'row', onclick: () => { if (!tip.firstChild) tip.append(itemTip(it, null, ch)); tip.style.display = tip.style.display === 'none' ? '' : 'none'; } },
         h('div', { class: 'ic' }, img(art('icon', it.icon))), h('div', { class: 't' }, h('b', { class: 'q' + it.q }, it.name, finName(it)), h('small', null, D.SLOT_LABEL[slot]))), tip); // someone else's gear: the slot, not whether you can use it (no can't-use badge, #322)
     }
-    parts.push(h('div', { class: 'sec-h' }, 'Gear', h('small', null, 'tap to inspect')), list);
+    const theirIP = (ch.level || 0) >= D.LEVEL_CAP ? G.avgItemPower(ch.equip) : null;
+    parts.push(h('div', { class: 'sec-h' }, 'Gear', h('small', null, theirIP != null ? `Item Power ${theirIP} · tap to inspect` : 'tap to inspect')), list);
     // their own story, newest first
     const story = (live.hist || []).slice().reverse().map((e) => ({ e, t: B.histText(e, lv) })).filter((x) => x.t && ok(x.t));
     if (story.length) parts.push(h('div', { class: 'sec-h' }, 'Lately'), h('div', { class: 'ai-box' }, ...story.map((x) => h('div', { class: 'ai-row' }, h('span', null, x.t), h('b', null, ago(x.e.t))))));
@@ -1692,7 +1693,7 @@
       const u = units ? units.find((x) => (m.me ? x.kind === 'player' : x.memberRef === m.char)) : null;
       const row = h('button', { class: 'pfr' + (u && u.dead ? ' dead' : '') + (!m.me && G.isHealPick(m.char) ? ' sel' : ''), onclick: () => { if (!m.me && !G.healsAllies()) return playerCard(m.char); G.pickHeal(m.me ? null : m.char); renderTarget(); markTargets(); renderPanel(); } }, // no heals to aim: a tap opens their card (#367)
         h('div', { class: 'portrait' }, h('div', { class: 'pclip' }, img(art('portrait', looks(m.me ? S.player : m.char.bot || m.char))))),
-        h('div', { class: 'uf-body' }, h('div', { class: 'uf-name cls-' + m.cls }, rankBadge(m.me ? S.player : m.char, m.me), m.gone ? m.name + ' (left)' : m.name, h('small', { class: 'rc' }, (m.me ? S.player.level : (m.char.level || '')) + ' ' + raceClass(m.me ? S.player : m.char))), h('div', { class: 'bar hp', 'data-pf': u ? u.uid : '' }, h('i'), h('b', { class: 'tnum' })),
+        h('div', { class: 'uf-body' }, h('div', { class: 'uf-name cls-' + m.cls }, rankBadge(m.me ? S.player : m.char, m.me), m.gone ? m.name + ' (left)' : m.name, h('small', { class: 'rc' }, (m.me ? S.player.level : (m.char.level || '')) + ' ' + raceClass(m.me ? S.player : m.char) + ipTag(m.me ? S.player : m.char))), h('div', { class: 'bar hp', 'data-pf': u ? u.uid : '' }, h('i'), h('b', { class: 'tnum' })),
           // between pulls: a thin mana bar for mana users, and ✓ once the member meets the pace's thresholds (#159)
           resting && D.CLASSES[m.cls].resource === 'mana' ? h('div', { class: 'bar mana thin', 'data-rest-mana': i }, h('i')) : null,
           u ? h('div', { class: 'buffs rowbuffs', 'data-au': u.uid }) : null),
@@ -2501,7 +2502,7 @@
     if (upi && upi.ok) { // #284: says what 100% is, and how it rises
       t.append(h('div', { class: 'st', style: { color: '#7fd4ff' } }, `Item Power: ${upi.pct}${upi.room ? ` · max ${upi.capPct}` : ' (max)'}`));
       if (upi.room) t.append(h('div', { class: 'st', style: { color: '#7fd4ff', opacity: 0.75 } }, 'Mentor Marks raise it, up to the max.'));
-    }
+    } else if (upi && (it.lvl || 0) >= D.UPGRADE.minLvl && G.itemPower(it) != null) t.append(h('div', { class: 'st', style: { color: '#7fd4ff' } }, `Item Power: ${G.itemPower(it)}`)); // level-57+ gear that can't be upgraded (greens, heirlooms) still says how strong it is
     const why = who ? null : blockReason(it);
     if (why) t.append(h('div', { class: 'red', style: { fontWeight: 800 } }, why.text));
     if (it.slot === 'quest') t.append(h('div', { class: 'st' }, 'Quest Item'));
@@ -3816,8 +3817,10 @@
   // a banner opens its page: what it is and the steps, which tick themselves, each with Go to its screen
   // Item Power (IP): a level-57+ piece's power, where the Tidecrown Citadel's epics are 100 (G.upgradeInfo(it).pct). The
   // scale stays tied to the Tidecrown when a newer raid becomes the upgrade ceiling, so old gear keeps its number
-  const avgItemPower = (P) => { const up = D.GEAR_SLOTS.map((k) => P.equip[k]).filter((it) => it && G.upgradeInfo(it).ok); return up.length ? Math.round(up.reduce((n, it) => n + G.upgradeInfo(it).pct, 0) / up.length) : null; }; // worn level-57+ gear; null with none
-  const ITEM_POWER_HELP = 'Item Power is a piece’s strength: Tidecrown Citadel epics are 100. Yours is the average of your worn level-57+ gear. Mentor Marks raise it.';
+  const avgItemPower = (P) => (P.level >= D.LEVEL_CAP ? G.avgItemPower(P.equip) : null); // at the level cap: the average of everything worn
+  // ' · IP 93' after a level-60 party member's class
+  const ipTag = (c) => { if (!c || (c.level || 0) < D.LEVEL_CAP) return ''; const v = G.avgItemPower(c.equip); /* well under 1 ms a member */ return v != null ? ` · IP ${v}` : ''; };
+  const ITEM_POWER_HELP = 'Item Power is a piece’s strength: Tidecrown Citadel epics are 100. Yours is the average of the gear you wear. Mentor Marks raise it.';
   const WEEK_GO = {
     'social:chat': () => openSocial('chat'),
     'social:guild': () => openSocial('guild'),
@@ -5381,6 +5384,10 @@
       } else {
         const cx = (P.codex || {})[act];
         row('Level', A.minLvl === A.maxLvl ? String(A.minLvl) : `${A.minLvl}–${A.maxLvl}${P.level > A.maxLvl ? ` (you are synced to ${A.maxLvl})` : ''}`);
+        { const rn = !A.bg && G.recItemPower(act, false), mine = avgItemPower(P); /* what a careful group-finder player brings; yours in red below it */
+          if (rn) { const rh = Dg && Dg.raid ? G.recItemPower(act, true) : null, low = mine != null && mine < rn;
+            rows.push(h('button', { class: 'ai-row', style: { width: '100%', textAlign: 'left' }, onclick: () => toast(ITEM_POWER_HELP + ' Recommended: what a careful group finder player wears here.', true) }, h('span', null, 'Item Power ⓘ'),
+              h('b', { class: 'tnum' }, `Recommended ${rn}${rh && rh !== rn ? ` · Hard ${rh}` : ''}`, mine != null ? h('span', { class: low ? 'red' : null }, ` · You ${mine}`) : null))); } }
         if (A.bg) { const C = D.BG[A.bg], L = P.level;
           row('Teams', `${C.team} against ${C.team}, all at your level (${L})`); row('Banners', C.banners.map((x) => x[1]).join(', '));
           row('How it works', `each round your group (you and two) and the pair (two more) each go to a banner: where both teams meet they fight, an empty banner is taken, and they take the banners they reach alone`);
