@@ -4836,8 +4836,8 @@
         const f = Math.min(1, (L - A.atCap.from) / (D.LEVEL_CAP - A.atCap.from)), mix = (lo, hi) => ({ hp: lo.hp + (hi.hp - lo.hp) * f, dmg: lo.dmg + (hi.dmg - lo.dmg) * f });
         mult = mix(mult, top.trashMult); bossMult = mix(bossMult, top.bossMult);
       }
-    } else {
-      pulls = A.pulls; hard = false;
+    } else { // a Wanted elite or a Legend's run: its own numbers when it has them (#586), else the mobs' own
+      pulls = A.pulls; hard = false; mult = A.trashMult || null; bossMult = A.bossMult || null;
     }
     S.run = { act, name, pulls, mult, bossMult, idx: 0, phase: 'rest', restUntil: now() + 6000, wipes: 0, rolls: [], returnTo: S.player.place, started: now(), hard: hard || undefined };
     if (A.scale) S.run.mobLevel = G.syncLevel(act);
