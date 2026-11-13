@@ -45,7 +45,7 @@
 
   const BREATH = (mult) => ({ kind: 'hit', name: 'Searing Breath', tele: true, every: 25, mult, who: 'all', school: 'fire', text: 'Veshmira rears back and breathes fire over the cavern!' });
   Object.assign(D.DUNGEONS, {
-    onyxias_lair: { name: "Veshmira's Lair", raid: true, music: 'veshmira', minLvl: 60, par: 250 /* x1.32: longer fights with bots in gear for their level (#582) */, trialPar: 330, size: 10, trashMult: { hp: 7.6, dmg: 2.99 }, bossMult: { hp: 45.6, dmg: 12.42 }, /* health x1.52: bots wear gear for their level (#582) */ trial: { trashMult: { hp: 5, dmg: 2.6 }, bossMult: { hp: 30, dmg: 9.4 } }, /* Normal hits harder since her breath is telegraphed (#179); Trials keep their numbers */ pulls: [
+    onyxias_lair: { name: "Veshmira's Lair", raid: true, music: 'veshmira', minLvl: 60, par: 250 /* x1.32: longer fights with bots in gear for their level (#582) */, trialPar: 330, size: 10, trashMult: { hp: 7.6, dmg: 3.89 }, bossMult: { hp: 45.6, dmg: 16.15 }, /* health x1.52: bots wear gear for their level (#582); damage x1.3 (#586) */ trial: { trashMult: { hp: 5, dmg: 2.6 }, bossMult: { hp: 30, dmg: 9.4 } }, /* Normal hits harder since her breath is telegraphed (#179); Trials keep their numbers */ pulls: [
       { scene: 'lair_tunnel', label: 'The entry tunnel', mobs: ['onyxian_warder', 'onyxian_warder'] },
       { scene: 'lair_tunnel', label: 'The warders', mobs: ['onyxian_warder', 'onyxian_warder', 'onyxian_whelp'] },
       { scene: 'lair_cavern', label: 'The whelp nests', mobs: ['onyxian_whelp', 'onyxian_whelp', 'onyxian_whelp', 'onyxian_whelp'] },
@@ -53,7 +53,7 @@
     ],
     // Hard (v10.7): opens after a Normal clear. Stronger enemies (tuned by sim/hardraid.js: a group near the ceiling
     // wipes about 2-3 times on a first clear) and one extra mechanic per boss: her last phase calls the rest of the brood
-    hard: { trashMult: { hp: 8.16, dmg: 3.05 }, bossMult: { hp: 49.6, dmg: 15.5 }, /* health x1.6 (#582) */ // #215: just above Normal; with the breath, more made Hard unwinnable
+    hard: { trashMult: { hp: 8.16, dmg: 3.97 }, bossMult: { hp: 49.6, dmg: 20.15 }, /* health x1.6 (#582); damage x1.3 with Normal (#586) */ // #215: just above Normal; with the breath, more made Hard unwinnable
       extra: { onyxia: [BREATH(1.3), { kind: 'adds', at: 0.25, mob: 'onyxian_whelp', n: 3, lvl: 0, text: 'Veshmira shrieks, and the rest of the brood pours out of the nests!' }] } },
     // Normal: her breath over the whole raid (#215). Without it the fight tested only the tank: no damage number made a group
     // wipe on Normal without making Hard impossible
