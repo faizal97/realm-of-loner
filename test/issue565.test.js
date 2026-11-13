@@ -111,3 +111,17 @@ test('a Hard clear from before Crestbearer existed is kept once a newer raid ope
   const nr = SOC.newestRaid; SOC.newestRaid = () => ({ act: 'zz_new', name: 'New Raid' });
   try { assert.strictEqual(G.titleUnlocked(t), true); } finally { SOC.newestRaid = nr; }
 });
+
+test("the Crestbearer award names the newest raid, even when an older Hard raid's clear brings it in (#570)", () => {
+  const { S, P } = character(60, 'warrior', 'human'); const SOC = globalThis.SOC;
+  const n = SOC.newestRaid(), A = D.ACTIVITIES[n.act];
+  const older = Object.keys(D.ACTIVITIES).find((k) => k !== n.act && D.ACTIVITIES[k].dungeon && D.DUNGEONS[D.ACTIVITIES[k].dungeon].raid && !D.ACTIVITIES[k].event);
+  assert.ok(older, 'an older raid');
+  P.crest = {}; P.codex = { [n.act]: { clears: 1, hard: 1 } }; // the newest raid cleared on Hard before the title existed: no crest recorded
+  const n0 = S.chat.length;
+  S.run = { act: older, hard: true, wipes: 0, noSpeed: true, help: null, started: Date.now() - 600000 }; G._runBonuses(S.run);
+  const award = S.chat.slice(n0).map((m) => m.text).filter((t) => /Crestbearer/.test(t));
+  assert.ok(award.length, 'the award is said');
+  assert.ok(award.every((t) => t.includes(n.name)), award.join(' | '));
+  assert.ok(A && P.crest[n.act], 'recorded');
+});
