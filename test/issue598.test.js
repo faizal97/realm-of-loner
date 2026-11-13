@@ -50,3 +50,18 @@ test('a talent for an ability still ahead says when it comes', () => {
   assert.strictEqual(G.talentAbilityNote({ cls: 'paladin', level: 10 }, t), 'Lay on Hands: learned at level 14');
   assert.strictEqual(G.talentAbilityNote({ cls: 'paladin', level: 14 }, t), null);
 });
+
+test('a quest\'s objective names only places in its own region: a dwarf\'s wolf meat is not sent to the human start (#598)', () => {
+  const src = require('fs').readFileSync(require('path').join(__dirname, '../src/ui.js'), 'utf8');
+  const fnSrc = (name) => { const at = src.indexOf('  function ' + name + '('); assert.ok(at >= 0, name); return src.slice(at, src.indexOf('\n  }\n', at) + 4); };
+  const np = src.slice(src.indexOf('  const npcPlace = '), src.indexOf('\n', src.indexOf('  const npcPlace = ')));
+  character(6, 'warrior', 'dwarf');
+  const objPlaces = new Function('G', 'D', np + '\n' + fnSrc('objPlaces') + '\n' + fnSrc('objPlacesAll') + '; return objPlaces;')(G, D);
+  for (const qid of ['dwarven_outfitters', 'wolves_border']) {
+    const Q = D.QUESTS[qid], home = D.PLACES[Object.keys(D.PLACES).find((p) => D.PLACES[p].npcs.includes(Q.giver))].region;
+    const all = objPlaces(Q.objs[0]), mine = objPlaces(Q.objs[0], qid);
+    assert.ok(all.some((p) => D.PLACES[p].region !== home), `${qid}: the meat drops in another region too`);
+    assert.ok(mine.length, qid);
+    assert.deepStrictEqual(mine.filter((p) => D.PLACES[p].region !== home), [], qid);
+  }
+});
