@@ -522,7 +522,7 @@
       let lim = Infinity;
       list.map((x, i) => i).filter((i) => list[i].ally && !list[i].dead).sort((a, b) => list[b].ex - list[a].ex).forEach((i) => {
         const c = xs[i] + list[i].w / 2; if (c > lim) xs[i] = lim - list[i].w / 2;
-        lim = Math.min(lim, xs[i] + list[i].w / 2) - 0.06 * W; /* each one behind stands a step further back */
+        lim = Math.min(lim, xs[i] + list[i].w / 2) - 0.06 * W * (k / M_MAX); /* each one behind stands a step further back; the step shrinks with the camera, so a full raid that stepped back still fits */
       });
       return xs;
     };
