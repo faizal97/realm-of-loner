@@ -253,7 +253,7 @@
     u.legend = char.legend || null;
     u.effects = E.itemEffects(char); // item effects (v10.10)
     E.recalc(u, true);
-    u.hp = char.hp == null ? u.maxHp : clamp(char.hp, 1, u.maxHp);
+    u.hp = char.hp == null ? u.maxHp : clamp(Math.round(char.hp), 1, u.maxHp); // whole health in a fight: rest and regen between pulls leave fractions (#603)
     u.maxRes = C.resource === 'mana' ? u.st.maxMana : 100;
     if (C.resource === 'rage') u.res = clamp(char.res || 0, 0, 100);
     else if (C.resource === 'energy') u.res = 100;
@@ -516,7 +516,7 @@
     if (src && src.auras && !(o && o.split) && amount > 0) { const ln = src.auras.find((a) => a.lantern != null), L2 = ln && C.units[ln.lantern]; if (L2 && !L2.dead && L2 !== tgt && (!L2.pos || !src.pos || E.dist(src, L2) <= DIST.ally)) { /* out of reach, the heal lands whole on its target */ heal(C, src, L2, amount / 2, Object.assign({}, o, { split: true })); amount /= 2; } } // Lantern of Faith (#516)
     if (src && o && o.ab && !o.split && amount > 0) proc(C, src, 'heal', o.ab); // talent reactions (v10.4), once a heal (Lantern's half is the same heal)
     if (src && src.char) { const hm = tmOf(src); amount *= 1 + (hm.heal + (o && o.ab ? hm.abilHeal[o.ab] || 0 : 0)) / 100; }
-    const before = tgt.hp;
+    tgt.hp = Math.round(tgt.hp); const before = tgt.hp; // counted from whole health, so the heal floats a whole number whatever left a fraction (#603)
     tgt.hp = Math.min(tgt.maxHp, tgt.hp + Math.round(amount));
     const done = tgt.hp - before;
     // heal threat, split across enemies fighting
@@ -568,7 +568,7 @@
     if (u.side === 'enemy' && C.opts.omens && C.opts.omens.includes('volatile') && root.TRIALS) { const VO = root.TRIALS.OMENS.volatile; (C.blasts = C.blasts || []).push({ t: C.t + VO.delay, name: u.name }); ev(C, { type: 'emote', uid: u.uid, text: `${u.name} starts to glow...` }); }
     if (u.side === 'enemy' && C.opts.omens && C.opts.omens.includes('rallying')) { // Rallying: the rest of the pull heal and hit harder
       const rest = C.enemies.filter((x) => !x.dead && x !== u);
-      const RO = root.TRIALS.OMENS.rallying; for (const x of rest) { if (RO.heal) x.hp = Math.min(x.maxHp, x.hp + x.maxHp * RO.heal); x.rally = (x.rally || 0) + 1; }
+      const RO = root.TRIALS.OMENS.rallying; for (const x of rest) { if (RO.heal) x.hp = Math.min(x.maxHp, Math.round(x.hp + x.maxHp * RO.heal)); x.rally = (x.rally || 0) + 1; }
       if (rest.length) ev(C, { type: 'emote', uid: rest[0].uid, text: `${rest.length > 1 ? 'The pull rallies' : rest[0].name + ' rallies'}!` });
     }
     if (u.side === 'enemy') {
@@ -945,7 +945,7 @@
       const pt = alive(k.side === 'ally' ? C.allies : C.enemies).filter((a) => a.kind !== 'pet' && !a.auras.some((x) => x.immune) && (!k.pos || !a.pos || Math.hypot(a.pos.x - k.pos.x, a.pos.y - k.pos.y) <= k.range));
       if (pt.length < 2) continue;
       const f = pt.reduce((a, w) => a + w.hp, 0) / pt.reduce((a, w) => a + w.maxHp, 0); // the shared share of health; the total never changes
-      for (const w of pt) w.hp = Math.min(w.maxHp, Math.max(1, w.hp + (w.maxHp * f - w.hp) * k.share));
+      for (const w of pt) w.hp = Math.min(w.maxHp, Math.max(1, Math.round(w.hp + (w.maxHp * f - w.hp) * k.share))); /* whole health, so a heal after it floats a whole number (#603) */
     }
     C.kin = C.kin.filter((k) => C.t <= k.until + 1e-6);
   }
