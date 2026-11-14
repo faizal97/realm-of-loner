@@ -33,3 +33,10 @@ test('Recommended Item Power: raids ask more on Hard; levelling content has none
   const low = Object.keys(D.ACTIVITIES).find((k) => (D.ACTIVITIES[k].maxLvl || 0) > 0 && D.ACTIVITIES[k].maxLvl < 50);
   assert.strictEqual(G.recItemPower(low, false), null, low);
 });
+
+test('a look-only piece (a Trialsworn appearance) has no Item Power and is left out of the average', () => {
+  const cloak = G.copyItem('trialsworn_cloak'), green = G.genGear('chest', 60, 2, { atype: 'mail' });
+  assert.ok(cloak.lookOnly, 'the Trialsworn Cloak is look-only');
+  assert.strictEqual(G.itemPower(cloak), null);
+  assert.strictEqual(G.avgItemPower({ chest: green, back: cloak }), G.itemPower(green));
+});

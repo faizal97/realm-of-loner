@@ -3379,7 +3379,7 @@
   // 100. An upgradeable piece reads its upgrade figure (same number); any other piece (greens, low levels, no stats: 0)
   // reads its points the same way. Null for no piece or a kind with no reference
   G.itemPower = function (it) {
-    if (!it || !D.GEAR_SLOTS.includes(it.slot)) return null;
+    if (!it || !D.GEAR_SLOTS.includes(it.slot) || it.lookOnly) return null; /* a look-only piece (Trialsworn) is for the wardrobe, not power: no number, not in the average */
     const u = G.upgradeInfo(it); if (u.ok) return u.pct;
     const ref = G.upgradeRef(it); return ref > 0 ? Math.round((G.itemPoints(it) / ref) * 100) : null;
   };
