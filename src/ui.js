@@ -5387,7 +5387,7 @@
         { const rn = !A.bg && G.recItemPower(act, false), mine = avgItemPower(P); /* what a careful group-finder player brings; yours in red below it */
           if (rn) { const rh = Dg && Dg.raid ? G.recItemPower(act, true) : null, low = mine != null && mine < rn;
             rows.push(h('button', { class: 'ai-row', style: { width: '100%', textAlign: 'left' }, onclick: () => toast(ITEM_POWER_HELP + ' Recommended: what a careful group finder player wears here.', true) }, h('span', null, 'Item Power ⓘ'),
-              h('b', { class: 'tnum' }, `Recommended ${rn}${rh && rh !== rn ? ` · Hard ${rh}` : ''}`, mine != null ? h('span', { class: low ? 'red' : null }, ` · You ${mine}`) : null))); } }
+              h('b', { class: 'tnum' }, `Recommended ${rn}${rh && rh !== rn ? ` · Hard ${rh}` : ''}`, mine != null ? h('span', { style: low ? { color: '#ff6a5a' } : null }, ` · You ${mine}`) : null))); } }
         if (A.bg) { const C = D.BG[A.bg], L = P.level;
           row('Teams', `${C.team} against ${C.team}, all at your level (${L})`); row('Banners', C.banners.map((x) => x[1]).join(', '));
           row('How it works', `each round your group (you and two) and the pair (two more) each go to a banner: where both teams meet they fight, an empty banner is taken, and they take the banners they reach alone`);
