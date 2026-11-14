@@ -4623,11 +4623,11 @@
   // #582: the group finder's gear floor, like a real finder's item level: a Normal raid takes players in Rare gear, a Hard
   // raid (which needs a Normal clear) players in Epic. The floor comes from what you queue for, never from your own gear
   G.gearFloor = (act, hard) => { const A = D.ACTIVITIES[act]; return A && A.size === 10 && !A.bg && !A.worldBoss && !A.scale ? (hard ? 4 : 3) : 0; };
-  function recruit(role, lvl, used, usedCls, guild, exact) { // exact: only players at this level (Trials: the cap)
+  function recruit(role, lvl, used, usedCls, guild, exact, minL) { // exact: only players at this level (Trials: the cap); minL: never under the activity's level (a 59 fought a level-60 raid as 59)
     const S = G.S, date = new Date();
     const want = role === 'tank' ? ['warrior', 'warrior', 'paladin'].concat(lvl >= 10 ? ['druid'] : []) : role === 'healer' ? ['priest', 'priest', 'paladin', 'druid', 'shaman', 'bard'] : ['mage', 'rogue', 'rogue', 'mage', 'warrior', 'warlock', 'warlock', 'hunter', 'hunter', 'druid', 'shaman', 'priest', 'bard'];
     const myF = (D.RACES[S.player.race] || {}).faction || 'alliance';
-    let pool = S.bots.filter((b) => B.isOnline(b, date) && B.factionOf(b) === myF && want.includes(b.cls) && (exact ? b.level === lvl : b.level >= lvl - 1 && b.level <= lvl + 3) && !used.has(b.id));
+    let pool = S.bots.filter((b) => B.isOnline(b, date) && B.factionOf(b) === myF && want.includes(b.cls) && (exact ? b.level === lvl : b.level >= Math.max(lvl - 1, minL || 0) && b.level <= lvl + 3) && !used.has(b.id));
     const taken = [S.player.name].concat(used.names || [], S.bots.filter((x) => used.has(x.id)).map((x) => x.name));
     pool = pool.filter((x) => !taken.some((n) => B.namesClose(n, x.name))); /* never two names one letter apart in a group: with nobody else here, someone from another realm */
     // prefer classes the group does not have yet
@@ -4637,7 +4637,7 @@
     let b;
     if (pool.length) b = JSON.parse(JSON.stringify(pick(pool)));
     else {
-      const names = new Set(S.bots.map((x) => x.name)), nb = B.makeBot(S.nextBotId++, names, { level: exact ? lvl : clamp(lvl + rint(-1, 1), 8, D.LEVEL_CAP) });
+      const names = new Set(S.bots.map((x) => x.name)), nb = B.makeBot(S.nextBotId++, names, { level: exact ? lvl : clamp(lvl + rint(-1, 1), Math.max(8, minL || 0), D.LEVEL_CAP) });
       for (let k = 0; k < 8 && taken.some((n) => B.namesClose(n, nb.name)); k++) nb.name = B.makeName(names);
       const freshCls = usedCls ? want.filter((c) => !usedCls.has(c)) : want;
       nb.cls = pick(freshCls.length ? freshCls : want); nb.realm = pick(OTHER_REALMS);
@@ -4791,7 +4791,7 @@
     const used = new Set(), usedCls = new Set([S.player.cls]);
     const trial = opts && opts.trial, lvl = trial ? D.LEVEL_CAP : G.syncLevel(act);
     const floor = G.gearFloor(act, opts && opts.hard);
-    const bots = roles.map((r) => Object.assign(recruit(r, lvl, used, usedCls, opts && opts.guild, !!trial), { gearFloor: floor }));
+    const bots = roles.map((r) => Object.assign(recruit(r, lvl, used, usedCls, opts && opts.guild, !!trial, A.minLvl), { gearFloor: floor }));
     if (trial) { const sk = TR().botSkill(G.trialRating()); for (const b of bots) b.skill = clamp(sk + rnd(-0.08, 0.05), 0.3, 0.95); } // your rating draws better players
     if (opts && opts.hard) { const sk = TR().botSkill(G.trialRating()) + 0.05; for (const b of bots) b.skill = clamp(sk + rnd(-0.06, 0.05), 0.3, 0.95); } // Hard: skilled players, a little above your Trial rating
     if (opts && opts.firstTimers) for (const b of bots) b.skill = Math.min(b.skill, 0.25 + Math.random() * 0.2);
@@ -5196,7 +5196,7 @@
       }
       for (const m of S.group.members.filter((x) => x.gone && x.replacing && t >= x.replacing)) {
         const used = new Set(S.group.members.map((x) => x.bot.id)); used.names = S.group.members.map((x) => x.bot.name);
-        const rb = Object.assign(recruit(m.role, G.syncLevel(R.act), used, new Set(S.group.members.filter((x) => !x.gone).map((x) => x.cls).concat([P.cls])), null, !!R.trial), { gearFloor: G.gearFloor(R.act, R.hard) });
+        const rb = Object.assign(recruit(m.role, G.syncLevel(R.act), used, new Set(S.group.members.filter((x) => !x.gone).map((x) => x.cls).concat([P.cls])), null, !!R.trial, D.ACTIVITIES[R.act].minLvl), { gearFloor: G.gearFloor(R.act, R.hard) });
         if (R.trial && !R.hard) rb.skill = clamp(TR().botSkill(G.trialRating()) + rnd(-0.08, 0.05), 0.3, 0.95); // drawn from your Trial rating, like the first group
         if (R.hard) rb.skill = clamp(TR().botSkill(G.trialRating()) + 0.05 + rnd(-0.06, 0.05), 0.3, 0.95); // a Hard group refills with skilled players too
         const nb = G.botChar(rb); /* gear once the skill is final (#590) */
