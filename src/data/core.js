@@ -693,7 +693,8 @@
   const budgetAt60 = (q) => (q === 2 ? 60 * 0.55 + 1 : q === 3 ? 60 * 0.55 + 2 : 60 * 0.64 + 2);
   const budgetLow = (L, q) => { const green = L * 0.55 + 1; return q === 2 ? green : q === 3 ? green * 1.2 : green * 1.2 * 1.15; };
   D.BLUE_FLOOR_BELOW = 57; // fixed blues under this level are held to the generated blue budget (src/data/finalize.js)
-  D.gearBudget = (L, q) => {
+  D.gearBudget = (L, q, bot) => {
+    if (q === 2 && L > 50 && !bot) return D.gearBudget(L, 3) / 1.2; /* past 50 a green you get stays a fifth under that level's blue, as below 50: it climbed to 34 at 60 while blues held at 35, so a blue barely beat a green. Group-finder players (bot) keep the old green: dungeon difficulty was tuned on it */
     if (L >= 60) return q === 2 ? L * 0.55 + 1 : q === 3 ? L * 0.55 + 2 : L * 0.64 + 2;
     if (q === 2 || L <= 50) return budgetLow(L, q);
     const a = budgetLow(50, q); return a + (budgetAt60(q) - a) * Math.min(1, (L - 50) / 9);

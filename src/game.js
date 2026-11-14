@@ -624,7 +624,7 @@
       // outranked raid purples): green 0.55, blue 0.55 + 1, purple 0.64 per level
       // #141: from D.gearBudget; a green or blue below 60 rolls it +-10%, so a good find and a poor one exist in a band
       const roll = lvl < 60 && (q === 2 || q === 3) ? 1 + rnd(-0.1, 0.1) : 1;
-      const budget = Math.max(1, Math.round(D.gearBudget(lvl, q) * roll));
+      const budget = Math.max(1, Math.round(D.gearBudget(lvl, q, opts.bot) * roll));
       const af = opts.affix || pick(D.AFFIXES);
       const keys = Object.keys(af.stats);
       it.stats = {};
@@ -4685,7 +4685,7 @@
     // waist (unless the content sets a gear floor), so a bad draw still costs the group something now that everyone wears gear of their level (a caster's gear still has its spell power)
     const careful = !(b.skill <= 0.4);
     const af = careful ? botAffix(b.cls, role) : undefined, sp = role === 'healer' || (role === 'dps' && BOT_CASTER[b.cls]) ? 0.5 : 0;
-    const o = (x) => Object.assign({ affix: af }, sp ? { sp } : {}, x);
+    const o = (x) => Object.assign({ affix: af, bot: true }, sp ? { sp } : {}, x); // bot: a group-finder player's greens keep their old budget (D.gearBudget)
     const equip = { weapon: G.genGear('weapon', b.level, q, o({ wtype: wt })) };
     if (C.ranged || C.instrument) equip.ranged = G.genGear('ranged', b.level, q, o(C.instrument ? { wtype: 'instrument' } : {}));
     if (b.level >= 10 && q >= 3) {

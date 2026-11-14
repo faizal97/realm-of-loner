@@ -69,7 +69,8 @@ test('gear never gets worse as you level: full blue and purple bonus to 50, a st
   for (const q of [2, 3, 4]) for (let L = 1; L < 60; L++) assert.ok(D.gearBudget(L + 1, q) >= D.gearBudget(L, q), `quality ${q}, ${L} -> ${L + 1}`);
   for (const q of [3, 4]) assert.ok(Math.abs(D.gearBudget(59, q) - D.gearBudget(60, q)) < 1e-9, `quality ${q}: 59 reaches 60`);
   assert.ok(Math.abs(D.gearBudget(50, 3) - D.gearBudget(50, 2) * 1.2) < 1e-9, 'the full blue bonus at 50');
-  assert.strictEqual(D.gearBudget(55, 2), 55 * 0.55 + 1, 'greens unchanged');
+  for (let L = 51; L <= 60; L++) assert.ok(Math.abs(D.gearBudget(L, 3) - D.gearBudget(L, 2) * 1.2) < 1e-9, `L${L}: a green stays a fifth under the blue past 50, as below it`);
+  assert.strictEqual(D.gearBudget(55, 2, true), 55 * 0.55 + 1, 'group-finder players keep the old green: dungeon difficulty was tuned on it');
 });
 
 test('the level 57-59 fixed blues (the Mentor Mark upgrade base) keep their own stats', () => {

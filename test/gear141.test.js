@@ -24,9 +24,9 @@ test('below 60: a blue is about 20% over a green, and both roll about +-10% arou
   }
 });
 
-test('level 60 generated gear is exactly as before (no roll, the v10.4 budgets)', () => {
+test('level 60 generated gear has no roll: greens a fifth under the blue, blues and purples on the v10.4 budgets', () => {
   character(60);
-  assert.deepStrictEqual([...new Set(many(60, 'chest', 60, 2))], [Math.round(60 * 0.55 + 1)]);
+  assert.deepStrictEqual([...new Set(many(60, 'chest', 60, 2))], [Math.round((60 * 0.55 + 2) / 1.2)]); // was 34, a point under the blue's 35
   assert.deepStrictEqual([...new Set(many(60, 'chest', 60, 3))], [Math.round(60 * 0.55 + 2)]);
   assert.deepStrictEqual([...new Set(many(60, 'chest', 60, 4))], [Math.round(60 * 0.64 + 2)]);
 });
