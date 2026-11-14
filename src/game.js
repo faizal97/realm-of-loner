@@ -3258,9 +3258,14 @@
       const fin = {}, finOwn = upRef['*finOwn'] = {}; for (const dk in D.DUNGEONS) for (const p of D.DUNGEONS[dk].pulls) for (const m of p.mobs) for (const id of (D.MOBS[m].finest || [])) {
         const x = D.ITEMS[id], k = x && upKey(x); if (!x || x.q !== 4 || x.effect) continue;
         if (!seen.has(k)) { if (!fin[k] || G.itemPoints(x) > G.itemPoints(fin[k])) fin[k] = x; } else if (!upRef[k] && G.itemPoints(x) > (finOwn[k] || 0)) finOwn[k] = G.itemPoints(x); }
+      /* a family with no level-57+ plain drop from any boss (the non-caster ring: its boss rings all carry effects) takes its
+         best plain level-57+ piece from anywhere (quests, vendors), raised by the lead, as a dungeon-only family does: against
+         its own power every ring read Item Power 90 whatever its quality. Season pieces never set it (#593) */
+      const anyBest = {}; for (const id in D.ITEMS) { const x = D.ITEMS[id]; if (x.finest || x.effect || (x.lvl || 0) < U.minLvl || !U.cap[x.q] || !D.GEAR_SLOTS.includes(x.slot) || !(G.itemPoints(x) > 0)) continue; const k = upKey(x); if (!upRef[k]) anyBest[k] = Math.max(anyBest[k] || 0, G.itemPoints(x)); }
+      upRef['*anyOwn'] = {}; for (const k in anyBest) upRef['*anyOwn'][k] = anyBest[k] * lead;
       for (const k in fin) { upRef[k] = G.itemPoints(fin[k]); if (fin[k].armor) upRef['*armor'][k] = fin[k].armor; if (fin[k].dmg && fin[k].speed) upRef['*dps'][k] = (fin[k].dmg[0] + fin[k].dmg[1]) / 2 / fin[k].speed; }
     }
-    const base = upRef[upKey(it)] || (it.finest && upRef['*finOwn'][upKey(it)]) || G.itemPoints(it.base || it) * upRef['*lead']; // a family seen nowhere: its own power, raised by the lead
+    const k = upKey(it), base = upRef[k] || (it.finest && upRef['*finOwn'][k]) || upRef['*anyOwn'][k] || G.itemPoints(it.base || it) * upRef['*lead']; // a family seen nowhere: its own power, raised by the lead
     if (!(it.effect && D.EFFECTS && D.EFFECTS[it.effect])) return base;
     // an effect item's ceiling pays the same share as its drop did, and it is never below where its drop sits for a plain
     // drop of its quality: a family with no plain item near it (Cinderhide Bracers started at 130%) still has room (#22)

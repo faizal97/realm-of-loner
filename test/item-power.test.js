@@ -40,3 +40,11 @@ test('a look-only piece (a Trialsworn appearance) has no Item Power and is left 
   assert.strictEqual(G.itemPower(cloak), null);
   assert.strictEqual(G.avgItemPower({ chest: green, back: cloak }), G.itemPower(green));
 });
+
+test('a ring family with no raid ring of its own reads by quality, not a flat 90 (its Season Best ring is the 100)', () => {
+  const ip = (k) => G.itemPower(G.copyItem(k));
+  assert.strictEqual(ip('stonecore_band'), 100);
+  assert.ok(ip('rimefather_band') > ip('scorchmaw_band'), `epic ${ip('rimefather_band')} over blue ${ip('scorchmaw_band')}`);
+  assert.ok(ip('foulmane_ring') < 85, `a level-57 blue ring reads under 85: ${ip('foulmane_ring')}`);
+  assert.ok(G.itemPower(G.genGear('finger', 60, 3, {})) > G.itemPower(G.genGear('finger', 60, 2, {})), 'a generated blue ring over a green');
+});
