@@ -5892,9 +5892,10 @@
     const A = D.ACTIVITIES[q.act], ms = q.group ? q.group.members : [];
     const n = (r) => ms.filter((m) => m.role === r).length + (G.role() === r ? 1 : 0), P = G.S.player; // the count includes you (#597)
     const knownOnly = ms.filter((m) => SOC.isFriend(m.bot.id) || (P.guild >= 0 && m.bot.guild === P.guild));
+    const tappable = ms.length <= 4 ? ms.length : knownOnly.length; /* a raid shows counts, plus only friends and guildmates to tap: no hint with nobody to tap */
     const who = !ms.length ? null : ms.length <= 4 ? h('div', { class: 'pop-group' }, ...ms.map(popMember))
       : h('div', { class: 'pop-group' }, h('p', { class: 'pop-count' }, [[n('tank'), 'tank'], [n('healer'), 'healer'], [n('dps'), 'damage']].filter((x) => x[0]).map(([k, w]) => `${k} ${w}${k > 1 && w !== 'damage' ? 's' : ''}`).join(' · ')), ...knownOnly.map(popMember));
-    showDialog([h('h3', null, 'Your group is ready'), h('p', null, A.name), h('p', { style: { color: 'var(--muted)' } }, `Role: ${G.role() === 'tank' ? 'Tank' : G.role() === 'healer' ? 'Healer' : 'Damage'}${who ? ' · tap someone for their card' : ''}`), who,
+    showDialog([h('h3', null, 'Your group is ready'), h('p', null, A.name), h('p', { style: { color: 'var(--muted)' } }, `Role: ${G.role() === 'tank' ? 'Tank' : G.role() === 'healer' ? 'Healer' : 'Damage'}${tappable ? ' · tap someone for their card' : ''}`), who,
       h('div', { class: 'btn-row' }, h('button', { class: 'btn', onclick: () => { if (G.fight) return G.acceptPop(); closeDialog(); closeSheet(); G.acceptPop(); renderAll(); } }, 'Enter'), h('button', { class: 'btn alt', onclick: () => { closeDialog(); G.declinePop(); renderAll(); } }, 'Decline'))]);
     ui.dialog.classList.add('pop-dialog'); // closed if the pop times out (#412)
   }
