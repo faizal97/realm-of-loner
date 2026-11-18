@@ -6523,8 +6523,28 @@
           after(); } }, 'Delete'),
         h('button', { class: 'btn alt', onclick: closeDialog }, 'Keep'))]);
   }
+  // The Android app moved to a new package (com.starlighthvn.realmofloner): a fresh install starts empty, so the first
+  // launch with no characters says this is the new app and offers the way back to the old one's characters. Once.
+  const MOVE_KEY = 'azsolo.moveAsked';
+  function moveCheck() {
+    if (!(window.UPD && UPD.inApp()) || G.characters().length) return;
+    try { if (localStorage.getItem(MOVE_KEY)) return; localStorage.setItem(MOVE_KEY, '1'); } catch (e) { return; }
+    const calm = () => { if (G.S || G.characters().length) return; if (ui.dialog || (window.CS && CS.playing)) return setTimeout(calm, 1500); moveDialog(); };
+    setTimeout(calm, 900);
+  }
+  function moveDialog() {
+    const cloud = window.CLOUD && CLOUD.available(), back = () => { if (G.characters().length) showSelect(); };
+    showDialog([h('h3', null, 'Played before?'),
+      h('p', null, `This is the new Realm of Loner app. Bring your characters over from the old one with ${cloud ? 'cloud save' : 'a save code'}.`),
+      h('p', { class: 'ai-note' }, cloud ? 'In the old app, turn on Hero → Settings → Cloud save first.' : 'In the old app: Hero → Settings → Copy save code.'),
+      h('div', { class: 'btn-row' },
+        cloud ? h('button', { class: 'btn', onclick: () => { closeDialog(); openRestore(back); } }, 'Restore from Google Drive')
+          : h('button', { class: 'btn', onclick: () => { closeDialog(); importSave(); } }, 'Load save code'),
+        h('button', { class: 'btn alt', onclick: closeDialog }, 'Start new'))]);
+  }
   function showCreate(fromSelect) {
     menuMusic();
+    if (!fromSelect) moveCheck();
     app.innerHTML = '';
     const st = { name: B.makeName(new Set()), faction: 'alliance', race: 'human', cls: 'warrior', gender: 'm', skin: 1, hair: 0 };
     const root = festSky(h('div', { class: 'create' }));
